@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TheWeave.Core/TheWeave.Core.csproj" />
+    <Project Path="src/TheWeave.EditorApp/TheWeave.EditorApp.csproj" />
+    <Project Path="src/TheWeave.Exporter/TheWeave.Exporter.csproj" />
+    <Project Path="src/TheWeave.Importer/TheWeave.Importer.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TheWeave.Core.Tests/TheWeave.Core.Tests.csproj" />
+    <Project Path="tests/TheWeave.EditorApp.Tests/TheWeave.EditorApp.Tests.csproj" />
+    <Project Path="tests/TheWeave.Exporter.Tests/TheWeave.Exporter.Tests.csproj" />
+    <Project Path="tests/TheWeave.Importer.Tests/TheWeave.Importer.Tests.csproj" />
+    <Project Path="tests/TheWeave.RoundTrip.Tests/TheWeave.RoundTrip.Tests.csproj" />
+  </Folder>
+</Solution>

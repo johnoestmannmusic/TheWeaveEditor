@@ -1,0 +1,446 @@
+using System.Globalization;
+using System.Net;
+using System.Text;
+using System.Text.RegularExpressions;
+using TheWeave.Core.Model;
+using TheWeave.Exporter;
+
+namespace TheWeave.Exporter.Templates;
+
+/// <summary>
+/// Renders a single Page to the same kind of static HTML the site is hand-authored in today:
+/// one .node div per location (recursively, for nested story chains), each with a .floatInfo
+/// card (cover, audio, heading, poetry lines, a download/travel action).
+/// </summary>
+public sealed class PageRenderer
+{
+    private static readonly Regex BoldPattern = new(@"\*\*(.+?)\*\*", RegexOptions.Compiled);
+
+    /// <summary>
+    /// The persistent shell (see ShellRenderer) needs to own the site's actual index.html, so
+    /// whichever page is WeaveProject.HomePageId is always written under this fixed name
+    /// instead of its own configured OutputFileName - see OutputFileNameFor.
+    /// </summary>
+    public const string HomePageFileName = "theweave.html";
+
+    private readonly WeaveProject _project;
+    private readonly Dictionary<string, string> _pageFileNamesById;
+    private readonly AssetResolver? _assets;
+
+    public PageRenderer(WeaveProject project, AssetResolver? assetResolver = null)
+    {
+        _project = project;
+        _pageFileNamesById = project.Pages.ToDictionary(p => p.Id, p => OutputFileNameFor(p, project));
+        _assets = assetResolver;
+    }
+
+    /// <summary>
+    /// The file this page actually ends up at in the export - its own configured
+    /// OutputFileName, unless it's the project's designated home page, in which case the
+    /// shell's fixed HomePageFileName wins instead (see HomePageFileName's own doc).
+    /// </summary>
+    public static string OutputFileNameFor(Page page, WeaveProject project) =>
+        project.HomePageId is not null && page.Id == project.HomePageId
+            ? HomePageFileName
+            : page.OutputFileName;
+
+    // Copies the referenced file into the export (if needed) and returns the path to emit -
+    // a no-op passthrough when no resolver was given (e.g. tests that only care about markup).
+    private string ResolveAsset(string? path) => _assets?.Resolve(path) ?? (path ?? "");
+
+    public string RenderPage(Page page)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine("<!DOCTYPE html>");
+        sb.AppendLine("<html><head>");
+        sb.AppendLine("<meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\">");
+        sb.AppendLine("  <meta charset=\"utf-8\">");
+        sb.AppendLine("  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\">");
+        sb.AppendLine($"  <title>{EscapeText(page.Title)}</title>");
+        sb.AppendLine($"  <link href=\"{EscapeAttr(_project.Assets.CssPath)}?v={RuntimeAssets.Version}\" rel=\"stylesheet\">");
+        sb.AppendLine($"  <script src=\"{EscapeAttr(_project.Assets.JsPath)}?v={RuntimeAssets.Version}\"></script>");
+        sb.AppendLine();
+        sb.AppendLine(PageConfigScriptRenderer.Render(page, _project));
+        sb.AppendLine("  </head>");
+        sb.AppendLine();
+        sb.AppendLine("  <body>");
+        sb.AppendLine();
+        sb.AppendLine("    <!-- Background -->");
+        sb.AppendLine($"     <img id=\"bgmap\" class=\"pannable\" src=\"{EscapeAttr(ResolveAsset(page.Background.ImagePath))}\">");
+
+        if (page.SecondaryBackground is not null)
+            sb.AppendLine($"     <img id=\"bgmap2\" class=\"pannable\" src=\"{EscapeAttr(ResolveAsset(page.SecondaryBackground.ImagePath))}\" style=\"opacity:0%;\">");
+
+        sb.AppendLine();
+        sb.AppendLine("    <!-- Interactables -->");
+        sb.AppendLine();
+
+        foreach (var node in page.Nodes)
+            RenderNode(sb, page, node, indent: 4, partOfChain: false);
+
+        var effectsScript = EffectsScriptRenderer.Render(page.Effects, _assets);
+        if (effectsScript is not null)
+        {
+            sb.AppendLine(effectsScript);
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("  </body>");
+        sb.AppendLine();
+        sb.AppendLine("  </html>");
+
+        return sb.ToString();
+    }
+
+    private void RenderNode(StringBuilder sb, Page sourcePage, Node node, int indent, bool partOfChain)
+    {
+        var pad = new string(' ', indent);
+        var iconSrc = node.IconStyle == IconStyle.Race ? "img/node-race.png" : "img/node.png";
+        var persistentAttr = node.Persistent ? " data-persistent=\"true\"" : "";
+        // Node.Id is otherwise never exposed in the exported HTML (it's purely an internal
+        // project-file slug - see the README's node-nesting section) - a modal card is the one
+        // exception, needing a *stable* identity across page loads so main.js can remember (via
+        // sessionStorage) that this particular one has already been dismissed once this session.
+        var modalAttr = node.Card.Size == CardSize.Modal
+            ? $" data-modal=\"true\" data-modal-id=\"{EscapeAttr(node.Id)}\""
+            : "";
+
+        // Once any ancestor (or this node itself) has a child, every node from there down is a
+        // member of that chain - even a childless leaf, since it's still a possible "next" stop.
+        var isPartOfChain = partOfChain || node.Children.Count > 0;
+
+        sb.AppendLine($"{pad}<!-- {SafeComment(node.Card.HeadingText)} -->");
+        sb.AppendLine($"{pad}<div class=\"node\"{persistentAttr}{modalAttr} style=\"left: {Px(node.X)}px; top: {Px(node.Y)}px;\">");
+        sb.AppendLine($"{pad}  <img class=\"nodeImage\" src=\"{iconSrc}\">");
+
+        // A hint that X/gamepad X cycles to the *next* chain member - see updateChainHint() in
+        // main.js, which is the only thing that ever makes this visible (default display:none -
+        // see main.css). One placeholder per chain member so JS can reveal exactly the one node
+        // that's actually next from wherever the player currently is in the chain.
+        if (isPartOfChain)
+            sb.AppendLine($"{pad}  <img class=\"chainHint\" src=\"img/ui/key_x.gif\">");
+
+        sb.AppendLine();
+        sb.AppendLine($"{pad}  <!-- Info -->");
+
+        RenderCard(sb, sourcePage, node, indent + 2, isPartOfChain);
+
+        sb.AppendLine($"{pad}</div>");
+        sb.AppendLine($"{pad}<!-------------------->");
+        sb.AppendLine();
+    }
+
+    private void RenderCard(StringBuilder sb, Page sourcePage, Node node, int indent, bool partOfChain)
+    {
+        var pad = new string(' ', indent);
+        var card = node.Card;
+        var modalAttr = card.Size == CardSize.Modal ? " data-modal=\"true\"" : "";
+
+        sb.AppendLine($"{pad}<div class=\"floatInfo\"{modalAttr} style=\"{BuildCardStyle(card)}\">");
+
+        if (!string.IsNullOrEmpty(card.CoverImagePath))
+            sb.AppendLine($"{pad}  <img class=\"songCover\" src=\"{EscapeAttr(ResolveAsset(card.CoverImagePath))}\">");
+
+        if (card.Audio is not null)
+        {
+            // Modal cards intercept Z entirely for closing (see main.js's modalQueue) - their
+            // songPlayer, if any, is never reachable via Z, only its own <audio controls>, so the
+            // key hint would be actively misleading there. Every other card's Z toggles this
+            // audio - see onInteract's own audio-first precedence, which RenderAction's own hint
+            // (below) mirrors from the other side.
+            //
+            // The hint sits to the *left* of the player, in a small wrapper rather than
+            // songPlayer's own position:relative offset - the player is already 250px wide (right
+            // at a Standard card's own content width), so there's no room to its left within the
+            // card itself; the wrapper just lets the pair overflow the card's left/right edge
+            // together rather than the hint having nowhere to go and wrapping onto its own line.
+            if (card.Size != CardSize.Modal)
+            {
+                sb.AppendLine($"{pad}  <div class=\"songPlayerRow\">");
+                sb.AppendLine($"{pad}    <img class=\"keyHint\" src=\"img/ui/key_z.gif\">");
+                sb.AppendLine($"{pad}    <audio class=\"songPlayer\" controls src=\"{EscapeAttr(card.Audio.Url)}\"></audio>");
+                sb.AppendLine($"{pad}  </div>");
+            }
+            else
+            {
+                sb.AppendLine($"{pad}  <audio class=\"songPlayer\" controls src=\"{EscapeAttr(card.Audio.Url)}\"></audio>");
+            }
+        }
+
+        sb.AppendLine($"{pad}  <!-- Text -->");
+
+        var headingOffset = card.HeadingOffset ?? (card.Size == CardSize.Hub ? new Offset { Top = 10, Left = 150 } : null);
+        var headingStyle = headingOffset is not null
+            ? $" style=\"left: {Px(headingOffset.Left)}px; top: {Px(headingOffset.Top)}px;\""
+            : "";
+        sb.AppendLine($"{pad}  <h3{headingStyle}>{EscapeText(card.HeadingText)}</h3>");
+        sb.AppendLine();
+
+        var poetryOffset = card.PoetryOffset ?? (card.Size == CardSize.Hub ? new Offset { Top = 20, Left = 175 } : null);
+        var poetryStyle = poetryOffset is not null
+            ? $" style=\"left: {Px(poetryOffset.Left)}px; top: {Px(poetryOffset.Top)}px;\""
+            : "";
+        sb.AppendLine($"{pad}  <div class=\"poetry-text\"{poetryStyle}>");
+
+        foreach (var line in card.PoetryLines)
+            sb.AppendLine($"{pad}    <div class=\"poetry-line\">{RenderPoetryLine(line)}</div>");
+
+        RenderAction(sb, sourcePage, card, pad);
+
+        // A modal's defining interaction - Z/gamepad A closes it (see main.js's modalQueue) -
+        // is independent of whatever Card.Action is separately configured (typically None, same
+        // as the original tutorial card), so it's rendered here rather than as another
+        // RenderAction case. The click handler lives in main.js, bound to this class.
+        if (card.Size == CardSize.Modal)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"{pad}    <!-- Close -->");
+            sb.AppendLine($"{pad}    <div class=\"poetry-close\">");
+            sb.AppendLine($"{pad}      <span class=\"modal-close-action\">[ Close ]</span><img class=\"keyHint\" src=\"img/ui/key_z.gif\">");
+            sb.AppendLine($"{pad}    </div>");
+        }
+
+        sb.AppendLine($"{pad}  </div>");
+
+        foreach (var panel in card.ExtraPanels)
+            RenderStaticPanel(sb, panel, indent);
+
+        foreach (var child in node.Children)
+            RenderNode(sb, sourcePage, child, indent, partOfChain);
+
+        // Closes the .floatInfo opened above. Deliberately emitted after any nested children
+        // (rather than right after the poetry-text div) so a childless node's card - the common
+        // case - is a properly self-closed, well-formed element: leaving it open here would let
+        // the *next sibling* .node get parsed as this card's descendant instead, compounding
+        // every subsequent top-level node's effective position. For a node that does have
+        // children this still nests them inside the still-open .floatInfo in the rendered DOM
+        // (matching the original hand-authored "parent-card-relative" nesting convention) -
+        // it's just expressed as an explicit, well-formed close instead of relying on the
+        // browser's unclosed-tag recovery to get there.
+        sb.AppendLine($"{pad}</div>");
+    }
+
+    private void RenderAction(StringBuilder sb, Page sourcePage, Card card, string pad)
+    {
+        switch (card.Action.Kind)
+        {
+            case ActionKind.Download:
+                sb.AppendLine();
+                sb.AppendLine($"{pad}    <!-- Download -->");
+                sb.AppendLine($"{pad}    <div class=\"poetry-download\">");
+                sb.AppendLine($"{pad}      <a href=\"{EscapeAttr(card.Action.Url ?? "")}\" target=\"_blank\" rel=\"noreferrer noopener\">[ Download ]</a>");
+                sb.AppendLine($"{pad}    </div>");
+                break;
+
+            case ActionKind.Travel:
+                var targetFileName = card.Action.TargetPageId is not null
+                    && _pageFileNamesById.TryGetValue(card.Action.TargetPageId, out var fileName)
+                        ? fileName
+                        : throw new InvalidOperationException(
+                            $"Travel action targets unknown page id '{card.Action.TargetPageId}'.");
+
+                sb.AppendLine();
+                sb.AppendLine($"{pad}    <!-- Travel -->");
+                sb.AppendLine($"{pad}    <div class=\"poetry-travel\">");
+                sb.Append($"{pad}      ");
+                // Z only reaches Travel when there's no songPlayer to toggle first - see
+                // onInteract's own audio-first precedence, which the songPlayer hint above
+                // mirrors from the other side.
+                if (card.Audio is null)
+                    sb.Append($"<img class=\"keyHint\" src=\"img/ui/key_z.gif\">");
+                sb.Append($"<a href=\"./{EscapeAttr(targetFileName)}{BuildTravelQuery(sourcePage, card.Action)}\">[ TRAVEL ]</a>");
+                sb.AppendLine();
+                sb.AppendLine($"{pad}    </div>");
+                break;
+
+            case ActionKind.None:
+            default:
+                break;
+        }
+    }
+
+    // TravelSpawnX/Y are an explicit override - when neither is set, the default depends on
+    // direction:
+    //
+    // - Leaving the hub (sourcePage is WeaveProject.HomePageId) for a planet: land in the middle
+    //   of that planet's own map. A planet's "return to the hub" node - the thing a reciprocal
+    //   lookup would otherwise find - sits whereever its own author put a return button, usually
+    //   a corner, which is a strange place to *arrive* even though it's exactly right to arrive
+    //   *at* the hub itself. worldWidth/HeightPx match what PageConfigScriptRenderer computes
+    //   for that same page, so this always agrees with the actual rendered map size.
+    // - Any other direction (most commonly a planet's own "return to the hub" link): defaults to
+    //   wherever the *return trip* would land - the position of whichever node on the target page
+    //   has its own Travel action pointing back at sourcePage. This is what makes "travel to a
+    //   planet, then travel back to the hub" land the ship right back near the hub icon it just
+    //   left, without needing every reciprocal pair of travel links hand-tuned to agree - a real,
+    //   previously-stale problem (a hub icon moving after its planet's own return link had its
+    //   spawn coordinates typed in by hand once) that a computed default can't get wrong the way
+    //   a copy-pasted constant can. Landing back on WeaveProject.HomePageId specifically nudges up
+    //   RECIPROCAL_HOME_LANDING_OFFSET_Y so the ship doesn't spawn sitting exactly on top of the
+    //   hub icon - every other reciprocal landing (a nested sub-location's own "back" link) still
+    //   lands exactly on the node, same as before.
+    private const double ReciprocalHomeLandingOffsetY = 50;
+
+    private string BuildTravelQuery(Page sourcePage, CardAction action)
+    {
+        var parts = new List<string>();
+
+        var x = action.TravelSpawnX;
+        var y = action.TravelSpawnY;
+
+        if (x is null || y is null)
+        {
+            var targetPage = action.TargetPageId is not null
+                ? _project.Pages.FirstOrDefault(p => p.Id == action.TargetPageId)
+                : null;
+
+            if (targetPage is not null && _project.HomePageId is not null && sourcePage.Id == _project.HomePageId)
+            {
+                x = (targetPage.WorldWidthPx ?? _project.DefaultWorldWidthPx) / 2.0;
+                y = (targetPage.WorldHeightPx ?? _project.DefaultWorldHeightPx) / 2.0;
+            }
+            else
+            {
+                var reciprocal = FindReciprocalSpawnPoint(sourcePage, targetPage);
+                if (reciprocal is not null)
+                {
+                    x = reciprocal.Value.X;
+                    y = reciprocal.Value.Y;
+                    if (targetPage is not null && targetPage.Id == _project.HomePageId)
+                        y -= ReciprocalHomeLandingOffsetY;
+                }
+            }
+        }
+
+        if (x is double xx && y is double yy)
+        {
+            parts.Add($"x={Px(xx)}");
+            parts.Add($"y={Px(yy)}");
+        }
+
+        if (action.TravelSkipTutorial)
+            parts.Add("tutorial=off");
+
+        return parts.Count == 0 ? "" : "?" + string.Join("&amp;", parts);
+    }
+
+    // The one node on targetPage whose own Travel action points back at sourcePage - null if
+    // there's no such node, or (deliberately, to avoid guessing wrong) more than one.
+    private static (double X, double Y)? FindReciprocalSpawnPoint(Page sourcePage, Page? targetPage)
+    {
+        if (targetPage is null) return null;
+
+        var matches = new List<Node>();
+
+        void Walk(IEnumerable<Node> nodes)
+        {
+            foreach (var n in nodes)
+            {
+                if (n.Card.Action.Kind == ActionKind.Travel && n.Card.Action.TargetPageId == sourcePage.Id)
+                    matches.Add(n);
+
+                Walk(n.Children);
+            }
+        }
+
+        Walk(targetPage.Nodes);
+
+        return matches.Count == 1 ? (matches[0].X, matches[0].Y) : null;
+    }
+
+    private void RenderStaticPanel(StringBuilder sb, StaticTextBlock panel, int indent)
+    {
+        var pad = new string(' ', indent);
+
+        sb.AppendLine($"{pad}<!-- {SafeComment(panel.HeadingText)} -->");
+        sb.AppendLine($"{pad}<div class=\"floatInfo\" style=\"position: absolute; left: {Px(panel.Offset.Left)}px; top: {Px(panel.Offset.Top)}px;\">");
+        sb.AppendLine($"{pad}  <h3>{EscapeText(panel.HeadingText)}</h3>");
+        sb.AppendLine($"{pad}  <div class=\"poetry-text\">");
+
+        foreach (var line in panel.Lines)
+            sb.AppendLine($"{pad}    <div class=\"poetry-line\">{RenderPoetryLine(line)}</div>");
+
+        sb.AppendLine($"{pad}  </div>");
+        sb.AppendLine($"{pad}</div>");
+    }
+
+    // Modal is handled as a complete, separate style string (rather than a case in the switch
+    // below) because it needs top/left to mean "50%, centered via transform" - the switch's
+    // common tail always appends Card.Offset-derived top/left *after* the switch, which would
+    // silently win (later declarations override earlier ones in the same inline style attribute)
+    // and re-break centering if Modal tried to set top/left inside the switch instead.
+    private static string BuildCardStyle(Card card)
+    {
+        if (card.Size == CardSize.Modal)
+        {
+            // height:auto (sizing to content) was tried here and reverted: it doesn't work for
+            // this card's real shape. An ExtraPanel (e.g. the tutorial's own "Updates:" column -
+            // see RenderStaticPanel) is deliberately position:absolute so it can sit in its own
+            // spot beside the main poetry-text column - but per the CSS spec, an absolutely
+            // positioned descendant never contributes to an auto-height ancestor's own size. The
+            // result was a box that shrank to fit only the in-flow column while the absolutely
+            // positioned one hung out past it, unclipped - worse than what this replaced.
+            // 560px is generous enough for a typical tutorial+updates card without needing
+            // CustomHeightPx set by hand; overflow-y:auto is the safety net for anything longer
+            // (or for whatever explicit CustomHeightPx someone sets instead).
+            var modalParts = new List<string>
+            {
+                $"width: {card.CustomWidthPx ?? 520}px",
+                $"height: {card.CustomHeightPx ?? 560}px",
+                "overflow-y: auto",
+                "position: fixed",
+                "top: 50%",
+                "left: 50%",
+                "transform: translate(-50%, -50%)",
+                "display:none",
+            };
+            return string.Join("; ", modalParts);
+        }
+
+        var parts = new List<string>();
+
+        switch (card.Size)
+        {
+            case CardSize.Hub:
+                parts.Add("width: 512px");
+                parts.Add("height: 460px");
+                parts.Add("position: absolute");
+                break;
+
+            case CardSize.Custom:
+                if (card.CustomWidthPx is int w) parts.Add($"width: {w}px");
+                if (card.CustomHeightPx is int h) parts.Add($"height: {h}px");
+                parts.Add("position: absolute");
+                break;
+
+            case CardSize.Standard:
+            default:
+                parts.Add("position: relative");
+                break;
+        }
+
+        parts.Add($"top: {Px(card.Offset.Top)}px");
+        parts.Add($"left: {Px(card.Offset.Left)}px");
+        parts.Add("display:none");
+
+        return string.Join("; ", parts);
+    }
+
+    // **bold** -> <b>bold</b>. Everything else - including intentional literal &nbsp; and
+    // <a href>...</a> links - passes through verbatim; see Card.PoetryLines' safe-markup note.
+    private static string RenderPoetryLine(string line) => BoldPattern.Replace(line, "<b>$1</b>");
+
+    private static string Px(double value) =>
+        value == Math.Floor(value)
+            ? ((long)value).ToString(CultureInfo.InvariantCulture)
+            : value.ToString("0.###", CultureInfo.InvariantCulture);
+
+    private static string EscapeText(string value) => WebUtility.HtmlEncode(value);
+
+    private static string EscapeAttr(string value) => WebUtility.HtmlEncode(value);
+
+    // HTML comments aren't a security boundary, but a stray "-->" in a heading would break
+    // the surrounding markup, so it's neutralized rather than escaped.
+    private static string SafeComment(string value) => value.Replace("-->", "- >");
+}

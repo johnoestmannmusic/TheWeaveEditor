@@ -1,0 +1,2761 @@
+{
+  "SchemaVersion": 1,
+  "Title": "The Weave",
+  "DefaultWorldWidthPx": 3010,
+  "DefaultWorldHeightPx": 1696,
+  "Assets": {
+    "CssPath": "css/main.css",
+    "JsPath": "jsx/main.js",
+    "ImgRoot": "img",
+    "FntRoot": "fnt",
+    "MusRoot": "mus",
+    "ShellJsPath": "jsx/shell.js"
+  },
+  "ExportPath": "/home/john/Desktop/00_Projects/00_John Oestmann/00_JOM-Common/TWE",
+  "Groups": [],
+  "Pages": [
+    {
+      "Id": "antarcticus",
+      "Title": "Antarcticus - The Weave Explorer",
+      "OutputFileName": "antarcticus.html",
+      "GroupId": null,
+      "WorldWidthPx": null,
+      "WorldHeightPx": null,
+      "Wraps": true,
+      "GlobeEffect": true,
+      "DefaultSpawnX": null,
+      "DefaultSpawnY": null,
+      "Background": {
+        "ImagePath": "img/ouros/ouros.png"
+      },
+      "SecondaryBackground": null,
+      "Nodes": [
+        {
+          "Id": "the-weave-sector-a",
+          "X": 50,
+          "Y": 50,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/the_weave/the_weave.png",
+            "Audio": null,
+            "HeadingText": "THE WEAVE [ Sector A ]",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Capital Star System",
+              "of the Greater Weave Galaxy",
+              "Twelve Planets",
+              "Twelve Biomes",
+              "Tales Spun by Loom"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "index",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        }
+      ],
+      "Effects": []
+    },
+    {
+      "Id": "ardune",
+      "Title": "Ardune - The Weave Explorer",
+      "OutputFileName": "ardune.html",
+      "GroupId": null,
+      "WorldWidthPx": null,
+      "WorldHeightPx": null,
+      "Wraps": true,
+      "GlobeEffect": true,
+      "DefaultSpawnX": null,
+      "DefaultSpawnY": null,
+      "Background": {
+        "ImagePath": "img/ouros/ouros.png"
+      },
+      "SecondaryBackground": null,
+      "Nodes": [
+        {
+          "Id": "the-weave-sector-a-2",
+          "X": 50,
+          "Y": 50,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/the_weave/the_weave.png",
+            "Audio": null,
+            "HeadingText": "THE WEAVE [ Sector A ]",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Capital Star System",
+              "of the Greater Weave Galaxy",
+              "Twelve Planets",
+              "Twelve Biomes",
+              "Tales Spun by Loom"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "index",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        }
+      ],
+      "Effects": []
+    },
+    {
+      "Id": "azurus",
+      "Title": "Azurus - The Weave Explorer",
+      "OutputFileName": "azurus.html",
+      "GroupId": null,
+      "WorldWidthPx": null,
+      "WorldHeightPx": null,
+      "Wraps": true,
+      "GlobeEffect": true,
+      "DefaultSpawnX": null,
+      "DefaultSpawnY": null,
+      "Background": {
+        "ImagePath": "img/azurus/azurus.png"
+      },
+      "SecondaryBackground": null,
+      "Nodes": [
+        {
+          "Id": "the-weave-sector-b",
+          "X": 50,
+          "Y": 50,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/the_weave/the_weave-2.png",
+            "Audio": null,
+            "HeadingText": "THE WEAVE [ Sector B ]",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Capital Star System",
+              "of the Greater Weave Galaxy",
+              "Twelve Planets",
+              "Twelve Biomes",
+              "Tales Spun by Loom"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "index",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "abandoned-genoti-lab",
+          "X": 1381,
+          "Y": 1193,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/azurus/abandoned-genoti-lab.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/06/abandoned-genoti-lab.ogg"
+            },
+            "HeadingText": "Abandoned Genoti Lab",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Hidden Deep",
+              "Beyond the Ocean Caves",
+              "Disconnected from Chain",
+              "Secret project of Genoti",
+              "Father and Son",
+              "Disappeared years ago",
+              "No one remembers",
+              "No one looks"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a729-abandoned-genoti-lab/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": [
+            {
+              "Id": "gamma-zone",
+              "X": -81,
+              "Y": 193,
+              "IconStyle": 0,
+              "Persistent": false,
+              "Card": {
+                "Size": 0,
+                "CustomWidthPx": null,
+                "CustomHeightPx": null,
+                "Offset": {
+                  "Top": -130,
+                  "Left": 80
+                },
+                "CoverImagePath": "img/azurus/gamma-zone.png",
+                "Audio": {
+                  "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/06/genoti-lab-gamma-zone.ogg"
+                },
+                "HeadingText": "Gamma Zone",
+                "HeadingOffset": null,
+                "PoetryLines": [
+                  "Then, two souls remained:",
+                  "The Scientist and The Junior",
+                  "Spliced Strength of Mirrorfish",
+                  "Seize the Family",
+                  "Now, generators hum to sleep",
+                  "Hot lighting grows dim",
+                  "The Deceased and The Racer",
+                  "Hush now, desperate power"
+                ],
+                "PoetryOffset": null,
+                "Action": {
+                  "Kind": 1,
+                  "Url": "https://johnoestmannmusic.com/0x2a731-discovery_fragment/",
+                  "TargetPageId": null,
+                  "TravelSpawnX": null,
+                  "TravelSpawnY": null,
+                  "TravelSkipTutorial": false
+                },
+                "ExtraPanels": []
+              },
+              "Children": []
+            }
+          ]
+        },
+        {
+          "Id": "helix-seacaves",
+          "X": 2048,
+          "Y": 1495,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/azurus/helix-seacaves.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/06/helix-seacaves.ogg"
+            },
+            "HeadingText": "Helix Seacaves",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Turquoise titanium archhalls",
+              "Lamplit by Magenta Wildlight",
+              "Saphnese Research-Monks",
+              "Welded Azurus\u0027 First Lab",
+              "Studies in Seafauna",
+              "Welcomed of its own Accord",
+              "A Flourishing Nonviolence",
+              "Seed of the Biochain"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a730-helix-seacaves/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": [
+            {
+              "Id": "lumina-podsnake",
+              "X": -81,
+              "Y": 193,
+              "IconStyle": 0,
+              "Persistent": false,
+              "Card": {
+                "Size": 0,
+                "CustomWidthPx": null,
+                "CustomHeightPx": null,
+                "Offset": {
+                  "Top": -130,
+                  "Left": 80
+                },
+                "CoverImagePath": "img/racers/lumina-podsnake.png",
+                "Audio": {
+                  "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/06/helix-seacaves-2.ogg"
+                },
+                "HeadingText": "Lumina Podsnake",
+                "HeadingOffset": null,
+                "PoetryLines": [
+                  "**PILOT:**\u0026nbsp;ISHAK TAIL",
+                  "Second Brother, Helix Seacaves",
+                  "Helixite, nephew of Saphna",
+                  "Gentle Rival of Dazzling Mirrorman",
+                  "**RACER:**\u0026nbsp;LUMINA PODSNAKE",
+                  "Deeply modified Research Pod",
+                  "Twisting Serpent with Custom Fins",
+                  "Deep-sea Lights and Electric Yellowspine"
+                ],
+                "PoetryOffset": null,
+                "Action": {
+                  "Kind": 1,
+                  "Url": "https://johnoestmannmusic.com/0x2a730-ii-helix-seacaves-page-2/",
+                  "TargetPageId": null,
+                  "TravelSpawnX": null,
+                  "TravelSpawnY": null,
+                  "TravelSkipTutorial": false
+                },
+                "ExtraPanels": []
+              },
+              "Children": []
+            }
+          ]
+        },
+        {
+          "Id": "azurus-biochain-lab-aleph",
+          "X": 1007,
+          "Y": 1020,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/azurus/azurus-biochain.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/06/azurus-biochain.ogg"
+            },
+            "HeadingText": "Azurus Biochain - Lab Aleph",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Tailend of Research Biochain",
+              "Each lab-node, its own specialty",
+              "Knowledge network in Triangular Trade",
+              "A Symbiotic Interdependence",
+              "Seafields of Fluorescent Forests",
+              "Surrounding Metallic Archiforms",
+              "Fishswarms of Technicolour Beauty",
+              "Guideline Subwater Racers"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a74d-azurus-biochain/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "uda-azurus",
+          "X": 926,
+          "Y": 390,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/azurus/uda-azurus.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/06/uda-azurus.ogg"
+            },
+            "HeadingText": "UDA Azurus",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "3 cargo containers fused",
+              "United Defense Alliance inside",
+              "Wallracks of Sonicwave Rifles",
+              "Barrier Spikes and other Disarmers",
+              "Post-Hermus-Treaty,",
+              "Citizens reject most Force",
+              "But UDA\u0027s strict defensive approach",
+              "Sits well in Biochain protection"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a735-uda-azurus/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        }
+      ],
+      "Effects": []
+    },
+    {
+      "Id": "gardenia",
+      "Title": "Gardenia - The Weave Explorer",
+      "OutputFileName": "gardenia.html",
+      "GroupId": null,
+      "WorldWidthPx": null,
+      "WorldHeightPx": null,
+      "Wraps": true,
+      "GlobeEffect": true,
+      "DefaultSpawnX": null,
+      "DefaultSpawnY": null,
+      "Background": {
+        "ImagePath": "img/gardenia/gardenia.png"
+      },
+      "SecondaryBackground": null,
+      "Nodes": [
+        {
+          "Id": "the-weave-sector-a-3",
+          "X": 50,
+          "Y": 50,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/the_weave/the_weave.png",
+            "Audio": null,
+            "HeadingText": "THE WEAVE [ Sector A ]",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Capital Star System",
+              "of the Greater Weave Galaxy",
+              "Twelve Planets",
+              "Twelve Biomes",
+              "Tales Spun by Loom"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "index",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        }
+      ],
+      "Effects": []
+    },
+    {
+      "Id": "hermus",
+      "Title": "Hermus - The Weave Explorer",
+      "OutputFileName": "hermus.html",
+      "GroupId": null,
+      "WorldWidthPx": null,
+      "WorldHeightPx": null,
+      "Wraps": true,
+      "GlobeEffect": true,
+      "DefaultSpawnX": null,
+      "DefaultSpawnY": null,
+      "Background": {
+        "ImagePath": "img/ouros/ouros.png"
+      },
+      "SecondaryBackground": null,
+      "Nodes": [
+        {
+          "Id": "the-weave-sector-a-4",
+          "X": 50,
+          "Y": 50,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/the_weave/the_weave.png",
+            "Audio": null,
+            "HeadingText": "THE WEAVE [ Sector A ]",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Capital Star System",
+              "of the Greater Weave Galaxy",
+              "Twelve Planets",
+              "Twelve Biomes",
+              "Tales Spun by Loom"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "index",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        }
+      ],
+      "Effects": []
+    },
+    {
+      "Id": "index",
+      "Title": "The Weave Explorer",
+      "OutputFileName": "index.html",
+      "GroupId": null,
+      "WorldWidthPx": 6020,
+      "WorldHeightPx": 1696,
+      "Wraps": false,
+      "GlobeEffect": false,
+      "DefaultSpawnX": 4262,
+      "DefaultSpawnY": 601,
+      "Background": {
+        "ImagePath": "img/the_weave/the_weave-merged.png"
+      },
+      "SecondaryBackground": null,
+      "Nodes": [
+        {
+          "Id": "azurus",
+          "X": 1101,
+          "Y": 350,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/azurus/azurus.png",
+            "Audio": null,
+            "HeadingText": "AZURUS",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Ocean Planet",
+              "Sprawling with Connected Research Labs",
+              "and Bioluminescent Life",
+              "Deep Knowledge and Deep Secrets",
+              "Roll along Oceanic Floor"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "azurus",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "pyron",
+          "X": 2452,
+          "Y": 349,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/pyron/pyron.png",
+            "Audio": null,
+            "HeadingText": "PYRON",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Infinite Forge of The Weave",
+              "Androids and Plate-Mod Humans",
+              "All identifying as Synthesite",
+              "Manufactured Spinning Magnet Core",
+              "Keeping the planet Molten"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "pyron",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "1000-shrines-of-spirit",
+          "X": 355,
+          "Y": 1252,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/shrine-layers/0001/0001-map.png",
+            "Audio": null,
+            "HeadingText": "1000 - shrines - /of/ - SPIRIT",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Mysterious Tear in Fabric",
+              "Opens to the Substrate",
+              "Infinitely Complex and Connected",
+              "\u0026nbsp;",
+              "What does this all mean?"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "shrines-layer-0001",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "tutorialnode",
+          "X": 3060,
+          "Y": 50,
+          "IconStyle": 0,
+          "Persistent": true,
+          "Card": {
+            "Size": 3,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/pyron/dust-refinery.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/05/magma-refinery-2.ogg"
+            },
+            "HeadingText": "THE WEAVE EXPLORER - Tutorial",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "1. Arrow Keys, \u0022Z\u0022, and \u0022X\u0022 keys",
+              "2. This site will be continously updated",
+              "3. Have fun exploring The Weave!",
+              "\u0026nbsp;",
+              "**Credits:**",
+              "By\u0026nbsp;\u003Ca href=\u0022https://johnoestmannmusic.com\u0022 target=\u0022_blank\u0022 rel=\u0022noreferrer noopener\u0022\u003EJohn Oestmann\u003C/a\u003E",
+              "See the \u0026nbsp;\u003Ca href=\u0022aadd.md\u0022 target=\u0022_blank\u0022 rel=\u0022noreferrer noopener\u0022\u003EAI-Assisted Development Disclosure\u003C/a\u003E"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 0,
+              "Url": null,
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": [
+              {
+                "HeadingText": "Updates:",
+                "Lines": [
+                  "[28AUG26] Ship-Controlling Overhaul, many other updates!",
+                  "\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;",
+                  "[17JUL26] 2 locations added to the mysterious portal..",
+                  "\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;",
+                  "[11JUL26] A  mysterious portal opened in    Sector B!",
+                  "\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;",
+                  "[08JUL26] 7 more locations added to Ouros",
+                  "\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;",
+                  "[07JUL26] Ouros is now open:",
+                  "\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;A mysterious radio signal discovered, revealing 2 locations..",
+                  "\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;",
+                  "\u003Ca href=\u0022updatelog.txt\u0022 target=\u0022_blank\u0022 rel=\u0022noreferrer noopener\u0022\u003EFull update history..\u003C/a\u003E"
+                ],
+                "Offset": {
+                  "Top": 0,
+                  "Left": 260
+                }
+              }
+            ]
+          },
+          "Children": []
+        },
+        {
+          "Id": "ouros",
+          "X": 3663,
+          "Y": 351,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/ouros/ouros.png",
+            "Audio": null,
+            "HeadingText": "OUROS",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Grand Desertscape",
+              "Land of Spiritual Caravaneers",
+              "Watched over by the Sandwalkers",
+              "Eleven months of Peace and Oases",
+              "Year\u0027s End of Sandstorms Shredding"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "ouros",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "pentura",
+          "X": 4262,
+          "Y": 501,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/pentura/pentura.png",
+            "Audio": null,
+            "HeadingText": "PENTURA",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Capital Planet of The Weave",
+              "HQ of Interstellar Peace Federation",
+              "Pentura City to the north",
+              "Dunam to the south-east",
+              "Eliope to the west"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "pentura",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "sigmir",
+          "X": 5012,
+          "Y": 651,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/sigmir/sigmir.png",
+            "Audio": null,
+            "HeadingText": "SIGMIR",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Elanyr\u0027s Cradle",
+              "Of Cyclic Lightning and Cloudsea Depths",
+              "Grandest Lighthouse, Religious Peak",
+              "Ancient Architecture and Ancient Peoples",
+              "Survive still, the Eternal Weathering"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "sigmir",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        }
+      ],
+      "Effects": []
+    },
+    {
+      "Id": "leviathan",
+      "Title": "Leviathan - The Weave Explorer",
+      "OutputFileName": "leviathan.html",
+      "GroupId": null,
+      "WorldWidthPx": null,
+      "WorldHeightPx": null,
+      "Wraps": true,
+      "GlobeEffect": true,
+      "DefaultSpawnX": null,
+      "DefaultSpawnY": null,
+      "Background": {
+        "ImagePath": "img/leviathan/leviathan.png"
+      },
+      "SecondaryBackground": null,
+      "Nodes": [
+        {
+          "Id": "open-windfields-race",
+          "X": 947,
+          "Y": 586,
+          "IconStyle": 1,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/ouros/cover.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/windfields-of-leviathan.ogg"
+            },
+            "HeadingText": "Open Windfields Race",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Winds of Leviathan XXI - Race 01",
+              "Keep Peace across The Weave",
+              "Interstellar Racer Federation",
+              "Built this Outpost in Such",
+              "Races thread through the Natural",
+              "The Traditionally Kept",
+              "IRF Outposts such as these",
+              "Monitor, Protect, and Welcome"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a74b-windfields-of-leviathan/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "the-weave-sector-a-5",
+          "X": 50,
+          "Y": 50,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/the_weave/the_weave.png",
+            "Audio": null,
+            "HeadingText": "THE WEAVE [ Sector A ]",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Capital Star System",
+              "of the Greater Weave Galaxy",
+              "Twelve Planets",
+              "Twelve Biomes",
+              "Tales Spun by Loom"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "index",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        }
+      ],
+      "Effects": []
+    },
+    {
+      "Id": "ouros",
+      "Title": "Ouros - The Weave Explorer",
+      "OutputFileName": "ouros.html",
+      "GroupId": null,
+      "WorldWidthPx": null,
+      "WorldHeightPx": null,
+      "Wraps": true,
+      "GlobeEffect": true,
+      "DefaultSpawnX": null,
+      "DefaultSpawnY": null,
+      "Background": {
+        "ImagePath": "img/ouros/ouros.png"
+      },
+      "SecondaryBackground": null,
+      "Nodes": [
+        {
+          "Id": "salanth-town-gardens",
+          "X": 173,
+          "Y": 158,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/ouros/salanth-gardens-1.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/salanth-town-gardens.ogg"
+            },
+            "HeadingText": "Salanth Town Gardens",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Sprawling Gardens",
+              "Of Salanth Town",
+              "Hydroponic Miracle",
+              "Born into Dry Northcliff Sands",
+              "Warm and Easy Sundays",
+              "That Smooth Day of Respite",
+              "Let Rejja\u0027s Plantful Tending",
+              "Tend to your own Spirit"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a72b-salanth-town-gardens/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": [
+            {
+              "Id": "jherop-phantom",
+              "X": -81,
+              "Y": 193,
+              "IconStyle": 0,
+              "Persistent": false,
+              "Card": {
+                "Size": 0,
+                "CustomWidthPx": null,
+                "CustomHeightPx": null,
+                "Offset": {
+                  "Top": -130,
+                  "Left": 80
+                },
+                "CoverImagePath": "img/racers/jherop-phantom.png",
+                "Audio": {
+                  "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/salanth-town-gardens-p2.ogg"
+                },
+                "HeadingText": "Jherop Phantom",
+                "HeadingOffset": null,
+                "PoetryLines": [
+                  "**PILOT:** REJJA",
+                  "Quiet and Polite",
+                  "Racer and Gardener in one",
+                  "Older than any do remember",
+                  "**RACER:** JHEROP PHANTOM",
+                  "Gifted Caravan of Sandwalker Zilst",
+                  "Custom Solar Sails and Turbines",
+                  "Stationary Core in Rotating Frame"
+                ],
+                "PoetryOffset": null,
+                "Action": {
+                  "Kind": 1,
+                  "Url": "https://johnoestmannmusic.com/0x2a72b-ii-salanth-town-gardens-page-2/",
+                  "TargetPageId": null,
+                  "TravelSpawnX": null,
+                  "TravelSpawnY": null,
+                  "TravelSkipTutorial": false
+                },
+                "ExtraPanels": []
+              },
+              "Children": [
+                {
+                  "Id": "the-gardener-s-funeral",
+                  "X": -81,
+                  "Y": 193,
+                  "IconStyle": 0,
+                  "Persistent": false,
+                  "Card": {
+                    "Size": 0,
+                    "CustomWidthPx": null,
+                    "CustomHeightPx": null,
+                    "Offset": {
+                      "Top": -130,
+                      "Left": 80
+                    },
+                    "CoverImagePath": "img/ouros/salanth-gardens-3.png",
+                    "Audio": {
+                      "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/salanth-town-gardens-p3.ogg"
+                    },
+                    "HeadingText": "The Gardener\u0027s Funeral",
+                    "HeadingOffset": null,
+                    "PoetryLines": [
+                      "Question the Tragedy of Rejja",
+                      "Who Raced True, Directly,",
+                      "Into Cliff-face of the Graveyard",
+                      "Question the Mistake of a Veteran",
+                      "Shivery Spectre of Zadra Unova",
+                      "Can\u0027t have been True",
+                      "Forget Rumours this Moment",
+                      "The Funeral Weeps Today"
+                    ],
+                    "PoetryOffset": null,
+                    "Action": {
+                      "Kind": 1,
+                      "Url": "https://johnoestmannmusic.com/0x2a72b-iii-salanth-town-gardens-page-3/",
+                      "TargetPageId": null,
+                      "TravelSpawnX": null,
+                      "TravelSpawnY": null,
+                      "TravelSkipTutorial": false
+                    },
+                    "ExtraPanels": []
+                  },
+                  "Children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "Id": "sylph-outpost",
+          "X": 524,
+          "Y": 1013,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/ouros/sylph-outpost.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/sylph-outpost.ogg"
+            },
+            "HeadingText": "Sylph Outpost",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Outskirts of The Vastness",
+              "Hidden Love built a Post",
+              "Ourosian Bird-watching",
+              "Rejja and Zadra did seek",
+              "Lightest memories",
+              "Foreshadowing the Darkdawn",
+              "Love The Caravan Builder",
+              "Love The Garden Racer"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a743-discovery_fragment/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "irf-outpost",
+          "X": 1674,
+          "Y": 1130,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/ouros/irf-outpost.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/irf-outpost.ogg"
+            },
+            "HeadingText": "IRF Outpost",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Wide Broadcasts of the Races",
+              "Keep Peace across The Weave",
+              "Interstellar Racer Federation",
+              "Built this Outpost in Such",
+              "Races thread through the Natural",
+              "The Traditionally Kept",
+              "IRF Outposts such as these",
+              "Monitor, Protect, and Welcome"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a72f-irf-outpost/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "shrine-of-zadra",
+          "X": 557,
+          "Y": 409,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/ouros/shrine-of-zadra-1.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/shrine-of-zadra.ogg"
+            },
+            "HeadingText": "Shrine of Zadra",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Here Rests Zadra Unova",
+              "One \u0022Old Master of Racing\u0022 of Five",
+              "Builder of Salanth",
+              "Friend to Zilst of Leviathan",
+              "Rejecting to Become",
+              "The next Sandwalker Reincarnate",
+              "Instead, choosing the Racing Life",
+              "Until Early Retirement Injuries"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a741-shrine-of-zadra/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": [
+            {
+              "Id": "double-eclipse",
+              "X": -81,
+              "Y": 193,
+              "IconStyle": 0,
+              "Persistent": false,
+              "Card": {
+                "Size": 0,
+                "CustomWidthPx": null,
+                "CustomHeightPx": null,
+                "Offset": {
+                  "Top": -130,
+                  "Left": 80
+                },
+                "CoverImagePath": "img/ouros/shrine-of-zadra-2.png",
+                "Audio": {
+                  "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/shrine-of-zadra-p2.ogg"
+                },
+                "HeadingText": "Double Eclipse",
+                "HeadingOffset": null,
+                "PoetryLines": [
+                  "During Ouros\u0027 Double Eclipse",
+                  "Perverted Ghost of Zadra",
+                  "Witnessed in Paleness",
+                  "By Fiilo of the Mephora\u0027s Eyes",
+                  "Redmoonlight race between",
+                  "Revealed Zadra, the Falsity",
+                  "Last Illusion of Rena",
+                  "Betraying the Sandwalkers\u0027 Arts"
+                ],
+                "PoetryOffset": null,
+                "Action": {
+                  "Kind": 1,
+                  "Url": "https://johnoestmannmusic.com/0x2a741-ii-shrine-of-zadra-page-2/",
+                  "TargetPageId": null,
+                  "TravelSpawnX": null,
+                  "TravelSpawnY": null,
+                  "TravelSkipTutorial": false
+                },
+                "ExtraPanels": []
+              },
+              "Children": []
+            }
+          ]
+        },
+        {
+          "Id": "radio-intercept-dendora",
+          "X": 2902,
+          "Y": 50,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/ouros/dendora.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/radio-intercept-dendora.ogg"
+            },
+            "HeadingText": "Radio Intercept (Dendora)",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Signal Intercepted",
+              "From Racer-Class Vehicle",
+              "Speeding across Dendora\u0027s Crust",
+              "The Stars are Watching Closely",
+              "Gambit of the Void Magister",
+              "Sanctuary\u0027s Shadowking",
+              "Challenge the Underdogs",
+              "Who shall take Death\u0027s Throne?"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a746-radio_intercept/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": [
+            {
+              "Id": "icarus-iii",
+              "X": -81,
+              "Y": 193,
+              "IconStyle": 0,
+              "Persistent": false,
+              "Card": {
+                "Size": 0,
+                "CustomWidthPx": null,
+                "CustomHeightPx": null,
+                "Offset": {
+                  "Top": -130,
+                  "Left": 80
+                },
+                "CoverImagePath": "img/ouros/icarus_iii.png",
+                "Audio": {
+                  "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/icarus-iii.ogg"
+                },
+                "HeadingText": "Icarus III",
+                "HeadingOffset": null,
+                "PoetryLines": [
+                  "Artificial Third Moon",
+                  "Lost Ark of Myra\u0027s Defense",
+                  "Invisible to Human Eye",
+                  "No landings recorded, officially",
+                  "Refracted Keycolour",
+                  "Kaleidoscoping across Stealthskin",
+                  "Hydraulic Memories",
+                  "Thrust Open to New Light"
+                ],
+                "PoetryOffset": null,
+                "Action": {
+                  "Kind": 1,
+                  "Url": "https://johnoestmannmusic.com/0x-icarus-iii/",
+                  "TargetPageId": null,
+                  "TravelSpawnX": null,
+                  "TravelSpawnY": null,
+                  "TravelSkipTutorial": false
+                },
+                "ExtraPanels": []
+              },
+              "Children": []
+            }
+          ]
+        },
+        {
+          "Id": "blacksand-beaches-race",
+          "X": 2765,
+          "Y": 1329,
+          "IconStyle": 1,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/ouros/cover.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/blacksand-beaches-race.ogg"
+            },
+            "HeadingText": "Blacksand Beaches Race",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Sands of Ouros XVI - Race 01",
+              "Keep Peace across The Weave",
+              "Interstellar Racer Federation",
+              "Built this Outpost in Such",
+              "Races thread through the Natural",
+              "The Traditionally Kept",
+              "IRF Outposts such as these",
+              "Monitor, Protect, and Welcome"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/rc-soo-xvi-1-blacksand-beaches-race/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "the-vastness-race",
+          "X": 991,
+          "Y": 1160,
+          "IconStyle": 1,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/ouros/cover.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/the-vastness-race.ogg"
+            },
+            "HeadingText": "The Vastness Race",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Sands of Ouros XVI - Race 02",
+              "Keep Peace across The Weave",
+              "Interstellar Racer Federation",
+              "Built this Outpost in Such",
+              "Races thread through the Natural",
+              "The Traditionally Kept",
+              "IRF Outposts such as these",
+              "Monitor, Protect, and Welcome"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/rc-soo-xvi-2-the-vastness-race/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "whitesands-night-race",
+          "X": 398,
+          "Y": 260,
+          "IconStyle": 1,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/ouros/cover.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/whitesands-night-race.ogg"
+            },
+            "HeadingText": "Whitesands Night Race",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Sands of Ouros XVI - Race 03",
+              "Keep Peace across The Weave",
+              "Interstellar Racer Federation",
+              "Built this Outpost in Such",
+              "Races thread through the Natural",
+              "The Traditionally Kept",
+              "IRF Outposts such as these",
+              "Monitor, Protect, and Welcome"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/rc-soo-xvi-3-whitesands-night-race/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "graveyard-of-ships-race",
+          "X": 1288,
+          "Y": 707,
+          "IconStyle": 1,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/ouros/cover.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/graveyard-of-ships-race.ogg"
+            },
+            "HeadingText": "Graveyard of Ships Race",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Sands of Ouros XVI - Race 04",
+              "Keep Peace across The Weave",
+              "Interstellar Racer Federation",
+              "Built this Outpost in Such",
+              "Races thread through the Natural",
+              "The Traditionally Kept",
+              "IRF Outposts such as these",
+              "Monitor, Protect, and Welcome"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/rc-soo-xvi-4-graveyard-of-ships-race/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "sandwalker-crater-race",
+          "X": 805,
+          "Y": 354,
+          "IconStyle": 1,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/ouros/cover.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/sandwalker-crater-race.ogg"
+            },
+            "HeadingText": "Sandwalker Crater Race",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Sands of Ouros XVI - Race 05",
+              "Keep Peace across The Weave",
+              "Interstellar Racer Federation",
+              "Built this Outpost in Such",
+              "Races thread through the Natural",
+              "The Traditionally Kept",
+              "IRF Outposts such as these",
+              "Monitor, Protect, and Welcome"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/rc-soo-xvi-5-sandwalker-crater-race/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "botanic-fields-race",
+          "X": 2499,
+          "Y": 834,
+          "IconStyle": 1,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/ouros/cover.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/botanic-fields-race.ogg"
+            },
+            "HeadingText": "Botanic Fields Race",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Sands of Ouros XVI - Race 06",
+              "Keep Peace across The Weave",
+              "Interstellar Racer Federation",
+              "Built this Outpost in Such",
+              "Races thread through the Natural",
+              "The Traditionally Kept",
+              "IRF Outposts such as these",
+              "Monitor, Protect, and Welcome"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/rc-soo-xvi-6-botanic-fields-race/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "the-weave-sector-a-6",
+          "X": 50,
+          "Y": 50,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/the_weave/the_weave.png",
+            "Audio": null,
+            "HeadingText": "THE WEAVE [ Sector A ]",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Capital Star System",
+              "of the Greater Weave Galaxy",
+              "Twelve Planets",
+              "Twelve Biomes",
+              "Tales Spun by Loom"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "index",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": true
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        }
+      ],
+      "Effects": []
+    },
+    {
+      "Id": "pentura",
+      "Title": "Pentura - The Weave Explorer",
+      "OutputFileName": "pentura.html",
+      "GroupId": null,
+      "WorldWidthPx": null,
+      "WorldHeightPx": null,
+      "Wraps": true,
+      "GlobeEffect": true,
+      "DefaultSpawnX": null,
+      "DefaultSpawnY": null,
+      "Background": {
+        "ImagePath": "img/pentura/pentura.png"
+      },
+      "SecondaryBackground": null,
+      "Nodes": [
+        {
+          "Id": "the-weave-sector-a-7",
+          "X": 50,
+          "Y": 50,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/the_weave/the_weave.png",
+            "Audio": null,
+            "HeadingText": "THE WEAVE [ Sector A ]",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Capital Star System",
+              "of the Greater Weave Galaxy",
+              "Twelve Planets",
+              "Twelve Biomes",
+              "Tales Spun by Loom"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "index",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "wooden-castle",
+          "X": 2357,
+          "Y": 1568,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/pentura/wooden-castle.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/05/Wooden-Castle.ogg"
+            },
+            "HeadingText": "Wooden Castle",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Castle of Wood",
+              "Neighbouring bluemoss swamplands",
+              "Design of Danesh",
+              "Framing Skywards of Mystery",
+              "Tourist Flow sweeps through",
+              "Restful sadness, liminally Outside",
+              "Whispers of thine own Heart,",
+              "Audible only here"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a73d-discovery_fragment/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "dunam-sunset-towers",
+          "X": 2268,
+          "Y": 1118,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/pentura/dunam-sunset-towers.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/05/Dunam-Sunset-Towers.ogg"
+            },
+            "HeadingText": "Dunam Sunset Towers",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Solace and Spirit",
+              "Twins in the setting sunbeams",
+              "You\u0027ll find me here",
+              "You know, always",
+              "High above my mistakes",
+              "The tried-so-hards",
+              "Cranes and Sketched Towers don\u0027t care",
+              "I\u0027m simply here, recovering vitality"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a72a-dunam-sunset-towers/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "clockwork-lighthouse",
+          "X": 836,
+          "Y": 1307,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/pentura/clockwork-lighthouse.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/05/clockwork-lighthouse.ogg"
+            },
+            "HeadingText": "Clockwork Lighthouse",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Time heeds none but me",
+              "Spiralling through Clockwork Fantasy",
+              "Keeper, Keeper, give me your cane",
+              "I want to be the same",
+              "Tinker away at your gears",
+              "I\u0027ll watch the shoreline near",
+              "Keeper, Keeper, what\u0027s your name?",
+              "I just want to be the same"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a734-discovery_fragment/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "gestalt-canals",
+          "X": 1403,
+          "Y": 160,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/pentura/gestalt-canals.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/05/gestalt-canals.ogg"
+            },
+            "HeadingText": "Gestalt Canals",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Customcraft Tunnelgrounds",
+              "Network Dynamics",
+              "Grandiosity Subterranean",
+              "A Pipeline Orchestrata",
+              "Steamvent Fugue",
+              "Industry and Blueprint",
+              "Racerpart Prototypes allegedly",
+              "through the Substreet Vaulthaven"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a73b-gestalt-canals/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "glass-wall-gallery-lobby",
+          "X": 1198,
+          "Y": 295,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/pentura/glass-wall-gallery.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/05/glass-wall-gallery-lobby.ogg"
+            },
+            "HeadingText": "Glass Wall Gallery - Lobby",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Inconsequential, until mid-afternoon sun",
+              "Light Refracted just right",
+              "Stoneware seethrough facades",
+              "Chamber opens of Glass Ventricles",
+              "Sit thoughtful in quaint lobby",
+              "Fifty-person space filled by three",
+              "Air of a different taste than the outside",
+              "Tiny World of empowered Sketchpad Design"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/glass-wall-gallery-lobby/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": [
+            {
+              "Id": "glass-wall-gallery-floor-i",
+              "X": -81,
+              "Y": 193,
+              "IconStyle": 0,
+              "Persistent": false,
+              "Card": {
+                "Size": 0,
+                "CustomWidthPx": null,
+                "CustomHeightPx": null,
+                "Offset": {
+                  "Top": -130,
+                  "Left": 80
+                },
+                "CoverImagePath": "img/pentura/glass-wall-gallery-2.png",
+                "Audio": {
+                  "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/05/Glass-Wall-Gallery-Floor-I.ogg"
+                },
+                "HeadingText": "Glass Wall Gallery - Floor I",
+                "HeadingOffset": null,
+                "PoetryLines": [
+                  "A room full of just myself",
+                  "Translucent blue User Interfaces",
+                  "Slide shyly in front of walls",
+                  "Datapoints on a world so far away",
+                  "The Glass here is more Glassy",
+                  "Echoes of Heart and Mind",
+                  "Slightest ache of Resonance",
+                  "Didn\u0027t even notice I could see the outside"
+                ],
+                "PoetryOffset": null,
+                "Action": {
+                  "Kind": 1,
+                  "Url": "https://johnoestmannmusic.com/glass-wall-gallery-floor-i/",
+                  "TargetPageId": null,
+                  "TravelSpawnX": null,
+                  "TravelSpawnY": null,
+                  "TravelSkipTutorial": false
+                },
+                "ExtraPanels": []
+              },
+              "Children": [
+                {
+                  "Id": "glass-wall-gallery-floor-ii",
+                  "X": -81,
+                  "Y": 193,
+                  "IconStyle": 0,
+                  "Persistent": false,
+                  "Card": {
+                    "Size": 0,
+                    "CustomWidthPx": null,
+                    "CustomHeightPx": null,
+                    "Offset": {
+                      "Top": -130,
+                      "Left": 80
+                    },
+                    "CoverImagePath": "img/pentura/glass-wall-gallery-3.png",
+                    "Audio": {
+                      "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/05/Glass-Wall-Gallery-Floor-II.ogg"
+                    },
+                    "HeadingText": "Glass Wall Gallery - Floor II",
+                    "HeadingOffset": null,
+                    "PoetryLines": [
+                      "Hum of Resonance",
+                      "So strong",
+                      "Airtight zenframe",
+                      "Subroutines of i_dont_know_what",
+                      "Golden Flakes reminding of Heaven",
+                      "Where Heavens leak via Immanence",
+                      "All the Mundane, sprouts All the Sacred",
+                      "Compressure Now Too Strong in This Space!"
+                    ],
+                    "PoetryOffset": null,
+                    "Action": {
+                      "Kind": 1,
+                      "Url": "https://johnoestmannmusic.com/glass-wall-gallery-floor-ii/",
+                      "TargetPageId": null,
+                      "TravelSpawnX": null,
+                      "TravelSpawnY": null,
+                      "TravelSkipTutorial": false
+                    },
+                    "ExtraPanels": []
+                  },
+                  "Children": [
+                    {
+                      "Id": "shattered-glass-gallery",
+                      "X": -81,
+                      "Y": 193,
+                      "IconStyle": 0,
+                      "Persistent": false,
+                      "Card": {
+                        "Size": 0,
+                        "CustomWidthPx": null,
+                        "CustomHeightPx": null,
+                        "Offset": {
+                          "Top": -130,
+                          "Left": 80
+                        },
+                        "CoverImagePath": "img/pentura/glass-wall-gallery-4.png",
+                        "Audio": {
+                          "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/05/shattered-glass-gallery.ogg"
+                        },
+                        "HeadingText": "Shattered Glass Gallery",
+                        "HeadingOffset": null,
+                        "PoetryLines": [
+                          "Shattered Spacetime",
+                          "Mindgates Flood",
+                          "Fabric Unreveal",
+                          "Chimes of Shardfall",
+                          "Harmonic Paralysis",
+                          "Single Dream into Ten Thousand",
+                          "Strap my Hands powertight",
+                          "Back to Pentura, Anew"
+                        ],
+                        "PoetryOffset": null,
+                        "Action": {
+                          "Kind": 1,
+                          "Url": "https://johnoestmannmusic.com/shattered-glass-gallery-floor-ii/",
+                          "TargetPageId": null,
+                          "TravelSpawnX": null,
+                          "TravelSpawnY": null,
+                          "TravelSkipTutorial": false
+                        },
+                        "ExtraPanels": []
+                      },
+                      "Children": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "Id": "mountain-town-of-urnh",
+          "X": 305,
+          "Y": 1564,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/pentura/mountain-town-urnh.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/05/mountain-town-of-urnh.ogg"
+            },
+            "HeadingText": "Mountain Town of Urnh",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Nestled in a tiny mountain town",
+              "Watching over South-West Seas",
+              "The first Penturans, Urnh as home",
+              "Cultivating Heritage",
+              "Ushirna Music:",
+              "Enormous harps struck by forked mallets",
+              "Wordless Songs of Gratitude",
+              "performed by three players as One"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a739-mountain-town-of-urnh/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        }
+      ],
+      "Effects": []
+    },
+    {
+      "Id": "pyron",
+      "Title": "Pyron - The Weave Explorer",
+      "OutputFileName": "pyron.html",
+      "GroupId": null,
+      "WorldWidthPx": null,
+      "WorldHeightPx": null,
+      "Wraps": true,
+      "GlobeEffect": true,
+      "DefaultSpawnX": null,
+      "DefaultSpawnY": null,
+      "Background": {
+        "ImagePath": "img/pyron/pyron.png"
+      },
+      "SecondaryBackground": null,
+      "Nodes": [
+        {
+          "Id": "the-weave-sector-b-3",
+          "X": 50,
+          "Y": 50,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/the_weave/the_weave-2.png",
+            "Audio": null,
+            "HeadingText": "THE WEAVE [ Sector B ]",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Capital Star System",
+              "of the Greater Weave Galaxy",
+              "Twelve Planets",
+              "Twelve Biomes",
+              "Tales Spun by Loom"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "index",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "magma-refinery",
+          "X": 1765,
+          "Y": 348,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/pyron/magma-refinery.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/06/magma-refinery.ogg"
+            },
+            "HeadingText": "Magma Refinery",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Webs of Magma Refineries",
+              "Heat-proof Labourers",
+              "Plate-modded People",
+              "And Androids alike",
+              "Magma Conversion",
+              "Infinite Energy",
+              "Unlike the fate of Antarcticus",
+              "Keep Pyron Warm"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a742-magma-refinery/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": [
+            {
+              "Id": "dust-refinery",
+              "X": -81,
+              "Y": 193,
+              "IconStyle": 0,
+              "Persistent": false,
+              "Card": {
+                "Size": 0,
+                "CustomWidthPx": null,
+                "CustomHeightPx": null,
+                "Offset": {
+                  "Top": -130,
+                  "Left": 80
+                },
+                "CoverImagePath": "img/pyron/dust-refinery.png",
+                "Audio": {
+                  "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/05/magma-refinery-2.ogg"
+                },
+                "HeadingText": "Dust Refinery",
+                "HeadingOffset": null,
+                "PoetryLines": [
+                  "Glistening Dust",
+                  "Magma Extract",
+                  "Invincible Alloy",
+                  "Modifications Forged",
+                  "All Pyronites",
+                  "Modded Synthesites",
+                  "Android or Human-born",
+                  "Identify as one"
+                ],
+                "PoetryOffset": null,
+                "Action": {
+                  "Kind": 1,
+                  "Url": "https://johnoestmannmusic.com/0x2a742-ii-magma-refinery-page-2/",
+                  "TargetPageId": null,
+                  "TravelSpawnX": null,
+                  "TravelSpawnY": null,
+                  "TravelSkipTutorial": false
+                },
+                "ExtraPanels": []
+              },
+              "Children": []
+            }
+          ]
+        }
+      ],
+      "Effects": []
+    },
+    {
+      "Id": "sanctuary",
+      "Title": "Sanctuary - The Weave Explorer",
+      "OutputFileName": "sanctuary.html",
+      "GroupId": null,
+      "WorldWidthPx": null,
+      "WorldHeightPx": null,
+      "Wraps": true,
+      "GlobeEffect": true,
+      "DefaultSpawnX": null,
+      "DefaultSpawnY": null,
+      "Background": {
+        "ImagePath": "img/ouros/ouros.png"
+      },
+      "SecondaryBackground": null,
+      "Nodes": [
+        {
+          "Id": "the-weave-sector-a-8",
+          "X": 50,
+          "Y": 50,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/the_weave/the_weave.png",
+            "Audio": null,
+            "HeadingText": "THE WEAVE [ Sector A ]",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Capital Star System",
+              "of the Greater Weave Galaxy",
+              "Twelve Planets",
+              "Twelve Biomes",
+              "Tales Spun by Loom"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "index",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        }
+      ],
+      "Effects": []
+    },
+    {
+      "Id": "saphna",
+      "Title": "Saphna - The Weave Explorer",
+      "OutputFileName": "saphna.html",
+      "GroupId": null,
+      "WorldWidthPx": null,
+      "WorldHeightPx": null,
+      "Wraps": true,
+      "GlobeEffect": true,
+      "DefaultSpawnX": null,
+      "DefaultSpawnY": null,
+      "Background": {
+        "ImagePath": "img/ouros/ouros.png"
+      },
+      "SecondaryBackground": null,
+      "Nodes": [
+        {
+          "Id": "the-weave-sector-a-9",
+          "X": 50,
+          "Y": 50,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/the_weave/the_weave.png",
+            "Audio": null,
+            "HeadingText": "THE WEAVE [ Sector A ]",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Capital Star System",
+              "of the Greater Weave Galaxy",
+              "Twelve Planets",
+              "Twelve Biomes",
+              "Tales Spun by Loom"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "index",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        }
+      ],
+      "Effects": []
+    },
+    {
+      "Id": "shrines-layer-0001",
+      "Title": "shrines layer 0001 - 1000.shrines.of.SPIRIT",
+      "OutputFileName": "shrines-layer-0001.html",
+      "GroupId": null,
+      "WorldWidthPx": null,
+      "WorldHeightPx": null,
+      "Wraps": true,
+      "GlobeEffect": true,
+      "DefaultSpawnX": null,
+      "DefaultSpawnY": null,
+      "Background": {
+        "ImagePath": "img/shrine-layers/0001/0001-map.png"
+      },
+      "SecondaryBackground": {
+        "ImagePath": "img/shrine-layers/0001/0001-map-2.png"
+      },
+      "Nodes": [
+        {
+          "Id": "the-weave-sector-b-4",
+          "X": 50,
+          "Y": 50,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/the_weave/the_weave-2.png",
+            "Audio": null,
+            "HeadingText": "THE WEAVE [ Sector B ]",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Capital Star System",
+              "of the Greater Weave Galaxy",
+              "Twelve Planets",
+              "Twelve Biomes",
+              "Tales Spun by Loom"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "index",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "shrinenode",
+          "X": 1480,
+          "Y": 729,
+          "IconStyle": 0,
+          "Persistent": true,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/shrine-layers/0001/0001.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/0001-SKYREST.ogg"
+            },
+            "HeadingText": "SKYREST",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "A Timeless Flower manifest",
+              "Show me the Bloom",
+              "The Universe\u0027s Second Breath",
+              "Rigid Lines give way to Peace",
+              "Connections Anew",
+              "Labyrinthine Hearts",
+              "I feel you warm-smiling",
+              "At the end of Our Street"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/futurejack-experimental-3-skyrest/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "shortterm-tapeloop",
+          "X": 2562,
+          "Y": 203,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/shrine-layers/0002/0002.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/0002-ShortTerm-TapeLoop.ogg"
+            },
+            "HeadingText": "ShortTerm TapeLoop",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Round and round..",
+              "A Golden Half-Moon."
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0002-shortterm-tapeloop/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "colourshards",
+          "X": 147,
+          "Y": 1160,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/shrine-layers/0001/cover-shards-small.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/SW-DIGICHIP-COLOURSHARD.ogg"
+            },
+            "HeadingText": "COLOURSHARDS",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "??"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/soundworlds-digichip-academy-colourshards-double-album-released/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        }
+      ],
+      "Effects": [
+        {
+          "$type": "crossfade",
+          "ImagePath": "img/shrine-layers/0001/0001-map-2.png",
+          "OpacityFrom": 0.82,
+          "OpacityTo": 0,
+          "DurationMs": 9500,
+          "Direction": "alternate",
+          "Easing": "ease-in-out",
+          "Id": "crossfade-bgmap2"
+        },
+        {
+          "$type": "drift",
+          "ImagePath": "img/shrine-layers/0001/flame.gif",
+          "X": 785,
+          "Y": 1154,
+          "BlendMode": "exclusion",
+          "DriftX": {
+            "FromPx": 0,
+            "ToPx": 1000,
+            "DurationMs": 5000,
+            "Direction": "alternate-reverse",
+            "Easing": "ease-in-out"
+          },
+          "DriftY": {
+            "FromPx": -50,
+            "ToPx": 50,
+            "DurationMs": 1000,
+            "Direction": "alternate",
+            "Easing": "ease-in-out"
+          },
+          "Id": "drift-flame-1"
+        },
+        {
+          "$type": "drift",
+          "ImagePath": "img/shrine-layers/0001/flame.gif",
+          "X": 2727,
+          "Y": 155,
+          "BlendMode": "exclusion",
+          "DriftX": {
+            "FromPx": 0,
+            "ToPx": -1000,
+            "DurationMs": 5000,
+            "Direction": "alternate-reverse",
+            "Easing": "ease-in-out"
+          },
+          "DriftY": {
+            "FromPx": -50,
+            "ToPx": 50,
+            "DurationMs": 1000,
+            "Direction": "alternate",
+            "Easing": "ease-in-out"
+          },
+          "Id": "drift-flame-2"
+        }
+      ]
+    },
+    {
+      "Id": "sigmir",
+      "Title": "Sigmir - The Weave Explorer",
+      "OutputFileName": "sigmir.html",
+      "GroupId": null,
+      "WorldWidthPx": null,
+      "WorldHeightPx": null,
+      "Wraps": true,
+      "GlobeEffect": true,
+      "DefaultSpawnX": null,
+      "DefaultSpawnY": null,
+      "Background": {
+        "ImagePath": "img/sigmir/sigmir.png"
+      },
+      "SecondaryBackground": null,
+      "Nodes": [
+        {
+          "Id": "the-weave-sector-a-10",
+          "X": 50,
+          "Y": 50,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 1,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/the_weave/the_weave.png",
+            "Audio": null,
+            "HeadingText": "THE WEAVE [ Sector A ]",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Capital Star System",
+              "of the Greater Weave Galaxy",
+              "Twelve Planets",
+              "Twelve Biomes",
+              "Tales Spun by Loom"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 2,
+              "Url": null,
+              "TargetPageId": "index",
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": []
+        },
+        {
+          "Id": "pharos-of-silent-lightning",
+          "X": 1252,
+          "Y": 1234,
+          "IconStyle": 0,
+          "Persistent": false,
+          "Card": {
+            "Size": 0,
+            "CustomWidthPx": null,
+            "CustomHeightPx": null,
+            "Offset": {
+              "Top": -130,
+              "Left": 80
+            },
+            "CoverImagePath": "img/sigmir/pharos-of-silent-lightning.png",
+            "Audio": {
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/06/pharos-of-silent-lightning.ogg"
+            },
+            "HeadingText": "Pharos of Silent Lightning",
+            "HeadingOffset": null,
+            "PoetryLines": [
+              "Great Lighthouse on The Great Coast",
+              "She watches over Cloud Ocean shore",
+              "Masoned claystone towered Pre-Space",
+              "Never Weathered nor Decayed",
+              "Pilgrims scale the Eighty Floors",
+              "To reach Holy Zenith of Storm",
+              "Prayerhands clasp at electrostatic air",
+              "Elanyr, Charge our Energies"
+            ],
+            "PoetryOffset": null,
+            "Action": {
+              "Kind": 1,
+              "Url": "https://johnoestmannmusic.com/0x2a75b-pharos-of-silent-lightning/",
+              "TargetPageId": null,
+              "TravelSpawnX": null,
+              "TravelSpawnY": null,
+              "TravelSkipTutorial": false
+            },
+            "ExtraPanels": []
+          },
+          "Children": [
+            {
+              "Id": "reactor-under-the-pharos",
+              "X": -81,
+              "Y": 193,
+              "IconStyle": 0,
+              "Persistent": false,
+              "Card": {
+                "Size": 0,
+                "CustomWidthPx": null,
+                "CustomHeightPx": null,
+                "Offset": {
+                  "Top": -130,
+                  "Left": 80
+                },
+                "CoverImagePath": "img/sigmir/reactor-under-the-pharos.png",
+                "Audio": {
+                  "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/06/reactor-under-the-pharos.ogg"
+                },
+                "HeadingText": "Reactor under the Pharos",
+                "HeadingOffset": null,
+                "PoetryLines": [
+                  "The Colossus Project Feasts",
+                  "Thunderstorm Reactor on Elanyr\u0027s Flame",
+                  "Spinning electromagnetic rings",
+                  "Containing the Fusing Antimatter",
+                  "Grafted below as heresy hidden",
+                  "Built by those who forgot",
+                  "Yet these: the non-religious gasp",
+                  "Behold, the Half-Phased Beings Emerge"
+                ],
+                "PoetryOffset": null,
+                "Action": {
+                  "Kind": 1,
+                  "Url": "https://johnoestmannmusic.com/0x2a75b-ii-reactor-under-the-pharos/",
+                  "TargetPageId": null,
+                  "TravelSpawnX": null,
+                  "TravelSpawnY": null,
+                  "TravelSkipTutorial": false
+                },
+                "ExtraPanels": []
+              },
+              "Children": []
+            }
+          ]
+        }
+      ],
+      "Effects": []
+    }
+  ],
+  "HomePageId": "index",
+  "BackgroundMusicPath": "DISCOVERYSQUAD.ogg"
+}

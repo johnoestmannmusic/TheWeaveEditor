@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Weave Editor</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+  <header id="toolbar">
+    <strong id="app-title">The Weave Editor</strong>
+    <div class="spacer"></div>
+    <button id="btn-problems" class="small" hidden>0 problems</button>
+    <button id="btn-undo" class="small" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
+    <button id="btn-redo" class="small" title="Redo (Ctrl+Shift+Z)" disabled>↷ Redo</button>
+    <button id="btn-new">New Project</button>
+    <button id="btn-open">Open Project…</button>
+    <button id="btn-import">Import Legacy Site…</button>
+    <button id="btn-export">Export Site</button>
+    <button id="btn-change-export-path" class="small" title="Choose a different export folder">Change Export Folder…</button>
+  </header>
+
+  <main>
+    <nav id="tree-panel">
+      <div id="project-settings" class="field" hidden>
+        <label for="f-project-music">Background music (loops site-wide, ducks for location tracks)</label>
+        <div class="music-field-row">
+          <input type="text" id="f-project-music" placeholder="e.g. DISCOVERYSQUAD.ogg (relative to mus/)">
+          <button type="button" id="btn-browse-music" class="small">Browse…</button>
+        </div>
+      </div>
+      <div id="tutorial-modal-row" class="tree-row" hidden>
+        <span>✎ Tutorial Modal</span>
+      </div>
+      <div class="panel-header">
+        <span>Pages</span>
+        <button id="btn-add-page" class="small">+ Page</button>
+      </div>
+      <div id="empty-state" class="muted padded">
+        No project open. Start with <strong>New Project</strong>, <strong>Open Project…</strong>,
+        or <strong>Import Legacy Site…</strong> to pull in an existing hand-authored site.
+      </div>
+      <ul id="tree" hidden></ul>
+    </nav>
+
+    <section id="canvas-panel">
+      <div id="canvas-empty" class="muted padded">Select a page to see its map.</div>
+      <div id="canvas-viewport" hidden>
+        <div id="canvas-world">
+          <img id="canvas-bg" draggable="false">
+          <div id="canvas-effects"></div>
+          <div id="canvas-nodes"></div>
+        </div>
+      </div>
+      <div id="canvas-hint" class="canvas-hint" hidden>Double-click empty space to add a location. Drag a marker to reposition it. Scroll to zoom.</div>
+    </section>
+
+    <aside id="inspector-panel">
+      <div id="inspector-empty" class="muted padded">Select a page or a location to edit it.</div>
+      <div id="inspector-page" class="inspector-form" hidden></div>
+      <div id="inspector-node" class="inspector-form" hidden></div>
+      <div id="inspector-tutorial-modal" class="inspector-form" hidden></div>
+    </aside>
+  </main>
+
+  <div id="problems-drawer" hidden>
+    <div id="issues" hidden>
+      <h3>Validation issues</h3>
+      <ul id="issues-list"></ul>
+    </div>
+    <div id="warnings" hidden>
+      <h3>Import warnings</h3>
+      <ul id="warnings-list"></ul>
+    </div>
+  </div>
+
+  <footer id="status-bar">
+    <span id="status-text">Ready.</span>
+  </footer>
+
+  <div id="toast" hidden></div>
+
+  <script src="app://dynamic.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

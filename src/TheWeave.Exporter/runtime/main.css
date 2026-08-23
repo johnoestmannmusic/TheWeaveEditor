@@ -1,0 +1,283 @@
+@font-face {
+    font-family: 'Medodica'; /*a name to be used later*/
+    src: url('../fnt/MedodicaRegular.otf'); /*URL to font*/
+}
+
+* {
+  -webkit-box-sizing: border-box;
+          box-sizing: border-box;
+
+  /* Pixel Scaling, especially for backgrounds */
+  image-rendering: -webkit-optimize-contrast; /* webkit */
+  image-rendering: -moz-crisp-edges; /* Firefox */
+  image-rendering: crisp-edges; /* Chrome */
+
+  /* Allows to manually set the position of all objects in the HTML file */
+  position:absolute;
+
+  font-family: Medodica;
+  /* font-family: Verdana,Geneva,sans-serif;  */
+
+  overflow-wrap: break-word;
+  line-height: 1.25;
+}
+
+body {
+  /* 500px scaled by 6 */
+  width: 3010px;
+  height: 1696px;
+  background-color: rgb(187, 186, 186);
+  /* rgb(44, 44, 44); */
+}
+
+#bgmap {
+  /* 500px scaled by 6 */
+  width: 3000px;
+}
+
+#bgmap2 {
+  width: 3000px;
+}
+
+/* Every background tile - the real #bgmap/#bgmap2 and, on a wrapping page, their cloned ghost
+   tiles (main.js's cloneBackgroundTile() - clones keep the .pannable class but drop the id) -
+   stays behind every node/card. Without this, a ghost tile appended later in the DOM (JS builds
+   them at runtime, after the page's real markup) would win same-z-index stacking by document
+   order and paint over any card whose rendered box happens to reach into that tile's territory -
+   most visible right at a wrap seam. */
+.pannable {
+  z-index: 0;
+}
+
+.node {
+  z-index: 1;
+}
+
+/* A node's own icon (and any nearby *other* node's icon, since siblings otherwise stack by
+   document order alone) shouldn't paint over this node's currently-open card - see main.js's
+   setCardOpen(), the only thing that ever adds/removes this class. Bumps the *whole* .node (icon
+   included, harmlessly) above every plain .node, so an unrelated node that merely happens to sit
+   close by on the map no longer draws its icon on top of this card's cover art/content. */
+.node.cardOpen {
+  z-index: 5;
+}
+
+/* Hide the scrollbars when not being used */
+::-webkit-scrollbar {
+  display: none;
+}
+
+h3 {
+  margin-top: 5px;
+  margin-bottom: 0px;
+  position: relative; left: 10px; right: 10px;
+  font-size: 20px;
+  font-weight: 700;
+  color:rgb(34, 34, 34);
+}
+
+.poetry-text{
+  position: relative; left: 10px; right: 10px;
+  /* font-style: italic; */
+  font-size: 14px;
+  color:rgb(34, 34, 34);
+  width: 230px;
+}
+
+.poetry-line{
+  position: relative; top: 1px;
+}
+
+.poetry-line b{
+  position: relative; top: 1px;
+}
+
+.poetry-download{
+  font-size: 13px;
+  position: relative; top: 5px; left:165px;
+  color:rgb(102, 102, 102);
+}
+
+.poetry-travel{
+  font-size: 12px;
+  position: relative; top: 5px; left:161px;
+  color:rgb(102, 102, 102);
+}
+
+/* A modal card's own Z-closes-it action (see main.js's modalQueue) - styled and positioned the
+   same as .poetry-travel: right-aligned within poetry-text's own 230px width (that's what
+   left:161px actually right-aligns against - poetry-text, not whichever outer card size happens
+   to contain it - so it lands at the same visual spot, bottom-right of its own column, on a
+   252px Standard card or a 520px Modal alike). What looked like a collision with a modal's
+   second column (an ExtraPanel, e.g. the tutorial's own "Updates:" - see RenderStaticPanel,
+   positioned at left:260px) here turned out to be .modal-close-action's own blockification bug
+   (see its comment below) garbling the text - not a genuine overlap; there's a real gap between
+   poetry-text's own right edge and left:260px. */
+.poetry-close{
+  font-size: 12px;
+  position: relative; top: 5px; left:161px;
+  color:rgb(102, 102, 102);
+}
+
+.modal-close-action{
+  /* Without this, the universal `* { position: absolute }` default applies (see this file's own
+     top-of-file rule) - and per the CSS spec, an absolutely positioned inline element gets
+     "blockified" (forced to display:block) regardless of its tag, which broke this span's width
+     down to a sliver and wrapped its own text across lines. Every other inline-ish element in
+     this file (.poetry-line b, .songCover, .keyHint, etc.) needs this exact same override for
+     the same reason - easy to forget on a new one, as this was. */
+  position: relative;
+  cursor: pointer;
+}
+
+/* The Z-key hint icon (fixtures' img/ui/key_z.gif) shown next to anything Z actually does on a
+   card - see PageRenderer's own comments on exactly which cases get one (it mirrors onInteract's
+   audio-first precedence, so it's never shown next to two competing actions on the same card). */
+.keyHint{
+  position: relative;
+  top: -2px;
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  /* Breathing room on every side - PageRenderer no longer relies on a literal space character
+     between this and its neighboring text/element for spacing, and this is also what keeps it
+     off the card's own edge in the audio row below (its wrapper, .songPlayerRow, has no gap of
+     its own for the same reason - this margin is doing that job too). */
+  margin: 5px;
+}
+
+.bg{
+  -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+        user-select: none;
+}
+
+.floatInfo{
+  border: solid;
+  border-width: 1px;
+  border-color: #d4bc93;
+  background-color: antiquewhite;
+  width: 252px;
+  height: 505px;
+  border-radius: 5px;
+  -moz-border-radius: 5px;
+}
+
+.songCover{
+  position: relative; top: 5px; left: 5px;
+}
+
+.songPlayer{
+  position: relative; top: 5px; left: 0px;
+  width: 250px;
+}
+
+/* Wraps the key hint + player together (see PageRenderer's own comment on why) so the hint sits
+   immediately to the player's left as one unit, rather than needing to know how far down the
+   card the player itself renders (which varies - a cover image above it shifts everything down).
+   No gap of its own - .keyHint's own margin already provides that spacing (and the outer edge
+   of it too, on whichever side ends up nearer the card's own border). */
+.songPlayerRow{
+  position: relative; top: 5px; left: 0px;
+  display: flex;
+  align-items: center;
+}
+
+.songPlayerRow .songPlayer{
+  /* The row above already carries the top:5px/left:0px offset .songPlayer normally sets for
+     itself - applying it twice would double the shift. Narrower than the base 250px too: a
+     Standard card's content area is only 250px wide (252px card - 1px border each side), and
+     the key hint now needs 30px of that (20px icon + 5px margin each side) - 250px unchanged
+     would push the pair's combined width past the card's edge by the icon's own full footprint,
+     not just trim by a few px. */
+  position: static;
+  width: 215px;
+}
+
+.nodeImage {
+  /* 8px scaled by 6 */
+  width: 48px;
+}
+
+/* Hint that X/gamepad X cycles to *this* node next (see updateChainHint() in main.js) - one
+   placeholder per chain member (see PageRenderer.RenderNode), hidden by default and shown on
+   exactly the one that's actually next from wherever the player currently is in the chain, never
+   the active member itself. Sits 20px to the left of the node's own icon, vertically centered
+   against its 48px height. */
+.chainHint {
+  display: none;
+  position: absolute;
+  left: -20px;
+  top: 14px;
+  width: 20px;
+  height: 20px;
+}
+
+.playerShip {
+  width: 40px;
+  z-index: 1000;
+  pointer-events: none;
+  transform-origin: center center;
+}
+
+/* Generic per-page effects (see applyPageEffects() in main.js) */
+.effect-drift-sprite {
+  width: 120px;
+}
+
+/* Cosmetic globe-curvature hint (Page.GlobeEffect - see buildGlobeEffect/updateGlobeEffect in
+   main.js). position:fixed (not the site-wide absolute every element otherwise gets) so it
+   stays glued to the viewport, not the scrolling world, and z-index sits above every node/card
+   (1) but below the ship (1000) - the ship itself should never be darkened/blurred by its own
+   view. Appended as a child of <html>, not <body> - see the comment in buildGlobeEffect() for
+   why that matters here.
+   The blur is scoped to just the edges via mask-image (same radial shape as the darkening
+   gradient, transparent through the middle) rather than applying to the whole element - a flat
+   backdrop-filter: blur() with no mask would blur the entire screen, ship included. */
+#globeVignette {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 999;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.35) 100%);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  mask-image: radial-gradient(ellipse at center, transparent 60%, black 100%);
+  -webkit-mask-image: radial-gradient(ellipse at center, transparent 60%, black 100%);
+}
+
+/* A CardSize.Modal card's icon never appears on the map - it isn't a real world location, it's
+   a screen overlay (see main.js's modalQueue) - so its .nodeImage is hidden rather than left to
+   sit uselessly somewhere on the background. */
+.node[data-modal="true"] .nodeImage {
+  display: none;
+}
+
+/* Dims/blurs/blocks the world behind an open modal card (see showCurrentModal/closeCurrentModal
+   in main.js, which create/remove this). Appended as a child of <html>, not <body>, for the same
+   reason #globeVignette above is - see main.js's own comment on that at the point this is
+   created. backdrop-filter blurs whatever renders *behind* this element - i.e. the whole game
+   world, since this already covers the full viewport - rather than the element itself. */
+#modalBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* The modal card itself (a normal .floatInfo, just centered/fixed via BuildCardStyle's Modal
+   case instead of world-positioned) - reparented next to #modalBackdrop above by main.js, for
+   the same position:fixed-under-a-transformed-ancestor reason. Sits one above the backdrop. */
+.floatInfo[data-modal="true"] {
+  z-index: 2001;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+}

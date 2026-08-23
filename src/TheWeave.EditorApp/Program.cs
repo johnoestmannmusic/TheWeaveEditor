@@ -1,0 +1,572 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Photino.NET;
+using TheWeave.Core.Model;
+using TheWeave.Core.Serialization;
+using TheWeave.Core.Validation;
+using TheWeave.Exporter;
+using TheWeave.Importer;
+
+namespace TheWeave.EditorApp;
+
+/// <summary>
+/// The editor shell: a thin native window (Photino, hosting the OS's own webview) around a
+/// plain HTML/CSS/JS UI in wwwroot/. This class is JS<->C# interop only - project
+/// state/logic lives entirely in TheWeave.Core/Importer/Exporter (and the small in-memory
+/// mutations in ProjectEditing.cs), kept UI-agnostic.
+///
+/// Protocol: JS sends one JSON envelope (EditorMessage) per action via
+/// window.external.sendMessage; after every mutation the *entire* current project is sent
+/// back via window.SendWebMessage as a "project-state" message, and the tree/inspector UI is
+/// fully re-rendered from that. Project sizes here (tens to low hundreds of nodes) make a
+/// full resync on every edit simpler and safer than partial patching, at negligible cost.
+/// </summary>
+public static class Program
+{
+    private static WeaveProject? _project;
+    private static string? _projectPath;
+    private static readonly EditorSettings _settings = EditorSettings.Load();
+    private static UndoHistory _undoHistory = new();
+
+    /// <summary>
+    /// Where this project's content assets (img/, fnt/) actually live on disk - the imported
+    /// folder, or the saved project file's own directory as a "assets live next to the
+    /// project" convention. Used both to resolve real file:// image URLs for the map canvas
+    /// preview and as the Exporter's contentSourceRoot so Export Site actually copies assets.
+    /// </summary>
+    private static string? _contentRoot;
+
+    // Extensions need a "*." glob prefix - Photino's Linux backend passes them straight to
+    // gtk_file_filter_add_pattern, which treats a bare "json" as a literal filename to match,
+    // not an extension.
+    private static readonly (string Name, string[] Extensions)[] ProjectFileFilter =
+    {
+        ("Weave Project", new[] { "*.json" }),
+    };
+
+    // One extension per filter entry, not a single entry listing several - confirmed (via
+    // Photino.Native's Linux AddFilters, which joins multiple extensions with ";" before
+    // handing the string to GTK) that its strtok-based parsing only ever splits the *first*
+    // "|", so a ";"-joined extension list gets added to GTK as one literal pattern that no
+    // real file matches, leaving the picker empty. Filtering to just "Image" isn't possible on
+    // Linux without hitting that bug, so this is several single-extension filters instead
+    // (GTK's own filter dropdown lets a user switch between them), with "All Files" last so
+    // nothing is ever unreachable.
+    private static readonly (string Name, string[] Extensions)[] ImageFileFilter =
+    {
+        ("PNG Image", new[] { "*.png" }),
+        ("JPEG Image", new[] { "*.jpg" }),
+        ("JPEG Image (.jpeg)", new[] { "*.jpeg" }),
+        ("GIF Image", new[] { "*.gif" }),
+        ("WebP Image", new[] { "*.webp" }),
+        ("All Files", new[] { "*" }),
+    };
+
+    // Same one-extension-per-filter reasoning as ImageFileFilter above.
+    private static readonly (string Name, string[] Extensions)[] AudioFileFilter =
+    {
+        ("OGG Audio", new[] { "*.ogg" }),
+        ("MP3 Audio", new[] { "*.mp3" }),
+        ("All Files", new[] { "*" }),
+    };
+
+    private static readonly JsonSerializerOptions InboundOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() },
+    };
+
+    // Enum values are intentionally NOT camelCased (kept as e.g. "Hub", "Travel") even though
+    // property names are - they're opaque tokens the UI round-trips verbatim in <select>
+    // options, and matching InboundOptions exactly avoids a second casing convention for JS to
+    // track when it sends an edit back.
+    private static readonly JsonSerializerOptions OutboundOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters = { new JsonStringEnumConverter() },
+    };
+
+    [STAThread]
+    public static void Main(string[] args)
+    {
+        // An explicit path argument wins; otherwise fall back to whatever project was open last
+        // time, since this editor is normally used on one ongoing project rather than many.
+        var pathToOpen = args.Length > 0 ? args[0] : _settings.LastProjectPath;
+
+        if (pathToOpen is not null && File.Exists(pathToOpen))
+        {
+            _project = WeaveProjectSerializer.LoadFromFile(pathToOpen);
+            _projectPath = pathToOpen;
+            _contentRoot = Path.GetDirectoryName(Path.GetFullPath(pathToOpen));
+            _undoHistory = UndoHistory.Load(pathToOpen);
+        }
+
+        var window = new PhotinoWindow()
+            .SetTitle("The Weave Editor")
+            .SetUseOsDefaultSize(false)
+            .SetSize(1200, 800)
+            .Center()
+            .RegisterWebMessageReceivedHandler(OnMessage)
+            .Load("wwwroot/index.html");
+
+        // Belt-and-suspenders: on this dev environment's WebKitGTK setup, WaitForClose() has
+        // been observed to not reliably unblock when the window is closed, leaving the host
+        // process (and its WebKit child processes) running after the window disappears. Force
+        // the whole process to exit as soon as the window starts closing, rather than relying
+        // on WaitForClose()'s return + natural fall-through of Main().
+        window.RegisterWindowClosingHandler((sender, e) =>
+        {
+            Environment.Exit(0);
+            return false;
+        });
+
+        window.WaitForClose();
+        Environment.Exit(0);
+    }
+
+    private static async void OnMessage(object? sender, string raw)
+    {
+        var window = (PhotinoWindow)sender!;
+
+        try
+        {
+            var message = JsonSerializer.Deserialize<EditorMessage>(raw, InboundOptions)
+                ?? throw new InvalidOperationException("Empty message.");
+
+            switch (message.Type)
+            {
+                case "ready":
+                    SendProjectState(window);
+                    break;
+
+                case "new-project":
+                    _project = new WeaveProject { Title = "Untitled Project" };
+                    _projectPath = null;
+                    _contentRoot = null;
+                    _undoHistory = new UndoHistory();
+                    SendProjectState(window);
+                    break;
+
+                case "open-project":
+                    OpenProject(window);
+                    break;
+
+                case "import-legacy-site":
+                    await ImportLegacySite(window);
+                    break;
+
+                case "export-site":
+                    ExportSite(window);
+                    break;
+
+                case "change-export-path":
+                    ChangeExportPath(window);
+                    break;
+
+                case "pick-cover-image":
+                    PickCoverImage(window, message.PageId, message.NodeId);
+                    break;
+
+                case "pick-background-music":
+                    PickBackgroundMusic(window);
+                    break;
+
+                case "rename-node-id":
+                    RequireProject();
+                    RenameNodeId(window, RequirePage(message.PageId), message.NodeId, message.NewId);
+                    break;
+
+                case "undo":
+                    RequireProject();
+                    Undo(window);
+                    break;
+
+                case "redo":
+                    RequireProject();
+                    Redo(window);
+                    break;
+
+                case "add-page":
+                    RequireProject();
+                    ApplyMutation(window, () => ProjectEditing.AddPage(_project!, message.Page?.Title, message.Page?.OutputFileName, message.Page?.BackgroundImagePath));
+                    break;
+
+                case "update-page":
+                    RequireProject();
+                    var pageToEdit = RequirePage(message.PageId);
+                    ApplyMutation(window, () => ProjectEditing.ApplyPageEdit(_project!, pageToEdit, message.Page ?? new PageEditRequest()));
+                    break;
+
+                case "update-project":
+                    RequireProject();
+                    ApplyMutation(window, () => ProjectEditing.ApplyProjectEdit(_project!, message.Project ?? new ProjectEditRequest()));
+                    break;
+
+                case "update-tutorial-modal":
+                    RequireProject();
+                    ApplyMutation(window, () => ProjectEditing.ApplyTutorialModalEdit(_project!, message.TutorialModal ?? new TutorialModalEditRequest()));
+                    break;
+
+                case "delete-page":
+                    RequireProject();
+                    var pageToDelete = RequirePage(message.PageId);
+                    ApplyMutation(window, () => _project!.Pages.Remove(pageToDelete));
+                    break;
+
+                case "add-node":
+                    RequireProject();
+                    var pageForAdd = RequirePage(message.PageId);
+                    ApplyMutation(window, () => ProjectEditing.AddNode(_project!, pageForAdd, message.ParentNodeId, message.X ?? 100, message.Y ?? 100));
+                    break;
+
+                case "update-node":
+                    RequireProject();
+                    var nodeToEdit = RequireNode(RequirePage(message.PageId), message.NodeId);
+                    ApplyMutation(window, () => ProjectEditing.ApplyNodeEdit(nodeToEdit, message.Node ?? new NodeEditRequest()));
+                    break;
+
+                case "delete-node":
+                    RequireProject();
+                    var pageForDelete = RequirePage(message.PageId);
+                    ApplyMutation(window, () =>
+                    {
+                        if (!ProjectEditing.RemoveNode(pageForDelete.Nodes, message.NodeId ?? ""))
+                            throw new InvalidOperationException($"Node '{message.NodeId}' not found.");
+                    });
+                    break;
+
+                case "add-effect":
+                    RequireProject();
+                    var pageForAddEffect = RequirePage(message.PageId);
+                    ApplyMutation(window, () => ProjectEditing.AddEffect(pageForAddEffect, message.Effect ?? new EffectEditRequest()));
+                    break;
+
+                case "update-effect":
+                    RequireProject();
+                    var pageForUpdateEffect = RequirePage(message.PageId);
+                    ApplyMutation(window, () => ProjectEditing.UpdateEffect(pageForUpdateEffect, message.EffectId ?? "", message.Effect ?? new EffectEditRequest()));
+                    break;
+
+                case "delete-effect":
+                    RequireProject();
+                    var pageForEffectDelete = RequirePage(message.PageId);
+                    ApplyMutation(window, () =>
+                    {
+                        if (!ProjectEditing.RemoveEffect(pageForEffectDelete, message.EffectId ?? ""))
+                            throw new InvalidOperationException($"Effect '{message.EffectId}' not found.");
+                    });
+                    break;
+
+                default:
+                    SendError(window, $"Unknown message type '{message.Type}'.");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            SendError(window, ex.Message);
+        }
+    }
+
+    private static void RequireProject()
+    {
+        if (_project is null)
+            throw new InvalidOperationException("No project open.");
+    }
+
+    private static Page RequirePage(string? pageId) =>
+        (pageId is not null ? ProjectEditing.FindPage(_project!, pageId) : null)
+        ?? throw new InvalidOperationException($"Page '{pageId}' not found.");
+
+    private static Node RequireNode(Page page, string? nodeId) =>
+        (nodeId is not null ? ProjectEditing.FindNode(page.Nodes, nodeId) : null)
+        ?? throw new InvalidOperationException($"Node '{nodeId}' not found.");
+
+    private static void OpenProject(PhotinoWindow window)
+    {
+        var paths = window.ShowOpenFile(title: "Open Weave Project", filters: ProjectFileFilter);
+        if (paths.Length == 0)
+            return;
+
+        _project = WeaveProjectSerializer.LoadFromFile(paths[0]);
+        _projectPath = paths[0];
+        _contentRoot = Path.GetDirectoryName(Path.GetFullPath(paths[0]));
+        _undoHistory = UndoHistory.Load(paths[0]);
+        RememberLastProjectPath();
+        SendProjectState(window);
+    }
+
+    // Shared shape for every plain in-memory edit: record the pre-mutation state for undo,
+    // apply it, then the usual auto-save + resync. Kept separate from RenameNodeId (needs an
+    // extra message sent before the resync) and Undo/Redo (the "mutation" *is* moving through
+    // the history rather than adding to it), but everything else funnels through here so
+    // there's exactly one place that has to remember all three steps.
+    private static void ApplyMutation(PhotinoWindow window, Action mutate)
+    {
+        _undoHistory.RecordBeforeChange(_project!);
+        mutate();
+        AutoSave(window);
+        if (_projectPath is not null)
+            _undoHistory.Save(_projectPath);
+        SendProjectState(window);
+    }
+
+    private static void Undo(PhotinoWindow window)
+    {
+        var restored = _undoHistory.Undo(_project!);
+        if (restored is null)
+        {
+            SendStatus(window, "Nothing to undo.");
+            return;
+        }
+
+        _project = restored;
+        AutoSave(window);
+        if (_projectPath is not null)
+            _undoHistory.Save(_projectPath);
+        SendProjectState(window);
+    }
+
+    private static void Redo(PhotinoWindow window)
+    {
+        var restored = _undoHistory.Redo(_project!);
+        if (restored is null)
+        {
+            SendStatus(window, "Nothing to redo.");
+            return;
+        }
+
+        _project = restored;
+        AutoSave(window);
+        if (_projectPath is not null)
+            _undoHistory.Save(_projectPath);
+        SendProjectState(window);
+    }
+
+    // Called after every mutation instead of a manual Save button. A brand new, never-saved
+    // project has nowhere to write to yet, so the very first edit prompts once (like a "Save
+    // As"); every edit after that - for this project, for the rest of the session - writes
+    // silently. If the user cancels that first prompt, the edit stays applied in memory and
+    // the next edit will ask again.
+    private static void AutoSave(PhotinoWindow window)
+    {
+        if (_project is null)
+            return;
+
+        if (_projectPath is null)
+        {
+            var path = window.ShowSaveFile(title: "Save Weave Project", filters: ProjectFileFilter);
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            _projectPath = path;
+            _contentRoot ??= Path.GetDirectoryName(Path.GetFullPath(path));
+            RememberLastProjectPath();
+        }
+
+        try
+        {
+            WeaveProjectSerializer.SaveToFile(_project, _projectPath);
+        }
+        catch (Exception ex)
+        {
+            SendError(window, $"Auto-save failed: {ex.Message}");
+        }
+    }
+
+    private static void RememberLastProjectPath()
+    {
+        _settings.LastProjectPath = _projectPath;
+        _settings.Save();
+    }
+
+    private static async Task ImportLegacySite(PhotinoWindow window)
+    {
+        var folders = window.ShowOpenFolder(title: "Select the site folder to import");
+        if (folders.Length == 0)
+            return;
+
+        var result = await new SiteImporter().ImportDirectoryAsync(folders[0]);
+        _project = result.Project;
+        _projectPath = null;
+        _contentRoot = Path.GetFullPath(folders[0]);
+        _undoHistory = new UndoHistory();
+
+        SendProjectState(window, result.Warnings.Select(w => w.ToString()).ToList());
+    }
+
+    private static void ExportSite(PhotinoWindow window)
+    {
+        if (_project is null)
+        {
+            SendError(window, "No project open.");
+            return;
+        }
+
+        // Once an export folder is set (and still exists), reuse it silently rather than
+        // prompting every time - this project is normally exported to the same place over and
+        // over. If it's gone missing (moved/deleted), fall back to prompting again.
+        var exportPath = _project.ExportPath;
+        if (exportPath is null || !Directory.Exists(exportPath))
+        {
+            var folders = window.ShowOpenFolder(title: "Select the export destination folder");
+            if (folders.Length == 0)
+                return;
+
+            exportPath = folders[0];
+            var chosenPath = exportPath;
+            ApplyMutation(window, () => _project!.ExportPath = chosenPath);
+        }
+
+        new SiteExporter().Export(_project, exportPath, _contentRoot);
+        SendStatus(window, $"Exported to {exportPath}" + (_contentRoot is null ? " (no content root known - img/fnt were not copied)" : ""));
+    }
+
+    private static void ChangeExportPath(PhotinoWindow window)
+    {
+        if (_project is null)
+        {
+            SendError(window, "No project open.");
+            return;
+        }
+
+        var folders = window.ShowOpenFolder(title: "Select the export destination folder");
+        if (folders.Length == 0)
+            return;
+
+        var newExportPath = folders[0];
+        ApplyMutation(window, () => _project!.ExportPath = newExportPath);
+        SendStatus(window, $"Export folder set to {newExportPath}.");
+    }
+
+    private static void PickCoverImage(PhotinoWindow window, string? pageId, string? nodeId)
+    {
+        if (_contentRoot is null)
+        {
+            SendError(window, "Open, import, or save the project first so its content folder is known.");
+            return;
+        }
+
+        var paths = window.ShowOpenFile(title: "Select cover image", filters: ImageFileFilter);
+        if (paths.Length == 0)
+            return;
+
+        var sourceAbsolute = Path.GetFullPath(paths[0]);
+        var page = pageId is not null ? ProjectEditing.FindPage(_project!, pageId) : null;
+        var node = page is not null && nodeId is not null ? ProjectEditing.FindNode(page.Nodes, nodeId) : null;
+
+        var destRelative = AssetImport.ResolveDestination(_contentRoot, _project!.Assets.ImgRoot, sourceAbsolute, page?.Id, node?.Id);
+
+        var destAbsolute = Path.GetFullPath(Path.Combine(_contentRoot, destRelative.Replace('/', Path.DirectorySeparatorChar)));
+        if (!string.Equals(destAbsolute, sourceAbsolute, StringComparison.OrdinalIgnoreCase))
+        {
+            var destDir = Path.GetDirectoryName(destAbsolute);
+            if (!string.IsNullOrEmpty(destDir))
+                Directory.CreateDirectory(destDir);
+
+            File.Copy(sourceAbsolute, destAbsolute, overwrite: true);
+        }
+
+        window.SendWebMessage(JsonSerializer.Serialize(new { type = "image-picked", path = destRelative }, OutboundOptions));
+    }
+
+    private static void PickBackgroundMusic(PhotinoWindow window)
+    {
+        if (_contentRoot is null)
+        {
+            SendError(window, "Open, import, or save the project first so its content folder is known.");
+            return;
+        }
+
+        var paths = window.ShowOpenFile(title: "Select background music", filters: AudioFileFilter);
+        if (paths.Length == 0)
+            return;
+
+        var sourceAbsolute = Path.GetFullPath(paths[0]);
+        var musRoot = _project!.Assets.MusRoot;
+
+        var destRelativeToMusRoot = AssetImport.ResolveRootRelativeDestination(_contentRoot, musRoot, sourceAbsolute);
+
+        var destAbsolute = Path.GetFullPath(Path.Combine(_contentRoot, musRoot, destRelativeToMusRoot.Replace('/', Path.DirectorySeparatorChar)));
+        if (!string.Equals(destAbsolute, sourceAbsolute, StringComparison.OrdinalIgnoreCase))
+        {
+            var destDir = Path.GetDirectoryName(destAbsolute);
+            if (!string.IsNullOrEmpty(destDir))
+                Directory.CreateDirectory(destDir);
+
+            File.Copy(sourceAbsolute, destAbsolute, overwrite: true);
+        }
+
+        window.SendWebMessage(JsonSerializer.Serialize(new { type = "music-picked", path = destRelativeToMusRoot }, OutboundOptions));
+    }
+
+    private static void RenameNodeId(PhotinoWindow window, Page page, string? nodeId, string? newIdRaw)
+    {
+        var node = RequireNode(page, nodeId);
+        var newId = ProjectEditing.NormalizeId(newIdRaw ?? "");
+
+        if (newId.Length == 0)
+        {
+            SendError(window, "Location ID can't be empty.");
+            return;
+        }
+
+        if (newId == node.Id)
+            return;
+
+        if (ProjectEditing.IsNodeIdInUse(_project!, newId))
+        {
+            SendError(window, $"Location ID '{newId}' is already in use - choose a different one.");
+            return;
+        }
+
+        _undoHistory.RecordBeforeChange(_project!);
+
+        var oldId = node.Id;
+        node.Id = newId;
+
+        if (_contentRoot is not null)
+        {
+            var renamedCover = AssetImport.RenameCoverImageIfOwned(_contentRoot, _project!, node, oldId);
+            if (renamedCover is not null)
+                node.Card.CoverImagePath = renamedCover;
+        }
+
+        // Sent before the usual project-state resync so the JS side can update its own
+        // selectedNodeId to match *before* that resync reconciles selection against the tree -
+        // otherwise it finds the old id gone and drops the selection entirely.
+        window.SendWebMessage(JsonSerializer.Serialize(new { type = "node-renamed", pageId = page.Id, oldId, newId }, OutboundOptions));
+
+        AutoSave(window);
+        if (_projectPath is not null)
+            _undoHistory.Save(_projectPath);
+        SendProjectState(window);
+    }
+
+    private static void SendProjectState(PhotinoWindow window, List<string>? warnings = null)
+    {
+        var issues = _project is not null
+            ? ProjectValidator.Validate(_project)
+            : new List<ValidationIssue>();
+
+        var payload = new
+        {
+            type = "project-state",
+            path = _projectPath,
+            contentRoot = _contentRoot,
+            project = _project,
+            validationIssues = issues.Select(i => i.ToString()).ToList(),
+            warnings = warnings ?? new List<string>(),
+            canUndo = _undoHistory.CanUndo,
+            canRedo = _undoHistory.CanRedo,
+        };
+
+        window.SendWebMessage(JsonSerializer.Serialize(payload, OutboundOptions));
+    }
+
+    private static void SendStatus(PhotinoWindow window, string message) =>
+        window.SendWebMessage(JsonSerializer.Serialize(new { type = "status", message }, OutboundOptions));
+
+    private static void SendError(PhotinoWindow window, string message) =>
+        window.SendWebMessage(JsonSerializer.Serialize(new { type = "error", message }, OutboundOptions));
+}

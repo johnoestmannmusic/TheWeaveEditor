@@ -1,0 +1,154 @@
+# The Weave Editor
+
+A cross-platform, open-source WYSIWYG editor and static-site exporter for
+[The Weave Explorer](https://jomusic.neocities.org) — an explorable galaxy map for the
+fictional universe of *The Weave*.
+
+One project file (JSON) holds every page, planet, location, and node in the site. This tool
+edits that file visually and exports it to the plain HTML/CSS/JS site that gets deployed to
+Neocities, replacing hand-authoring HTML per location.
+
+## Features
+
+**Editor**
+
+- Tree navigator + Inspector: browse every page and (nested) location in a project, and edit
+  a location's full card — heading, position, icon style, persistence, card size, cover
+  image/audio, poetry lines, and its download/travel action (including arrival position) — or
+  a page's metadata, all through forms.
+- A dedicated **Tutorial Modal** tab for the screen-centered popup shown the first time a
+  visitor opens the site (heading, cover, audio, poetry, plus a separate "Updates" panel) — kept
+  out of the tree/canvas since it isn't a real map location.
+- Live map canvas: select a page and its real background renders with every top-level location
+  as a draggable, color-coded marker. Click to select (syncs with the tree/Inspector), drag to
+  reposition, double-click empty space to add a new location, scroll to zoom, click-drag to pan.
+- Live Effects panel: add/edit/delete a page's crossfade or drifting-sprite effects and watch
+  them actually animate on the canvas while you edit, using the same rendering the exported site
+  uses.
+- Add/delete pages and locations (including nested "next part of the story" locations via the
+  tree's "+ Add nested location").
+- Import an existing hand-authored site into a new project file, for one-time migration.
+- Undo/redo (toolbar or Ctrl+Z / Ctrl+Shift+Z) covering every project edit, up to 10 steps back,
+  persisted alongside the project so history survives closing and reopening the editor.
+- No manual save step: every edit auto-saves to disk immediately (prompting once for a
+  destination on a brand-new project, like a "Save As"); Export Site remembers its destination
+  folder after the first run.
+- Imported cover images are copied into an organized `img/<page>/<location>.<ext>` path inside
+  the project automatically, so a project's asset tree stays tidy as content is added.
+
+**Exported site**
+
+- A genuinely multi-page static site (real navigation between pages, not a single-page app).
+- A persistent, site-wide looping background track (set per-project) that plays across page
+  navigation via a thin iframe "shell", ducking automatically whenever a location's own track is
+  playing.
+- Configurable ship spawn points: a page's own default landing spot, plus directional defaults
+  for travel links (arriving at a planet centers on its map; returning to the starting map lands
+  back near the hub icon you left, nudged just above it) — all overridable per travel link.
+- Keyboard and gamepad controls: arrow keys/stick to fly, Z/gamepad A to interact (play a track,
+  travel, or close a popup), X/gamepad X to step through a multi-part location's nested parts in
+  place. Contextual hint icons show next to whichever action is actually available.
+- Optional per-page world wrapping (seamless edge-to-edge looping) and a cosmetic globe-curvature
+  vignette, independently toggleable per page.
+- Export cleans up after itself: files from a previous export that the current run didn't
+  (re)write — a renamed/deleted page, an orphaned cover image — are removed, so exporting
+  repeatedly to the same folder doesn't accumulate stale files. It only ever touches the
+  specific subfolders it manages, so anything else kept in that export folder is left alone.
+
+## Solution layout
+
+- `src/TheWeave.Core` — the project file schema, serialization, and validation. No UI or I/O
+  framework dependencies beyond the .NET BCL, so it's fully unit-testable in isolation.
+- `src/TheWeave.Exporter` — renders a project to a static HTML/CSS/JS site. Also owns the
+  canonical shared runtime (`runtime/main.css`, `runtime/main.js`, `runtime/shell.js`) embedded
+  in the assembly.
+- `src/TheWeave.Importer` — parses an existing hand-authored site into a project file, for
+  one-time migration. Built on [AngleSharp](https://anglesharp.github.io/).
+- `src/TheWeave.EditorApp` — the desktop editor shell, built on
+  [Photino.NET](https://www.tryphotino.io/) (a thin native window hosting the OS's own webview,
+  rather than a bundled Chromium). `wwwroot/` is the plain HTML/CSS/JS UI.
+- `tests/` — one test project per `src/` project, plus a full import → export round-trip suite
+  validated against a real snapshot of The Weave Explorer (`fixtures/weave-explorer-snapshot/`).
+
+## Building
+
+Requires the .NET SDK (developed against .NET 10).
+
+```
+dotnet test
+```
+
+To run the editor itself:
+
+```
+cd src/TheWeave.EditorApp
+dotnet run
+```
+
+Pass a `.json` project file path as an argument to open it directly on launch (e.g. for a
+double-click-to-open file association) instead of starting empty:
+
+```
+dotnet run -- /path/to/project.json
+```
+
+### Linux: window doesn't appear / process hangs after "Load(...)"
+
+If `dotnet run` prints Photino's setup log lines and then just sits there with no window ever
+showing (WebKitNetworkProcess/WebKitWebProcess spawn in `ps` but nothing renders), it's almost
+certainly `WAYLAND_DISPLAY` being set in your environment: GTK auto-detects a Wayland compositor
+and tries that first, and on some setups that path just hangs rather than falling back to X11.
+Force X11:
+
+```
+GDK_BACKEND=x11 dotnet run
+```
+
+## Known limitations
+
+- No drag-a-node-onto-a-card-to-reparent gesture yet — nested locations are created via the
+  tree's "+ Add nested location" instead, which is fully functional.
+- The Cover Image file picker lists image types as separate single-extension filters (PNG,
+  JPEG, GIF, WebP, All Files) rather than one combined "Image" filter, working around a Photino
+  Linux/GTK bug where a filter listing more than one extension silently matches nothing.
+
+## How the exported HTML's node nesting works
+
+Worth reading before touching `PageRenderer` or `main.js`'s chain-cycling logic — this shape has
+caused real, hard-to-spot bugs before.
+
+**The basic shape.** Every location is a `<div class="node">` containing an
+`<img class="nodeImage">` and exactly one `<div class="floatInfo">` (the card — cover, audio,
+heading, poetry, action link). A page's top-level locations are direct children of `<body>`.
+
+**Nesting = literally inside the parent's card.** A "next part of the story" location (e.g.
+Ouros' Salanth Town Gardens → Jherop Phantom → The Gardener's Funeral) is not a sibling with a
+`ParentId` — its whole `<div class="node">` is placed *inside* its parent's
+`<div class="floatInfo">`, as one more child alongside the poetry text. That's what makes
+`Node.X`/`Node.Y` "parent-card-relative" instead of world-relative for a nested node: its
+containing block genuinely is the parent's card. `PageRenderer.RenderCard` reflects this
+directly — `foreach (var child in node.Children) RenderNode(...)` runs *inside* the method that
+also opens/closes that same `.floatInfo`.
+
+**Closing tags matter more than they look like they should.** A childless node's `.floatInfo`
+must be explicitly closed before the *next sibling* `.node` starts. Miss that and the browser's
+own tag-recovery makes the next sibling a descendant of the unclosed card instead — which
+doesn't just misplace one node, it compounds: node 3 becomes a fourth-generation descendant of
+node 1, etc. `PageRenderer` closes `.floatInfo` *after* rendering `node.Children`, not before, so
+a childless node closes cleanly but a parent's card still structurally contains its child.
+
+**Visibility inherits down, and nothing about a child's own `display` overrides that.** A nested
+card's `display: ''` does nothing while its ancestor card is `display: none` — the whole subtree
+just isn't rendered, full stop. So making chain member N visible (`main.js`'s `showChainMember`)
+means setting `display: ''` on *every* ancestor from the root down to N, not just N itself — and
+closing anything past N, in case the player is stepping backward.
+
+**Testing gotcha worth remembering:** `getComputedStyle(el).display !== 'none'` (or checking an
+element's own inline `style.display`) only tells you about that one element — it says nothing
+about whether an *ancestor* is hidden, so it will happily report a genuinely-invisible nested
+card as "visible." `el.offsetParent !== null` (or an actual screenshot) reflects real rendered
+visibility.
+
+## License
+
+MIT — see `LICENSE`.

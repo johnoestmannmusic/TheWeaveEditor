@@ -1,0 +1,551 @@
+:root {
+  --bg: #1c1b1a;
+  --panel: #262524;
+  --panel-alt: #201f1e;
+  --border: #3a3836;
+  --text: #ece7de;
+  --muted: #9c968a;
+  --accent: #d4bc93;
+  --error: #d97a6c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.spacer {
+  flex: 1;
+}
+
+button {
+  background: #34322f;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+button:hover {
+  background: #403d39;
+  border-color: var(--accent);
+}
+
+button.small {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+button.danger:hover {
+  background: #4a2e29;
+  border-color: var(--error);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+button:disabled:hover {
+  background: #34322f;
+  border-color: var(--border);
+}
+
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 260px 1fr 320px;
+  overflow: hidden;
+  position: relative;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.padded {
+  padding: 14px;
+}
+
+#tree-panel {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+#project-settings {
+  padding: 10px 12px 0;
+  margin-bottom: 0;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+
+#tree {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+#tree ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 16px;
+}
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.tree-row:hover {
+  background: #34322f;
+}
+
+.tree-row.selected {
+  background: #45392b;
+  color: var(--accent);
+}
+
+.tree-row .caret {
+  width: 16px;
+  flex-shrink: 0;
+  display: inline-flex;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.tree-row .badge {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted);
+  padding-left: 6px;
+}
+
+.tree-add-node {
+  padding: 4px 10px 4px 28px;
+}
+
+#inspector-panel {
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+.effect-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.effect-row span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.effect-form {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+.effect-form h4 {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+/* ---------- canvas ---------- */
+
+#canvas-panel {
+  position: relative;
+  overflow: hidden;
+  background: #0f0e0d;
+}
+
+#canvas-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  cursor: grab;
+}
+
+#canvas-viewport.panning {
+  cursor: grabbing;
+}
+
+#canvas-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+#canvas-bg {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+#canvas-nodes {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.canvas-marker {
+  /* Anchored at the node's stored (x, y) with no centering transform, matching the exported
+     site's own .node div: left/top is the icon's top-left corner, not its center. The .dot is
+     absolutely positioned at that same (0, 0) local origin (not flex-centered against the
+     .label's width) so it renders exactly where the hit-testing math in app.js expects it -
+     otherwise clicks/drags miss the visible dot. */
+  position: absolute;
+  cursor: grab;
+  user-select: none;
+}
+
+.canvas-marker.dragging {
+  cursor: grabbing;
+  z-index: 10;
+}
+
+.canvas-marker .dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #1c1b1a;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4);
+}
+
+.canvas-marker.kind-travel .dot {
+  background: #7fb2e0;
+}
+
+.canvas-marker.kind-none .dot {
+  background: var(--muted);
+}
+
+.canvas-marker.selected .dot {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.canvas-marker .label {
+  position: absolute;
+  top: 20px;
+  left: 8px;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--text);
+  background: rgba(28, 27, 26, 0.85);
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+#canvas-effects {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.effect-preview-crossfade {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.effect-preview-sprite {
+  position: absolute;
+  width: 120px;
+}
+
+.canvas-hint {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(38, 37, 36, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* ---------- problems drawer ---------- */
+
+#problems-drawer {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 340px;
+  max-height: 50vh;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-right: none;
+  border-radius: 6px 0 0 0;
+  padding: 12px;
+  z-index: 20;
+  box-shadow: -2px -2px 12px rgba(0,0,0,0.4);
+}
+
+.field {
+  margin-bottom: 12px;
+}
+
+.field label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.field input[type="text"],
+.field input[type="number"],
+.field textarea,
+.field select {
+  width: 100%;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.field-hint {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.field-row {
+  display: flex;
+  gap: 12px;
+}
+
+.cover-field {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.cover-preview {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--panel-alt);
+  flex-shrink: 0;
+}
+
+.cover-field-main {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+}
+
+.cover-field-main input {
+  flex: 1;
+}
+
+.music-field-row {
+  display: flex;
+  gap: 6px;
+}
+
+.music-field-row input {
+  flex: 1;
+}
+
+.field-row > .field {
+  flex: 1;
+}
+
+.field.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field.checkbox label {
+  margin: 0;
+  text-transform: none;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.inspector-form h2 {
+  margin-top: 0;
+  font-size: 16px;
+}
+
+.inspector-form .id-line {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: -8px;
+  margin-bottom: 16px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+fieldset {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin: 0 0 14px 0;
+}
+
+legend {
+  padding: 0 6px;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#issues, #warnings {
+  margin-bottom: 16px;
+}
+
+#issues h3 {
+  color: var(--error);
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+#warnings h3 {
+  color: var(--accent);
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+#issues ul, #warnings ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+#status-bar {
+  padding: 6px 14px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+#status-bar.error {
+  color: var(--error);
+}
+
+/* ---------- toast ---------- */
+
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 44px;
+  transform: translate(-50%, 12px);
+  background: #2f4a34;
+  color: #d9f0da;
+  border: 1px solid #4d7a55;
+  border-radius: 6px;
+  padding: 10px 18px;
+  font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 100;
+}
+
+#toast.error {
+  background: #4a2e29;
+  color: #f5d6cf;
+  border-color: var(--error);
+}
+
+#toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
