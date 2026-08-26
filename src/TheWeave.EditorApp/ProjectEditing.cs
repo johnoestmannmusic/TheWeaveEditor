@@ -186,6 +186,12 @@ internal static class ProjectEditing
         project.BackgroundMusicPath = string.IsNullOrWhiteSpace(edit.BackgroundMusicPath)
             ? null
             : edit.BackgroundMusicPath.Trim();
+
+        // Unlike BackgroundMusicPath, this never clears to null/a blank-field default - a
+        // missing or non-positive value just leaves whatever the project already had (its own
+        // schema default, 105, the first time this is ever called).
+        if (edit.ListeningRadiusPx is double radius && radius > 0)
+            project.ListeningRadiusPx = radius;
     }
 
     /// <summary>The one CardSize.Modal node on the project's home page, if any - see

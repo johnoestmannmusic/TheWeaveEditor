@@ -50,12 +50,16 @@ public sealed class PageEditRequest
     public double? DefaultSpawnY { get; set; }
 }
 
-/// <summary>Project-level settings editable from the UI - currently just the shell's looping
-/// background track (relative to Assets.MusRoot). A blank value clears it back to null, same
-/// as an Inspector text field's own convention (see ApplyNodeEdit's CoverImagePath handling).</summary>
+/// <summary>Project-level settings editable from the UI: the shell's looping background track
+/// (relative to Assets.MusRoot, currently unused by the exported site - see
+/// WeaveProject.BackgroundMusicPath's own doc) and the shared location-audio listening radius.
+/// A blank BackgroundMusicPath clears it back to null, same as an Inspector text field's own
+/// convention (see ApplyNodeEdit's CoverImagePath handling). ListeningRadiusPx is never cleared
+/// to null this way - see ApplyProjectEdit.</summary>
 public sealed class ProjectEditRequest
 {
     public string? BackgroundMusicPath { get; set; }
+    public double? ListeningRadiusPx { get; set; }
 }
 
 /// <summary>

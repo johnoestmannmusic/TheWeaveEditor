@@ -40,7 +40,7 @@ let chainIndex = 0;      // activeNode's position within activeRoot's chain
 // Globe wraparound (see window.__weavePage, emitted per-page by PageConfigScriptRenderer).
 // worldWidth/worldHeight are the page's authoritative world size - not document.body's actual
 // scrollWidth/Height, which for a wrapping page is 3x larger once the ghost tiles below exist.
-let weavePage = { wraps: false, globeEffect: false, worldWidth: 0, worldHeight: 0, defaultSpawnX: null, defaultSpawnY: null };
+let weavePage = { wraps: false, globeEffect: false, worldWidth: 0, worldHeight: 0, defaultSpawnX: null, defaultSpawnY: null, listeningRadiusPx: null };
 // Top-level node element -> its 8 ghost clones (one per non-center tile in the 3x3 wrap grid).
 // Only populated when weavePage.wraps is true.
 let ghostRoots = new Map();
@@ -55,6 +55,20 @@ let globeEffectIcons = [];
 // Ship tuning
 const SHIP_WIDTH = 40;
 const INTERACT_RADIUS = 100;
+
+// Location-zoned audio tuning (see updateLocationAudio). LISTEN_RADIUS_FALLBACK mirrors
+// WeaveProject's own schema default (105px) - used only if a page somehow loads without
+// window.__weavePage.listeningRadiusPx (e.g. an export from before this existed).
+// PRELOAD_RADIUS_MULTIPLIER controls how much earlier (as a multiple of the audible radius) a
+// track starts buffering than it needs to actually be heard - location tracks are commonly
+// hosted at an external URL (see Card.Audio.Url), so buffering has to have a head start on
+// becoming audible or there'd be a silent gap right as a location should start fading in.
+const LISTEN_INNER_RADIUS = INTERACT_RADIUS; // full volume within this distance - matches card-open range
+const LISTEN_RADIUS_FALLBACK = 105;
+const PRELOAD_RADIUS_MULTIPLIER = 3;
+let listenRadius = LISTEN_RADIUS_FALLBACK;
+let preloadRadius = LISTEN_RADIUS_FALLBACK * PRELOAD_RADIUS_MULTIPLIER;
+const AUDIO_VOLUME_EASE = 0.85; // per-second retention factor, same Math.pow(x, dt) shape as TURN_DAMPING
 const TURN_ACCEL = 0.006;
 const TURN_DAMPING = 0.86;
 const MAX_TURN_SPEED = 0.055;
@@ -180,6 +194,13 @@ function loadPageConfig(){
   // back to its own hardcoded default in that case.
   weavePage.defaultSpawnX = cfg && cfg.defaultSpawnX != null ? cfg.defaultSpawnX : null;
   weavePage.defaultSpawnY = cfg && cfg.defaultSpawnY != null ? cfg.defaultSpawnY : null;
+
+  // WeaveProject.ListeningRadiusPx - project-wide, not per-page (see updateLocationAudio).
+  // Floored well above LISTEN_INNER_RADIUS so the fade math there never divides by ~0, even if
+  // the project value is missing, zero, or set below the card-open radius by mistake.
+  weavePage.listeningRadiusPx = cfg && cfg.listeningRadiusPx != null ? cfg.listeningRadiusPx : null;
+  listenRadius = Math.max(weavePage.listeningRadiusPx || LISTEN_RADIUS_FALLBACK, LISTEN_INNER_RADIUS + 1);
+  preloadRadius = listenRadius * PRELOAD_RADIUS_MULTIPLIER;
 
   document.body.style.width = weavePage.worldWidth + "px";
   document.body.style.height = weavePage.worldHeight + "px";
@@ -469,6 +490,8 @@ function loadNodes() {
       curNode.classList.add('cardOpen'); // see setCardOpen()'s own comment
     }
 
+    let curAudio = curInfo.querySelector('.songPlayer');
+
     nodeMeta.set(curNode, {
       img: curImg,
       info: curInfo,
@@ -485,10 +508,16 @@ function loadNodes() {
       // part of a chain at all (:scope so a nested chain member's own .chainHint isn't picked up
       // instead - see updateChainHint()). null for a node that's never part of any chain.
       chainHint: curNode.querySelector(':scope > .chainHint') ?? null,
+      // This node's .songPlayer (null if it has none) - see updateLocationAudio, which is the
+      // only thing driving a non-modal node's audio now (a modal's own <audio controls> is left
+      // to the visitor, untouched by that system). audioPreloaded latches true the first time
+      // this element's buffering is kicked off, so that only ever happens once per element.
+      audio: curAudio,
+      audioPreloaded: false,
     });
 
-    let curAudio = curInfo.querySelector('.songPlayer');
     if (curAudio) {
+      if (!isModal) curAudio.volume = 0; // updateLocationAudio eases this up from silence
       curAudio.addEventListener('play', notifyShellOfTrackState);
       curAudio.addEventListener('pause', notifyShellOfTrackState);
       curAudio.addEventListener('ended', notifyShellOfTrackState);
@@ -1018,6 +1047,65 @@ function updateNodeProximity(){
   }
 }
 
+// Location-zoned music: every top-level root's own track (or whichever chain member the player
+// has X-cycled to - see cycleChainNode) fades in as the ship approaches that root's center, up
+// to full volume within LISTEN_INNER_RADIUS (the same distance that already opens the card), and
+// fades to silent by listenRadius. listenRadius is one shared, project-configured value (see
+// loadPageConfig) rather than something computed from node spacing here - the editor is
+// responsible for keeping it small enough that no two locations' audible zones overlap.
+//
+// Distance is measured to the *root* even when a deeper chain member is the one actually
+// sounding, since only top-level nodes have a real map position (see getNodeCenter) - a nested
+// chain member's music is "the root's location, a different track," not a different place.
+//
+// Every other (non-active) member of the same chain is eased toward 0 right alongside the active
+// one, rather than snapped to pause immediately - that's what makes X-cycling from a root to a
+// child (or back) read as a crossfade instead of a hard cut.
+function updateLocationAudio(dt){
+  let ease = 1 - Math.pow(AUDIO_VOLUME_EASE, dt);
+
+  nodeMeta.forEach((meta, node) => {
+    if (!meta.isTopLevel || meta.isModal) return;
+
+    let center = getNodeCenter(meta);
+    let d = Math.hypot(...wrappedOffset(ship.x - center.x, ship.y - center.y));
+
+    // Start buffering well before the track needs to be audible - see PRELOAD_RADIUS_MULTIPLIER's
+    // own comment on why (external-URL tracks need a head start). The whole chain preloads
+    // together (not just whichever member happens to be active right now) so stepping into a
+    // child with X once close doesn't hit a cold, unbuffered element.
+    if (d <= preloadRadius) {
+      for (const member of meta.chain) {
+        let memberMeta = nodeMeta.get(member);
+        if (memberMeta.audio && !memberMeta.audioPreloaded) {
+          memberMeta.audioPreloaded = true;
+          memberMeta.audio.preload = 'auto';
+          memberMeta.audio.load();
+        }
+      }
+    }
+
+    let audibility = clamp((listenRadius - d) / (listenRadius - LISTEN_INNER_RADIUS), 0, 1);
+    let activeMember = (node === activeRoot && activeNode) ? activeNode : node;
+
+    for (const member of meta.chain) {
+      let memberMeta = nodeMeta.get(member);
+      let audio = memberMeta.audio;
+      if (!audio) continue;
+
+      let target = (member === activeMember) ? audibility : 0;
+      audio.volume += (target - audio.volume) * ease;
+      if (audio.volume < 0.004) audio.volume = 0;
+
+      if (audio.volume > 0) {
+        if (audio.paused) audio.play().catch(() => {});
+      } else if (!audio.paused) {
+        audio.pause();
+      }
+    }
+  });
+}
+
 // Marks whether a node's card is currently open, driving .node.cardOpen (see main.css) so an
 // open card's own icon-bearing .node paints above every plain (closed) .node - without this,
 // nearby nodes on the map stack purely by document order and can draw their icon over this
@@ -1108,22 +1196,17 @@ function onInteract(){
   if (!activeNode) return;
 
   let meta = nodeMeta.get(activeNode);
-  let audio = meta.info.querySelector('.songPlayer');
   let travelLink = meta.info.querySelector('.poetry-travel a');
 
-  if (audio) {
-    if (audio.paused) {
-      audio.play();
-    } else {
-      audio.pause();
-    }
-  } else if (travelLink) {
+  if (travelLink) {
     window.location.href = travelLink.getAttribute('href');
-  } else {
+  } else if (!meta.audio) {
     // Informational-only card (e.g. tutorial) - interact just toggles it
     setCardOpen(activeNode, meta, meta.info.style.display === 'none');
     if (weavePage.wraps) syncGhosts(activeRoot);
   }
+  // A card with location audio and no travel link has nothing left for Z to do - the music
+  // itself is proximity-driven now (see updateLocationAudio), not toggled by interact.
 }
 
 // Generic per-page visual effects (drifting sprites, a cross-fading second
@@ -1212,6 +1295,7 @@ function loop(timestamp){
   updateShip(dt);
   updateCamera(dt);
   updateNodeProximity();
+  updateLocationAudio(dt);
   if (weavePage.globeEffect) updateGlobeEffect();
 
   requestAnimationFrame(loop);

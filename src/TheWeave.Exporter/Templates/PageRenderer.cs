@@ -144,28 +144,20 @@ public sealed class PageRenderer
 
         if (card.Audio is not null)
         {
-            // Modal cards intercept Z entirely for closing (see main.js's modalQueue) - their
-            // songPlayer, if any, is never reachable via Z, only its own <audio controls>, so the
-            // key hint would be actively misleading there. Every other card's Z toggles this
-            // audio - see onInteract's own audio-first precedence, which RenderAction's own hint
-            // (below) mirrors from the other side.
+            // Modal cards stay outside the location-zoned proximity system entirely (see
+            // Card.cs's own doc on CardSize.Modal) - Z closes them (main.js's modalQueue), never
+            // toggles their audio, so they keep a manual <audio controls> player.
             //
-            // The hint sits to the *left* of the player, in a small wrapper rather than
-            // songPlayer's own position:relative offset - the player is already 250px wide (right
-            // at a Standard card's own content width), so there's no room to its left within the
-            // card itself; the wrapper just lets the pair overflow the card's left/right edge
-            // together rather than the hint having nowhere to go and wrapping onto its own line.
+            // Every other card's music is proximity-driven (see main.js's updateLocationAudio) -
+            // no `controls` (a manually-scrubbed/paused element would just fight the per-frame
+            // volume/play control every frame) and no key hint (Z no longer does anything to it).
+            // preload="none" so the browser doesn't eagerly fetch every location's (often
+            // externally-hosted) track on page load - main.js flips it to "auto" once the ship
+            // is close enough to actually need it buffered.
             if (card.Size != CardSize.Modal)
-            {
-                sb.AppendLine($"{pad}  <div class=\"songPlayerRow\">");
-                sb.AppendLine($"{pad}    <img class=\"keyHint\" src=\"img/ui/key_z.gif\">");
-                sb.AppendLine($"{pad}    <audio class=\"songPlayer\" controls src=\"{EscapeAttr(card.Audio.Url)}\"></audio>");
-                sb.AppendLine($"{pad}  </div>");
-            }
+                sb.AppendLine($"{pad}  <audio class=\"songPlayer\" preload=\"none\" src=\"{EscapeAttr(card.Audio.Url)}\"></audio>");
             else
-            {
                 sb.AppendLine($"{pad}  <audio class=\"songPlayer\" controls src=\"{EscapeAttr(card.Audio.Url)}\"></audio>");
-            }
         }
 
         sb.AppendLine($"{pad}  <!-- Text -->");
@@ -244,11 +236,9 @@ public sealed class PageRenderer
                 sb.AppendLine($"{pad}    <!-- Travel -->");
                 sb.AppendLine($"{pad}    <div class=\"poetry-travel\">");
                 sb.Append($"{pad}      ");
-                // Z only reaches Travel when there's no songPlayer to toggle first - see
-                // onInteract's own audio-first precedence, which the songPlayer hint above
-                // mirrors from the other side.
-                if (card.Audio is null)
-                    sb.Append($"<img class=\"keyHint\" src=\"img/ui/key_z.gif\">");
+                // Z always reaches Travel now - location audio is proximity-driven, not
+                // Z-toggled anymore (see onInteract), so it never competes for this hint.
+                sb.Append($"<img class=\"keyHint\" src=\"img/ui/key_z.gif\">");
                 sb.Append($"<a href=\"./{EscapeAttr(targetFileName)}{BuildTravelQuery(sourcePage, card.Action)}\">[ TRAVEL ]</a>");
                 sb.AppendLine();
                 sb.AppendLine($"{pad}    </div>");

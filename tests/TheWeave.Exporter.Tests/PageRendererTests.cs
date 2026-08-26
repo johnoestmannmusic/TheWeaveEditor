@@ -50,7 +50,7 @@ public class PageRendererTests
               <script src="jsx/main.js?v={{RuntimeAssets.Version}}"></script>
 
               <script>
-                window.__weavePage = {"wraps":true,"globeEffect":true,"worldWidth":3010,"worldHeight":1696,"defaultSpawnX":null,"defaultSpawnY":null};
+                window.__weavePage = {"wraps":true,"globeEffect":true,"worldWidth":3010,"worldHeight":1696,"defaultSpawnX":null,"defaultSpawnY":null,"listeningRadiusPx":105};
               </script>
               </head>
 
@@ -323,7 +323,7 @@ public class PageRendererTests
         project.Pages.Add(wrapping);
 
         var wrappingHtml = new PageRenderer(project).RenderPage(wrapping);
-        Assert.Contains("window.__weavePage = {\"wraps\":true,\"globeEffect\":true,\"worldWidth\":3010,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null};", wrappingHtml);
+        Assert.Contains("window.__weavePage = {\"wraps\":true,\"globeEffect\":true,\"worldWidth\":3010,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"listeningRadiusPx\":105};", wrappingHtml);
 
         var merged = MakePage("index", "index.html");
         merged.Wraps = false;
@@ -333,7 +333,7 @@ public class PageRendererTests
         project.Pages.Add(merged);
 
         var mergedHtml = new PageRenderer(project).RenderPage(merged);
-        Assert.Contains("window.__weavePage = {\"wraps\":false,\"globeEffect\":false,\"worldWidth\":6020,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null};", mergedHtml);
+        Assert.Contains("window.__weavePage = {\"wraps\":false,\"globeEffect\":false,\"worldWidth\":6020,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"listeningRadiusPx\":105};", mergedHtml);
     }
 
     [Fact]
@@ -602,7 +602,7 @@ public class PageRendererTests
     }
 
     [Fact]
-    public void RenderPage_TravelActionWithAudio_OmitsKeyHint_AudioGetsItInstead()
+    public void RenderPage_TravelActionWithAudio_HintGoesToTravel_AudioIsUnwrapped()
     {
         var project = new WeaveProject();
         var index = MakePage("index", "index.html");
@@ -623,11 +623,11 @@ public class PageRendererTests
 
         var html = new PageRenderer(project).RenderPage(index);
 
-        // Z always reaches the audio first (see onInteract) when both are present, so only the
-        // audio gets the hint - the travel link never would while this card has a songPlayer.
-        Assert.Contains("<div class=\"songPlayerRow\">\n          <img class=\"keyHint\" src=\"img/ui/key_z.gif\">\n          <audio class=\"songPlayer\" controls src=\"https://example.com/track.ogg\"></audio>", html);
-        Assert.Contains("<a href=\"./pentura.html\">[ TRAVEL ]</a>", html);
-        Assert.DoesNotContain("keyHint\" src=\"img/ui/key_z.gif\"><a href=\"./pentura.html\">", html); // no keyHint tacked onto the travel link
+        // Location audio is proximity-driven now (see main.js's updateLocationAudio), not
+        // Z-toggled, so it never competes with the travel link for the key hint - Z always
+        // reaches Travel when one is present, audio or not.
+        Assert.Contains("<audio class=\"songPlayer\" preload=\"none\" src=\"https://example.com/track.ogg\"></audio>", html);
+        Assert.Contains("<img class=\"keyHint\" src=\"img/ui/key_z.gif\"><a href=\"./pentura.html\">[ TRAVEL ]</a>", html);
     }
 
     [Fact]

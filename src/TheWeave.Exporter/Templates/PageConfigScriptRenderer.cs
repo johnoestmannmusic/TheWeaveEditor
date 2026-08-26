@@ -26,6 +26,7 @@ public static class PageConfigScriptRenderer
             worldHeight = page.WorldHeightPx ?? project.DefaultWorldHeightPx,
             defaultSpawnX = page.DefaultSpawnX,
             defaultSpawnY = page.DefaultSpawnY,
+            listeningRadiusPx = project.ListeningRadiusPx,
         };
         var json = JsonSerializer.Serialize(payload, Options);
 

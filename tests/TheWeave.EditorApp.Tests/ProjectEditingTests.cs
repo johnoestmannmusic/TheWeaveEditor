@@ -286,6 +286,26 @@ public class ProjectEditingTests
         Assert.Null(project.BackgroundMusicPath);
     }
 
+    [Fact]
+    public void ApplyProjectEdit_ListeningRadiusPx_UpdatesOnPositiveValue_IgnoresMissingOrNonPositive()
+    {
+        var project = new WeaveProject(); // default ListeningRadiusPx = 105
+
+        ProjectEditing.ApplyProjectEdit(project, new ProjectEditRequest { ListeningRadiusPx = 180 });
+        Assert.Equal(180, project.ListeningRadiusPx);
+
+        // Unlike BackgroundMusicPath, a missing or non-positive value never clears/resets this -
+        // it just leaves whatever the project already had.
+        ProjectEditing.ApplyProjectEdit(project, new ProjectEditRequest { ListeningRadiusPx = null });
+        Assert.Equal(180, project.ListeningRadiusPx);
+
+        ProjectEditing.ApplyProjectEdit(project, new ProjectEditRequest { ListeningRadiusPx = 0 });
+        Assert.Equal(180, project.ListeningRadiusPx);
+
+        ProjectEditing.ApplyProjectEdit(project, new ProjectEditRequest { ListeningRadiusPx = -5 });
+        Assert.Equal(180, project.ListeningRadiusPx);
+    }
+
     [Theory]
     [InlineData("Salmon Town", "salmon-town")]
     [InlineData("  Trailing spaces  ", "trailing-spaces")]

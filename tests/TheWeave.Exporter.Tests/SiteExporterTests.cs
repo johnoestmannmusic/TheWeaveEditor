@@ -204,7 +204,10 @@ public class SiteExporterTests
 
         var shell = File.ReadAllText(Path.Combine(outDir.Path, "index.html"));
         Assert.Contains("id=\"weaveStage\" src=\"theweave.html\"", shell);
-        Assert.Contains("id=\"weaveBgMusic\" src=\"mus/DISCOVERYSQUAD.ogg\"", shell);
+        // The shell's site-wide background track is intentionally disabled (see
+        // ShellRenderer) in favor of location-zoned audio - never emitted even when
+        // BackgroundMusicPath is set.
+        Assert.DoesNotContain("weaveBgMusic", shell);
         Assert.Contains("jsx/shell.js", shell);
 
         Assert.True(File.Exists(Path.Combine(outDir.Path, "jsx", "shell.js")));

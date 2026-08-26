@@ -32,11 +32,13 @@ public static class ShellRenderer
         sb.AppendLine("<body>");
         sb.AppendLine();
 
-        if (project.BackgroundMusicPath is not null)
-        {
-            var musicSrc = $"{project.Assets.MusRoot}/{project.BackgroundMusicPath}";
-            sb.AppendLine($"  <audio id=\"weaveBgMusic\" src=\"{EscapeAttr(musicSrc)}\" loop preload=\"auto\"></audio>");
-        }
+        // The shell's site-wide looping track is intentionally disabled - the site moved to
+        // location-zoned ambient audio instead (see PageRenderer's per-node .songPlayer and
+        // main.js's proximity-driven volume). Deliberately never emitting the <audio> tag here
+        // (rather than deleting this whole block) means shell.js's own bindBackgroundMusic
+        // logic - which only ever runs `if (bgMusic)` - just quietly no-ops, so it's a one-line
+        // revert if a site-wide track comes back later. project.BackgroundMusicPath is left
+        // alone in the schema/editor for the same reason.
 
         sb.AppendLine($"  <iframe id=\"weaveStage\" src=\"{EscapeAttr(homePageFileName)}\" allow=\"autoplay; gamepad\"></iframe>");
         sb.AppendLine();

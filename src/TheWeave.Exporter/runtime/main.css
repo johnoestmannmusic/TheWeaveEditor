@@ -173,28 +173,6 @@ h3 {
   width: 250px;
 }
 
-/* Wraps the key hint + player together (see PageRenderer's own comment on why) so the hint sits
-   immediately to the player's left as one unit, rather than needing to know how far down the
-   card the player itself renders (which varies - a cover image above it shifts everything down).
-   No gap of its own - .keyHint's own margin already provides that spacing (and the outer edge
-   of it too, on whichever side ends up nearer the card's own border). */
-.songPlayerRow{
-  position: relative; top: 5px; left: 0px;
-  display: flex;
-  align-items: center;
-}
-
-.songPlayerRow .songPlayer{
-  /* The row above already carries the top:5px/left:0px offset .songPlayer normally sets for
-     itself - applying it twice would double the shift. Narrower than the base 250px too: a
-     Standard card's content area is only 250px wide (252px card - 1px border each side), and
-     the key hint now needs 30px of that (20px icon + 5px margin each side) - 250px unchanged
-     would push the pair's combined width past the card's edge by the icon's own full footprint,
-     not just trim by a few px. */
-  position: static;
-  width: 215px;
-}
-
 .nodeImage {
   /* 8px scaled by 6 */
   width: 48px;
