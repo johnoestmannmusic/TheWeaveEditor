@@ -458,7 +458,7 @@ function renderPageInspector(container, page) {
     </div>
     <div class="field checkbox">
       <input type="checkbox" id="f-page-is-home" ${project.homePageId === page.id ? 'checked' : ''}>
-      <label for="f-page-is-home">Starting map (the persistent shell loads this page by default - see Background Music)</label>
+      <label for="f-page-is-home">Starting map (the persistent shell loads this page by default - see Hub theme)</label>
     </div>
     <div class="field-row">
       <div class="field">

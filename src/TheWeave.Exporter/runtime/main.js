@@ -40,7 +40,7 @@ let chainIndex = 0;      // activeNode's position within activeRoot's chain
 // Globe wraparound (see window.__weavePage, emitted per-page by PageConfigScriptRenderer).
 // worldWidth/worldHeight are the page's authoritative world size - not document.body's actual
 // scrollWidth/Height, which for a wrapping page is 3x larger once the ghost tiles below exist.
-let weavePage = { wraps: false, globeEffect: false, worldWidth: 0, worldHeight: 0, defaultSpawnX: null, defaultSpawnY: null, listeningRadiusPx: null };
+let weavePage = { wraps: false, globeEffect: false, worldWidth: 0, worldHeight: 0, defaultSpawnX: null, defaultSpawnY: null, listeningRadiusPx: null, isHomePage: false };
 // Top-level node element -> its 8 ghost clones (one per non-center tile in the 3x3 wrap grid).
 // Only populated when weavePage.wraps is true.
 let ghostRoots = new Map();
@@ -123,10 +123,15 @@ let lastFrameTime = null;
 
 // Order of initialization
 document.addEventListener('DOMContentLoaded', function() {
-  // Effects run first because a crossfade effect creates #bgmap2 dynamically - loadPageConfig
-  // (sizes it) and buildWrapGhosts (tiles it) both need it to already exist.
-  applyPageEffects();
+  // loadPageConfig runs first now (it didn't used to need to - see its own history - but
+  // applyDriftEffect needs weavePage.wraps/worldWidth/worldHeight already known, to place a
+  // drift sprite in the same shifted render space a wrapping page's background/nodes use - see
+  // applyDriftEffect's own comment). A crossfade effect's own #bgmap2 is already present in the
+  // static markup regardless of this order (PageRenderer renders it whenever
+  // Page.SecondaryBackground is set, which CrossfadeLayerEffect keeps in sync with - see
+  // ProjectEditing's SyncSecondaryBackground).
   loadPageConfig();
+  applyPageEffects();
   initShip();
   loadNodes();
   if (weavePage.wraps) {
@@ -201,6 +206,9 @@ function loadPageConfig(){
   weavePage.listeningRadiusPx = cfg && cfg.listeningRadiusPx != null ? cfg.listeningRadiusPx : null;
   listenRadius = Math.max(weavePage.listeningRadiusPx || LISTEN_RADIUS_FALLBACK, LISTEN_INNER_RADIUS + 1);
   preloadRadius = listenRadius * PRELOAD_RADIUS_MULTIPLIER;
+
+  // Whether this is WeaveProject.HomePageId's own page - see updateHubMusicSignal.
+  weavePage.isHomePage = cfg ? !!cfg.isHomePage : false;
 
   document.body.style.width = weavePage.worldWidth + "px";
   document.body.style.height = weavePage.worldHeight + "px";
@@ -514,25 +522,14 @@ function loadNodes() {
       // this element's buffering is kicked off, so that only ever happens once per element.
       audio: curAudio,
       audioPreloaded: false,
+      // Whether this node's Travel action leads back to the project's home page - see
+      // updateHubMusicSignal, which fades the shell's hub theme in as the ship approaches one.
+      travelHome: curNode.dataset.travelHome === "true",
     });
 
-    if (curAudio) {
-      if (!isModal) curAudio.volume = 0; // updateLocationAudio eases this up from silence
-      curAudio.addEventListener('play', notifyShellOfTrackState);
-      curAudio.addEventListener('pause', notifyShellOfTrackState);
-      curAudio.addEventListener('ended', notifyShellOfTrackState);
-    }
+    if (curAudio && !isModal) curAudio.volume = 0; // updateLocationAudio eases this up from silence
 
   });
-
-  // Tell the persistent shell (see shell.js) whether *any* location's song is currently
-  // playing on this page, so it can duck/restore its own looping background track. A no-op
-  // when this page isn't actually embedded in the shell's iframe (e.g. opened directly) -
-  // window.parent is just window itself then, so nothing is listening on the other end anyway.
-  // Called once up front too (immediately reports "nothing playing"), which is what makes a
-  // fresh page load - including one arrived at by traveling away while a track was left
-  // running - correctly tell the shell to fade back in.
-  notifyShellOfTrackState();
 
   // A multi-part location's nested nodes aren't reachable by flying to them
   // directly (see getNodeCenter) - the X button instead steps through each
@@ -623,21 +620,11 @@ function closeCurrentModal(){
   }
 }
 
-function notifyShellOfTrackState(){
-  if (window.parent === window) return;
-
-  let anyPlaying = Array.from(document.querySelectorAll('.songPlayer'))
-    .some(audio => !audio.paused && !audio.ended);
-
-  window.parent.postMessage({ source: 'weave-track', playing: anyPlaying }, '*');
-}
-
 // Tells the shell the visitor has actually interacted with this page - keyboard or gamepad
-// input, same as notifyShellOfTrackState's own "is a real track playing" signal, this is what
-// lets the shell unmute its background track (autoplay policies require a genuine gesture, and
-// a keypress that lands inside this iframe is one even though the shell's own top-level
-// document never directly saw it - see shell.js's bindBackgroundMusic). Sent at most once per
-// page load; every input source that can trigger it shares this one flag.
+// input. This is what lets the shell unmute its hub-theme track (autoplay policies require a
+// genuine gesture, and a keypress that lands inside this iframe is one even though the shell's
+// own top-level document never directly saw it - see shell.js's bindBackgroundMusic). Sent at
+// most once per page load; every input source that can trigger it shares this one flag.
 let shellInteractionNotified = false;
 function notifyShellOfInteraction(){
   if (shellInteractionNotified || window.parent === window) return;
@@ -1106,6 +1093,34 @@ function updateLocationAudio(dt){
   });
 }
 
+// Tells the persistent shell (see shell.js) how audible its "hub theme" track
+// (WeaveProject.BackgroundMusicPath) should be right now: full ambient volume while this is the
+// home page itself, otherwise the same distance-based fade curve updateLocationAudio uses,
+// applied to the closest node whose Travel action leads back to the home page (see
+// PageRenderer's data-travel-home marker) - so approaching one of those "return to the hub"
+// nodes previews the hub theme before you actually arrive. A no-op when this page isn't embedded
+// in the shell's iframe at all (e.g. opened directly), same guard as notifyShellOfInteraction.
+function updateHubMusicSignal(){
+  if (window.parent === window) return;
+
+  let audibility = 0;
+
+  if (weavePage.isHomePage) {
+    audibility = 1;
+  } else {
+    nodeMeta.forEach((meta, node) => {
+      if (!meta.isTopLevel || meta.isModal || !meta.travelHome) return;
+
+      let center = getNodeCenter(meta);
+      let d = Math.hypot(...wrappedOffset(ship.x - center.x, ship.y - center.y));
+      let a = clamp((listenRadius - d) / (listenRadius - LISTEN_INNER_RADIUS), 0, 1);
+      if (a > audibility) audibility = a;
+    });
+  }
+
+  window.parent.postMessage({ source: 'weave-hub-music', audibility }, '*');
+}
+
 // Marks whether a node's card is currently open, driving .node.cardOpen (see main.css) so an
 // open card's own icon-bearing .node paints above every plain (closed) .node - without this,
 // nearby nodes on the map stack purely by document order and can draw their icon over this
@@ -1226,13 +1241,17 @@ function applyPageEffects(){
   });
 }
 
+// #bgmap2 already exists in the static markup - PageRenderer renders it whenever
+// Page.SecondaryBackground is set, and CrossfadeLayerEffect.ImagePath is always kept in sync
+// with that (see ProjectEditing's SyncSecondaryBackground), so this animates the existing
+// element rather than creating a second one. Creating a duplicate here used to be the actual
+// bug: getElementById elsewhere (loadPageConfig, sizing it; buildWrapGhosts, tiling it) only
+// ever finds the first, static #bgmap2 in document order, so the freshly-created second one -
+// the one this function was calling .animate() on - never got sized or positioned at all, while
+// the properly-positioned static one sat there forever at its unanimated inline opacity:0%.
 function applyCrossfadeEffect(fx){
-  let layer = document.createElement('img');
-  layer.id = 'bgmap2';
-  layer.className = 'pannable';
-  layer.src = fx.imagePath;
-  layer.style.opacity = '0%';
-  document.body.appendChild(layer);
+  let layer = document.getElementById('bgmap2');
+  if (!layer) return;
 
   layer.animate(
     [{ opacity: fx.opacityFrom }, { opacity: fx.opacityTo }],
@@ -1246,9 +1265,19 @@ function applyCrossfadeEffect(fx){
 }
 
 function applyDriftEffect(fx){
+  // fx.x/y are authored in the same canonical [0, worldWidth) x [0, worldHeight) space every
+  // other authored position (Node.X/Y, etc.) lives in - a wrapping page's *real* content is
+  // rendered shifted by a whole world-size step (see loadPageConfig/shiftTopLevelNodesForWrap's
+  // own comments on why), so a drift sprite needs that same shift or it ends up sitting in the
+  // unshifted west/north ghost-tile position instead of alongside the real, visible world - miles
+  // from wherever the ship actually starts, which read as "the sprite doesn't appear" even
+  // though it's really just rendered off in the wrong tile.
+  let shiftX = weavePage.wraps ? weavePage.worldWidth : 0;
+  let shiftY = weavePage.wraps ? weavePage.worldHeight : 0;
+
   let outer = document.createElement('div');
-  outer.style.left = fx.x + "px";
-  outer.style.top = fx.y + "px";
+  outer.style.left = (fx.x + shiftX) + "px";
+  outer.style.top = (fx.y + shiftY) + "px";
   if (fx.blendMode) outer.style.mixBlendMode = fx.blendMode;
 
   let img = document.createElement('img');
@@ -1296,6 +1325,7 @@ function loop(timestamp){
   updateCamera(dt);
   updateNodeProximity();
   updateLocationAudio(dt);
+  updateHubMusicSignal();
   if (weavePage.globeEffect) updateGlobeEffect();
 
   requestAnimationFrame(loop);

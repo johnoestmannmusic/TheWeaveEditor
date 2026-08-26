@@ -63,6 +63,14 @@ public sealed class SiteExporter
             written.Add("index.html");
         }
 
+        // Written unconditionally, same as the shared runtime below - every export gets the
+        // AI-assisted-development disclosure page and the changelog regardless of project content.
+        File.WriteAllText(Path.Combine(outputDir, DisclosurePageRenderer.OutputFileName), DisclosurePageRenderer.Render());
+        written.Add(DisclosurePageRenderer.OutputFileName);
+
+        File.WriteAllText(Path.Combine(outputDir, UpdateLogPageRenderer.OutputFileName), UpdateLogPageRenderer.Render());
+        written.Add(UpdateLogPageRenderer.OutputFileName);
+
         written.UnionWith(AssetCopier.CopyRuntime(project, outputDir));
 
         if (contentSourceRoot is not null)

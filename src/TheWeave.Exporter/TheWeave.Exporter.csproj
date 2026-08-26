@@ -5,9 +5,18 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="TheWeave.Exporter.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="runtime\main.css" />
     <EmbeddedResource Include="runtime\main.js" />
     <EmbeddedResource Include="runtime\shell.js" />
+    <!-- Repo-root disclosure statement and changelog (see DisclosurePageRenderer/
+         UpdateLogPageRenderer) - kept at the root, next to README.md/LICENSE, rather than copied
+         into this project's own directory, so they stay the single editable source of truth. -->
+    <EmbeddedResource Include="..\..\aadd.md" LogicalName="TheWeave.Exporter.aadd.md" />
+    <EmbeddedResource Include="..\..\updatelog.md" LogicalName="TheWeave.Exporter.updatelog.md" />
   </ItemGroup>
 
   <PropertyGroup>

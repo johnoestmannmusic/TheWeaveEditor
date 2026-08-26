@@ -50,7 +50,7 @@ public class PageRendererTests
               <script src="jsx/main.js?v={{RuntimeAssets.Version}}"></script>
 
               <script>
-                window.__weavePage = {"wraps":true,"globeEffect":true,"worldWidth":3010,"worldHeight":1696,"defaultSpawnX":null,"defaultSpawnY":null,"listeningRadiusPx":105};
+                window.__weavePage = {"wraps":true,"globeEffect":true,"worldWidth":3010,"worldHeight":1696,"defaultSpawnX":null,"defaultSpawnY":null,"listeningRadiusPx":105,"isHomePage":false};
               </script>
               </head>
 
@@ -323,7 +323,7 @@ public class PageRendererTests
         project.Pages.Add(wrapping);
 
         var wrappingHtml = new PageRenderer(project).RenderPage(wrapping);
-        Assert.Contains("window.__weavePage = {\"wraps\":true,\"globeEffect\":true,\"worldWidth\":3010,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"listeningRadiusPx\":105};", wrappingHtml);
+        Assert.Contains("window.__weavePage = {\"wraps\":true,\"globeEffect\":true,\"worldWidth\":3010,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"listeningRadiusPx\":105,\"isHomePage\":false};", wrappingHtml);
 
         var merged = MakePage("index", "index.html");
         merged.Wraps = false;
@@ -333,7 +333,7 @@ public class PageRendererTests
         project.Pages.Add(merged);
 
         var mergedHtml = new PageRenderer(project).RenderPage(merged);
-        Assert.Contains("window.__weavePage = {\"wraps\":false,\"globeEffect\":false,\"worldWidth\":6020,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"listeningRadiusPx\":105};", mergedHtml);
+        Assert.Contains("window.__weavePage = {\"wraps\":false,\"globeEffect\":false,\"worldWidth\":6020,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"listeningRadiusPx\":105,\"isHomePage\":false};", mergedHtml);
     }
 
     [Fact]
@@ -583,6 +583,72 @@ public class PageRendererTests
     }
 
     [Fact]
+    public void RenderPage_StandardCard_HeightDependsOnWhetherItHasAudio()
+    {
+        var project = new WeaveProject();
+        var page = MakePage("index", "index.html");
+        page.Nodes.Add(new Node
+        {
+            Id = "no-audio",
+            Card = new Card { HeadingText = "Informational" }, // e.g. a travel-only or plain card
+        });
+        page.Nodes.Add(new Node
+        {
+            Id = "with-audio",
+            Card = new Card { HeadingText = "Has Music", Audio = new AudioRef { Url = "https://example.com/track.ogg" } },
+        });
+        project.Pages.Add(page);
+
+        var html = new PageRenderer(project).RenderPage(page);
+
+        // No audio - no explicit height override, so it falls back to .floatInfo's own CSS
+        // default (505px, the no-audio size - see main.css).
+        var noAudioBlock = html.Substring(html.IndexOf("<!-- Informational -->"), html.IndexOf("<!-- Has Music -->") - html.IndexOf("<!-- Informational -->"));
+        Assert.DoesNotContain("height:", noAudioBlock);
+
+        // Has audio - explicit shorter height (505 - 54, see main.css's own comment on the 54).
+        var withAudioBlock = html.Substring(html.IndexOf("<!-- Has Music -->"));
+        Assert.Contains("height: 451px", withAudioBlock);
+    }
+
+    [Fact]
+    public void RenderPage_TravelActionTargetingHomePage_GetsTravelHomeMarker()
+    {
+        var project = new WeaveProject { HomePageId = "index" };
+        var index = MakePage("index", "index.html");
+        var azurus = MakePage("azurus", "azurus.html");
+        azurus.Nodes.Add(new Node
+        {
+            Id = "return-to-weave",
+            Card = new Card { HeadingText = "RETURN", Action = new CardAction { Kind = ActionKind.Travel, TargetPageId = "index" } },
+        });
+        azurus.Nodes.Add(new Node
+        {
+            Id = "return-elsewhere",
+            Card = new Card { HeadingText = "ELSEWHERE", Action = new CardAction { Kind = ActionKind.Travel, TargetPageId = "azurus" } },
+        });
+        project.Pages.Add(index);
+        project.Pages.Add(azurus);
+
+        var homeHtml = new PageRenderer(project).RenderPage(index);
+        var azurusHtml = new PageRenderer(project).RenderPage(azurus);
+
+        // main.js's updateHubMusicSignal reads isHomePage to know when to play the hub theme at
+        // full ambient volume, and data-travel-home to know which nodes elsewhere preview it.
+        Assert.Contains("\"isHomePage\":true", homeHtml);
+        Assert.Contains("\"isHomePage\":false", azurusHtml);
+        Assert.DoesNotContain("data-travel-home=\"true\"", homeHtml);
+
+        // Only the node whose Travel action targets the home page gets the marker - the other
+        // node's own <!-- HeadingText --> comment (see RenderNode) delimits its block so this
+        // can tell the two apart despite Node.Id never appearing in the exported HTML.
+        var returnBlock = azurusHtml.Substring(azurusHtml.IndexOf("<!-- RETURN -->"), azurusHtml.IndexOf("<!-- ELSEWHERE -->") - azurusHtml.IndexOf("<!-- RETURN -->"));
+        var elsewhereBlock = azurusHtml.Substring(azurusHtml.IndexOf("<!-- ELSEWHERE -->"));
+        Assert.Contains("data-travel-home=\"true\"", returnBlock);
+        Assert.DoesNotContain("data-travel-home", elsewhereBlock);
+    }
+
+    [Fact]
     public void RenderPage_TravelActionWithoutAudio_GetsKeyHint()
     {
         var project = new WeaveProject();
@@ -622,6 +688,11 @@ public class PageRendererTests
         project.Pages.Add(pentura);
 
         var html = new PageRenderer(project).RenderPage(index);
+
+        // A Hub card that actually has audio gets the shorter, audio-reclaimed height (see
+        // BuildCardStyle) - unlike the plain travel-only Hub card in
+        // RenderPage_TravelActionWithoutAudio_GetsKeyHint, which never had that space to reclaim.
+        Assert.Contains("width: 512px; height: 406px; position: absolute", html);
 
         // Location audio is proximity-driven now (see main.js's updateLocationAudio), not
         // Z-toggled, so it never competes with the travel link for the key hint - Z always

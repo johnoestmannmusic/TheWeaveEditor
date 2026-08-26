@@ -33,28 +33,30 @@ public sealed class WeaveProject
     public string? HomePageId { get; set; }
 
     /// <summary>
-    /// Path (relative to Assets.MusRoot) of the track the shell loops in the background for as
-    /// long as the visitor is on the site, ducking out whenever a location's own song is
-    /// playing. Null means the shell has no background music. Only meaningful when HomePageId
-    /// is also set - a shell with no destination page never gets exported.
+    /// Path (relative to Assets.MusRoot) of the shell's "hub theme" track - the home page's own
+    /// identity music (e.g. DISCOVERY SQUAD). Null means the shell has no such track. Only
+    /// meaningful when HomePageId is also set - a shell with no destination page never gets
+    /// exported.
     ///
-    /// Currently unused: ShellRenderer intentionally never emits the shell's background-music
-    /// element regardless of this value - the site moved to location-zoned ambient audio
-    /// instead (see ListeningRadiusPx and runtime/main.js). Kept, rather than removed, in case
-    /// a site-wide track comes back later.
+    /// Not a constant site-wide loop: shell.js plays it at full ambient volume only while the
+    /// visitor is actually on the home page, and fades it in/out using the same proximity curve
+    /// as location audio (see ListeningRadiusPx) when they're elsewhere near a node whose travel
+    /// action leads back to the home page - see main.js's updateHubMusicSignal.
     /// </summary>
     public string? BackgroundMusicPath { get; set; }
 
     /// <summary>
-    /// Outer radius, in world-space pixels, within which a location's own track becomes audible
-    /// at all as the ship approaches it - fades from silent at this distance up to full volume
-    /// at the (shorter, fixed) proximity radius that already opens its card - see main.js's
-    /// INTERACT_RADIUS and location-audio logic. The same radius applies to every location on
-    /// every page, so it needs to stay small enough that no two audio-bearing locations'
-    /// audible zones overlap anywhere in the project. 105 is a starting point picked by
-    /// checking the closest real spacing between two audio-bearing locations in the live site
-    /// (~218px, on Ouros) - not auto-derived or kept in sync with node positions, so revisit it
-    /// by hand if locations move closer together than that.
+    /// Outer radius, in world-space pixels, within which a location's own track - or, elsewhere
+    /// on the site, the shell's hub theme (see BackgroundMusicPath) as the ship nears a node
+    /// that travels back to the home page - becomes audible at all as the ship approaches it,
+    /// fading from silent at this distance up to full volume at the (shorter, fixed) proximity
+    /// radius that already opens a card - see main.js's INTERACT_RADIUS and location-audio
+    /// logic. The same radius applies to every location on every page, so it needs to stay small
+    /// enough that no two audio-bearing locations' audible zones overlap anywhere in the
+    /// project. 105 is a starting point picked by checking the closest real spacing between two
+    /// audio-bearing locations in the live site (~218px, on Ouros) - not auto-derived or kept in
+    /// sync with node positions, so revisit it by hand if locations move closer together than
+    /// that.
     /// </summary>
     public double ListeningRadiusPx { get; set; } = 105;
 }

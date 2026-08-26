@@ -106,12 +106,22 @@ public sealed class PageRenderer
             ? $" data-modal=\"true\" data-modal-id=\"{EscapeAttr(node.Id)}\""
             : "";
 
+        // Marks a node whose Travel action leads back to the project's home page - main.js's
+        // updateHubMusicSignal uses this to fade the shell's hub theme in as the ship
+        // approaches one, the same way it fades a location's own track in (see
+        // WeaveProject.BackgroundMusicPath's own doc).
+        var travelHomeAttr = node.Card.Action.Kind == ActionKind.Travel
+            && _project.HomePageId is not null
+            && node.Card.Action.TargetPageId == _project.HomePageId
+                ? " data-travel-home=\"true\""
+                : "";
+
         // Once any ancestor (or this node itself) has a child, every node from there down is a
         // member of that chain - even a childless leaf, since it's still a possible "next" stop.
         var isPartOfChain = partOfChain || node.Children.Count > 0;
 
         sb.AppendLine($"{pad}<!-- {SafeComment(node.Card.HeadingText)} -->");
-        sb.AppendLine($"{pad}<div class=\"node\"{persistentAttr}{modalAttr} style=\"left: {Px(node.X)}px; top: {Px(node.Y)}px;\">");
+        sb.AppendLine($"{pad}<div class=\"node\"{persistentAttr}{modalAttr}{travelHomeAttr} style=\"left: {Px(node.X)}px; top: {Px(node.Y)}px;\">");
         sb.AppendLine($"{pad}  <img class=\"nodeImage\" src=\"{iconSrc}\">");
 
         // A hint that X/gamepad X cycles to the *next* chain member - see updateChainHint() in
@@ -394,7 +404,12 @@ public sealed class PageRenderer
         {
             case CardSize.Hub:
                 parts.Add("width: 512px");
-                parts.Add("height: 460px");
+                // 460px normally; 54px shorter when this card actually has audio - see
+                // .floatInfo's own comment in main.css on where that number comes from. A
+                // Hub-sized card without audio (the common case - a planet/sector travel hub)
+                // never rendered the old <audio controls> row its height used to account for,
+                // so it keeps the full size instead of shrinking into space it never had.
+                parts.Add(card.Audio is not null ? "height: 406px" : "height: 460px");
                 parts.Add("position: absolute");
                 break;
 
@@ -406,6 +421,10 @@ public sealed class PageRenderer
 
             case CardSize.Standard:
             default:
+                // .floatInfo's own CSS default (505px) already covers the common no-audio case
+                // (informational/travel-only cards) - only override it down to the shorter,
+                // audio-reclaimed height (see main.css) when this specific card actually has one.
+                if (card.Audio is not null) parts.Add("height: 451px");
                 parts.Add("position: relative");
                 break;
         }

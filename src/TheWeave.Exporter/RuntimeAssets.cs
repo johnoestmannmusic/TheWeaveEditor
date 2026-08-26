@@ -18,6 +18,12 @@ public static class RuntimeAssets
     /// <summary>The persistent shell's own script - see ShellRenderer.</summary>
     public static string ReadShellJs() => ReadEmbedded("runtime.shell.js");
 
+    /// <summary>The repo-root AI-assisted-development disclosure statement - see DisclosurePageRenderer.</summary>
+    public static string ReadAaddMd() => ReadEmbedded("aadd.md");
+
+    /// <summary>The repo-root site changelog - see UpdateLogPageRenderer.</summary>
+    public static string ReadUpdateLogMd() => ReadEmbedded("updatelog.md");
+
     /// <summary>
     /// Short hash of the runtime's own content, appended as a "?v=" query string to every
     /// exported page's css/js references. main.css/main.js keep the same filename across every

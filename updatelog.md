@@ -1,0 +1,39 @@
+# Update Log
+## The Weave Explorer
+
+[26AUG26] Locations now Auto-Play and various other fixes!
+
+[23AUG26] Ship-Controlling Overhaul, many other updates!
+
+[18JUL26] Maps now pan when mouse is near the edge of the screen (with a delay after grabbing).
+
+[17JUL26] 1 more locations added to the mysterious portal..
+
+[15JUL26] 1 location added to the mysterious portal..
+
+[11JUL26] A mysterious portal has opened in Sector B!
+
+[08JUL26] 7 more locations added to Ouros
+
+[07JUL26] Ouros is now open:
+    A mysterious radio signal discovered, revealing 2 locations..
+
+TWE Guided Tours are now available for those who would like a more structured look into The Weave (or just for background listening)!
+
+[24JUN26] Sigmir released, with 2 locations
+
+[19JUN26] Great news - the update bug appears to be fixed, so you can now visit Pyron and Azurus as intended :) Thanks Neocities team!
+
+[10JUN26] Entry point is now The Weave:
+    Both Weave Sectors available for travel
+    Azurus released, with 6 locations
+    Pyron released, with 2 locations
+    Pentura now has 9 locations
+
+[06JUN26] Fixing some styling issues and closer to consistent experience across browsers
+
+[31MAY26] Added Mountain Town of Urnh
+
+[30MAY26] Opened a number of locations on Pentura. Many more locations across twelve planets will be opened in the future..
+
+[28MAY26] Started The Weave Explorer website!

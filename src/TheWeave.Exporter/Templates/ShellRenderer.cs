@@ -6,8 +6,9 @@ namespace TheWeave.Exporter.Templates;
 
 /// <summary>
 /// Renders the site's persistent shell (written to index.html) - a full-viewport iframe that
-/// every actual page loads into, plus a looping background track (see runtime/shell.js) that
+/// every actual page loads into, plus a looping "hub theme" track (see runtime/shell.js) that
 /// survives travel between pages since the iframe, not the shell document, is what reloads.
+/// Its volume is proximity-driven, not constant - see shell.js's bindBackgroundMusic.
 /// Only ever called when WeaveProject.HomePageId is set; see SiteExporter.
 /// </summary>
 public static class ShellRenderer
@@ -32,13 +33,16 @@ public static class ShellRenderer
         sb.AppendLine("<body>");
         sb.AppendLine();
 
-        // The shell's site-wide looping track is intentionally disabled - the site moved to
-        // location-zoned ambient audio instead (see PageRenderer's per-node .songPlayer and
-        // main.js's proximity-driven volume). Deliberately never emitting the <audio> tag here
-        // (rather than deleting this whole block) means shell.js's own bindBackgroundMusic
-        // logic - which only ever runs `if (bgMusic)` - just quietly no-ops, so it's a one-line
-        // revert if a site-wide track comes back later. project.BackgroundMusicPath is left
-        // alone in the schema/editor for the same reason.
+        if (project.BackgroundMusicPath is not null)
+        {
+            // No longer a constant site-wide loop - shell.js now drives this element's volume
+            // from a per-frame 'weave-hub-music' signal main.js computes (see its
+            // updateHubMusicSignal): full ambient volume while the visitor is actually on the
+            // home page, fading in/out via the same proximity curve as location audio when
+            // they're elsewhere near a node that travels back to it.
+            var musicSrc = $"{project.Assets.MusRoot}/{project.BackgroundMusicPath}";
+            sb.AppendLine($"  <audio id=\"weaveBgMusic\" src=\"{EscapeAttr(musicSrc)}\" loop preload=\"auto\"></audio>");
+        }
 
         sb.AppendLine($"  <iframe id=\"weaveStage\" src=\"{EscapeAttr(homePageFileName)}\" allow=\"autoplay; gamepad\"></iframe>");
         sb.AppendLine();

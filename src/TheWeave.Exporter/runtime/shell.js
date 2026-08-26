@@ -2,20 +2,31 @@
 // John Oestmann
 // The persistent site shell: an <iframe> that every actual page (map, planet, shrine, ...)
 // loads into, plus whatever needs to survive travel between them without restarting - today
-// just the looping background track, ducking out whenever a location's own song is playing.
+// just the "hub theme" track (WeaveProject.BackgroundMusicPath), whose volume main.js drives
+// via postMessage: full ambient volume while the visitor is on the home page itself, fading in
+// via the same proximity curve as location audio as they approach a node elsewhere that travels
+// back to it (see main.js's updateHubMusicSignal).
 //
 // This file is the canonical shared runtime owned by TheWeave.Exporter - it's generated into
 // every exported site's jsx/shell.js, not hand-edited there. See main.js's own header for the
 // per-page runtime this loads inside its iframe.
 
 const BG_MUSIC_VOLUME = 0.5;
+// 'weave-hub-music' arrives every frame now (main.js's updateHubMusicSignal, a continuous
+// proximity value), not on discrete events the way the old ducking signal did - so this can't be
+// "start a fresh BG_MUSIC_FADE_MS-long animation on every message" (received every ~16ms, that
+// would restart itself before ever finishing). Converted instead into a per-millisecond ease
+// retention factor for a *persistent* loop (stepFade) that continuously nudges bgMusic.volume
+// toward whatever desiredVolume currently is, same "ease toward a continuously-updated target"
+// idiom main.js itself already uses (see e.g. its CAMERA_EASE/AUDIO_VOLUME_EASE) - picked so an
+// unattended target still reads as "settled" in roughly the same ~900ms it always has.
 const BG_MUSIC_FADE_MS = 900;
+const BG_MUSIC_EASE_PER_MS = Math.exp(Math.log(0.05) / BG_MUSIC_FADE_MS);
 
 let bgMusic;
 let stage;
 let musicUnlocked = false; // see unlockMusic()
 let desiredVolume = BG_MUSIC_VOLUME;
-let fadeHandle = null;
 
 document.addEventListener('DOMContentLoaded', function() {
   stage = document.getElementById('weaveStage');
@@ -43,13 +54,11 @@ function bindStageFocus(stage) {
 // page at all. Rather than block on that with a "click to enter" splash, the track starts
 // muted (always allowed) and unmutes/fades in on the first real user gesture - a click/tap
 // anywhere in the shell, a keypress there, or (via postMessage - see main.js's own
-// notifyShellOfInteraction/notifyShellOfTrackState) the first keyboard/gamepad input inside
-// the iframe itself, which is just as real a gesture even though it happens in a nested
-// document. That's also why the 'weave-track' branch below only unlocks on playing:true
-// (a location's song actually starting): main.js announces playing:false unconditionally on
-// every single page load, including the very first one, and that particular message carries
-// no gesture behind it at all - unlocking on it would start audible playback before the
-// visitor had done anything.
+// notifyShellOfInteraction) the first keyboard/gamepad input inside the iframe itself, which is
+// just as real a gesture even though it happens in a nested document. The continuous
+// 'weave-hub-music' audibility signal itself never unlocks playback on its own - it carries no
+// gesture behind it (it's sent every frame regardless of what the visitor has done), so an
+// explicit interaction is always what unmutes this.
 function bindBackgroundMusic(bgMusic) {
   bgMusic.loop = true;
   bgMusic.volume = 0;
@@ -61,7 +70,7 @@ function bindBackgroundMusic(bgMusic) {
     musicUnlocked = true;
     bgMusic.muted = false;
     bgMusic.play().catch(() => {});
-    fadeTo(desiredVolume);
+    // stepFade (below) picks up the fade-in from here on its own, now that musicUnlocked is true.
     window.removeEventListener('pointerdown', unlockMusic);
     window.removeEventListener('keydown', unlockMusic);
   };
@@ -71,25 +80,29 @@ function bindBackgroundMusic(bgMusic) {
   window.addEventListener('message', function(e) {
     if (!e.data) return;
 
-    if (e.data.source === 'weave-track') {
-      desiredVolume = e.data.playing ? 0 : BG_MUSIC_VOLUME;
-      if (musicUnlocked) fadeTo(desiredVolume);
-      else if (e.data.playing) unlockMusic(); // starting a track is itself a real gesture
+    if (e.data.source === 'weave-hub-music') {
+      desiredVolume = BG_MUSIC_VOLUME * Math.max(0, Math.min(1, e.data.audibility));
     } else if (e.data.source === 'weave-interaction') {
       unlockMusic();
     }
   });
+
+  requestAnimationFrame(stepFade);
 }
 
-function fadeTo(targetVolume) {
-  if (fadeHandle) cancelAnimationFrame(fadeHandle);
+let lastFadeFrameTime = null;
 
-  const startVolume = bgMusic.volume;
-  const startTime = performance.now();
+function stepFade(now){
+  if (lastFadeFrameTime === null) lastFadeFrameTime = now;
+  let dtMs = now - lastFadeFrameTime;
+  lastFadeFrameTime = now;
 
-  fadeHandle = requestAnimationFrame(function step(now) {
-    const t = Math.min(1, (now - startTime) / BG_MUSIC_FADE_MS);
-    bgMusic.volume = startVolume + (targetVolume - startVolume) * t;
-    fadeHandle = t < 1 ? requestAnimationFrame(step) : null;
-  });
+  // Stays silent (bgMusic.volume already initialized to 0, still muted) until a real gesture
+  // unlocks it - see bindBackgroundMusic's own comment on why this never self-unlocks.
+  if (musicUnlocked) {
+    let ease = 1 - Math.pow(BG_MUSIC_EASE_PER_MS, dtMs);
+    bgMusic.volume += (desiredVolume - bgMusic.volume) * ease;
+  }
+
+  requestAnimationFrame(stepFade);
 }

@@ -31,6 +31,48 @@ public class SiteExporterTests
     }
 
     [Fact]
+    public void Export_AlwaysWritesTheDisclosurePage()
+    {
+        var project = new WeaveProject { Title = "Test" };
+        project.Pages.Add(new Page
+        {
+            Id = "index",
+            Title = "Index",
+            OutputFileName = "index.html",
+            Background = new ImageRef { ImagePath = "img/x.png" },
+        });
+
+        using var outDir = new TempDirectory();
+
+        new SiteExporter().Export(project, outDir.Path);
+
+        var path = Path.Combine(outDir.Path, "aadd.html");
+        Assert.True(File.Exists(path));
+        Assert.StartsWith("<!DOCTYPE html>", File.ReadAllText(path));
+    }
+
+    [Fact]
+    public void Export_AlwaysWritesTheUpdateLogPage()
+    {
+        var project = new WeaveProject { Title = "Test" };
+        project.Pages.Add(new Page
+        {
+            Id = "index",
+            Title = "Index",
+            OutputFileName = "index.html",
+            Background = new ImageRef { ImagePath = "img/x.png" },
+        });
+
+        using var outDir = new TempDirectory();
+
+        new SiteExporter().Export(project, outDir.Path);
+
+        var path = Path.Combine(outDir.Path, "updatelog.html");
+        Assert.True(File.Exists(path));
+        Assert.StartsWith("<!DOCTYPE html>", File.ReadAllText(path));
+    }
+
+    [Fact]
     public void Export_WithContentSourceRoot_CopiesImgAndFntDirectories()
     {
         var project = new WeaveProject();
@@ -204,10 +246,7 @@ public class SiteExporterTests
 
         var shell = File.ReadAllText(Path.Combine(outDir.Path, "index.html"));
         Assert.Contains("id=\"weaveStage\" src=\"theweave.html\"", shell);
-        // The shell's site-wide background track is intentionally disabled (see
-        // ShellRenderer) in favor of location-zoned audio - never emitted even when
-        // BackgroundMusicPath is set.
-        Assert.DoesNotContain("weaveBgMusic", shell);
+        Assert.Contains("id=\"weaveBgMusic\" src=\"mus/DISCOVERYSQUAD.ogg\"", shell);
         Assert.Contains("jsx/shell.js", shell);
 
         Assert.True(File.Exists(Path.Combine(outDir.Path, "jsx", "shell.js")));

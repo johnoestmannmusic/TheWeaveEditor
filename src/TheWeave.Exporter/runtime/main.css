@@ -159,6 +159,15 @@ h3 {
   border-color: #d4bc93;
   background-color: antiquewhite;
   width: 252px;
+  /* This is the no-audio Standard-card height (informational/travel-only cards - the common
+     case, and the only one this shared class default needs to cover). A Standard card that
+     actually has audio gets a shorter, explicit inline override instead (see PageRenderer's
+     BuildCardStyle) - h3/.poetry-text are position:relative (flow-following, not absolute), so
+     removing the old <audio controls> row's own space (see PageRenderer's location-audio
+     rendering) already reflows them upward on its own; measured in a real browser at exactly
+     54px reclaimed, hence 505 - 54 = 451 there. A card with no audio never had that row taking
+     up space to begin with, so it keeps the full 505px instead of shrinking into space it never
+     used. */
   height: 505px;
   border-radius: 5px;
   -moz-border-radius: 5px;
