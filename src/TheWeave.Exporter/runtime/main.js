@@ -7,7 +7,8 @@
 // sokoban.js, which owns the movement itself). Press Z (keyboard) or A (gamepad) to interact with
 // whatever location the ship is standing on - travels to its linked page, or opens a track's Track
 // Focus screen. When that location has extra nested locations tucked inside its card (a multi-part
-// story), press X (keyboard) or X (gamepad) to step between them without having to move.
+// story), press X (keyboard) or X (gamepad) in Track Focus to step between them. Z / A in Track Focus
+// starts the Sokoban board over the album art, and Esc (keyboard) or B (gamepad) backs out of it.
 //
 // This file is the canonical shared runtime owned by TheWeave.Exporter - it's
 // generated into every exported site's jsx/main.js, not hand-edited there.
@@ -29,28 +30,23 @@ let modalQueue = [];
 let modalBackdrop = null;
 // The open Track Focus screen's root element, or null while it's closed - see openTrackFocus.
 let trackFocusEl = null;
-let activeNode = null;   // whichever card is currently shown (a root, or one of its chain)
-// performance.now() timestamp of the moment activeNode last changed identity (null while no
-// card is active) - see CARD_FOCUS_DELAY_MS in updateCamera: the camera only starts heading
-// toward a card once it's stayed the *same* activeNode this long, so passing near a location (or
-// quickly X-cycling through a chain) doesn't drag the camera around - only actually stopping on
-// one does.
-let activeNodeSince = null;
+let trackFocusScale = 1; // scale the art is drawn at - see updateTrackFocusScale
+// The Sokoban board's own mover and ship while it's being played, null otherwise - see startBoardGame.
+let boardMover = null;
+let boardShipEl = null;
+let activeNode = null;   // the current track: activeRoot, or the chain member Track Focus is on
 let activeRoot = null;   // the top-level node the ship is currently within range of
 let chainIndex = 0;      // activeNode's position within activeRoot's chain
 
 // The page's own config (see window.__weavePage, emitted per-page by PageConfigScriptRenderer) -
 // worldWidth/worldHeight are the page's authoritative world size, and grid is the board of squares
 // the ship walks (see loadPageConfig).
-let weavePage = { globeEffect: false, worldWidth: 0, worldHeight: 0, defaultSpawnX: null, defaultSpawnY: null, isHomePage: false, grid: null };
+let weavePage = { globeEffect: false, worldWidth: 0, worldHeight: 0, defaultSpawnX: null, defaultSpawnY: null, isHomePage: false, grid: null, screen: null };
 
-// Cosmetic globe-curvature hint (Page.GlobeEffect - see updateGlobeEffect). A purely screen-space
-// effect. Every top-level node icon that should get the effect - built once at load rather than
-// re-queried every frame.
-let globeEffectIcons = [];
 
 // Ship tuning
 const SHIP_WIDTH = 40;
+const SHIP_HEIGHT = SHIP_WIDTH * 16 / 12; // keeps img/ui/pilot-ship.png's 12x16 shape
 const NODE_ICON_SIZE = 48; // matches .nodeImage's width in main.css
 const STEP_MS = 240; // how long walking one square takes
 const MS_PER_FRAME = 1000 / 60; // loop()'s dt is measured in 60fps frames
@@ -70,16 +66,13 @@ const AUDIO_VOLUME_EASE = 0.95;
 // shouldn't walk the ship anywhere.
 const GAMEPAD_DEADZONE = 0.5;
 
-// Camera tuning. The camera doesn't track the ship 1:1 - it eases toward a target point that
-// leads the ship by LOOK_AHEAD_FRACTION of the viewport in whichever direction it's currently
-// facing, so more of what's ahead is visible than what's behind (2/3 ahead, 1/3 behind - see
-// updateCamera). CAMERA_EASE is a per-second retention factor, applied as Math.pow(x, dt) - without
-// easing, the look-ahead point would snap across the screen every time the ship turned to face a
-// new direction.
-const LOOK_AHEAD_FRACTION = 1 / 6; // fraction of viewport width/height, applied per-axis
-const CAMERA_EASE = 0.95;
-const CARD_FOCUS_EASE = 0.97; // slower than CAMERA_EASE - settling on a card should read as deliberate, not a snap
-const CARD_FOCUS_DELAY_MS = 450;
+// The view: one static screen of the map at a time (see updateView). SOURCE_SCREEN_WIDTH/HEIGHT are
+// one screen's size in the map art's own pixels, which only its shape matters for - see
+// updateViewScale. CARD_SCREEN_MARGIN keeps an open card from touching the screen's edge - see placeCard.
+const SOURCE_SCREEN_WIDTH = 250;
+const SOURCE_SCREEN_HEIGHT = 133;
+const SCREEN_SLIDE_MS = 300;
+const CARD_SCREEN_MARGIN = 8;
 
 // Ship state - x/y/angle are copied from playerMover every frame (see syncShipToMover), which is
 // what actually decides where the ship is.
@@ -95,15 +88,10 @@ let playerMover = null; // see sokoban.js's createMover - built by initShip
 // ship finds out what it's standing on.
 let rootByCell = new Map();
 
-// Camera state - the eased point (tracking either the ship or a focused card) updateCamera
-// scrolls to keep centered.
-let camera = { x: 0, y: 0, initialized: false };
-// The separately-eased look-ahead bias added on top of camera.x/y - see updateCamera.
-let lookAhead = { x: 0, y: 0, initialized: false };
-// Whether updateCamera is currently tracking a focused card (set at the end of every call) -
-// consulted by showChainMember so X-cycling while already settled on a card doesn't re-arm
-// CARD_FOCUS_DELAY_MS and revert to ship-tracking before panning to the next member.
-let cameraFocused = false;
+// View state, in world coordinates: where the top-left of the picture is right now (position), and
+// the slide underway to a new screen, if any.
+let view = { position: null, slide: null, scale: 1, offsetX: 0, offsetY: 0 };
+let screenFrameEl = null; // see buildScreenFrame
 
 // Input state
 const KEY_DIRECTIONS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
@@ -124,7 +112,9 @@ document.addEventListener('DOMContentLoaded', function() {
   initShip();
   loadNodes();
   indexNodesByCell();
-  if (weavePage.globeEffect) buildGlobeEffect();
+  buildScreenFrame();
+  updateViewScale();
+  placePersistentCards();
   bindInput();
   claimOwnFocus();
   requestAnimationFrame(loop);
@@ -172,6 +162,7 @@ function loadPageConfig(){
   weavePage.worldWidth = cfg.worldWidth;
   weavePage.worldHeight = cfg.worldHeight;
   weavePage.grid = WeaveSokoban.createGrid(cfg.grid);
+  weavePage.screen = cfg.screen;
   // Page.DefaultSpawnX/Y - where initShip() puts the ship when this page is opened with no
   // travel/query-string position at all (e.g. a bare URL, or the shell's iframe on first load).
   // Null/undefined (no Page override configured) leaves these null - initShip() itself falls
@@ -193,59 +184,25 @@ function loadPageConfig(){
   }
 }
 
-// Sets up the cosmetic globe-curvature hint (Page.GlobeEffect): a fixed vignette overlay (see
-// #globeVignette in main.css) plus the per-frame icon scale/fade updateGlobeEffect() drives.
-// Only ever called when weavePage.globeEffect is true.
-function buildGlobeEffect(){
-  nodeMeta.forEach((meta, node) => {
-    if (meta.isTopLevel && !meta.isModal) globeEffectIcons.push(meta.img);
-  });
+// The dark surround that hides everything outside the current screen, including the neighbouring
+// screens, and, on a page with Page.GlobeEffect, the edge vignette (see #globeVignette in main.css).
+//
+// Appended to <html>, deliberately *not* document.body - body gets a `transform` every frame (see
+// updateView), and per the CSS spec a `transform` on an ancestor changes what a `position: fixed`
+// descendant is contained by: instead of the viewport, it becomes the *transformed ancestor's own
+// box* - here, the whole world, not the screen. <html> itself never gets a transform, so a fixed child
+// of it is immune to that.
+function buildScreenFrame(){
+  screenFrameEl = document.createElement('div');
+  screenFrameEl.id = 'screenFrame';
 
-  // Appended to <html>, deliberately *not* document.body - body gets a `transform` applied every
-  // frame (updateCamera's sub-pixel scroll correction), and per the CSS spec a `transform` on an
-  // ancestor changes what a `position: fixed` descendant is contained by: instead of the
-  // viewport, it becomes the *transformed ancestor's own box* - here, the whole (huge)
-  // world, not the screen. A child of body would size itself to that instead of the viewport,
-  // which is what made the vignette look "attached to the background" rather than the screen.
-  // <html> itself never gets a transform, so a fixed child of it is immune to that regardless of
-  // what body does.
-  let vignette = document.createElement("div");
-  vignette.id = "globeVignette";
-  document.documentElement.appendChild(vignette);
-}
-
-// Purely cosmetic, screen-space only - never touches ship/camera/proximity math, and safe to
-// call every frame regardless of dt (there's nothing to be time-consistent about: it's just a
-// direct function of the current, already-eased scroll position). Every top-level node icon
-// (not the .floatInfo cards themselves - see buildGlobeEffect) scales down and fades slightly
-// as it nears the screen edge, to read as falling away over a curved horizon; #globeVignette
-// (see main.css) supplies the matching edge darkening. Reads every icon's rect before writing
-// any style (two separate loops below) so the browser can batch all the layout reads together
-// instead of alternating read/write and forcing a reflow per icon.
-const GLOBE_EFFECT_INNER = 0.45; // fraction of the screen half-diagonal where falloff begins
-const GLOBE_EFFECT_OUTER = 1.05; // fraction where falloff finishes (just past the true edge)
-const GLOBE_EFFECT_MIN_SCALE = 0.65;
-const GLOBE_EFFECT_MIN_OPACITY = 0.35;
-
-function updateGlobeEffect(){
-  let halfW = window.innerWidth / 2;
-  let halfH = window.innerHeight / 2;
-
-  let falloffs = globeEffectIcons.map(icon => {
-    let rect = icon.getBoundingClientRect();
-    let dx = (rect.left + rect.width / 2 - halfW) / halfW;
-    let dy = (rect.top + rect.height / 2 - halfH) / halfH;
-    let r = Math.hypot(dx, dy);
-    return clamp((r - GLOBE_EFFECT_INNER) / (GLOBE_EFFECT_OUTER - GLOBE_EFFECT_INNER), 0, 1);
-  });
-
-  for (let i = 0; i < globeEffectIcons.length; i++) {
-    let t = falloffs[i];
-    let scale = 1 - t * (1 - GLOBE_EFFECT_MIN_SCALE);
-    let opacity = 1 - t * (1 - GLOBE_EFFECT_MIN_OPACITY);
-    globeEffectIcons[i].style.transform = "scale(" + scale + ")";
-    globeEffectIcons[i].style.opacity = opacity;
+  if (weavePage.globeEffect) {
+    let vignette = document.createElement('div');
+    vignette.id = 'globeVignette';
+    screenFrameEl.appendChild(vignette);
   }
+
+  document.documentElement.appendChild(screenFrameEl);
 }
 
 // Set up the ship's starting square (from URL params, or a sane default) and the DOM element that
@@ -260,8 +217,9 @@ function initShip() {
   let destY  = parseInt(params.get("destY"));
   tutorialSwitch = params.get("tutorial");
 
-  let spawnX = 120;
-  let spawnY = 120;
+  // Square A0.
+  let spawnX = 225;
+  let spawnY = 225;
 
   if (!isNaN(destX) && !isNaN(destY)) {
     spawnX = destX;
@@ -292,7 +250,6 @@ function initShip() {
   document.body.appendChild(shipEl);
 
   renderShip();
-  updateCamera();
 }
 
 function loadNodes() {
@@ -315,10 +272,9 @@ function loadNodes() {
     // not a world location - shown/hidden entirely through modalQueue below, on its own timing,
     // rather than the plain display:'' every other persistent card gets here. Its .floatInfo is
     // reparented to <html> so its `position: fixed` is relative to the real viewport instead of
-    // <body> - <body> gets a `transform` applied every frame by updateCamera()'s sub-pixel
-    // scroll correction, which (per the CSS spec) makes any `position: fixed` descendant fixed
+    // <body> - <body> gets a `transform` applied every frame by updateView(), which (per the CSS spec) makes any `position: fixed` descendant fixed
     // relative to *that transformed box* instead of the viewport. This is the exact same trap
-    // buildGlobeEffect() already had to work around for #globeVignette - see its own comment for
+    // buildScreenFrame() already had to work around for #screenFrame - see its own comment for
     // the full mechanics. (A modal card with nested child locations isn't supported: they'd move
     // out of curNode along with curInfo here, so cycleChainNode's querySelectorAll('.node')
     // would never find them - fine for a tutorial/news popup, not a multi-part location.)
@@ -349,10 +305,6 @@ function loadNodes() {
       // node whose parent is <body>.
       isTopLevel: !curNode.parentElement.closest(".node"),
       chain: null, // filled in below, top-level nodes only
-      // The X-cycle hint PageRenderer renders as a direct child of this node, if this node is
-      // part of a chain at all (:scope so a nested chain member's own .chainHint isn't picked up
-      // instead - see updateChainHint()). null for a node that's never part of any chain.
-      chainHint: curNode.querySelector(':scope > .chainHint') ?? null,
       // This node's .songPlayer (null if it has none) - see updateLocationAudio, which is the
       // only thing driving a non-modal node's audio now (a modal's own <audio controls> is left
       // to the visitor, untouched by that system). audioPreloaded latches true the first time
@@ -366,18 +318,17 @@ function loadNodes() {
 
     if (curAudio && !isModal) curAudio.volume = 0; // updateLocationAudio eases this up from silence
 
-    // The card's own "[ Focus ]" action (see PageRenderer) - same thing as Z/gamepad A. :scope so a
+    // The card's own "[ Enter ]" action (see PageRenderer) - same thing as Z/gamepad A. :scope so a
     // chain member's card never binds a nested member's action instead.
     let focusAction = curInfo.querySelector(':scope > .poetry-text > .poetry-focus .focus-action');
     if (focusAction) focusAction.addEventListener('click', openTrackFocus);
 
   });
 
-  // A multi-part location's nested nodes aren't reachable by walking to them
-  // directly - the X button instead steps through each
-  // top-level node's own chain (itself, then every descendant, depth-first)
-  // without the ship needing to move. Branching Children would flatten into
-  // one cycle order here too, though in practice these are linear chains.
+  // A multi-part location's nested nodes aren't reachable by walking to them - X in Track Focus
+  // instead steps through each top-level node's own chain (itself, then every descendant,
+  // depth-first). Branching Children would flatten into one cycle order here too, though in practice
+  // these are linear chains.
   nodeMeta.forEach((meta, node) => {
     if (meta.isTopLevel)
       meta.chain = [node, ...node.querySelectorAll(".node")];
@@ -529,26 +480,25 @@ function bindInput(){
       e.preventDefault();
     }
 
-    if (direction) playerMover.press(direction);
+    // Not on e.repeat: a key held since before the board started shouldn't reach its new mover.
+    if (direction && !e.repeat) activeMover().press(direction);
 
     if ((e.key === 'z' || e.key === 'Z') && !e.repeat) onInteractButton();
-    if ((e.key === 'x' || e.key === 'X') && !e.repeat && !isScreenCovered()) cycleChainNode();
-    if (e.key === 'Escape' && !e.repeat) closeTrackFocus();
+    if ((e.key === 'x' || e.key === 'X') && !e.repeat) cycleChainNode();
+    if (e.key === 'Escape' && !e.repeat) onBackButton();
   });
 
   document.addEventListener('keyup', (e) => {
     let direction = KEY_DIRECTIONS[e.key];
-    if (direction) playerMover.release(direction);
+    if (direction) activeMover().release(direction);
   });
 
   window.addEventListener('resize', updateTrackFocusScale);
+  window.addEventListener('resize', updateViewScale);
 
   // A key released while another window has focus never fires keyup here - without this, the ship
   // would keep walking until it hit the edge of the map.
-  window.addEventListener('blur', () => {
-    playerMover.releaseAll();
-    padDirection = null;
-  });
+  window.addEventListener('blur', releaseDirections);
 
   // Gamepads don't fire events for stick movement, so they're polled each
   // frame in updateInput() instead - nothing to bind here besides buttons,
@@ -597,12 +547,12 @@ function updateInput(){
 
       // Standard gamepad mapping: button 1 is B (Xbox) / Circle (PlayStation).
       let bDown = !!(pad.buttons[1] && pad.buttons[1].pressed);
-      if (bDown && !gamepadBackWasDown) closeTrackFocus();
+      if (bDown && !gamepadBackWasDown) onBackButton();
       gamepadBackWasDown = bDown;
 
       // Standard gamepad mapping: button 2 is X (Xbox) / Square (PlayStation).
       let xDown = !!(pad.buttons[2] && pad.buttons[2].pressed);
-      if (xDown && !gamepadCycleWasDown && !isScreenCovered()) cycleChainNode();
+      if (xDown && !gamepadCycleWasDown) cycleChainNode();
       gamepadCycleWasDown = xDown;
 
       break; // only the first connected gamepad drives the ship
@@ -610,8 +560,8 @@ function updateInput(){
   }
 
   if (nextPadDirection !== padDirection) {
-    if (padDirection) playerMover.release(padDirection);
-    if (nextPadDirection) playerMover.press(nextPadDirection);
+    if (padDirection) activeMover().release(padDirection);
+    if (nextPadDirection) activeMover().press(nextPadDirection);
     padDirection = nextPadDirection;
   }
 }
@@ -633,6 +583,8 @@ function readPadDirection(pad){
 
 function updateShip(dt){
 
+  let dtMs = dt * MS_PER_FRAME;
+
   // A modal card or Track Focus traps input entirely while it's showing - the ship simply doesn't
   // move, and a press made underneath it doesn't suddenly fire the moment it closes.
   if (isScreenCovered()) {
@@ -640,9 +592,23 @@ function updateShip(dt){
     return;
   }
 
-  playerMover.update(dt * MS_PER_FRAME);
+  // New moves wait while the view slides to a new screen - see updateView.
+  if (view.slide) playerMover.finishStep(dtMs);
+  else playerMover.update(dtMs);
+
   syncShipToMover();
   renderShip();
+}
+
+// Whichever mover the arrow keys, D-pad and stick are currently driving.
+function activeMover(){
+  return boardMover ?? playerMover;
+}
+
+// Forgets every held direction, including any a new mover should never inherit.
+function releaseDirections(){
+  activeMover().releaseAll();
+  padDirection = null;
 }
 
 function syncShipToMover(){
@@ -653,116 +619,84 @@ function syncShipToMover(){
 }
 
 function renderShip(){
-  // Deliberately *not* rounded, unlike the scroll target in updateCamera - the world content
-  // (background, nodes) is all static, already-integer-positioned markup, so rounding only the
-  // scroll keeps it crisp; the ship is the one thing that actually needs to move smoothly every
-  // frame. Rounding it too would make a steady glide visibly alternate between neighboring whole
-  // pixel steps, which is its own kind of shake - a single small sprite sitting at a sub-pixel
-  // offset is far less noticeable than that.
+  // Deliberately *not* rounded: rounding would make a steady glide visibly alternate between
+  // neighboring whole pixel steps, which is its own kind of shake - a single small sprite sitting at
+  // a sub-pixel offset is far less noticeable than that.
   shipEl.style.left = (ship.x - SHIP_WIDTH / 2) + "px";
-  shipEl.style.top = (ship.y - SHIP_WIDTH / 2) + "px";
+  shipEl.style.top = (ship.y - SHIP_HEIGHT / 2) + "px";
   // Sprite's forward points "up" (angle -90deg) at rest, so offset by +90deg
   shipEl.style.transform = "rotate(" + (ship.angle + Math.PI / 2) + "rad)";
 }
 
-// dt defaults to 1 because the one call site that omits it (initShip's very first call) always
-// takes the "not yet initialized" snap path below, which doesn't use dt at all.
-//
-// This is split into two independently-eased pieces - *what* the camera tracks (camera.x/y) and
-// *how far ahead of that it leads* (lookAhead.x/y, a small plain offset) - so a change of heading
-// and a change of target each ease at their own rate.
-function updateCamera(dt = 1){
-  // What the camera tracks: the ship's own position, unless a card is open *and the player has
-  // actually settled on it* (the same activeNode for CARD_FOCUS_DELAY_MS - see setter sites in
-  // showChainMember/hideChain), in which case it tracks that card's actual rendered center instead.
-  // The delay is deliberate: without it, quickly X-cycling through a chain would drag the camera
-  // around before the player had any intention of reading that particular card. Reads
-  // getBoundingClientRect() rather than re-deriving the offset math, so it's automatically correct
-  // for any card size/offset/nesting depth. A straight center-on-card (rather than the minimal
-  // shift needed to only just bring it inside the viewport) is deliberate too - the minimal-shift
-  // version tended to leave the card pinned against whichever edge it had been overflowing, i.e. in
-  // a corner, instead of settling somewhere comfortable.
-  let focused = false;
-  let trackX = ship.x;
-  let trackY = ship.y;
-  let easeFactor = CAMERA_EASE;
+// The map is split into static screens (see GridLayout.ScreenColumns) rather than following the ship:
+// the view only moves when the ship walks onto a new one, then slides there over SCREEN_SLIDE_MS. The
+// slide starts as soon as the ship *sets off* for the new screen, so the two travel together.
+function updateView(dtMs){
+  let target = screenOriginOf(playerMover.cell);
 
-  // !isMoving is a live, continuous condition (not just checked once) - a card only ever opens once
-  // the ship has stopped, but walking off again should drop back to plain ship-tracking immediately.
-  if (!playerMover.isMoving && activeNode && activeNodeSince !== null && performance.now() - activeNodeSince >= CARD_FOCUS_DELAY_MS) {
-    let info = nodeMeta.get(activeNode).info;
-    if (info.style.display !== 'none') {
-      let rect = info.getBoundingClientRect();
-      trackX = rect.left + rect.width / 2 + window.scrollX;
-      trackY = rect.top + rect.height / 2 + window.scrollY;
-      focused = true;
-      easeFactor = CARD_FOCUS_EASE;
-    }
-  }
-  cameraFocused = focused;
-
-  if (!camera.initialized) {
-    camera.x = trackX;
-    camera.y = trackY;
-    camera.initialized = true;
-  } else {
-    let ease = 1 - Math.pow(easeFactor, dt);
-    camera.x += (trackX - camera.x) * ease;
-    camera.y += (trackY - camera.y) * ease;
+  if (!view.position) {
+    view.position = target;
+  } else if (view.slide) {
+    if (target.x !== view.slide.to.x || target.y !== view.slide.to.y) startSlide(target);
+  } else if (target.x !== view.position.x || target.y !== view.position.y) {
+    startSlide(target);
   }
 
-  // Lead the ship by a fraction of the viewport in whichever direction it's currently facing (and
-  // not at all while focused on a card), so more of the world ahead is visible than what's behind
-  // (2/3 ahead, 1/3 behind: the ship sits 1/3 of the way from the trailing edge along its heading,
-  // which means the *camera's* center has to sit ahead of the ship by (1/2 - 1/3) = 1/6 of the
-  // viewport). Each axis uses its own viewport dimension (not a single shared magnitude) so a
-  // heading gets the exact 2/3-1/3 split rather than one skewed by the viewport's aspect ratio.
-  // Eased on its own so turning to face a new direction doesn't yank the view.
-  let desiredLookX = focused ? 0 : Math.cos(ship.angle) * window.innerWidth * LOOK_AHEAD_FRACTION;
-  let desiredLookY = focused ? 0 : Math.sin(ship.angle) * window.innerHeight * LOOK_AHEAD_FRACTION;
-
-  if (!lookAhead.initialized) {
-    lookAhead.x = desiredLookX;
-    lookAhead.y = desiredLookY;
-    lookAhead.initialized = true;
-  } else {
-    let lookEase = 1 - Math.pow(CAMERA_EASE, dt);
-    lookAhead.x += (desiredLookX - lookAhead.x) * lookEase;
-    lookAhead.y += (desiredLookY - lookAhead.y) * lookEase;
+  if (view.slide) {
+    view.slide.elapsed = Math.min(view.slide.elapsed + dtMs, SCREEN_SLIDE_MS);
+    let t = view.slide.elapsed / SCREEN_SLIDE_MS;
+    let eased = t * t * (3 - 2 * t);
+    view.position = {
+      x: view.slide.from.x + (view.slide.to.x - view.slide.from.x) * eased,
+      y: view.slide.from.y + (view.slide.to.y - view.slide.from.y) * eased,
+    };
+    if (view.slide.elapsed === SCREEN_SLIDE_MS) view.slide = null;
   }
 
-  let maxScrollX = Math.max(0, document.body.scrollWidth - window.innerWidth);
-  let maxScrollY = Math.max(0, document.body.scrollHeight - window.innerHeight);
+  let x = Math.round(view.offsetX - view.position.x * view.scale);
+  let y = Math.round(view.offsetY - view.position.y * view.scale);
+  document.body.style.transform = "translate(" + x + "px, " + y + "px) scale(" + view.scale + ")";
+}
 
-  let targetX = camera.x + lookAhead.x;
-  let targetY = camera.y + lookAhead.y;
+function startSlide(to){
+  view.slide = { from: view.position, to, elapsed: 0 };
+}
 
-  let clampedX = clamp(targetX - window.innerWidth / 2, 0, maxScrollX);
-  let clampedY = clamp(targetY - window.innerHeight / 2, 0, maxScrollY);
+// The top-left corner, in world coordinates, of the screen a square is on.
+function screenOriginOf(cell){
+  let screen = weavePage.screen;
+  return {
+    x: Math.floor(weavePage.grid.centerOf(cell).x / screen.width) * screen.width,
+    y: screen.tops[Math.floor(cell.row * screen.tops.length / weavePage.grid.rows)],
+  };
+}
 
-  // window.scrollTo() turns out to only have whole-pixel precision in practice - confirmed
-  // directly (a minimal test page, no game code involved): Chrome silently rounds whatever
-  // fractional value is passed here before it's readable back via window.scrollX/Y, regardless of
-  // what's passed in. Whenever the camera is easing, its rate of change isn't a whole number of
-  // pixels/frame, so the rounding lands on a different side of the true value frame to frame in a
-  // way that reads as a faint stepping, and it affects everything on screen (ship included - the
-  // ship's own position is unrounded, but it's still rendered *relative to* this same rounded
-  // scroll).
-  //
-  // A CSS translate on body supplies exactly the fractional remainder scrollTo() rounded away.
-  // This is purely a paint-time adjustment - it doesn't disturb the scroll mechanism's own
-  // (coarse, integer) positioning or clamping above, and every getBoundingClientRect() call
-  // elsewhere (proximity, card-focus tracking) already reflects it automatically, so nothing else
-  // needs to change to account for it.
-  window.scrollTo(clampedX, clampedY);
-  document.body.style.transform =
-    "translate(" + (window.scrollX - clampedX) + "px, " + (window.scrollY - clampedY) + "px)";
+// Fits the picture to the window, normally by filling its width, and centers it, with #screenFrame's
+// surround filling whatever's left. Not a whole-number multiple of the art's own pixels: at most scales
+// that would leave a good chunk of the window unused, and the art's pixels drawing a screen pixel wider
+// or narrower than each other isn't noticeable on these maps.
+function updateViewScale(){
+  let fit = Math.min(
+    window.innerWidth / SOURCE_SCREEN_WIDTH,
+    window.innerHeight / SOURCE_SCREEN_HEIGHT
+  );
+  let pictureWidth = Math.round(SOURCE_SCREEN_WIDTH * fit);
+  let pictureHeight = Math.round(SOURCE_SCREEN_HEIGHT * fit);
+
+  view.scale = pictureWidth / weavePage.screen.width;
+  view.offsetX = Math.floor((window.innerWidth - pictureWidth) / 2);
+  view.offsetY = Math.floor((window.innerHeight - pictureHeight) / 2);
+
+  screenFrameEl.style.left = view.offsetX + "px";
+  screenFrameEl.style.top = view.offsetY + "px";
+  screenFrameEl.style.width = pictureWidth + "px";
+  screenFrameEl.style.height = pictureHeight + "px";
 }
 
 // Which top-level location the ship is standing on drives the open card - a multi-part location's
 // nested nodes aren't out on the map to walk to, so they never compete here.
-// Once a root is active, X steps through its chain (see cycleChainNode); this only decides *which
-// root*, resetting back to the start of its chain whenever the root itself changes. Only counts
+// This only decides *which root*, resetting back to the start of its chain whenever the root itself
+// changes. Only counts
 // once the ship has actually stopped, so holding a direction straight across a node doesn't flash
 // its card open and shut on the way past.
 function updateNodeProximity(){
@@ -770,10 +704,10 @@ function updateNodeProximity(){
   let root = playerMover.isMoving ? null : (rootByCell.get(cellKey(playerMover.cell)) ?? null);
 
   if (root !== activeRoot) {
-    if (activeRoot) hideChain(activeRoot);
+    if (activeRoot) hideLocation(activeRoot);
     activeRoot = root;
     chainIndex = 0;
-    if (activeRoot) showChainMember(activeRoot, 0);
+    if (activeRoot) showLocation(activeRoot);
   }
 }
 
@@ -858,74 +792,88 @@ function updateHubMusicSignal(){
 function setCardOpen(node, meta, open){
   meta.info.style.display = open ? '' : 'none';
   node.classList.toggle('cardOpen', open);
+  if (open) placeCard(node, meta);
 }
 
-// Closes every card in a root's chain - used when the ship leaves it entirely. (Cycling
-// within the same root doesn't call this - see showChainMember.)
-function hideChain(root){
-  for (const node of nodeMeta.get(root).chain) {
-    let meta = nodeMeta.get(node);
-    if (meta.chainHint) meta.chainHint.style.display = 'none';
-    if (!meta.persistent) {
-      setCardOpen(node, meta, false);
-      meta.img.src = 'img/node.png';
+// Keeps a card fully inside its node's screen, now that there's no camera to bring it into view. It
+// goes where it was authored if that fits; otherwise it flips to the other side of the icon, then
+// slides up or down as needed. Works from the authored offset every time, so a card that had to move
+// doesn't stay moved for no reason.
+function placeCard(node, meta){
+  let info = meta.info;
+  if (meta.cardLeft === undefined) {
+    meta.cardLeft = parseFloat(info.style.left) || 0;
+    meta.cardTop = parseFloat(info.style.top) || 0;
+  }
+
+  let nodeX = parseFloat(node.style.left) || 0;
+  let nodeY = parseFloat(node.style.top) || 0;
+  let screen = screenOriginOf(meta.cell);
+  let screenRight = screen.x + weavePage.screen.width - CARD_SCREEN_MARGIN;
+  let screenBottom = screen.y + weavePage.screen.height - CARD_SCREEN_MARGIN;
+
+  let x = nodeX + meta.cardLeft;
+  let y = nodeY + meta.cardTop;
+
+  if (x + info.offsetWidth > screenRight) {
+    // The same gap from the icon's left edge as the authored position has from its right.
+    x = nodeX - (meta.cardLeft - NODE_ICON_SIZE) - info.offsetWidth;
+  }
+
+  x = clamp(x, screen.x + CARD_SCREEN_MARGIN, screenRight - info.offsetWidth);
+  y = clamp(y, screen.y + CARD_SCREEN_MARGIN, screenBottom - info.offsetHeight);
+
+  info.style.left = (x - nodeX) + "px";
+  info.style.top = (y - nodeY) + "px";
+}
+
+// A persistent card is already open by the time anything knows where screens are - see loadNodes.
+function placePersistentCards(){
+  nodeMeta.forEach((meta, node) => {
+    if (meta.isTopLevel && !meta.isModal && meta.persistent && meta.info.style.display !== 'none') {
+      placeCard(node, meta);
     }
+  });
+}
+
+// Closes a location's card when the ship leaves it.
+function hideLocation(root){
+  let meta = nodeMeta.get(root);
+  if (!meta.persistent) {
+    setCardOpen(root, meta, false);
+    meta.img.src = 'img/node.png';
   }
   activeNode = null;
-  activeNodeSince = null;
 }
 
-// Shows chain[index] and clears activeNode/img back to every OTHER member. Nested cards
-// live inside their parent's own .floatInfo (that's how "parent-card-relative" positioning
-// works), so a nested card's own display:'' does nothing while an ancestor card containing
-// it is display:none - every ancestor from the root down to the target has to stay open too
-// (chain[0..index] here), not just the target itself. Anything past the target closes, in
-// case this is stepping backward from a deeper member.
-function showChainMember(root, index){
-  let chain = nodeMeta.get(root).chain;
-  for (let i = 0; i < chain.length; i++) {
-    let meta = nodeMeta.get(chain[i]);
-    // Cleared unconditionally (even for a persistent member, and regardless of index) - reset
-    // below to the one actual "next" member, the only case that should ever show it.
-    if (meta.chainHint) meta.chainHint.style.display = 'none';
-    if (meta.persistent) continue;
-    setCardOpen(chain[i], meta, i <= index);
-    meta.img.src = (i === index) ? 'img/node-active.png' : 'img/node.png';
+// Opens a location's card once the ship stops on it. Always the root's own: a chain's later parts
+// are only ever reached in Track Focus (see cycleChainNode), so their cards never open on the map.
+function showLocation(root){
+  let meta = nodeMeta.get(root);
+  if (!meta.persistent) {
+    setCardOpen(root, meta, true);
+    meta.img.src = 'img/node-active.png';
   }
-  // The X-cycle hint belongs on whichever member is next, never the active one itself - wraps
-  // back to chain[0] past the last member, since cycleChainNode's own %chain.length does too.
-  if (chain.length > 1) {
-    let nextHint = nodeMeta.get(chain[(index + 1) % chain.length]).chainHint;
-    if (nextHint) nextHint.style.display = 'block';
-  }
-  // Only re-arm the settle delay when the camera isn't already focused on a card - otherwise
-  // X-cycling to the next chain member while already settled would revert to ship-tracking and
-  // force another CARD_FOCUS_DELAY_MS wait before panning to it. When cameraFocused is true,
-  // activeNodeSince is left exactly as it is (already well past the delay threshold), so
-  // updateCamera's focus condition stays true on the very next frame and its continuous
-  // re-targeting (see updateCamera) picks up the new activeNode's card and eases straight there.
-  //
-  // The `activeNodeSince === null` half matters for a genuine root change: hideChain() always
-  // nulls activeNodeSince unconditionally right before this runs (called from
-  // updateNodeProximity when switching roots), so if the *previous* root happened to be focused,
-  // cameraFocused would still read true here even though it no longer describes anything - without
-  // this check the reset gets skipped, activeNodeSince stays permanently null, and the new root
-  // can never focus at all.
-  if (activeNode !== chain[index] && (activeNodeSince === null || !cameraFocused)) activeNodeSince = performance.now();
-  activeNode = chain[index];
+  activeNode = root;
 }
 
-// X (keyboard) / X (gamepad): step to the next location in the current
-// root's chain - the way to reach a multi-part location's later parts,
-// since they aren't out on the map to walk to.
+// Whether Track Focus may move on from this chain member. The one place a "solve this part's
+// Sokoban first" rule goes - nothing is locked yet.
+function canAdvanceChain(member){
+  return true;
+}
+
+// X (keyboard) / X (gamepad): in Track Focus, step to the next part of the current location, wrapping
+// back to the first. Its music crossfades on its own, since updateLocationAudio follows activeNode.
 function cycleChainNode(){
-  if (!activeRoot) return;
+  if (!trackFocusEl || boardMover) return;
 
   let chain = nodeMeta.get(activeRoot).chain;
-  if (chain.length <= 1) return;
+  if (chain.length <= 1 || !canAdvanceChain(activeNode)) return;
 
   chainIndex = (chainIndex + 1) % chain.length;
-  showChainMember(activeRoot, chainIndex);
+  activeNode = chain[chainIndex];
+  renderTrackFocus();
 }
 
 // Whether something is covering the whole screen, leaving the map underneath out of reach.
@@ -934,11 +882,19 @@ function isScreenCovered(){
 }
 
 // Z (keyboard) / A (gamepad). Whatever is covering the screen takes this over entirely: a modal
-// card (see modalQueue) first, then Track Focus - closing it, never onInteract().
+// card (see modalQueue) first, then Track Focus, which starts its board. It has no use on the board
+// itself yet.
 function onInteractButton(){
   if (modalQueue.length > 0) closeCurrentModal();
-  else if (trackFocusEl) closeTrackFocus();
+  else if (boardMover) return;
+  else if (trackFocusEl) startBoardGame();
   else onInteract();
+}
+
+// Esc (keyboard) / B (gamepad): back out one level, from the board to Track Focus to the map.
+function onBackButton(){
+  if (boardMover) leaveBoardGame();
+  else closeTrackFocus();
 }
 
 function onInteract(){
@@ -957,27 +913,37 @@ function onInteract(){
   }
 }
 
-// Track Focus: a full-screen view of the active track (whichever chain member X has landed on) -
-// album art on the left, title and poetry on the right, over the dimmed map and a blown-up, blurred
-// copy of the art that gives the whole screen its palette. Its music carries on playing, since the
-// ship stays exactly where it is (see updateLocationAudio).
+// Track Focus: a full-screen view of the current track - album art on the left, title and poetry on
+// the right, over the dimmed map and a blown-up, blurred copy of the art that gives the whole screen
+// its palette. Its music carries on playing, since the ship stays exactly where it is (see
+// updateLocationAudio). A multi-part location's later parts are only reachable here - see
+// cycleChainNode.
 //
-// Everything shown is read from the card already in the page, rather than being rendered a second
-// time per node. :scope matters here: a chain member's card contains every later member's whole
-// card (see the README's nesting section), so a plain querySelector could find the wrong track's.
-//
-// Appended to <html>, not <body>, for the same reason as #modalBackdrop - see #globeVignette's
-// comment in buildGlobeEffect.
+// Appended to <html>, not <body>, for the same reason as #modalBackdrop - see #screenFrame's
+// comment in buildScreenFrame.
 function openTrackFocus(){
   if (trackFocusEl || !activeNode) return;
 
+  trackFocusEl = document.createElement('div');
+  trackFocusEl.id = 'trackFocus';
+
+  renderTrackFocus();
+  updateTrackFocusScale();
+  document.documentElement.appendChild(trackFocusEl);
+}
+
+// (Re)builds the screen for activeNode. Everything shown is read from that node's card already in the
+// page, rather than being rendered a second time per node. :scope matters here: a chain member's card
+// contains every later member's whole card (see the README's nesting section), so a plain
+// querySelector could find the wrong track's.
+function renderTrackFocus(){
   let info = nodeMeta.get(activeNode).info;
   let cover = info.querySelector(':scope > .songCover');
   let title = info.querySelector(':scope > h3');
   let lines = info.querySelectorAll(':scope > .poetry-text > .poetry-line');
+  let download = info.querySelector(':scope > .poetry-text > .poetry-download a');
 
-  trackFocusEl = document.createElement('div');
-  trackFocusEl.id = 'trackFocus';
+  trackFocusEl.replaceChildren();
 
   let content = document.createElement('div');
   content.id = 'trackFocusContent';
@@ -995,10 +961,11 @@ function openTrackFocus(){
     art.src = cover.src;
     frame.appendChild(art);
 
-    // Empty for now: where a 10x10 board laid over the art goes, sized to exactly match it - see
-    // updateTrackFocusScale for the tile size it gets to work with.
+    // Where the 10x10 board laid over the art goes, sized to exactly match it - see startBoardGame,
+    // and updateTrackFocusScale for the tile size it gets to work with.
     let board = document.createElement('div');
     board.id = 'trackFocusBoard';
+    if (boardMover) board.appendChild(buildBoardShip());
     frame.appendChild(board);
 
     content.appendChild(frame);
@@ -1013,42 +980,77 @@ function openTrackFocus(){
 
   lines.forEach(line => text.appendChild(line.cloneNode(true)));
 
-  let close = document.createElement('div');
-  close.id = 'trackFocusClose';
-  let closeLabel = document.createElement('span');
-  closeLabel.textContent = '[ Close ]';
-  closeLabel.addEventListener('click', closeTrackFocus);
-  let closeHint = document.createElement('img');
-  closeHint.className = 'keyHint';
-  closeHint.src = 'img/ui/key_z.gif';
-  close.append(closeLabel, closeHint);
-  text.appendChild(close);
+  let actions = document.createElement('div');
+  actions.id = 'trackFocusActions';
+  if (boardMover) {
+    actions.appendChild(buildTrackFocusAction('[ Leave ]', ESC_HINT, leaveBoardGame));
+  } else {
+    if (cover) actions.appendChild(buildTrackFocusAction('[ Start ]', 'img/ui/key_z.gif', startBoardGame));
+    if (nodeMeta.get(activeRoot).chain.length > 1) {
+      actions.appendChild(buildTrackFocusAction('[ Next ]', 'img/ui/key_x.gif', cycleChainNode));
+    }
+    actions.appendChild(buildTrackFocusAction('[ Close ]', ESC_HINT, closeTrackFocus));
+    // Only reachable from here for a chain's later parts, since their cards never open on the map.
+    if (download) actions.appendChild(download.cloneNode(true));
+  }
+  text.appendChild(actions);
 
   content.appendChild(text);
   trackFocusEl.appendChild(content);
 
   // Clicking anywhere that isn't the art or the text dismisses it, same as a modal's backdrop.
+  // Not while playing, though: nobody should lose their place on the board to a stray click.
   content.addEventListener('click', (e) => {
-    if (e.target === content) closeTrackFocus();
+    if (e.target === content && !boardMover) closeTrackFocus();
   });
 
-  updateTrackFocusScale();
-  document.documentElement.appendChild(trackFocusEl);
+  trackFocusEl.classList.toggle('boardPlaying', boardMover !== null);
 }
 
-// A no-op when it isn't open, so every way of closing it can just call this.
+// The key hint for an action with no drawn key to show.
+const ESC_HINT = 'Esc';
+
+function buildTrackFocusAction(label, hint, onClick){
+  let action = document.createElement('span');
+  action.className = 'trackFocusAction';
+
+  let text = document.createElement('span');
+  text.textContent = label;
+  text.addEventListener('click', onClick);
+  action.appendChild(text);
+
+  if (hint === ESC_HINT) {
+    action.append(' ' + hint);
+  } else {
+    let hintImg = document.createElement('img');
+    hintImg.className = 'keyHint';
+    hintImg.src = hint;
+    action.appendChild(hintImg);
+  }
+
+  return action;
+}
+
+// A no-op when it isn't open, so every way of closing it can just call this. Always comes back to the
+// location's first part: that's the only card the map ever shows, and the music should match it.
 function closeTrackFocus(){
   if (!trackFocusEl) return;
   trackFocusEl.remove();
   trackFocusEl = null;
+  activeNode = activeRoot;
+  chainIndex = 0;
 }
 
-// Album art is 240x240, and only stays crisp - with whole-pixel tiles for a 10x10 board over it, 24
-// source pixels each - at a whole-number scale. So that's what this picks: the largest that fits.
+// Album art is 240x240, on a 10x10 board of 24-source-pixel tiles. Picks the largest size that fits with
+// tiles a whole number of screen pixels wide, so the board's squares are always exact. The art itself is
+// only perfectly crisp at a whole-number scale, so one of those wins if it's within
+// TRACK_FOCUS_SNAP_FRACTION of the space available.
 const TRACK_FOCUS_ART_PX = 240;
 const TRACK_FOCUS_BOARD_SQUARES = 10;
-const TRACK_FOCUS_MAX_HEIGHT_FRACTION = 0.8;
-const TRACK_FOCUS_MAX_WIDTH_FRACTION = 0.45;
+const BOARD_TILE_PX = TRACK_FOCUS_ART_PX / TRACK_FOCUS_BOARD_SQUARES;
+const TRACK_FOCUS_MAX_HEIGHT_FRACTION = 0.92;
+const TRACK_FOCUS_MAX_WIDTH_FRACTION = 0.55;
+const TRACK_FOCUS_SNAP_FRACTION = 0.95;
 
 function updateTrackFocusScale(){
   if (!trackFocusEl) return;
@@ -1057,10 +1059,83 @@ function updateTrackFocusScale(){
     window.innerHeight * TRACK_FOCUS_MAX_HEIGHT_FRACTION,
     window.innerWidth * TRACK_FOCUS_MAX_WIDTH_FRACTION
   );
-  let scale = Math.max(1, Math.floor(available / TRACK_FOCUS_ART_PX));
+  let wholeScale = Math.floor(available / TRACK_FOCUS_ART_PX);
+  let tile = wholeScale * TRACK_FOCUS_ART_PX >= available * TRACK_FOCUS_SNAP_FRACTION
+    ? wholeScale * BOARD_TILE_PX
+    : Math.floor(available / TRACK_FOCUS_BOARD_SQUARES);
+  tile = Math.max(BOARD_TILE_PX, tile);
+  trackFocusScale = tile / BOARD_TILE_PX;
 
-  trackFocusEl.style.setProperty('--focus-scale', scale);
-  trackFocusEl.style.setProperty('--focus-cell', (TRACK_FOCUS_ART_PX / TRACK_FOCUS_BOARD_SQUARES * scale) + 'px');
+  trackFocusEl.style.setProperty('--focus-line', Math.max(1, Math.round(trackFocusScale)) + 'px');
+  trackFocusEl.style.setProperty('--focus-cell', tile + 'px');
+
+  // Worked out here rather than left to CSS centering, which could land the art on a half pixel, and
+  // its tiles with it. The left margin matches the top one, up to one tile - past that, the text can
+  // make better use of the space.
+  let top = Math.max(0, Math.floor((window.innerHeight - tile * TRACK_FOCUS_BOARD_SQUARES) / 2));
+  trackFocusEl.style.setProperty('--focus-top', top + 'px');
+  trackFocusEl.style.setProperty('--focus-left', Math.min(top, tile) + 'px');
+}
+
+// The Sokoban board: the ship walking a 10x10 grid over the album art, on the same reusable movement
+// as the map (see sokoban.js). Everything is measured in the art's own pixels, then multiplied up by
+// trackFocusScale to draw, so a window resize mid-game has nothing to rebuild and the ship always
+// matches the art's pixel size. There's nothing to push or solve on it yet - this is just the ship.
+const BOARD_STEP_MS = 180;
+const BOARD_START_CELL = { col: 5, row: 9 };
+// img/ui/pilot-ship.png's own size.
+const BOARD_SHIP_WIDTH = 12;
+const BOARD_SHIP_HEIGHT = 16;
+
+function startBoardGame(){
+  if (!trackFocusEl || boardMover || !document.getElementById('trackFocusBoard')) return;
+
+  releaseDirections();
+  boardMover = WeaveSokoban.createMover(
+    WeaveSokoban.createGrid({
+      columns: TRACK_FOCUS_BOARD_SQUARES,
+      rows: TRACK_FOCUS_BOARD_SQUARES,
+      cellWidth: BOARD_TILE_PX,
+      cellHeight: BOARD_TILE_PX,
+    }),
+    { cell: BOARD_START_CELL, stepMs: BOARD_STEP_MS }
+  );
+  renderTrackFocus();
+  renderBoardShip();
+}
+
+function leaveBoardGame(){
+  if (!boardMover) return;
+
+  releaseDirections();
+  boardMover = null;
+  boardShipEl = null;
+  renderTrackFocus();
+}
+
+function buildBoardShip(){
+  boardShipEl = document.createElement('img');
+  boardShipEl.id = 'trackFocusBoardShip';
+  boardShipEl.src = 'img/ui/pilot-ship.png';
+  return boardShipEl;
+}
+
+function updateBoardGame(dtMs){
+  if (!boardMover) return;
+  boardMover.update(dtMs);
+  renderBoardShip();
+}
+
+function renderBoardShip(){
+  let position = boardMover.position;
+  let width = Math.round(BOARD_SHIP_WIDTH * trackFocusScale);
+  let height = Math.round(BOARD_SHIP_HEIGHT * trackFocusScale);
+  boardShipEl.style.width = width + "px";
+  boardShipEl.style.height = height + "px";
+  boardShipEl.style.left = (position.x * trackFocusScale - width / 2) + "px";
+  boardShipEl.style.top = (position.y * trackFocusScale - height / 2) + "px";
+  // Sprite's forward points "up" at rest, same as the map ship - see renderShip.
+  boardShipEl.style.transform = "rotate(" + (FACING_ANGLES[boardMover.facing] + Math.PI / 2) + "rad)";
 }
 
 // Generic per-page visual effects (drifting sprites, a cross-fading second
@@ -1152,11 +1227,11 @@ function loop(timestamp){
 
   updateInput();
   updateShip(dt);
-  updateCamera(dt);
+  updateView(dt * MS_PER_FRAME);
+  updateBoardGame(dt * MS_PER_FRAME);
   updateNodeProximity();
   updateLocationAudio(dt);
   updateHubMusicSignal();
-  if (weavePage.globeEffect) updateGlobeEffect();
 
   requestAnimationFrame(loop);
 }

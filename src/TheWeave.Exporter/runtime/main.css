@@ -3,6 +3,12 @@
     src: url('../fnt/MedodicaRegular.otf'); /*URL to font*/
 }
 
+/* Nothing scrolls: main.js's updateView moves the world underneath a fixed screen. */
+html {
+  overflow: hidden;
+  background: rgb(17, 17, 17);
+}
+
 * {
   -webkit-box-sizing: border-box;
           box-sizing: border-box;
@@ -29,6 +35,7 @@ body {
   /* World coordinates start at the viewport's very corner, with nothing peeking out around the map
      at its hard edges. */
   margin: 0;
+  transform-origin: 0 0;
   background-color: rgb(187, 186, 186);
   /* rgb(44, 44, 44); */
 }
@@ -117,7 +124,7 @@ h3 {
   color:rgb(102, 102, 102);
 }
 
-/* A card's "[ Focus ]" action (see main.js's openTrackFocus). Takes up no height of its own: it sits
+/* A card's "[ Enter ]" action (see main.js's openTrackFocus). Takes up no height of its own: it sits
    on the same line as [ Download ], at the left of the row, rather than pushing that down past the
    bottom of the card - there's no spare room under 8 lines of poetry. */
 .poetry-focus{
@@ -186,6 +193,19 @@ h3 {
   -moz-border-radius: 5px;
 }
 
+/* A track's card on the map (see PageRenderer.OpensTrackFocus). Its poetry stays in the page, because
+   that's where Track Focus reads it from, but that's the only place it shows - see main.js's
+   renderTrackFocus. */
+.trackCard{
+  /* Room for the Focus/Download row: neither is in flow (see .poetry-focus, and this file's site-wide
+     position:absolute default on the link), so the card can't size itself around them. */
+  padding-bottom: 30px;
+}
+
+.trackCard > .poetry-text > .poetry-line{
+  display: none;
+}
+
 .songCover{
   position: relative; top: 5px; left: 5px;
 }
@@ -200,25 +220,10 @@ h3 {
   width: 48px;
 }
 
-/* A nested node is one more part of its root's location, reached with X, not a separate place on
-   the map - so it has no icon of its own. visibility rather than display, so the element keeps its
-   place in the layout. */
+/* A nested node is one more part of its root's location, reached with X in Track Focus, not a
+   separate place on the map - so it has no icon of its own. */
 .node .node > .nodeImage {
   visibility: hidden;
-}
-
-/* Hint that X/gamepad X cycles to *this* node next (see updateChainHint() in main.js) - one
-   placeholder per chain member (see PageRenderer.RenderNode), hidden by default and shown on
-   exactly the one that's actually next from wherever the player currently is in the chain, never
-   the active member itself. Sits 20px to the left of the node's own icon, vertically centered
-   against its 48px height. */
-.chainHint {
-  display: none;
-  position: absolute;
-  left: -20px;
-  top: 14px;
-  width: 20px;
-  height: 20px;
 }
 
 .playerShip {
@@ -233,28 +238,24 @@ h3 {
   width: 120px;
 }
 
-/* Cosmetic globe-curvature hint (Page.GlobeEffect - see buildGlobeEffect/updateGlobeEffect in
-   main.js). position:fixed (not the site-wide absolute every element otherwise gets) so it
-   stays glued to the viewport, not the scrolling world, and z-index sits above every node/card
-   (1) but below the ship (1000) - the ship itself should never be darkened/blurred by its own
-   view. Appended as a child of <html>, not <body> - see the comment in buildGlobeEffect() for
-   why that matters here.
-   The blur is scoped to just the edges via mask-image (same radial shape as the darkening
-   gradient, transparent through the middle) rather than applying to the whole element - a flat
-   backdrop-filter: blur() with no mask would blur the entire screen, ship included. */
-#globeVignette {
+/* Marks out the current static screen (see main.js's buildScreenFrame/updateViewScale, which size it),
+   hiding the rest of the world behind its own outsized shadow. Above every node/card/the ship, below
+   anything covering the whole window. */
+#screenFrame {
   position: fixed;
+  z-index: 1500;
+  pointer-events: none;
+  box-shadow: 0 0 0 100vmax rgb(17, 17, 17);
+}
+
+/* The edge darkening of Page.GlobeEffect. */
+#globeVignette {
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  pointer-events: none;
-  z-index: 999;
   background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.35) 100%);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  mask-image: radial-gradient(ellipse at center, transparent 60%, black 100%);
-  -webkit-mask-image: radial-gradient(ellipse at center, transparent 60%, black 100%);
 }
 
 /* A CardSize.Modal card's icon never appears on the map - it isn't a real world location, it's
@@ -266,7 +267,7 @@ h3 {
 
 /* Dims/blurs/blocks the world behind an open modal card (see showCurrentModal/closeCurrentModal
    in main.js, which create/remove this). Appended as a child of <html>, not <body>, for the same
-   reason #globeVignette above is - see main.js's own comment on that at the point this is
+   reason #screenFrame above is - see main.js's own comment on that at the point this is
    created. backdrop-filter blurs whatever renders *behind* this element - i.e. the whole game
    world, since this already covers the full viewport - rather than the element itself. */
 #modalBackdrop {
@@ -292,9 +293,9 @@ h3 {
 /* Track Focus (see main.js's openTrackFocus): album art on the left, title and poetry on the right,
    over the dimmed map. Appended as a child of <html>, not <body> - see #modalBackdrop.
 
-   --focus-scale is the whole-number scale the art is drawn at, and --focus-cell one 24-source-pixel
-   tile of a 10x10 board at that scale (see updateTrackFocusScale) - everything else here is sized
-   from those. */
+   --focus-cell is one 24-source-pixel tile of a 10x10 board, a whole number of screen pixels wide, and
+   --focus-line one source pixel rounded to whole screen pixels (see updateTrackFocusScale). Everything
+   else here is sized from those. */
 #trackFocus {
   position: fixed;
   top: 0;
@@ -330,24 +331,23 @@ h3 {
   right: 0;
   bottom: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: calc(var(--focus-cell) * 2);
-  padding: 24px;
+  column-gap: var(--focus-left);
+  padding: 0 var(--focus-left);
   overflow-y: auto;
 }
 
 /* Only the art frame's size is ever in play - flex-shrink would otherwise squash it off its
-   whole-number scale on a narrow screen. */
+   exact tile size on a narrow screen. */
 #trackFocusArt {
   position: relative;
   flex: none;
+  margin-top: var(--focus-top);
   width: calc(var(--focus-cell) * 10);
   height: calc(var(--focus-cell) * 10);
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
 }
 
-#trackFocusArt img {
+#trackFocusArt > img {
   position: absolute;
   top: 0;
   left: 0;
@@ -364,21 +364,46 @@ h3 {
   height: 100%;
 }
 
+/* Dulled while the board is being played, so the ship and anything else on it stands out. */
+#trackFocus.boardPlaying #trackFocusArt > img {
+  filter: brightness(0.65) saturate(0.7);
+}
+
+/* The board's squares, one source pixel wide, showing only once it's being played. */
+#trackFocus.boardPlaying #trackFocusBoard {
+  background:
+    linear-gradient(to right, rgba(255, 255, 255, 0.3) var(--focus-line), transparent var(--focus-line)) 0 0 / var(--focus-cell) var(--focus-cell),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.3) var(--focus-line), transparent var(--focus-line)) 0 0 / var(--focus-cell) var(--focus-cell);
+}
+
+/* Drawn at the art's own pixel size - see main.js's renderBoardShip, which positions it. */
+#trackFocusBoardShip {
+  image-rendering: pixelated;
+  transform-origin: center center;
+}
+
 /* Everything in here flows normally - see the top of this file on the site-wide position:absolute
    default this has to opt back out of, including for inline elements inside poetry lines. */
 #trackFocusText, #trackFocusText * {
   position: relative;
 }
 
-/* A fixed width, rather than fitting whatever the poem needs, so the art stays in exactly the same
-   whole-pixel spot from one track to the next. This always fits: updateTrackFocusScale keeps the
-   art's 10 tiles to 45% of the screen, so the screen is at least 22 tiles wide, and art + gap + this
-   comes to 21. */
+/* Centered in the space to the art's right. A fixed width, rather than fitting whatever the poem needs,
+   so the text starts in the same place from one track to the next: 20em fits the longest line on the
+   site, and shrinks and wraps if a window has less than that to spare. Its size follows the window
+   rather than the art, so it reads the same whatever size the art lands on. */
 #trackFocusText {
-  flex: none;
-  width: calc(var(--focus-cell) * 9);
+  flex: 0 1 20em;
+  min-width: 0;
+  align-self: center;
+  margin: 0 auto;
   color: antiquewhite;
-  font-size: calc(14px * (var(--focus-scale) + 1) / 2);
+  font-size: max(14px, 2.6vh);
+}
+
+#trackFocusText .keyHint {
+  width: 1.2em;
+  height: 1.2em;
 }
 
 #trackFocusText h2 {
@@ -390,24 +415,35 @@ h3 {
   color: #9cc4ee;
 }
 
-#trackFocusClose {
+#trackFocusActions {
   margin-top: 1em;
   font-size: 0.8em;
   color: #c9bda9;
 }
 
-#trackFocusClose span {
+.trackFocusAction {
+  margin-right: 1.5em;
+}
+
+.trackFocusAction > span {
   cursor: pointer;
 }
 
 @media (max-width: 700px) {
   #trackFocusContent {
     flex-direction: column;
-    justify-content: flex-start;
+    align-items: center;
     gap: 16px;
+    padding: 24px;
+  }
+
+  #trackFocusArt {
+    margin-top: 0;
   }
 
   #trackFocusText {
+    flex: none;
     width: 100%;
+    margin: 0;
   }
 }

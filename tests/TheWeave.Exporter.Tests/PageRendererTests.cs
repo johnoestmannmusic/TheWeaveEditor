@@ -9,10 +9,9 @@ namespace TheWeave.Exporter.Tests;
 public class PageRendererTests
 {
     private const string ExactGridJson =
-        "{\"columns\":19,\"rows\":10,\"cellWidth\":150,\"cellHeight\":150,\"originX\":150,\"originY\":150,\"gapColumns\":[]}";
+        "{\"columns\":20,\"rows\":10,\"cellWidth\":150,\"cellHeight\":150,\"originX\":0,\"originY\":150}";
 
-    private const string SingleSectorGridJson =
-        "{\"columns\":19,\"rows\":10,\"cellWidth\":150.5,\"cellHeight\":150.8896797153025,\"originX\":150.5,\"originY\":150.8896797153025,\"gapColumns\":[]}";
+    private const string ExactScreenJson = "{\"width\":1500,\"height\":798,\"tops\":[126,876]}";
 
     // A minimal single-node page, checked byte-for-byte against a pinned expected output -
     // the one true "golden file" case, kept deliberately small so it's easy to eyeball.
@@ -57,7 +56,7 @@ public class PageRendererTests
               <script src="jsx/main.js?v={{RuntimeAssets.Version}}"></script>
 
               <script>
-                window.__weavePage = {"globeEffect":true,"worldWidth":3000,"worldHeight":1686,"defaultSpawnX":null,"defaultSpawnY":null,"isHomePage":false,"grid":{{ExactGridJson}}};
+                window.__weavePage = {"globeEffect":true,"worldWidth":3000,"worldHeight":1686,"defaultSpawnX":null,"defaultSpawnY":null,"isHomePage":false,"grid":{{ExactGridJson}},"screen":{{ExactScreenJson}}};
               </script>
               </head>
 
@@ -151,10 +150,8 @@ public class PageRendererTests
         Assert.True(parentCardOpen < childNode);
         Assert.True(childNode < grandchildNode);
 
-        // Every member of the chain - root, mid-chain, and the childless leaf alike - gets a
-        // hidden placeholder (main.js's updateChainHint() reveals exactly one at runtime,
-        // whichever is actually next from wherever the player currently is in the chain).
-        Assert.Equal(3, CountOccurrences(html, "class=\"chainHint\" src=\"img/ui/key_x.gif\""));
+        // Their cards are only read by Track Focus now, so nothing on the map hints at them.
+        Assert.DoesNotContain("chainHint", html);
     }
 
     [Fact]
@@ -323,7 +320,7 @@ public class PageRendererTests
     }
 
     [Fact]
-    public void RenderPage_NestedNode_SitsExactlyOnItsParentWhateverItsStoredPosition()
+    public void RenderPage_NestedNode_IgnoresItsStoredPosition()
     {
         var project = new WeaveProject();
         var page = MakePage("ouros", "ouros.html");
@@ -349,28 +346,27 @@ public class PageRendererTests
         var html = new PageRenderer(project).RenderPage(page);
 
         Assert.Contains("<div class=\"node\" style=\"left: 201px; top: 351px;\">", html);
-        // -(card offset) - (card border) from inside the parent's card, which is back at the parent.
-        Assert.Contains("<div class=\"node\" style=\"left: -81px; top: 129px;\">", html);
+        Assert.Contains("<div class=\"node\" style=\"left: 0px; top: 0px;\">", html);
     }
 
     [Fact]
     public void RenderPage_WeavePageConfig_UsesPageWorldSizeAndGrid()
     {
-        var project = new WeaveProject { DefaultWorldWidthPx = 3010, DefaultWorldHeightPx = 1696 };
+        var project = new WeaveProject { DefaultWorldWidthPx = 3000, DefaultWorldHeightPx = 1686 };
         var planet = MakePage("planet", "planet.html");
         project.Pages.Add(planet);
 
         var planetHtml = new PageRenderer(project).RenderPage(planet);
-        Assert.Contains("window.__weavePage = {\"globeEffect\":true,\"worldWidth\":3010,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":{\"columns\":19,\"rows\":10,\"cellWidth\":150.5,\"cellHeight\":150.8896797153025,\"originX\":150.5,\"originY\":150.8896797153025,\"gapColumns\":[]}};", planetHtml);
+        Assert.Contains("window.__weavePage = {\"globeEffect\":true,\"worldWidth\":3000,\"worldHeight\":1686,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":" + ExactGridJson + ",\"screen\":" + ExactScreenJson + "};", planetHtml);
 
         var merged = MakePage("index", "index.html");
         merged.GlobeEffect = false;
-        merged.WorldWidthPx = 6020;
-        merged.WorldHeightPx = 1696;
+        merged.WorldWidthPx = 6000;
+        merged.WorldHeightPx = 1686;
         project.Pages.Add(merged);
 
         var mergedHtml = new PageRenderer(project).RenderPage(merged);
-        Assert.Contains("window.__weavePage = {\"globeEffect\":false,\"worldWidth\":6020,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":{\"columns\":38,\"rows\":10,\"cellWidth\":150.5,\"cellHeight\":150.8896797153025,\"originX\":150.5,\"originY\":150.8896797153025,\"gapColumns\":[19]}};", mergedHtml);
+        Assert.Contains("window.__weavePage = {\"globeEffect\":false,\"worldWidth\":6000,\"worldHeight\":1686,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":{\"columns\":40,\"rows\":10,\"cellWidth\":150,\"cellHeight\":150,\"originX\":0,\"originY\":150},\"screen\":" + ExactScreenJson + "};", mergedHtml);
     }
 
     [Fact]
@@ -643,9 +639,9 @@ public class PageRendererTests
         var noAudioBlock = html.Substring(html.IndexOf("<!-- Informational -->"), html.IndexOf("<!-- Has Music -->") - html.IndexOf("<!-- Informational -->"));
         Assert.DoesNotContain("height:", noAudioBlock);
 
-        // Has audio - explicit shorter height (505 - 54, see main.css's own comment on the 54).
+        // Has audio - a track's card just fits what's left once its poetry is hidden.
         var withAudioBlock = html.Substring(html.IndexOf("<!-- Has Music -->"));
-        Assert.Contains("height: 451px", withAudioBlock);
+        Assert.Contains("height: auto", withAudioBlock);
     }
 
     [Fact]
@@ -761,7 +757,35 @@ public class PageRendererTests
 
         var html = new PageRenderer(project).RenderPage(page);
 
-        Assert.Equal(expected, html.Contains("<span class=\"focus-action\">[ Focus ]</span>"));
+        Assert.Equal(expected, html.Contains("<span class=\"focus-action\">[ Enter ]</span>"));
+    }
+
+    [Theory]
+    [InlineData(ActionKind.Download, true, true)]
+    [InlineData(ActionKind.None, true, true)]
+    [InlineData(ActionKind.Travel, true, false)]
+    [InlineData(ActionKind.None, false, false)]
+    public void RenderPage_TrackCard_MarkedSoItsPoetryOnlyShowsInTrackFocus(ActionKind kind, bool hasAudio, bool expected)
+    {
+        var project = new WeaveProject();
+        var page = MakePage("ouros", "ouros.html");
+        page.Nodes.Add(new Node
+        {
+            Id = "location",
+            Card = new Card
+            {
+                Audio = hasAudio ? new AudioRef { Url = "https://example.com/track.ogg" } : null,
+                PoetryLines = { "A line of verse" },
+                Action = new CardAction { Kind = kind, TargetPageId = kind == ActionKind.Travel ? "ouros" : null },
+            },
+        });
+        project.Pages.Add(page);
+
+        var html = new PageRenderer(project).RenderPage(page);
+
+        Assert.Equal(expected, html.Contains("class=\"floatInfo trackCard\""));
+        // Always in the page, whichever way it's shown - Track Focus reads it from here.
+        Assert.Contains("A line of verse", html);
     }
 
     [Fact]

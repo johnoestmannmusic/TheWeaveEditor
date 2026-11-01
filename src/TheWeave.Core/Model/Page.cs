@@ -19,9 +19,8 @@ public sealed class Page
     public int? WorldHeightPx { get; set; }
 
     /// <summary>
-    /// True (the default) draws a cosmetic globe-curvature hint on this page - a faint edge
-    /// vignette plus nodes scaling/fading slightly as they near the screen edge, to sell a
-    /// sense of a curved horizon. Purely visual - e.g. toggled off for a building interior, where
+    /// True (the default) draws a faint vignette around the edges of this page's screens, to sell
+    /// a sense of a curved horizon. Purely visual - e.g. toggled off for a building interior, where
     /// "curved horizon" makes no sense.
     /// </summary>
     public bool GlobeEffect { get; set; } = true;
@@ -29,8 +28,7 @@ public sealed class Page
     /// <summary>
     /// Where the ship spawns landing on this page with no travel/query-string position at all -
     /// e.g. opening it directly with a bare URL, or via the shell's iframe on first load. The ship
-    /// lands on whichever square is nearest. Null falls back to the runtime's own hardcoded default
-    /// (120, 120), which is square A0. Doesn't affect arriving via
+    /// lands on whichever square is nearest. Null falls back to the runtime's own default, square A0. Doesn't affect arriving via
     /// a travel link - that's governed by CardAction.TravelSpawnX/Y (or the exporter's own
     /// reciprocal/center-of-map defaults when those aren't set - see PageRenderer.BuildTravelQuery).
     /// </summary>

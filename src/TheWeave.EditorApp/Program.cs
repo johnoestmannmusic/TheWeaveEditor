@@ -603,6 +603,8 @@ public static class Program
             columnCenters = Enumerable.Range(0, grid.Columns).Select(grid.ColumnCenter).ToList(),
             rowCenters = Enumerable.Range(0, grid.Rows).Select(grid.RowCenter).ToList(),
             columnLabels = Enumerable.Range(0, grid.Columns).Select(grid.ColumnLabel).ToList(),
+            screenLinesX = grid.ScreenLinesX,
+            screenLinesY = grid.ScreenLinesY,
         };
     }
 

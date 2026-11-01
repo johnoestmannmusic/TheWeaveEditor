@@ -446,7 +446,7 @@ function renderPageInspector(container, page) {
     </div>
     <div class="field checkbox">
       <input type="checkbox" id="f-page-globe-effect" ${page.globeEffect !== false ? 'checked' : ''}>
-      <label for="f-page-globe-effect">Globe curvature visual (edge vignette + node fisheye - e.g. turn off for a building interior)</label>
+      <label for="f-page-globe-effect">Globe curvature visual (edge vignette - e.g. turn off for a building interior)</label>
     </div>
     <div class="field checkbox">
       <input type="checkbox" id="f-page-is-home" ${project.homePageId === page.id ? 'checked' : ''}>
@@ -842,7 +842,7 @@ function renderNodeInspector(container, pageId, node) {
 
     ${onMap
       ? cellPickerHtml('f-square', 'Map', grid, node.x + grid.nodeIconSize / 2, node.y + grid.nodeIconSize / 2)
-      : isModalNode(node) ? '' : '<div class="field-hint">Shares its parent\'s square on the map - press X there to reach it.</div>'}
+      : isModalNode(node) ? '' : '<div class="field-hint">Shares its parent\'s square on the map - press X in Track Focus to reach it.</div>'}
 
     <div class="field-row">
       <div class="field">
@@ -1105,9 +1105,31 @@ function renderCanvas() {
     nodesEl.appendChild(renderCanvasMarker(node, grids[page.id]));
   }
 
+  renderScreenLines(grids[page.id], view);
   renderEffectPreviews(page);
 
   applyCanvasTransform(page.id);
+}
+
+// Outlines the static screens the map splits into on the exported site, so it's clear which screen a
+// location will land on.
+function renderScreenLines(grid, view) {
+  const layer = document.getElementById('canvas-screens');
+  layer.innerHTML = '';
+
+  const line = (className, left, top) => {
+    const el = document.createElement('div');
+    el.className = className;
+    el.style.left = left + 'px';
+    el.style.top = top + 'px';
+    layer.appendChild(el);
+  };
+
+  for (const x of grid.screenLinesX) line('screen-line-x', x, grid.screenLinesY[0]);
+  for (const y of grid.screenLinesY) line('screen-line-y', 0, y);
+
+  layer.style.setProperty('--screen-lines-height', (grid.screenLinesY.at(-1) - grid.screenLinesY[0]) + 'px');
+  layer.style.setProperty('--screen-lines-width', view.worldW + 'px');
 }
 
 // Live preview of this page's effects, using the same technique (and close to the same code)

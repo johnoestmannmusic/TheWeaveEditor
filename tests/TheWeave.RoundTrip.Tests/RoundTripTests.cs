@@ -89,13 +89,13 @@ public class RoundTripTests
         var ouros = project.Pages.Single(p => p.Id == "ouros");
         var grid = GridLayout.For(ouros, project);
 
-        // Salanth Town Gardens was already over A0; the return node just clamps there, so it yields.
-        Assert.Equal(new GridCell(0, 0), grid.CellOf(ouros.Nodes.Single(n => n.Id == "salanth-town-gardens")));
-        Assert.Equal(new GridCell(0, 1), grid.CellOf(ouros.Nodes.Single(n => n.Id == "the-weave-sector-a-6")));
+        // Above the grid, the return node comes down into the top of the column it was already in.
+        Assert.Equal(new GridCell(0, 0), grid.CellOf(ouros.Nodes.Single(n => n.Id == "the-weave-sector-a-6")));
         // Unremarkable nodes just land on the square they were over.
-        Assert.Equal(new GridCell(10, 6), grid.CellOf(ouros.Nodes.Single(n => n.Id == "irf-outpost")));
+        Assert.Equal(new GridCell(1, 0), grid.CellOf(ouros.Nodes.Single(n => n.Id == "salanth-town-gardens")));
+        Assert.Equal(new GridCell(11, 6), grid.CellOf(ouros.Nodes.Single(n => n.Id == "irf-outpost")));
 
-        Assert.Contains(notes!, n => n.StartsWith("Ouros") && n.Contains("moved to A1") && n.Contains("A0 was already taken"));
+        Assert.Contains(notes!, n => n.StartsWith("Ouros") && n.Contains("moved to #0") && n.Contains("outside the grid"));
         Assert.Contains(notes!, n => n.StartsWith("Ouros") && n.Contains("moved to S0") && n.Contains("outside the grid"));
     }
 
@@ -109,20 +109,6 @@ public class RoundTripTests
 
         Assert.Null(notes);
         Assert.Equal(serialized, WeaveProjectSerializer.Serialize(twice));
-    }
-
-    [Fact]
-    public async Task ImportedChildNodes_RenderOnTopOfTheirParent()
-    {
-        var result = await new SiteImporter().ImportDirectoryAsync(SnapshotDir, "The Weave");
-        ProjectMigrations.Upgrade(result.Project);
-
-        using var outputDir = new TempDirectory();
-        new SiteExporter().Export(result.Project, outputDir.Path, SnapshotDir);
-
-        var html = await File.ReadAllTextAsync(Path.Combine(outputDir.Path, "ouros.html"));
-        Assert.Contains("left: -81px; top: 129px;", html);
-        Assert.DoesNotContain("top: 193px;", html);
     }
 
     [Fact]

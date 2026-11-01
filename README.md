@@ -22,7 +22,8 @@ Neocities, replacing hand-authoring HTML per location.
 - Live map canvas: select a page and its real background renders with every top-level location
   as a draggable, color-coded marker, always centered in a square of the map's grid. Click to
   select (syncs with the tree/Inspector), drag to move it to another free square, double-click an
-  empty square to add a new location, scroll to zoom, click-drag to pan.
+  empty square to add a new location, scroll to zoom, click-drag to pan. Dashed lines show where
+  the exported site's static screens meet.
 - Live Effects panel: add/edit/delete a page's crossfade or drifting-sprite effects and watch
   them actually animate on the canvas while you edit, using the same rendering the exported site
   uses.
@@ -47,18 +48,24 @@ Neocities, replacing hand-authoring HTML per location.
 - Configurable ship spawn points: a page's own default landing spot, plus directional defaults
   for travel links (arriving at a planet centers on its map; returning to the starting map lands
   back near the hub icon you left, nudged just above it) — all overridable per travel link.
-- Sokoban-style grid movement along the grid drawn on every map (columns A-S, rows 0-9): hold an
+- Sokoban-style grid movement along the grid drawn on every map (the number column and columns A-S,
+  rows 0-9): hold an
   arrow key, D-pad direction, or stick direction to walk square by square, and let go to stop on
   the square you're heading into. Every map has hard edges. The movement itself lives in
   `runtime/sokoban.js`, with no knowledge of the DOM or these maps, so other boards can reuse it.
 - Keyboard and gamepad controls: Z/gamepad A to interact (travel, open a track's Track Focus screen,
-  or close a popup), X/gamepad X to step through a multi-part location's nested parts in place.
-  Contextual hint icons show next to whichever action is actually available.
-- Track Focus: a full-screen view of a track, with its album art enlarged to a whole-number scale on
-  the left and its title and poetry on the right, over the dimmed map and a blurred, blown-up copy
-  of the art. Z/gamepad A, gamepad B, Esc, or clicking the backdrop closes it; the track keeps
-  playing throughout.
-- An optional cosmetic globe-curvature vignette, toggleable per page.
+  start its Sokoban board, or close a popup), X/gamepad X in Track Focus to step through a multi-part
+  location's nested parts, Esc/gamepad B to back out. Contextual hints show next to whichever action
+  is actually available.
+- Track Focus: a full-screen view of a track, with its album art enlarged to use the space on the
+  left and its title and poetry on the right (a track's card on the map skips the poetry), over the dimmed map and a blurred, blown-up copy
+  of the art. Esc, gamepad B, or clicking the backdrop closes it; the track keeps playing throughout.
+- A Sokoban board over the album art, started with Z/gamepad A from Track Focus: the ship walks a
+  10x10 grid using the same movement as the map. There are no boxes or goals to it yet.
+- Static screens instead of a follow camera: each map splits into 10x5-square screens (4 per map, 8
+  on The Weave), and walking off one slides the view to the next. The picture scales to fill the
+  window's width. Cards always fit on the screen.
+- An optional cosmetic globe-curvature vignette around each screen, toggleable per page.
 - Export cleans up after itself: files from a previous export that the current run didn't
   (re)write — a renamed/deleted page, an orphaned cover image — are removed, so exporting
   repeatedly to the same folder doesn't accumulate stale files. It only ever touches the
@@ -140,11 +147,11 @@ Ouros' Salanth Town Gardens → Jherop Phantom → The Gardener's Funeral) is no
 reflects this directly — `foreach (var child in node.Children) RenderNode(...)` runs *inside* the
 method that also opens/closes that same `.floatInfo`.
 
-**A nested node shares its parent's square.** Its containing block is the parent's card, so
-`PageRenderer.RenderNode` positions it by cancelling out that card's own offset and border, which
-lands it back on the parent's icon. Its stored `Node.X`/`Node.Y` aren't used. Its icon is hidden
-(see `main.css`), and its card gets offset the same way the parent's did, so it lands exactly on
-top of the parent's card and X swaps cards in place.
+**A nested node isn't a place on the map.** Its stored `Node.X`/`Node.Y`
+aren't used, its icon is hidden (see `main.css`), and its card never opens. It stays in the DOM
+because that's where Track Focus reads its content from: X there steps through the chain (`main.js`'s
+`cycleChainNode`), and `renderTrackFocus` reads that member's card directly, whether or not it's
+displayed.
 
 **Closing tags matter more than they look like they should.** A childless node's `.floatInfo`
 must be explicitly closed before the *next sibling* `.node` starts. Miss that and the browser's
@@ -152,12 +159,6 @@ own tag-recovery makes the next sibling a descendant of the unclosed card instea
 doesn't just misplace one node, it compounds: node 3 becomes a fourth-generation descendant of
 node 1, etc. `PageRenderer` closes `.floatInfo` *after* rendering `node.Children`, not before, so
 a childless node closes cleanly but a parent's card still structurally contains its child.
-
-**Visibility inherits down, and nothing about a child's own `display` overrides that.** A nested
-card's `display: ''` does nothing while its ancestor card is `display: none` — the whole subtree
-just isn't rendered, full stop. So making chain member N visible (`main.js`'s `showChainMember`)
-means setting `display: ''` on *every* ancestor from the root down to N, not just N itself — and
-closing anything past N, in case the player is stepping backward.
 
 **Testing gotcha worth remembering:** `getComputedStyle(el).display !== 'none'` (or checking an
 element's own inline `style.display`) only tells you about that one element — it says nothing

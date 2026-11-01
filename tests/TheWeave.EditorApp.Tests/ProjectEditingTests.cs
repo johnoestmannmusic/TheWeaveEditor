@@ -277,8 +277,30 @@ public class ProjectEditingTests
         var page = new Page { Nodes = { new Node { X = 201, Y = 201 } } };
         var node = ProjectEditing.AddNode(new WeaveProject { Pages = { page } }, page, null);
 
-        Assert.Equal(351, node.X); // B0: A0 is taken
+        Assert.Equal(51, node.X); // #0, next to the A0 that's taken
         Assert.Equal(201, node.Y);
+    }
+
+    [Fact]
+    public void AddNode_WithNoPositionOnAnEmptyMap_StartsAtA0()
+    {
+        var page = new Page();
+        var node = ProjectEditing.AddNode(new WeaveProject { Pages = { page } }, page, null);
+
+        Assert.Equal(201, node.X);
+        Assert.Equal(201, node.Y);
+    }
+
+    [Fact]
+    public void ApplyNodeEdit_NumberColumn_IsAllowedLikeAnyOtherSquare()
+    {
+        var node = new Node { X = 201, Y = 201 };
+        var page = new Page { Nodes = { node } };
+
+        ProjectEditing.ApplyNodeEdit(new WeaveProject { Pages = { page } }, page, node, new NodeEditRequest { X = 51, Y = 351 });
+
+        Assert.Equal(51, node.X);
+        Assert.Equal(351, node.Y);
     }
 
     [Fact]
