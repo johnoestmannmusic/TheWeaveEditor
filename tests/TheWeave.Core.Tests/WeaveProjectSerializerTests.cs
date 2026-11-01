@@ -25,9 +25,10 @@ public class WeaveProjectSerializerTests
                         Palette = { ["wall"] = "#112233" },
                         Objects =
                         {
-                            new PuzzleObject { Kind = PuzzleObjectKind.Gate, Col = 2, Row = 3, Letter = "A" },
+                            new PuzzleObject { Kind = PuzzleObjectKind.Gate, Col = 2, Row = 3, Letter = "A", Open = true },
                             new PuzzleObject { Kind = PuzzleObjectKind.Stream, Col = 4, Row = 5, Direction = PuzzleDirection.Left },
                         },
+                        Textures = { ["wall"] = new PuzzleTexture { Ramp = { "#112233" }, Pixels = "0" } },
                     },
                 },
             },
@@ -43,6 +44,11 @@ public class WeaveProjectSerializerTests
         Assert.Equal(PuzzleObjectKind.Gate, puzzle.Objects[0].Kind);
         Assert.Equal("A", puzzle.Objects[0].Letter);
         Assert.Equal(PuzzleDirection.Left, puzzle.Objects[1].Direction);
+        Assert.True(puzzle.Objects[0].Open);
+        Assert.False(puzzle.Objects[1].Open);
+        Assert.Equal(1, System.Text.RegularExpressions.Regex.Count(json, "\"Open\""));
+        Assert.Equal("#112233", puzzle.Textures["wall"].Ramp[0]);
+        Assert.Equal("0", puzzle.Textures["wall"].Pixels);
     }
 
     [Fact]

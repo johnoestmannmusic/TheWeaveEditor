@@ -657,14 +657,28 @@ main.behind-puzzle-editor {
   background: #4a4338;
 }
 
-#pe-directions {
+#pe-directions, #pe-gate-states, #pe-letters {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
 }
 
-#pe-directions button {
+#pe-gate-states {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+#pe-letters {
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+}
+
+#pe-directions button, #pe-gate-states button, #pe-letters button {
   padding: 6px 0;
+}
+
+#pe-letters button {
+  padding: 3px 0;
+  font-size: 12px;
 }
 
 #pe-stage {
@@ -704,9 +718,11 @@ main.behind-puzzle-editor {
     linear-gradient(to bottom, rgba(255, 255, 255, 0.3) var(--pe-line), transparent var(--pe-line)) 0 0 / var(--pe-tile) var(--pe-tile);
 }
 
+/* Scaled up exactly as the art is, so that their pixels line up. */
 #pe-canvas {
   cursor: crosshair;
   touch-action: none;
+  image-rendering: pixelated;
 }
 
 #pe-palette {

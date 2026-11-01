@@ -114,13 +114,17 @@ public static class ProjectValidator
             Warn("this location has no Track Focus screen with album art, so it can't be played.");
         else if (puzzle.PaletteSource != card.CoverImagePath)
             Warn("its colours came from different album art. Open the Puzzle Editor to update them.");
+        else if (puzzle.Textures.Count == 0)
+            Warn("it was made before objects had textures. Open the Puzzle Editor to add them.");
 
         if (puzzle.Objects.All(o => o.Kind != PuzzleObjectKind.Finish))
             Warn("it has no Finish, so it can't be solved. It won't lock the next part until it has one.");
 
         var gates = LettersOf(PuzzleObjectKind.Gate);
         var switches = LettersOf(PuzzleObjectKind.Switch);
-        foreach (var letter in gates.Except(switches))
+        // A Gate placed open is simply always open without a Switch, which is a fine thing to want.
+        var closedGates = puzzle.Objects.Where(o => o.Kind == PuzzleObjectKind.Gate && !o.Open).Select(o => o.Letter ?? "").Distinct().OrderBy(l => l);
+        foreach (var letter in closedGates.Except(switches))
             Warn($"Gate {letter} has no Switch {letter}, so it can never open.");
         foreach (var letter in switches.Except(gates))
             Warn($"Switch {letter} has no Gate {letter}, so it does nothing.");
@@ -130,7 +134,79 @@ public static class ProjectValidator
             if (group.Count() != 2)
                 Warn($"Teleporter {group.Key} needs exactly 2, and there {(group.Count() == 1 ? "is 1" : $"are {group.Count()}")}.");
         }
+
+        foreach (var problem in FindStreamTraps(puzzle))
+            Warn(problem);
     }
+
+    // A Stream holds the ship until it pushes it off, so a path with no way off is somewhere a ship can only
+    // get out of by restarting. Each path is followed to where it ends, and each ending reported once.
+    private static IEnumerable<string> FindStreamTraps(Puzzle puzzle)
+    {
+        var streams = new Dictionary<(int Col, int Row), PuzzleObject>();
+        var objects = new Dictionary<(int Col, int Row), PuzzleObject>();
+        foreach (var obj in puzzle.Objects)
+            (obj.Kind == PuzzleObjectKind.Stream ? streams : objects).TryAdd((obj.Col, obj.Row), obj);
+
+        var reported = new HashSet<(int Col, int Row)>();
+
+        foreach (var first in streams.Values)
+        {
+            var path = new List<(int Col, int Row)>();
+            var current = first;
+
+            while (true)
+            {
+                var here = (current.Col, current.Row);
+
+                var seenAt = path.IndexOf(here);
+                if (seenAt >= 0)
+                {
+                    // Named by the same square of the loop, wherever the path came into it from.
+                    var loop = path.Skip(seenAt).OrderBy(c => c.Row).ThenBy(c => c.Col).First();
+                    if (reported.Add(loop))
+                        yield return $"{DescribeStream(loop)} is part of a loop, so a ship on it can only restart.";
+                    break;
+                }
+                path.Add(here);
+
+                // Something on the path that takes the ship away means it never gets as far as the ending.
+                if (objects.TryGetValue(here, out var on) && on.Kind is PuzzleObjectKind.Teleporter or PuzzleObjectKind.Finish)
+                    break;
+
+                var next = Step(here, current.Direction);
+                string? ending = null;
+
+                if (next.Col < 0 || next.Col >= Puzzle.BoardSize || next.Row < 0 || next.Row >= Puzzle.BoardSize)
+                    ending = "runs off the board";
+                else if (streams.TryGetValue(next, out var nextStream))
+                {
+                    if (Step(next, nextStream.Direction) != here)
+                    {
+                        current = nextStream;
+                        continue;
+                    }
+                    ending = "faces another Stream head-on";
+                }
+                else if (objects.TryGetValue(next, out var blocking) && blocking.Kind == PuzzleObjectKind.Wall)
+                    ending = "ends at a Wall";
+
+                if (ending is not null && reported.Add(here))
+                    yield return $"{DescribeStream(here)} {ending}, so a ship on it can only restart.";
+                break;
+            }
+        }
+    }
+
+    private static string DescribeStream((int Col, int Row) cell) => $"The Stream at column {cell.Col + 1}, row {cell.Row + 1}";
+
+    private static (int Col, int Row) Step((int Col, int Row) cell, PuzzleDirection? direction) => direction switch
+    {
+        PuzzleDirection.Up => (cell.Col, cell.Row - 1),
+        PuzzleDirection.Down => (cell.Col, cell.Row + 1),
+        PuzzleDirection.Left => (cell.Col - 1, cell.Row),
+        _ => (cell.Col + 1, cell.Row),
+    };
 
     private static void CheckGridPlacement(WeaveProject project, Page page, List<ValidationIssue> issues)
     {

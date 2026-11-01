@@ -25,9 +25,10 @@ public class PageRendererTests
                     {
                         PaletteSource = "img/track.png",
                         Palette = { ["wall"] = "#112233" },
+                        Textures = { ["wall"] = new PuzzleTexture { Ramp = { "#112233" }, Pixels = "0" } },
                         Objects =
                         {
-                            new PuzzleObject { Kind = PuzzleObjectKind.Gate, Col = 2, Row = 3, Letter = "A" },
+                            new PuzzleObject { Kind = PuzzleObjectKind.Gate, Col = 2, Row = 3, Letter = "A", Open = true },
                             new PuzzleObject { Kind = PuzzleObjectKind.Stream, Col = 4, Row = 5, Direction = PuzzleDirection.Left },
                         },
                     },
@@ -48,7 +49,7 @@ public class PageRendererTests
         var attr = System.Text.RegularExpressions.Regex.Match(html, "data-puzzle=\"([^\"]*)\"").Groups[1].Value;
         var json = System.Net.WebUtility.HtmlDecode(attr);
         Assert.Equal(
-            "{\"id\":\"track\",\"objects\":[{\"kind\":\"Gate\",\"col\":2,\"row\":3,\"letter\":\"A\"},{\"kind\":\"Stream\",\"col\":4,\"row\":5,\"direction\":\"Left\"}],\"palette\":{\"wall\":\"#112233\"}}",
+            "{\"id\":\"track\",\"objects\":[{\"kind\":\"Gate\",\"col\":2,\"row\":3,\"letter\":\"A\",\"open\":true},{\"kind\":\"Stream\",\"col\":4,\"row\":5,\"direction\":\"Left\"}],\"palette\":{\"wall\":\"#112233\"},\"textures\":{\"wall\":{\"ramp\":[\"#112233\"],\"pixels\":\"0\"}}}",
             json);
     }
 

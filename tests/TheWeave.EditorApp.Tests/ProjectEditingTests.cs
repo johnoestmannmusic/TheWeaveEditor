@@ -42,16 +42,17 @@ public class ProjectEditingTests
     [Fact]
     public void UpdatePuzzleMessage_ReadsWhatTheEditorSends()
     {
-        const string raw = """
+        var raw = $$"""
             {
               "type": "update-puzzle", "pageId": "ouros", "nodeId": "track",
               "puzzle": {
                 "objects": [
-                  { "kind": "Gate", "col": 2, "row": 3, "letter": "A" },
+                  { "kind": "Gate", "col": 2, "row": 3, "letter": "A", "open": true },
                   { "kind": "Stream", "col": 4, "row": 5, "direction": "Left" },
                   { "kind": "Start", "col": 5, "row": 9 }
                 ],
                 "palette": { "wall": "#112233" },
+                "textures": { "wall": { "ramp": ["#112233"], "pixels": "{{new string('0', 576)}}" } },
                 "paletteSource": "img/track.png"
               }
             }
@@ -62,6 +63,8 @@ public class ProjectEditingTests
         ProjectEditing.ValidatePuzzle(message.Puzzle!);
         Assert.Equal(PuzzleObjectKind.Gate, message.Puzzle!.Objects[0].Kind);
         Assert.Equal("A", message.Puzzle.Objects[0].Letter);
+        Assert.True(message.Puzzle.Objects[0].Open);
+        Assert.Equal("#112233", message.Puzzle.Textures["wall"].Ramp[0]);
         Assert.Equal(PuzzleDirection.Left, message.Puzzle.Objects[1].Direction);
         Assert.Equal("#112233", message.Puzzle.Palette["wall"]);
         Assert.Equal("img/track.png", message.Puzzle.PaletteSource);
@@ -100,10 +103,11 @@ public class ProjectEditingTests
     {
         var node = new Node();
 
-        ProjectEditing.ApplyPuzzleEdit(node, MakePuzzle(new PuzzleObject { Kind = PuzzleObjectKind.Wall, Letter = "A", Direction = PuzzleDirection.Up }));
+        ProjectEditing.ApplyPuzzleEdit(node, MakePuzzle(new PuzzleObject { Kind = PuzzleObjectKind.Wall, Letter = "A", Direction = PuzzleDirection.Up, Open = true }));
 
         Assert.Null(node.Puzzle!.Objects[0].Letter);
         Assert.Null(node.Puzzle.Objects[0].Direction);
+        Assert.False(node.Puzzle.Objects[0].Open);
     }
 
     public static TheoryData<PuzzleObject[]> InvalidPuzzles => new()
@@ -133,6 +137,27 @@ public class ProjectEditingTests
         Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyPuzzleEdit(node, MakePuzzle(objects)));
 
         Assert.Same(before, node.Puzzle);
+    }
+
+    [Fact]
+    public void ApplyPuzzleEdit_KeepsAGatePlacedOpen()
+    {
+        var node = new Node();
+
+        ProjectEditing.ApplyPuzzleEdit(node, MakePuzzle(new PuzzleObject { Kind = PuzzleObjectKind.Gate, Letter = "A", Open = true }));
+
+        Assert.True(node.Puzzle!.Objects[0].Open);
+    }
+
+    [Theory]
+    [InlineData(0, 576)]
+    [InlineData(1, 575)]
+    public void ApplyPuzzleEdit_RejectsAnIncompleteTexture(int shades, int pixels)
+    {
+        var puzzle = MakePuzzle();
+        puzzle.Textures["wall"] = new PuzzleTexture { Ramp = Enumerable.Repeat("#112233", shades).ToList(), Pixels = new string('0', pixels) };
+
+        Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyPuzzleEdit(new Node(), puzzle));
     }
 
     [Fact]

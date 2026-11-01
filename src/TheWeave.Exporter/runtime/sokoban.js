@@ -118,8 +118,6 @@
       get cell(){ return target ?? current; },
       get facing(){ return facing; },
       get isMoving(){ return target !== null; },
-      // Whether anything's asking it to move: a direction held, or a press still waiting for its step.
-      get hasInput(){ return heldDirections.length > 0 || queuedDirection !== null; },
 
       get position(){
         let from = grid.centerOf(current);

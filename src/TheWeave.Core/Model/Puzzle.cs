@@ -53,6 +53,20 @@ public sealed class PuzzleObject
 
     /// <summary>Stream only.</summary>
     public PuzzleDirection? Direction { get; set; }
+
+    /// <summary>Gate only: whether it starts the puzzle open. Left out of the project file when it doesn't.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Open { get; set; }
+}
+
+/// <summary>
+/// One object colour's texture, generated from the album art (see runtime/puzzle.js's pickTextures): the
+/// shades it's made of, and one digit per pixel of a square saying which shade goes there.
+/// </summary>
+public sealed class PuzzleTexture
+{
+    public List<string> Ramp { get; set; } = new();
+    public string Pixels { get; set; } = "";
 }
 
 /// <summary>
@@ -72,6 +86,9 @@ public sealed class Puzzle
     /// </summary>
     public Dictionary<string, string> Palette { get; set; } = new();
 
-    /// <summary>The Card.CoverImagePath that Palette was picked from, to tell when it's gone out of date.</summary>
+    /// <summary>The objects' textures, by the same roles as Palette and stored for the same reason.</summary>
+    public Dictionary<string, PuzzleTexture> Textures { get; set; } = new();
+
+    /// <summary>The Card.CoverImagePath that Palette and Textures were made from, to tell when they've gone out of date.</summary>
     public string? PaletteSource { get; set; }
 }

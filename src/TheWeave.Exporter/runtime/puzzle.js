@@ -2,8 +2,8 @@
 // John Oestmann
 // Sokoban puzzles played over a track's album art: what each object looks like, what colours they're
 // drawn in, the rules for placing them on a board, and the rules for playing one. Knows nothing about
-// the DOM - callers pass in a canvas context or plain pixel data. Shared by the Editor's Puzzle Editor
-// and the exported site, so that a puzzle looks the same in both.
+// the DOM - callers pass in plain pixel data, and get plain pixel data back. Shared by the Editor's
+// Puzzle Editor and the exported site, so that a puzzle looks the same in both.
 //
 // This file is part of the canonical shared runtime owned by TheWeave.Exporter - it's generated into
 // every exported site's jsx/puzzle.js, not hand-edited there.
@@ -93,7 +93,7 @@
     for (const object of puzzle.objects) {
       if (object.kind === 'Stream') streams.set(cellKey(object), object.direction);
       else if (object.kind === 'Start') start = { col: object.col, row: object.row };
-      else objects.push({ ...object, fromCol: object.col, fromRow: object.row, open: false });
+      else objects.push({ ...object, fromCol: object.col, fromRow: object.row, open: !!object.open });
     }
 
     let shipCell = start;
@@ -105,6 +105,10 @@
 
     function objectAt(cell){
       return objects.find(object => isAt(object, cell)) ?? null;
+    }
+
+    function switchesActive(){
+      return !objects.some(object => object.kind === 'Key');
     }
 
     function isSolid(object){
@@ -129,7 +133,7 @@
           return null;
 
         case 'Switch':
-          if (objects.some(other => other.kind === 'Key')) return null;
+          if (!switchesActive()) return null;
           for (const gate of objects) {
             if (gate.kind === 'Gate' && gate.letter === object.letter) gate.open = !gate.open;
           }
@@ -189,14 +193,16 @@
       get objects(){ return objects; },
       get shipCell(){ return shipCell; },
       get isSolved(){ return solved; },
+      get switchesActive(){ return switchesActive(); },
       streams: puzzle.objects.filter(object => object.kind === 'Stream'),
 
-      // For sokoban.js's canEnter. A Stream can't be walked against, whether already on it or coming
-      // onto it head-on.
+      // For sokoban.js's canEnter. A Stream holds a ship until it pushes it off: the only way to leave
+      // one is the way it's going. It can't be stepped onto head-on either.
       canEnter(from, to, moverDirection){
         let direction = PUZZLE_DIRECTIONS[moverDirection];
-        let against = streams.get(cellKey(from)) === OPPOSITES[direction] || streams.get(cellKey(to)) === OPPOSITES[direction];
-        if (against) return false;
+        let holding = streams.get(cellKey(from));
+        if (holding && holding !== direction) return false;
+        if (streams.get(cellKey(to)) === OPPOSITES[direction]) return false;
         let object = objectAt(to);
         return !(object && isSolid(object));
       },
@@ -361,185 +367,334 @@
     };
   }
 
-  function hexLightness(hex){
+  // ---------- textures ----------
+
+  // One square of the board, and the album art, in the art's own pixels.
+  const TILE_PX = 24;
+  const ART_PX = TILE_PX * BOARD_SIZE;
+
+  // Every role that has a texture of its own. A Switch shares its Gate's, as it does its colour.
+  const TEXTURE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key'];
+  // The shades a texture is made of, by how far they're aimed from its main colour in lightness, and how
+  // much of the texture each covers. A shade only exists if the art really has a colour like it.
+  const TEXTURE_SHADES = [
+    { offset: -30, share: 0.15 },
+    { offset: -14, share: 0.25 },
+    { offset: 0, share: 0.45 },
+    { offset: 16, share: 0.15 },
+  ];
+  // How close a colour in the art has to be to count as a shade of one, or towards finding a patch of it.
+  const TEXTURE_SHADE_DISTANCE = 110;
+  const TEXTURE_PATCH_DISTANCE = 70;
+  const TEXTURE_PATCH_STEP = 4;
+
+  function hexToColor(hex){
     let value = parseInt(hex.slice(1), 16);
-    return lightnessOf({ r: value >> 16, g: (value >> 8) & 255, b: value & 255 });
+    return { r: value >> 16, g: (value >> 8) & 255, b: value & 255 };
+  }
+
+  // Generates each object's texture from an album's art (RGBA bytes, width x height): the pattern of light
+  // and dark from wherever the art has the most of that object's colour, recoloured in shades of that
+  // colour that are also exact colours from the art. So it carries the album's own grain and dithering, but
+  // still reads as that object, rather than blending into the art behind it.
+  function pickTextures(pixels, width, height, palette){
+    let colors = new Map();
+    for (let i = 0; i + 3 < pixels.length; i += 4) {
+      if (pixels[i + 3] < 128) continue;
+      let key = (pixels[i] << 16) | (pixels[i + 1] << 8) | pixels[i + 2];
+      colors.set(key, (colors.get(key) ?? 0) + 1);
+    }
+    let artColors = [...colors.keys()].map(key => ({ r: key >> 16, g: (key >> 8) & 255, b: key & 255 }));
+
+    let textures = {};
+    for (const role of TEXTURE_ROLES) {
+      let color = hexToColor(palette[role]);
+      let { ramp, baseIndex } = pickShades(color, artColors);
+      let patch = findPatch(pixels, width, height, color);
+      textures[role] = { ramp: ramp.map(toHex), pixels: patternOf(pixels, width, height, patch, ramp.length, baseIndex) };
+    }
+    return textures;
+  }
+
+  // The art's colours nearest each shade wanted, darkest first, with no shade repeated.
+  function pickShades(color, artColors){
+    let near = artColors.filter(other => colorDistance(other, color) <= TEXTURE_SHADE_DISTANCE);
+    let shades = [];
+    let baseIndex = 0;
+
+    for (const shade of TEXTURE_SHADES) {
+      if (shade.offset === 0) {
+        baseIndex = shades.length;
+        shades.push(color);
+        continue;
+      }
+      let wanted = lightnessOf(color) + shade.offset;
+      let best = null;
+      for (const other of near) {
+        let miss = Math.abs(lightnessOf(other) - wanted);
+        if (miss <= Math.abs(shade.offset) / 2 && (!best || miss < best.miss)) best = { other, miss };
+      }
+      if (best) shades.push(best.other);
+    }
+    return { ramp: shades, baseIndex };
+  }
+
+  // The top-left of the square of art holding the most of a colour, using a running total of matching
+  // pixels so that trying every position stays quick.
+  function findPatch(pixels, width, height, color){
+    let totals = new Int32Array((width + 1) * (height + 1));
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let i = (y * width + x) * 4;
+        let matches = colorDistance({ r: pixels[i], g: pixels[i + 1], b: pixels[i + 2] }, color) <= TEXTURE_PATCH_DISTANCE ? 1 : 0;
+        totals[(y + 1) * (width + 1) + x + 1] = matches + totals[y * (width + 1) + x + 1] + totals[(y + 1) * (width + 1) + x] - totals[y * (width + 1) + x];
+      }
+    }
+
+    let best = { x: 0, y: 0, score: -1 };
+    for (let y = 0; y + TILE_PX <= height; y += TEXTURE_PATCH_STEP) {
+      for (let x = 0; x + TILE_PX <= width; x += TEXTURE_PATCH_STEP) {
+        let bottom = y + TILE_PX, right = x + TILE_PX, row = width + 1;
+        let score = totals[bottom * row + right] - totals[y * row + right] - totals[bottom * row + x] + totals[y * row + x];
+        if (score > best.score) best = { x, y, score };
+      }
+    }
+    return best;
+  }
+
+  // A patch of art as one digit per pixel, each the index of the shade to draw there. Stretches the patch's
+  // own range of lightness across the shades, so that even a nearly flat patch shows its pattern.
+  function patternOf(pixels, width, height, patch, shadeCount, baseIndex){
+    let values = [];
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        let i = (Math.min(patch.y + y, height - 1) * width + Math.min(patch.x + x, width - 1)) * 4;
+        values.push(lightnessOf({ r: pixels[i], g: pixels[i + 1], b: pixels[i + 2] }));
+      }
+    }
+
+    let sorted = [...values].sort((a, b) => a - b);
+    let flat = sorted[0] === sorted[sorted.length - 1];
+
+    // How far through the patch's lightness each shade ends, sharing the shades that do exist in proportion.
+    let shades = TEXTURE_SHADES.slice(0, shadeCount);
+    let walked = 0;
+    let total = shades.reduce((sum, shade) => sum + shade.share, 0);
+    let limits = shades.map(shade => {
+      walked += shade.share / total;
+      return sorted[Math.min(sorted.length - 1, Math.floor(walked * sorted.length))];
+    });
+
+    return values.map(value => {
+      if (flat) return baseIndex;
+      let index = limits.findIndex(limit => value <= limit);
+      return index === -1 ? shadeCount - 1 : index;
+    }).join('');
   }
 
   // ---------- drawing ----------
 
-  // How long a Stream's cross-lines take to move one whole square, and how many there are in one.
+  // How long a Stream's cross-lines take to move one whole square, and how far apart they are.
   const STREAM_CYCLE_MS = 900;
-  const STREAM_LINES = 3;
+  const STREAM_LINE_SPACING = 8;
 
-  function polygon(ctx, cx, cy, radius, sides, turn){
-    ctx.beginPath();
-    for (let i = 0; i < sides; i++) {
-      let angle = turn + i * 2 * Math.PI / sides;
-      ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+  // Each letter as 7 rows of 5 pixels.
+  const PIXEL_LETTERS = {
+    A: '01110 10001 10001 11111 10001 10001 10001', B: '11110 10001 10001 11110 10001 10001 11110',
+    C: '01110 10001 10000 10000 10000 10001 01110', D: '11110 10001 10001 10001 10001 10001 11110',
+    E: '11111 10000 10000 11110 10000 10000 11111', F: '11111 10000 10000 11110 10000 10000 10000',
+    G: '01110 10001 10000 10111 10001 10001 01111', H: '10001 10001 10001 11111 10001 10001 10001',
+    I: '01110 00100 00100 00100 00100 00100 01110', J: '00111 00010 00010 00010 00010 10010 01100',
+    K: '10001 10010 10100 11000 10100 10010 10001', L: '10000 10000 10000 10000 10000 10000 11111',
+    M: '10001 11011 10101 10101 10001 10001 10001', N: '10001 11001 10101 10011 10001 10001 10001',
+    O: '01110 10001 10001 10001 10001 10001 01110', P: '11110 10001 10001 11110 10000 10000 10000',
+    Q: '01110 10001 10001 10001 10101 10010 01101', R: '11110 10001 10001 11110 10100 10010 10001',
+    S: '01111 10000 10000 01110 00001 00001 11110', T: '11111 00100 00100 00100 00100 00100 00100',
+    U: '10001 10001 10001 10001 10001 10001 01110', V: '10001 10001 10001 10001 10001 01010 00100',
+    W: '10001 10001 10001 10101 10101 11011 10001', X: '10001 10001 01010 00100 01010 10001 10001',
+    Y: '10001 10001 01010 00100 00100 00100 00100', Z: '11111 00001 00010 00100 01000 10000 11111',
+  };
+
+  // Each shape as whether a pixel of a square is inside it, measuring from the square's center.
+  const SHAPES = {
+    octagon: (dx, dy) => Math.abs(dx) <= 11 && Math.abs(dy) <= 11 && Math.abs(dx) + Math.abs(dy) <= 16,
+    octagonHole: (dx, dy) => Math.abs(dx) <= 7 && Math.abs(dy) <= 7 && Math.abs(dx) + Math.abs(dy) <= 10,
+    roundedSquare: (dx, dy) => {
+      let cornerX = Math.max(0, Math.abs(dx) - 6), cornerY = Math.max(0, Math.abs(dy) - 6);
+      return Math.abs(dx) <= 9.5 && Math.abs(dy) <= 9.5 && cornerX * cornerX + cornerY * cornerY <= 3.5 * 3.5;
+    },
+    circle: (dx, dy) => dx * dx + dy * dy <= 10.8 * 10.8,
+    diamond: (dx, dy) => Math.abs(dx) + Math.abs(dy) <= 12,
+    triangle: (dx, dy) => dy >= -9.5 && dy <= 9.5 && Math.abs(dx) <= (dy + 10.5) * 0.55,
+  };
+
+  const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle' };
+  const SPRITE_ROLES = { Wall: 'wall', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream' };
+
+  // What colour a role's pixel at x, y of a square is: its texture's shade there, or its plain colour for a
+  // puzzle saved before it had textures.
+  function roleColorAt(look, role, x, y){
+    let texture = look.textures?.[role];
+    let shade = texture?.pixels?.[y * TILE_PX + x];
+    return hexToColor(shade !== undefined ? texture.ramp[Number(shade)] : look.palette[role] ?? look.palette.wall);
+  }
+
+  function maskOf(test){
+    let mask = [];
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) mask.push(test(x + 0.5 - TILE_PX / 2, y + 0.5 - TILE_PX / 2));
     }
-    ctx.closePath();
+    return mask;
   }
 
-  function roundedSquare(ctx, cx, cy, half, corner){
-    let left = cx - half, right = cx + half, top = cy - half, bottom = cy + half;
-    ctx.beginPath();
-    ctx.moveTo(left + corner, top);
-    ctx.arcTo(right, top, right, bottom, corner);
-    ctx.arcTo(right, bottom, left, bottom, corner);
-    ctx.arcTo(left, bottom, left, top, corner);
-    ctx.arcTo(left, top, right, top, corner);
-    ctx.closePath();
+  // Whether a pixel of a mask is on its edge: inside it, with something outside it right next to it.
+  function isEdge(mask, x, y){
+    let inside = (ax, ay) => ax >= 0 && ax < TILE_PX && ay >= 0 && ay < TILE_PX && mask[ay * TILE_PX + ax];
+    return inside(x, y) && !(inside(x - 1, y) && inside(x + 1, y) && inside(x, y - 1) && inside(x, y + 1));
   }
 
-  function fillAndOutline(ctx, fill, palette, tile){
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = Math.max(1, tile * 0.07);
-    ctx.fillStyle = fill;
-    ctx.strokeStyle = palette.outline;
-    ctx.fill();
-    ctx.stroke();
-  }
+  function drawPixelLetter(sprite, letter, color, halo, scale){
+    let rows = PIXEL_LETTERS[letter]?.split(' ');
+    if (!rows) return;
 
-  function drawLetter(ctx, letter, fill, palette, cx, cy, tile, font){
-    // Whichever of the art's lightest and darkest colours stands out from this shape the most.
-    let useDark = Math.abs(hexLightness(fill) - hexLightness(palette.outline)) >= Math.abs(hexLightness(fill) - hexLightness(palette.light));
-    ctx.fillStyle = useDark ? palette.outline : palette.light;
-    ctx.font = `bold ${Math.round(tile * 0.46)}px ${font}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(letter ?? '', cx, cy + tile * 0.02);
-  }
-
-  function drawStream(ctx, direction, palette, x, y, tile, timeMs){
-    let delta = DIRECTION_DELTAS[direction];
-    let along = delta.x !== 0;
-    let inset = tile * 0.14;
-    let lineWidth = Math.max(1, tile * 0.07);
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(x, y, tile, tile);
-    ctx.clip();
-
-    let drawLines = (color, width) => {
-      ctx.strokeStyle = color;
-      ctx.lineWidth = width;
-      ctx.lineCap = 'butt';
-      ctx.beginPath();
-
-      // The two rails, running in the direction of travel.
-      for (const side of [inset, tile - inset]) {
-        if (along) {
-          ctx.moveTo(x, y + side);
-          ctx.lineTo(x + tile, y + side);
-        } else {
-          ctx.moveTo(x + side, y);
-          ctx.lineTo(x + side, y + tile);
-        }
-      }
-
-      // The lines between them, moving along.
-      let spacing = tile / STREAM_LINES;
-      let phase = ((timeMs % STREAM_CYCLE_MS) / STREAM_CYCLE_MS) * tile;
-      for (let i = -1; i <= STREAM_LINES; i++) {
-        let moved = (i * spacing + phase) % tile;
-        let forward = moved < 0 ? moved + tile : moved;
-        let at = (delta.x + delta.y) > 0 ? forward : tile - forward;
-        if (along) {
-          ctx.moveTo(x + at, y + inset);
-          ctx.lineTo(x + at, y + tile - inset);
-        } else {
-          ctx.moveTo(x + inset, y + at);
-          ctx.lineTo(x + tile - inset, y + at);
-        }
-      }
-
-      ctx.stroke();
+    let left = Math.floor((TILE_PX - 5 * scale) / 2), top = Math.floor((TILE_PX - 7 * scale) / 2);
+    let isLetter = (x, y) => {
+      let col = Math.floor((x - left) / scale), row = Math.floor((y - top) / scale);
+      return rows[row]?.[col] === '1';
     };
 
-    drawLines(palette.outline, lineWidth * 2.2);
-    drawLines(palette.stream, lineWidth);
-    ctx.restore();
-  }
-
-  // Draws one object into the square whose top-left corner is at x, y. options.timeMs drives a Stream's
-  // animation, options.shipImage is what to draw for Start, and options.font is the font for letters.
-  function drawObject(ctx, object, palette, x, y, tile, options = {}){
-    let cx = x + tile / 2;
-    let cy = y + tile / 2;
-    let radius = tile * 0.43;
-    let font = options.font ?? 'sans-serif';
-
-    switch (object.kind) {
-      case 'Wall':
-        polygon(ctx, cx, cy, radius, 8, Math.PI / 8);
-        fillAndOutline(ctx, palette.wall, palette, tile);
-        break;
-
-      case 'Gate':
-        polygon(ctx, cx, cy, radius, 8, Math.PI / 8);
-        if (object.open) {
-          // Just the frame of itself, to show that it can be walked through.
-          ctx.lineJoin = 'round';
-          ctx.lineWidth = Math.max(1, tile * 0.14);
-          ctx.strokeStyle = palette.outline;
-          ctx.stroke();
-          ctx.lineWidth = Math.max(1, tile * 0.07);
-          ctx.strokeStyle = palette.gate;
-          ctx.stroke();
-          drawLetter(ctx, object.letter, palette.outline, palette, cx, cy, tile, font);
-        } else {
-          fillAndOutline(ctx, palette.gate, palette, tile);
-          drawLetter(ctx, object.letter, palette.gate, palette, cx, cy, tile, font);
-        }
-        break;
-
-      case 'Finish':
-        roundedSquare(ctx, cx, cy, tile * 0.36, tile * 0.13);
-        fillAndOutline(ctx, palette.finish, palette, tile);
-        break;
-
-      case 'Switch':
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius * 0.92, 0, Math.PI * 2);
-        fillAndOutline(ctx, palette.switch, palette, tile);
-        drawLetter(ctx, object.letter, palette.switch, palette, cx, cy, tile, font);
-        break;
-
-      case 'Teleporter':
-        polygon(ctx, cx, cy, tile * 0.47, 4, 0);
-        fillAndOutline(ctx, palette.teleporter, palette, tile);
-        drawLetter(ctx, object.letter, palette.teleporter, palette, cx, cy, tile, font);
-        break;
-
-      case 'Key':
-        polygon(ctx, cx, cy + tile * 0.05, radius, 3, -Math.PI / 2);
-        fillAndOutline(ctx, palette.key, palette, tile);
-        break;
-
-      case 'Stream':
-        drawStream(ctx, object.direction, palette, x, y, tile, options.timeMs ?? 0);
-        break;
-
-      case 'Start':
-        if (options.shipImage) {
-          let height = tile * 0.8;
-          let width = height * 12 / 16;
-          ctx.imageSmoothingEnabled = false;
-          ctx.drawImage(options.shipImage, cx - width / 2, cy - height / 2, width, height);
-        }
-        break;
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        if (isLetter(x, y)) sprite[y * TILE_PX + x] = color;
+        else if (halo && (isLetter(x - 1, y) || isLetter(x + 1, y) || isLetter(x, y - 1) || isLetter(x, y + 1))) sprite[y * TILE_PX + x] = halo;
+      }
     }
   }
 
-  // Everything on a board, Streams first, so that whatever's on one sits on top of it.
-  function drawObjects(ctx, objects, palette, tile, options = {}){
-    let streamsFirst = [...objects].sort((a, b) => (b.kind === 'Stream') - (a.kind === 'Stream'));
+  // A square's worth of pixels for one object: a colour per pixel, or null where it's see-through.
+  function buildSprite(object, look, switchesActive){
+    let sprite = new Array(TILE_PX * TILE_PX).fill(null);
+    let role = SPRITE_ROLES[object.kind];
+    let outline = hexToColor(look.palette.outline);
+    let light = hexToColor(look.palette.light);
+
+    let isOpenGate = object.kind === 'Gate' && object.open;
+    let isDim = object.kind === 'Switch' && !switchesActive;
+
+    let body = SHAPES[SPRITE_SHAPES[object.kind]];
+    let test = isOpenGate ? (dx, dy) => body(dx, dy) && !SHAPES.octagonHole(dx, dy) : body;
+    let mask = maskOf(test);
+
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        if (!mask[y * TILE_PX + x]) continue;
+        // De-activated: every other pixel gives way to the outline's colour, the classic look of something disabled.
+        let dimmed = isDim && (x + y) % 2 === 0;
+        sprite[y * TILE_PX + x] = isEdge(mask, x, y) || dimmed ? outline : roleColorAt(look, role, x, y);
+      }
+    }
+
+    if (object.kind === 'Gate' || object.kind === 'Switch' || object.kind === 'Teleporter') {
+      // Whichever of the art's lightest and darkest colours stands out from this shape the most. An open
+      // Gate's letter has only the art behind it, so that one gets a dark edge to stand out from it.
+      let fill = hexToColor(look.palette[role]);
+      let useDark = Math.abs(lightnessOf(fill) - lightnessOf(outline)) >= Math.abs(lightnessOf(fill) - lightnessOf(light));
+      // Twice the alphabet's size where it fits. A diamond narrows too quickly for that, so its stays small.
+      let scale = object.kind === 'Teleporter' ? 1 : 2;
+      if (isOpenGate || isDim) drawPixelLetter(sprite, object.letter, light, outline, scale);
+      else drawPixelLetter(sprite, object.letter, useDark ? outline : light, null, scale);
+    }
+
+    return sprite;
+  }
+
+  // A Stream's two rails running in its direction of travel, with cross-lines between them moving along.
+  function buildStreamSprite(direction, look, phase){
+    let sprite = new Array(TILE_PX * TILE_PX).fill(null);
+    let delta = DIRECTION_DELTAS[direction];
+    let horizontal = delta.x !== 0;
+    let forward = delta.x + delta.y > 0;
+    let outline = hexToColor(look.palette.outline);
+
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        let along = horizontal ? x : y;
+        let across = horizontal ? y : x;
+        let color = null;
+
+        let rail = across <= 5 ? across - 2 : across - 18;
+        if (rail >= 0 && rail <= 3 && (across <= 5 || across >= 18)) {
+          color = rail === 0 || rail === 3 ? outline : roleColorAt(look, 'stream', x, y);
+        } else if (across > 5 && across < 18) {
+          let moved = ((forward ? along - phase : along + phase) % STREAM_LINE_SPACING + STREAM_LINE_SPACING) % STREAM_LINE_SPACING;
+          if (moved <= 3) color = moved === 0 || moved === 3 ? outline : roleColorAt(look, 'stream', x, y);
+        }
+
+        sprite[y * TILE_PX + x] = color;
+      }
+    }
+    return sprite;
+  }
+
+  // Sprites are only worth working out once per look, since there are only so many things to be drawn.
+  const spriteCaches = new WeakMap();
+
+  function spriteFor(object, look, switchesActive, streamPhase){
+    let cache = spriteCaches.get(look);
+    if (!cache) spriteCaches.set(look, cache = new Map());
+
+    let key = object.kind === 'Stream'
+      ? `Stream|${object.direction}|${streamPhase}`
+      : `${object.kind}|${object.letter ?? ''}|${object.kind === 'Gate' && !!object.open}|${object.kind === 'Switch' && !switchesActive}`;
+
+    let sprite = cache.get(key);
+    if (!sprite) {
+      sprite = object.kind === 'Stream' ? buildStreamSprite(object.direction, look, streamPhase) : buildSprite(object, look, switchesActive);
+      cache.set(key, sprite);
+    }
+    return sprite;
+  }
+
+  function blit(image, sprite, left, top){
+    let { data, width, height } = image;
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        let color = sprite[y * TILE_PX + x];
+        let px = left + x, py = top + y;
+        if (!color || px < 0 || px >= width || py < 0 || py >= height) continue;
+        let i = (py * width + px) * 4;
+        data[i] = color.r;
+        data[i + 1] = color.g;
+        data[i + 2] = color.b;
+        data[i + 3] = 255;
+      }
+    }
+  }
+
+  // Draws a whole board into RGBA pixel data the size of the album art, to be scaled up exactly as the art
+  // is, so that every pixel of every object lands on one of the art's. Streams go first, so that whatever's
+  // on one sits on top of it. Start isn't drawn, since that's where the ship itself goes.
+  //
+  // look is { palette, textures }. options.timeMs drives a Stream's animation, options.switchesActive says
+  // whether Switches work yet, and options.along is how far objects are through moving from their fromCol
+  // and fromRow, for ones in play. They move in whole pixels, like everything else here.
+  function renderBoard(image, objects, look, options = {}){
+    image.data.fill(0);
+
+    let phase = Math.floor(((options.timeMs ?? 0) % STREAM_CYCLE_MS) / STREAM_CYCLE_MS * TILE_PX) % STREAM_LINE_SPACING;
+    let switchesActive = options.switchesActive ?? true;
+    let along = options.along ?? 1;
+
+    let streamsFirst = objects
+      .filter(object => object.kind !== 'Start')
+      .sort((a, b) => (b.kind === 'Stream') - (a.kind === 'Stream'));
+
     for (const object of streamsFirst) {
-      drawObject(ctx, object, palette, object.col * tile, object.row * tile, tile, options);
+      let col = object.fromCol === undefined ? object.col : object.fromCol + (object.col - object.fromCol) * along;
+      let row = object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * along;
+      blit(image, spriteFor(object, look, switchesActive, phase), Math.round(col * TILE_PX), Math.round(row * TILE_PX));
     }
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, suggestLetter, pickPalette, drawObject, drawObjects, hasFinish, createPuzzleGame };
+  return { BOARD_SIZE, DEFAULT_START, LETTERS, TILE_PX, ART_PX, placeObject, eraseObject, suggestLetter, pickPalette, pickTextures, renderBoard, hasFinish, createPuzzleGame };
 });
