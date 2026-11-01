@@ -19,6 +19,7 @@ const expandedNodeIds = new Set();
 const canvasViewByPage = new Map(); // pageId -> { scale, offsetX, offsetY, worldW, worldH }
 let effectFormState = null; // { pageId, effectId (null if adding), kind } while the effect form is open
 let grids = {}; // pageId -> that page's grid of squares, worked out by Program.cs's BuildGridPayload
+let validationIssues = []; // the project's current problems, as text
 
 function send(type, extra) {
   window.external.sendMessage(JSON.stringify({ type, ...extra }));
@@ -67,6 +68,7 @@ window.external.receiveMessage((raw) => {
   if (message.type === 'project-state') {
     project = message.project;
     grids = message.grids ?? {};
+    validationIssues = message.validationIssues ?? [];
     projectPath = message.path;
     contentRoot = message.contentRoot;
     reconcileSelection();
@@ -81,6 +83,9 @@ window.external.receiveMessage((raw) => {
       : 'No export folder set yet - will prompt on first export.';
     document.getElementById('btn-undo').disabled = !message.canUndo;
     document.getElementById('btn-redo').disabled = !message.canRedo;
+    syncPuzzleEditor();
+  } else if (message.type === 'puzzle-art') {
+    receivePuzzleArt(message);
   } else if (message.type === 'status') {
     setStatus(message.message, false);
     showToast(message.message, false);
@@ -88,6 +93,7 @@ window.external.receiveMessage((raw) => {
     // A rejected edit (e.g. a square that's already taken) changes nothing on the C# side, so this
     // puts the form back in step with what's actually saved.
     if (project) renderAll();
+    syncPuzzleEditor();
     setStatus(message.message, true);
     showToast(message.message, true);
   } else if (message.type === 'image-picked') {
@@ -899,6 +905,8 @@ function renderNodeInspector(container, pageId, node) {
       </div>
     </fieldset>
 
+    ${renderPuzzleField(node)}
+
     <fieldset>
       <legend>Action</legend>
 
@@ -987,6 +995,8 @@ function renderNodeInspector(container, pageId, node) {
     });
   };
 
+  document.getElementById('btn-puzzle-editor').addEventListener('click', () => openPuzzleEditor(pageId, node.id));
+
   // Text/number/textarea fields save on blur (leaving the field) rather than on every
   // keystroke - a keystroke-triggered save would fight the user's own typing, since every
   // save re-renders this whole form from the authoritative C# state. Select/checkbox fields
@@ -1016,6 +1026,26 @@ function updateCoverPreview(path, previewId = 'f-cover-preview') {
   } else {
     preview.hidden = true;
   }
+}
+
+// Mirrors the game: only a track with album art has a Track Focus screen to play a puzzle on - see
+// PageRenderer's OpensTrackFocus.
+function canHavePuzzle(node) {
+  const card = node.card;
+  return !!card.coverImagePath && !!card.audio && card.action?.kind !== 'Travel' && card.size !== 'Modal';
+}
+
+function renderPuzzleField(node) {
+  const count = (node.puzzle?.objects ?? []).filter((o) => o.kind !== 'Start').length;
+  return `
+    <fieldset>
+      <legend>Sokoban puzzle</legend>
+      <button type="button" id="btn-puzzle-editor" ${canHavePuzzle(node) ? '' : 'disabled'}>Puzzle Editor</button>
+      <div class="field-hint">${canHavePuzzle(node)
+        ? (node.puzzle ? `${count} object${count === 1 ? '' : 's'} placed.` : 'No puzzle yet.')
+        : 'Needs album art and audio, with no Travel action.'}</div>
+    </fieldset>
+  `;
 }
 
 function selectOptions(values, current) {

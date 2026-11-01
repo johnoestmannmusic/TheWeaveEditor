@@ -584,3 +584,154 @@ legend {
   opacity: 1;
   transform: translate(-50%, 0);
 }
+
+/* The Puzzle Editor screen - see puzzleEditor.js. */
+#puzzle-editor {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+#puzzle-editor[hidden] {
+  display: none;
+}
+
+#pe-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+#pe-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+#pe-tools, #pe-side {
+  flex: none;
+  width: 170px;
+  padding: 12px;
+  overflow-y: auto;
+  background: var(--panel-alt);
+}
+
+#pe-tools {
+  border-right: 1px solid var(--border);
+}
+
+#pe-side {
+  width: 220px;
+  border-left: 1px solid var(--border);
+}
+
+#pe-side h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+#pe-tool-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+#pe-tool-buttons button {
+  text-align: left;
+}
+
+#puzzle-editor button.active {
+  border-color: var(--accent);
+  background: #4a4338;
+}
+
+#pe-directions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+#pe-directions button {
+  padding: 6px 0;
+}
+
+#pe-stage {
+  flex: 1;
+  min-width: 0;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#pe-board {
+  position: relative;
+  flex: none;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+#pe-art, #pe-grid, #pe-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Matches how the game dulls the art while a board is being played - see main.css's .boardPlaying. */
+#pe-art {
+  image-rendering: pixelated;
+  filter: brightness(0.65) saturate(0.7);
+}
+
+#pe-grid {
+  pointer-events: none;
+  background:
+    linear-gradient(to right, rgba(255, 255, 255, 0.3) var(--pe-line), transparent var(--pe-line)) 0 0 / var(--pe-tile) var(--pe-tile),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.3) var(--pe-line), transparent var(--pe-line)) 0 0 / var(--pe-tile) var(--pe-tile);
+}
+
+#pe-canvas {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+#pe-palette {
+  margin: 8px 0 16px;
+}
+
+.pe-swatch-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  color: var(--muted);
+}
+
+.pe-swatch {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+#pe-problems {
+  margin: 0;
+  padding-left: 16px;
+  color: var(--error);
+}
+
+#pe-problems .muted {
+  list-style: none;
+  margin-left: -16px;
+  color: var(--muted);
+}

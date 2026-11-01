@@ -87,8 +87,49 @@ public static class ProjectValidator
         if (!string.IsNullOrEmpty(node.Card.CoverImagePath))
             CheckAsset(node.Card.CoverImagePath, assetBasePath, "Cover image", page.Id, node.Id, issues);
 
+        if (node.Puzzle is not null)
+            CheckPuzzle(page, node, issues);
+
         foreach (var child in node.Children)
             CheckNode(page, child, pageIds, assetBasePath, issues);
+    }
+
+    private static void CheckPuzzle(Page page, Node node, List<ValidationIssue> issues)
+    {
+        var puzzle = node.Puzzle!;
+
+        void Warn(string problem) => issues.Add(new ValidationIssue
+        {
+            Severity = ValidationSeverity.Warning,
+            Message = $"Puzzle on '{node.Id}': {problem}",
+            PageId = page.Id,
+            NodeId = node.Id,
+        });
+
+        List<string> LettersOf(PuzzleObjectKind kind) =>
+            puzzle.Objects.Where(o => o.Kind == kind).Select(o => o.Letter ?? "").Distinct().OrderBy(l => l).ToList();
+
+        var card = node.Card;
+        if (string.IsNullOrEmpty(card.CoverImagePath) || card.Audio is null || card.Action.Kind == ActionKind.Travel || card.Size == CardSize.Modal)
+            Warn("this location has no Track Focus screen with album art, so it can't be played.");
+        else if (puzzle.PaletteSource != card.CoverImagePath)
+            Warn("its colours came from different album art. Open the Puzzle Editor to update them.");
+
+        if (puzzle.Objects.All(o => o.Kind != PuzzleObjectKind.Finish))
+            Warn("it has no Finish, so it can't be solved. It won't lock the next part until it has one.");
+
+        var gates = LettersOf(PuzzleObjectKind.Gate);
+        var switches = LettersOf(PuzzleObjectKind.Switch);
+        foreach (var letter in gates.Except(switches))
+            Warn($"Gate {letter} has no Switch {letter}, so it can never open.");
+        foreach (var letter in switches.Except(gates))
+            Warn($"Switch {letter} has no Gate {letter}, so it does nothing.");
+
+        foreach (var group in puzzle.Objects.Where(o => o.Kind == PuzzleObjectKind.Teleporter).GroupBy(o => o.Letter ?? "").OrderBy(g => g.Key))
+        {
+            if (group.Count() != 2)
+                Warn($"Teleporter {group.Key} needs exactly 2, and there {(group.Count() == 1 ? "is 1" : $"are {group.Count()}")}.");
+        }
     }
 
     private static void CheckGridPlacement(WeaveProject project, Page page, List<ValidationIssue> issues)

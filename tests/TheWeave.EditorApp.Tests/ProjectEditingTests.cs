@@ -6,6 +6,124 @@ namespace TheWeave.EditorApp.Tests;
 
 public class ProjectEditingTests
 {
+    private static Puzzle MakePuzzle(params PuzzleObject[] objects) => new() { Objects = objects.ToList() };
+
+    private static Node MakeNodeWithPuzzle()
+    {
+        return new Node { Id = "track", Puzzle = MakePuzzle(new PuzzleObject { Kind = PuzzleObjectKind.Finish, Col = 1, Row = 1 }) };
+    }
+
+    // Exactly what puzzleEditor.js's savePuzzle sends.
+    [Fact]
+    public void UpdatePuzzleMessage_ReadsWhatTheEditorSends()
+    {
+        const string raw = """
+            {
+              "type": "update-puzzle", "pageId": "ouros", "nodeId": "track",
+              "puzzle": {
+                "objects": [
+                  { "kind": "Gate", "col": 2, "row": 3, "letter": "A" },
+                  { "kind": "Stream", "col": 4, "row": 5, "direction": "Left" },
+                  { "kind": "Start", "col": 5, "row": 9 }
+                ],
+                "palette": { "wall": "#112233" },
+                "paletteSource": "img/track.png"
+              }
+            }
+            """;
+
+        var message = System.Text.Json.JsonSerializer.Deserialize<EditorMessage>(raw, Program.InboundOptions)!;
+
+        ProjectEditing.ValidatePuzzle(message.Puzzle!);
+        Assert.Equal(PuzzleObjectKind.Gate, message.Puzzle!.Objects[0].Kind);
+        Assert.Equal("A", message.Puzzle.Objects[0].Letter);
+        Assert.Equal(PuzzleDirection.Left, message.Puzzle.Objects[1].Direction);
+        Assert.Equal("#112233", message.Puzzle.Palette["wall"]);
+        Assert.Equal("img/track.png", message.Puzzle.PaletteSource);
+
+        var cleared = System.Text.Json.JsonSerializer.Deserialize<EditorMessage>("""{ "type": "update-puzzle", "puzzle": null }""", Program.InboundOptions)!;
+        Assert.Null(cleared.Puzzle);
+    }
+
+    [Fact]
+    public void ApplyPuzzleEdit_ReplacesAndRemoves()
+    {
+        var node = MakeNodeWithPuzzle();
+        var replacement = MakePuzzle(new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 9, Row = 9 });
+
+        ProjectEditing.ApplyPuzzleEdit(node, replacement);
+        Assert.Same(replacement, node.Puzzle);
+
+        ProjectEditing.ApplyPuzzleEdit(node, null);
+        Assert.Null(node.Puzzle);
+    }
+
+    [Fact]
+    public void ApplyPuzzleEdit_AllowsAnObjectOnAStream()
+    {
+        var node = new Node();
+
+        ProjectEditing.ApplyPuzzleEdit(node, MakePuzzle(
+            new PuzzleObject { Kind = PuzzleObjectKind.Stream, Col = 1, Row = 1, Direction = PuzzleDirection.Up },
+            new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 1, Row = 1 }));
+
+        Assert.Equal(2, node.Puzzle!.Objects.Count);
+    }
+
+    [Fact]
+    public void ApplyPuzzleEdit_DropsFieldsAKindDoesNotUse()
+    {
+        var node = new Node();
+
+        ProjectEditing.ApplyPuzzleEdit(node, MakePuzzle(new PuzzleObject { Kind = PuzzleObjectKind.Wall, Letter = "A", Direction = PuzzleDirection.Up }));
+
+        Assert.Null(node.Puzzle!.Objects[0].Letter);
+        Assert.Null(node.Puzzle.Objects[0].Direction);
+    }
+
+    public static TheoryData<PuzzleObject[]> InvalidPuzzles => new()
+    {
+        { new[] { new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 10 } } },
+        { new[] { new PuzzleObject { Kind = PuzzleObjectKind.Wall, Row = -1 } } },
+        { new[] { new PuzzleObject { Kind = PuzzleObjectKind.Gate } } },
+        { new[] { new PuzzleObject { Kind = PuzzleObjectKind.Switch, Letter = "a" } } },
+        { new[] { new PuzzleObject { Kind = PuzzleObjectKind.Teleporter, Letter = "AB" } } },
+        { new[] { new PuzzleObject { Kind = PuzzleObjectKind.Stream } } },
+        { new[] { new PuzzleObject { Kind = PuzzleObjectKind.Wall }, new PuzzleObject { Kind = PuzzleObjectKind.Key } } },
+        { new[]
+        {
+            new PuzzleObject { Kind = PuzzleObjectKind.Stream, Direction = PuzzleDirection.Up },
+            new PuzzleObject { Kind = PuzzleObjectKind.Stream, Direction = PuzzleDirection.Down },
+        } },
+        { new[] { new PuzzleObject { Kind = PuzzleObjectKind.Start }, new PuzzleObject { Kind = PuzzleObjectKind.Start, Col = 1 } } },
+    };
+
+    [Theory]
+    [MemberData(nameof(InvalidPuzzles))]
+    public void ApplyPuzzleEdit_RejectsAnInvalidPuzzle_LeavingTheOldOne(PuzzleObject[] objects)
+    {
+        var node = MakeNodeWithPuzzle();
+        var before = node.Puzzle;
+
+        Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyPuzzleEdit(node, MakePuzzle(objects)));
+
+        Assert.Same(before, node.Puzzle);
+    }
+
+    [Fact]
+    public void ApplyNodeEdit_LeavesThePuzzleAlone()
+    {
+        var project = MakeProjectWithNestedNodes();
+        var page = project.Pages[0];
+        var node = page.Nodes[0].Children[0];
+        node.Puzzle = MakePuzzle();
+        var before = node.Puzzle;
+
+        ProjectEditing.ApplyNodeEdit(project, page, node, new NodeEditRequest { HeadingText = "Renamed" });
+
+        Assert.Same(before, node.Puzzle);
+    }
+
     private static WeaveProject MakeProjectWithNestedNodes()
     {
         var project = new WeaveProject();

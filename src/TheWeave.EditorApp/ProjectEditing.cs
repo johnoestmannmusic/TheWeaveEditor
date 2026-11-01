@@ -192,6 +192,44 @@ internal static class ProjectEditing
         };
     }
 
+    /// <summary>Replaces a node's puzzle, or removes it if null. A rejected puzzle leaves the node's as it was.</summary>
+    public static void ApplyPuzzleEdit(Node node, Puzzle? puzzle)
+    {
+        if (puzzle is not null)
+            ValidatePuzzle(puzzle);
+
+        node.Puzzle = puzzle;
+    }
+
+    public static void ValidatePuzzle(Puzzle puzzle)
+    {
+        foreach (var obj in puzzle.Objects)
+        {
+            if (obj.Col < 0 || obj.Col >= Puzzle.BoardSize || obj.Row < 0 || obj.Row >= Puzzle.BoardSize)
+                throw new InvalidOperationException($"A {obj.Kind} at column {obj.Col}, row {obj.Row} is off the board.");
+
+            var usesLetter = obj.Kind is PuzzleObjectKind.Gate or PuzzleObjectKind.Switch or PuzzleObjectKind.Teleporter;
+            if (usesLetter && (obj.Letter is not { Length: 1 } || obj.Letter[0] is < 'A' or > 'Z'))
+                throw new InvalidOperationException($"A {obj.Kind} needs a letter from A to Z.");
+            if (!usesLetter)
+                obj.Letter = null;
+
+            if (obj.Kind == PuzzleObjectKind.Stream && obj.Direction is null)
+                throw new InvalidOperationException("A Stream needs a direction.");
+            if (obj.Kind != PuzzleObjectKind.Stream)
+                obj.Direction = null;
+        }
+
+        var crowded = puzzle.Objects
+            .GroupBy(o => (o.Col, o.Row, IsStream: o.Kind == PuzzleObjectKind.Stream))
+            .FirstOrDefault(g => g.Count() > 1);
+        if (crowded is not null)
+            throw new InvalidOperationException($"Column {crowded.Key.Col}, row {crowded.Key.Row} holds more than one {(crowded.Key.IsStream ? "Stream" : "object")}.");
+
+        if (puzzle.Objects.Count(o => o.Kind == PuzzleObjectKind.Start) > 1)
+            throw new InvalidOperationException("A puzzle can only have one Start.");
+    }
+
     public static void ApplyPageEdit(WeaveProject project, Page page, PageEditRequest edit)
     {
         if (!string.IsNullOrWhiteSpace(edit.Title))

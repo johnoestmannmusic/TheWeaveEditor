@@ -12,6 +12,11 @@ Neocities, replacing hand-authoring HTML per location.
 
 **Editor**
 
+- A Puzzle Editor for each track with album art, opened from its location's panel: the art with a 10x10
+  board over it, for placing Walls, a Finish, Gates and Switches, Teleporters, Streams, Keys and the
+  ship's Start. Its colours are picked from the art itself, and problems like an unmatched Gate are
+  listed as you go. What the objects look like and how they're placed lives in `runtime/puzzle.js`,
+  shared with the exported site.
 - Tree navigator + Inspector: browse every page and (nested) location in a project, and edit
   a location's full card — heading, position, icon style, persistence, card size, cover
   image/audio, poetry lines, and its download/travel action (including arrival position) — or

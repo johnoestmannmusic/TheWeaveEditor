@@ -7,6 +7,56 @@ namespace TheWeave.Core.Tests;
 
 public class WeaveProjectSerializerTests
 {
+    [Fact]
+    public void Puzzle_RoundTrips_WithItsKindsAndDirectionsWrittenByName()
+    {
+        var project = new WeaveProject();
+        project.Pages.Add(new Page
+        {
+            Id = "ouros",
+            Nodes =
+            {
+                new Node
+                {
+                    Id = "track",
+                    Puzzle = new Puzzle
+                    {
+                        PaletteSource = "img/track.png",
+                        Palette = { ["wall"] = "#112233" },
+                        Objects =
+                        {
+                            new PuzzleObject { Kind = PuzzleObjectKind.Gate, Col = 2, Row = 3, Letter = "A" },
+                            new PuzzleObject { Kind = PuzzleObjectKind.Stream, Col = 4, Row = 5, Direction = PuzzleDirection.Left },
+                        },
+                    },
+                },
+            },
+        });
+
+        var json = WeaveProjectSerializer.Serialize(project);
+        Assert.Contains("\"Kind\": \"Gate\"", json);
+        Assert.Contains("\"Direction\": \"Left\"", json);
+
+        var puzzle = WeaveProjectSerializer.Deserialize(json).Pages[0].Nodes[0].Puzzle!;
+        Assert.Equal("img/track.png", puzzle.PaletteSource);
+        Assert.Equal("#112233", puzzle.Palette["wall"]);
+        Assert.Equal(PuzzleObjectKind.Gate, puzzle.Objects[0].Kind);
+        Assert.Equal("A", puzzle.Objects[0].Letter);
+        Assert.Equal(PuzzleDirection.Left, puzzle.Objects[1].Direction);
+    }
+
+    [Fact]
+    public void Node_WithNoPuzzle_LeavesItOutOfTheFile()
+    {
+        var project = new WeaveProject();
+        project.Pages.Add(new Page { Id = "ouros", Nodes = { new Node { Id = "track" } } });
+
+        var json = WeaveProjectSerializer.Serialize(project);
+
+        Assert.DoesNotContain("Puzzle", json);
+        Assert.Null(WeaveProjectSerializer.Deserialize(json).Pages[0].Nodes[0].Puzzle);
+    }
+
     private static WeaveProject BuildSampleProject()
     {
         var project = new WeaveProject
