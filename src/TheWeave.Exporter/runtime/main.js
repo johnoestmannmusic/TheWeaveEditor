@@ -57,12 +57,15 @@ const FACING_ANGLES = { up: -Math.PI / 2, down: Math.PI / 2, left: Math.PI, righ
 
 // Contrail tuning (see createContrails). The offset, width and hidden length are in pixels of
 // img/ui/pilot-ship.png, whatever size it's drawn at: its two engines are 2.5 of them either side of
-// center, and its tail is 8 behind it. Orange reads as thrusters in space, while white-grey reads as
-// vapor over a planet.
+// center, and its tail is 8 behind it. CONTRAIL_TURN_SQUARES sets how long a stretch of path each turn
+// is rounded over, in squares, and CONTRAIL_FADE_STEPS how many separate opacities its fade is drawn
+// with. Orange reads as thrusters in space, while white-grey reads as vapor over a planet.
 const CONTRAIL_OFFSET = 2.5;
 const CONTRAIL_WIDTH = 1;
 const CONTRAIL_UNDER_SHIP = 7;
-const CONTRAIL_LIFE_MS = 2500;
+const CONTRAIL_TURN_SQUARES = 1;
+const CONTRAIL_FADE_STEPS = 24;
+const CONTRAIL_LIFE_MS = 1250;
 const CONTRAIL_SPACE = { color: 'rgb(255, 140, 40)', opacity: 0.85 };
 const CONTRAIL_PLANET = { color: 'rgb(240, 240, 245)', opacity: 0.8 };
 
@@ -729,23 +732,33 @@ function updateViewScale(){
   layoutMapContrails(pictureWidth, pictureHeight);
 }
 
-// The ship's contrails: one from each engine, lying along the exact path it took, turning its corners
-// with it, and fading out over CONTRAIL_LIFE_MS. A set of them works in whatever coordinates its ship
-// moves in, given how big one of the sprite's pixels is there, so the map and the Sokoban board share all
-// of this. They're drawn on a canvas in screen pixels, so that they stay as crisp as the ship.
-function createContrails(shipPixel, start){
+// The ship's contrails: one from each engine, following the path it took, sweeping around its corners,
+// and fading out over CONTRAIL_LIFE_MS. A set of them works in whatever coordinates its ship moves in,
+// given how big one of the sprite's pixels and one square are there, so the map and the Sokoban board
+// share all of this. They're drawn on a canvas in screen pixels, so that they stay as crisp as the ship.
+//
+// They follow the average of the last stretch of the ship's path, rather than the ship itself. The ship
+// turns a sharp corner, but that average sweeps around it in an even curve, and because it's already
+// behind the ship by then, nothing already drawn ever has to change for that to happen.
+function createContrails(shipPixel, squareSize, start){
   let canvas = document.createElement('canvas');
   canvas.className = 'contrails';
+
+  let sampleCount = Math.round(squareSize * CONTRAIL_TURN_SQUARES / shipPixel);
 
   return {
     canvas,
     context: canvas.getContext('2d'),
     look: weavePage.isHomePage ? CONTRAIL_SPACE : CONTRAIL_PLANET,
     shipPixel,
-    // side: which way this engine is from the ship's center, looking along its heading.
+    // side: which way this engine is from the path, looking along it.
     rails: [{ side: -1, points: [] }, { side: 1, points: [] }],
     head: { x: start.x, y: start.y }, // the last place the ship was seen
-    heading: null,
+    // The ship's path so far, in evenly spaced samples, one sprite pixel apart, over the stretch being averaged.
+    samples: Array.from({ length: sampleCount }, () => ({ x: start.x, y: start.y })),
+    toNextSample: shipPixel,
+    average: { x: start.x, y: start.y },
+    direction: null, // which way along the path average is heading
     drawn: false, // whether the canvas has anything on it - see drawContrails
     clock: 0, // only runs while the page does, so a tab left in the background fades nothing
   };
@@ -753,7 +766,7 @@ function createContrails(shipPixel, start){
 
 // On the map, above its own layers and below every location and the ship.
 function buildMapContrails(){
-  mapContrails = createContrails(SHIP_WIDTH / 12, ship);
+  mapContrails = createContrails(SHIP_WIDTH / 12, weavePage.grid.cellWidth, ship);
   document.body.appendChild(mapContrails.canvas);
 }
 
@@ -785,10 +798,10 @@ function updateContrails(trail, position, facing, dtMs){
     if (position.x !== head.x && position.y !== head.y) {
       let nowVertical = facing === 'up' || facing === 'down';
       let corner = nowVertical ? { x: position.x, y: head.y } : { x: head.x, y: position.y };
-      extendContrails(trail, head, corner);
+      walkContrails(trail, head, corner);
       head = corner;
     }
-    extendContrails(trail, head, position);
+    walkContrails(trail, head, position);
     trail.head = { x: position.x, y: position.y };
   }
 
@@ -799,39 +812,53 @@ function updateContrails(trail, position, facing, dtMs){
   }
 }
 
-// Extends both contrails along one straight move of the ship. Each one is the ship's own path, shifted
-// sideways to its engine, so at a corner the outside one has to run on to meet its new line and the
-// inside one has to stop short of it - otherwise the two lines wouldn't join up.
-function extendContrails(trail, from, to){
-  let offset = CONTRAIL_OFFSET * trail.shipPixel;
-  let heading = { x: Math.sign(to.x - from.x), y: Math.sign(to.y - from.y) };
-  let previous = trail.heading;
-  let alignment = previous ? previous.x * heading.x + previous.y * heading.y : 1;
-  let born = trail.clock;
+// Samples the ship's path along one straight move. It goes by distance rather than by frame, so that a
+// turn is rounded the same however the frames happened to fall.
+function walkContrails(trail, from, to){
+  let length = Math.hypot(to.x - from.x, to.y - from.y);
+  let along = trail.toNextSample;
 
-  for (const { side, points } of trail.rails) {
-    let shift = { x: -heading.y * side * offset, y: heading.x * side * offset };
-    let ahead = (point, of, along) => (point.x - of.x) * along.x + (point.y - of.y) * along.y > 0;
-
-    if (points.length === 0 || alignment < 0) {
-      // Starting fresh, or doubling back, which swaps which side each engine is on.
-      points.push({ x: from.x + shift.x, y: from.y + shift.y, born });
-    } else if (alignment === 0) {
-      let corner = {
-        x: from.x + shift.x - previous.y * side * offset,
-        y: from.y + shift.y + previous.x * side * offset,
-        born,
-        corner: true,
-      };
-      while (points.length > 0 && ahead(points[points.length - 1], corner, previous)) points.pop();
-      points.push(corner);
-    }
-
-    let point = { x: to.x + shift.x, y: to.y + shift.y, born };
-    if (ahead(point, points[points.length - 1], heading)) points.push(point);
+  while (along <= length) {
+    addContrailSample(trail, from.x + (to.x - from.x) * along / length, from.y + (to.y - from.y) * along / length);
+    along += trail.shipPixel;
   }
 
-  trail.heading = heading;
+  trail.toNextSample = along - length;
+}
+
+function addContrailSample(trail, x, y){
+  let samples = trail.samples;
+  samples.shift();
+  samples.push({ x, y });
+
+  trail.average = {
+    x: samples.reduce((sum, sample) => sum + sample.x, 0) / samples.length,
+    y: samples.reduce((sum, sample) => sum + sample.y, 0) / samples.length,
+  };
+
+  // The average moves along the line between the two ends of what it's averaging. Having doubled back,
+  // those are in the same place for a moment, and there's no direction to speak of.
+  let toNewest = { x: x - samples[0].x, y: y - samples[0].y };
+  let distance = Math.hypot(toNewest.x, toNewest.y);
+  if (distance === 0) return;
+  let direction = { x: toNewest.x / distance, y: toNewest.y / distance };
+
+  // Doubling back also flips that direction around. Each engine's contrail stays on its own side of the
+  // line, rather than jumping across to the other one.
+  if (trail.direction && direction.x * trail.direction.x + direction.y * trail.direction.y < 0) {
+    for (const rail of trail.rails) rail.side = -rail.side;
+  }
+  trail.direction = direction;
+
+  for (const rail of trail.rails) {
+    rail.points.push({ ...contrailPointAt(trail, rail, trail.average, direction), born: trail.clock });
+  }
+}
+
+// Where an engine's contrail is, level with a point on the path heading in a direction.
+function contrailPointAt(trail, rail, point, direction){
+  let offset = CONTRAIL_OFFSET * trail.shipPixel * rail.side;
+  return { x: point.x - direction.y * offset, y: point.y + direction.x * offset };
 }
 
 // scale takes the trail's coordinates to screen pixels, and originX/Y is where its (0, 0) lands on the canvas.
@@ -840,63 +867,62 @@ function drawContrails(trail, scale, originX, originY){
 
   // Touching a canvas makes the browser repaint it, and anything blurred over it, so a ship that's had
   // nothing to show for a while leaves it alone.
-  let anything = trail.rails.some(rail => rail.points.length > 1);
+  let anything = trail.rails.some(rail => rail.points.length > 0);
   if (!anything && !trail.drawn) return;
   trail.drawn = anything;
 
   context.clearRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = look.color;
-  for (const rail of trail.rails) drawContrail(trail, rail.points, scale, originX, originY);
+  context.strokeStyle = look.color;
+  context.lineJoin = 'round';
+  context.lineWidth = Math.max(1, Math.round(CONTRAIL_WIDTH * trail.shipPixel * scale));
+
+  for (const rail of trail.rails) {
+    if (rail.points.length > 0) drawContrail(trail, withStretchToShip(trail, rail), scale, originX, originY);
+  }
   context.globalAlpha = 1;
 }
 
-// Every move is along one axis, so a contrail is a run of plain rectangles, each with the opacity of
-// its newest end. They're worked out in whole screen pixels so neighbors meet exactly, with no seams.
+// A contrail's points, plus the stretch from the newest of them on to wherever the ship's sprite hides it,
+// which is what pivots smoothly while the ship is going around a corner.
+function withStretchToShip(trail, rail){
+  let points = rail.points;
+  let toShip = { x: trail.head.x - trail.average.x, y: trail.head.y - trail.average.y };
+  let distance = Math.hypot(toShip.x, toShip.y);
+  let visible = distance - CONTRAIL_UNDER_SHIP * trail.shipPixel;
+  if (visible <= 0) return points;
+
+  let direction = { x: toShip.x / distance, y: toShip.y / distance };
+  // Against the path's own direction when doubling back, where rail.side has been flipped to match that.
+  if (direction.x * trail.direction.x + direction.y * trail.direction.y < 0) return points;
+
+  let end = { x: trail.average.x + direction.x * visible, y: trail.average.y + direction.y * visible };
+  return [...points, { ...contrailPointAt(trail, rail, end, direction), born: points[points.length - 1].born }];
+}
+
+// One opacity per stroke, so each run of points that have faded the same amount is drawn as one line:
+// overlapping strokes would show as darker beads along it, with the line being see-through.
 function drawContrail(trail, points, scale, originX, originY){
-  let width = Math.max(1, Math.round(CONTRAIL_WIDTH * trail.shipPixel * scale));
-  let toScreenX = (x) => Math.round(originX + x * scale);
-  let toScreenY = (y) => Math.round(originY + y * scale);
+  let context = trail.context;
 
-  // The newest stretch is walked back over first, because it's hidden under the ship.
-  let hidden = CONTRAIL_UNDER_SHIP * trail.shipPixel;
+  // Whole pixels for an even width and half pixels for an odd one are what keep a straight stretch crisp.
+  let snap = context.lineWidth % 2 === 0 ? 0 : 0.5;
+  let toScreenX = (x) => Math.round(originX + x * scale) + snap;
+  let toScreenY = (y) => Math.round(originY + y * scale) + snap;
+  let fadeStepOf = (point) => Math.ceil(Math.max(0, 1 - (trail.clock - point.born) / CONTRAIL_LIFE_MS) * CONTRAIL_FADE_STEPS);
 
-  for (let i = points.length - 1; i > 0; i--) {
-    let start = points[i - 1];
-    let end = points[i];
-    let length = Math.abs(end.x - start.x) + Math.abs(end.y - start.y);
-    if (hidden >= length) {
-      hidden -= length;
-      continue;
-    }
-    let shown = (length - hidden) / length;
-    hidden = 0;
+  let i = 0;
+  while (i < points.length - 1) {
+    let step = fadeStepOf(points[i + 1]);
 
-    let startX = toScreenX(start.x);
-    let startY = toScreenY(start.y);
-    let endX = toScreenX(start.x + (end.x - start.x) * shown);
-    let endY = toScreenY(start.y + (end.y - start.y) * shown);
-
-    // A corner belongs to the stretch coming into it, so the two neither leave a notch nor overlap.
-    let reach = width / 2;
-    let directionX = Math.sign(end.x - start.x);
-    let directionY = Math.sign(end.y - start.y);
-    if (start.corner) {
-      startX += directionX * reach;
-      startY += directionY * reach;
-    }
-    if (end.corner && shown === 1) {
-      endX += directionX * reach;
-      endY += directionY * reach;
+    context.beginPath();
+    context.moveTo(toScreenX(points[i].x), toScreenY(points[i].y));
+    while (i < points.length - 1 && fadeStepOf(points[i + 1]) === step) {
+      i++;
+      context.lineTo(toScreenX(points[i].x), toScreenY(points[i].y));
     }
 
-    let along = directionX !== 0;
-    let left = along ? Math.min(startX, endX) : Math.round(startX - reach);
-    let top = along ? Math.round(startY - reach) : Math.min(startY, endY);
-    let rectWidth = along ? Math.abs(endX - startX) : width;
-    let rectHeight = along ? width : Math.abs(endY - startY);
-
-    trail.context.globalAlpha = trail.look.opacity * Math.max(0, 1 - (trail.clock - end.born) / CONTRAIL_LIFE_MS);
-    trail.context.fillRect(left, top, rectWidth, rectHeight);
+    context.globalAlpha = trail.look.opacity * step / CONTRAIL_FADE_STEPS;
+    context.stroke();
   }
 }
 
@@ -1428,7 +1454,7 @@ function startBoardGame(){
     }),
     { cell: BOARD_START_CELL, stepMs: BOARD_STEP_MS }
   );
-  boardContrails = createContrails(BOARD_SHIP_WIDTH / 12, boardMover.position);
+  boardContrails = createContrails(BOARD_SHIP_WIDTH / 12, BOARD_TILE_PX, boardMover.position);
   renderTrackFocus();
   renderBoardShip();
 }
