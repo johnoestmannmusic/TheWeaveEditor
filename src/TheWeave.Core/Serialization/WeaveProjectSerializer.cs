@@ -17,13 +17,22 @@ public static class WeaveProjectSerializer
     public static string Serialize(WeaveProject project) =>
         JsonSerializer.Serialize(project, Options);
 
-    public static WeaveProject Deserialize(string json) =>
-        JsonSerializer.Deserialize<WeaveProject>(json, Options)
-        ?? throw new InvalidDataException("Project file is empty or invalid.");
+    public static WeaveProject Deserialize(string json) => Deserialize(json, out _);
+
+    /// <param name="upgradeNotes">What ProjectMigrations.Upgrade reported - null if nothing needed upgrading.</param>
+    public static WeaveProject Deserialize(string json, out List<string>? upgradeNotes)
+    {
+        var project = JsonSerializer.Deserialize<WeaveProject>(json, Options)
+            ?? throw new InvalidDataException("Project file is empty or invalid.");
+        upgradeNotes = ProjectMigrations.Upgrade(project);
+        return project;
+    }
 
     public static void SaveToFile(WeaveProject project, string path) =>
         File.WriteAllText(path, Serialize(project));
 
-    public static WeaveProject LoadFromFile(string path) =>
-        Deserialize(File.ReadAllText(path));
+    public static WeaveProject LoadFromFile(string path) => LoadFromFile(path, out _);
+
+    public static WeaveProject LoadFromFile(string path, out List<string>? upgradeNotes) =>
+        Deserialize(File.ReadAllText(path), out upgradeNotes);
 }

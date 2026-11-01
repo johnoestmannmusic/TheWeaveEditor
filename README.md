@@ -20,8 +20,9 @@ Neocities, replacing hand-authoring HTML per location.
   visitor opens the site (heading, cover, audio, poetry, plus a separate "Updates" panel) — kept
   out of the tree/canvas since it isn't a real map location.
 - Live map canvas: select a page and its real background renders with every top-level location
-  as a draggable, color-coded marker. Click to select (syncs with the tree/Inspector), drag to
-  reposition, double-click empty space to add a new location, scroll to zoom, click-drag to pan.
+  as a draggable, color-coded marker, always centered in a square of the map's grid. Click to
+  select (syncs with the tree/Inspector), drag to move it to another free square, double-click an
+  empty square to add a new location, scroll to zoom, click-drag to pan.
 - Live Effects panel: add/edit/delete a page's crossfade or drifting-sprite effects and watch
   them actually animate on the canvas while you edit, using the same rendering the exported site
   uses.
@@ -45,11 +46,14 @@ Neocities, replacing hand-authoring HTML per location.
 - Configurable ship spawn points: a page's own default landing spot, plus directional defaults
   for travel links (arriving at a planet centers on its map; returning to the starting map lands
   back near the hub icon you left, nudged just above it) — all overridable per travel link.
-- Keyboard and gamepad controls: arrow keys/stick to fly, Z/gamepad A to interact (play a track,
-  travel, or close a popup), X/gamepad X to step through a multi-part location's nested parts in
-  place. Contextual hint icons show next to whichever action is actually available.
-- Optional per-page world wrapping (seamless edge-to-edge looping) and a cosmetic globe-curvature
-  vignette, independently toggleable per page.
+- Sokoban-style grid movement along the grid drawn on every map (columns A-S, rows 0-9): hold an
+  arrow key, D-pad direction, or stick direction to walk square by square, and let go to stop on
+  the square you're heading into. Every map has hard edges. The movement itself lives in
+  `runtime/sokoban.js`, with no knowledge of the DOM or these maps, so other boards can reuse it.
+- Keyboard and gamepad controls: Z/gamepad A to interact (travel, or close a popup), X/gamepad X to
+  step through a multi-part location's nested parts in place. Contextual hint icons show next to
+  whichever action is actually available.
+- An optional cosmetic globe-curvature vignette, toggleable per page.
 - Export cleans up after itself: files from a previous export that the current run didn't
   (re)write — a renamed/deleted page, an orphaned cover image — are removed, so exporting
   repeatedly to the same folder doesn't accumulate stale files. It only ever touches the
@@ -60,8 +64,8 @@ Neocities, replacing hand-authoring HTML per location.
 - `src/TheWeave.Core` — the project file schema, serialization, and validation. No UI or I/O
   framework dependencies beyond the .NET BCL, so it's fully unit-testable in isolation.
 - `src/TheWeave.Exporter` — renders a project to a static HTML/CSS/JS site. Also owns the
-  canonical shared runtime (`runtime/main.css`, `runtime/main.js`, `runtime/shell.js`) embedded
-  in the assembly.
+  canonical shared runtime (`runtime/main.css`, `runtime/main.js`, `runtime/sokoban.js`,
+  `runtime/shell.js`) embedded in the assembly.
 - `src/TheWeave.Importer` — parses an existing hand-authored site into a project file, for
   one-time migration. Built on [AngleSharp](https://anglesharp.github.io/).
 - `src/TheWeave.EditorApp` — the desktop editor shell, built on
@@ -76,7 +80,10 @@ Requires the .NET SDK (developed against .NET 10).
 
 ```
 dotnet test
+node --test tests/runtime/*.test.js
 ```
+
+The second command covers the runtime's grid movement module and needs Node.js 20 or newer.
 
 To run the editor itself:
 
@@ -124,11 +131,15 @@ heading, poetry, action link). A page's top-level locations are direct children 
 **Nesting = literally inside the parent's card.** A "next part of the story" location (e.g.
 Ouros' Salanth Town Gardens → Jherop Phantom → The Gardener's Funeral) is not a sibling with a
 `ParentId` — its whole `<div class="node">` is placed *inside* its parent's
-`<div class="floatInfo">`, as one more child alongside the poetry text. That's what makes
-`Node.X`/`Node.Y` "parent-card-relative" instead of world-relative for a nested node: its
-containing block genuinely is the parent's card. `PageRenderer.RenderCard` reflects this
-directly — `foreach (var child in node.Children) RenderNode(...)` runs *inside* the method that
-also opens/closes that same `.floatInfo`.
+`<div class="floatInfo">`, as one more child alongside the poetry text. `PageRenderer.RenderCard`
+reflects this directly — `foreach (var child in node.Children) RenderNode(...)` runs *inside* the
+method that also opens/closes that same `.floatInfo`.
+
+**A nested node shares its parent's square.** Its containing block is the parent's card, so
+`PageRenderer.RenderNode` positions it by cancelling out that card's own offset and border, which
+lands it back on the parent's icon. Its stored `Node.X`/`Node.Y` aren't used. Its icon is hidden
+(see `main.css`), and its card gets offset the same way the parent's did, so it lands exactly on
+top of the parent's card and X swaps cards in place.
 
 **Closing tags matter more than they look like they should.** A childless node's `.floatInfo`
 must be explicitly closed before the *next sibling* `.node` starts. Miss that and the browser's

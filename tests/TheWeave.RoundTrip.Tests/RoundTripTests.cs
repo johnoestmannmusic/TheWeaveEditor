@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 using AngleSharp;
+using TheWeave.Core.Model;
+using TheWeave.Core.Serialization;
 using TheWeave.Core.Validation;
 using TheWeave.Exporter;
 using TheWeave.Importer;
@@ -42,10 +44,85 @@ public class RoundTripTests
     public async Task Import_TheRealSite_ProducesAValidProject()
     {
         var result = await new SiteImporter().ImportDirectoryAsync(SnapshotDir, "The Weave");
+        ProjectMigrations.Upgrade(result.Project);
 
         var issues = ProjectValidator.Validate(result.Project, SnapshotDir);
 
         Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void UpgradingTheRealProjectFile_PutsEveryLocationOnItsOwnSquare()
+    {
+        var project = WeaveProjectSerializer.LoadFromFile(Path.Combine(SnapshotDir, "project.json"), out var notes);
+
+        Assert.NotNull(notes);
+        Assert.Equal(ProjectMigrations.CurrentSchemaVersion, project.SchemaVersion);
+        Assert.Equal(3000, project.DefaultWorldWidthPx);
+        Assert.Equal(1686, project.DefaultWorldHeightPx);
+
+        foreach (var page in project.Pages)
+        {
+            var grid = GridLayout.For(page, project);
+            var mapNodes = page.Nodes.Where(n => n.Card.Size != CardSize.Modal).ToList();
+
+            foreach (var node in mapNodes)
+                Assert.Equal(grid.NodePositionFor(grid.CellOf(node)), (node.X, node.Y));
+
+            Assert.Equal(mapNodes.Count, mapNodes.Select(grid.CellOf).Distinct().Count());
+            Assert.Equal(150, grid.CellWidth);
+            Assert.Equal(150, grid.CellHeight);
+        }
+
+        var theWeave = project.Pages.Single(p => p.Id == "index");
+        Assert.Equal(6000, theWeave.WorldWidthPx);
+        Assert.Equal(1686, theWeave.WorldHeightPx);
+
+        Assert.Empty(ProjectValidator.Validate(project, SnapshotDir));
+    }
+
+    [Fact]
+    public void UpgradingTheRealProjectFile_KeepsLocationsOnTheSquaresTheyWereOver_AndReportsTheRest()
+    {
+        var project = WeaveProjectSerializer.LoadFromFile(Path.Combine(SnapshotDir, "project.json"), out var notes);
+
+        var ouros = project.Pages.Single(p => p.Id == "ouros");
+        var grid = GridLayout.For(ouros, project);
+
+        // Salanth Town Gardens was already over A0; the return node just clamps there, so it yields.
+        Assert.Equal(new GridCell(0, 0), grid.CellOf(ouros.Nodes.Single(n => n.Id == "salanth-town-gardens")));
+        Assert.Equal(new GridCell(0, 1), grid.CellOf(ouros.Nodes.Single(n => n.Id == "the-weave-sector-a-6")));
+        // Unremarkable nodes just land on the square they were over.
+        Assert.Equal(new GridCell(10, 6), grid.CellOf(ouros.Nodes.Single(n => n.Id == "irf-outpost")));
+
+        Assert.Contains(notes!, n => n.StartsWith("Ouros") && n.Contains("moved to A1") && n.Contains("A0 was already taken"));
+        Assert.Contains(notes!, n => n.StartsWith("Ouros") && n.Contains("moved to S0") && n.Contains("outside the grid"));
+    }
+
+    [Fact]
+    public void UpgradingTwice_ChangesNothing()
+    {
+        var once = WeaveProjectSerializer.LoadFromFile(Path.Combine(SnapshotDir, "project.json"));
+        var serialized = WeaveProjectSerializer.Serialize(once);
+
+        var twice = WeaveProjectSerializer.Deserialize(serialized, out var notes);
+
+        Assert.Null(notes);
+        Assert.Equal(serialized, WeaveProjectSerializer.Serialize(twice));
+    }
+
+    [Fact]
+    public async Task ImportedChildNodes_RenderOnTopOfTheirParent()
+    {
+        var result = await new SiteImporter().ImportDirectoryAsync(SnapshotDir, "The Weave");
+        ProjectMigrations.Upgrade(result.Project);
+
+        using var outputDir = new TempDirectory();
+        new SiteExporter().Export(result.Project, outputDir.Path, SnapshotDir);
+
+        var html = await File.ReadAllTextAsync(Path.Combine(outputDir.Path, "ouros.html"));
+        Assert.Contains("left: -81px; top: 129px;", html);
+        Assert.DoesNotContain("top: 193px;", html);
     }
 
     [Fact]

@@ -247,11 +247,9 @@ main {
 }
 
 .canvas-marker {
-  /* Anchored at the node's stored (x, y) with no centering transform, matching the exported
-     site's own .node div: left/top is the icon's top-left corner, not its center. The .dot is
-     absolutely positioned at that same (0, 0) local origin (not flex-centered against the
-     .label's width) so it renders exactly where the hit-testing math in app.js expects it -
-     otherwise clicks/drags miss the visible dot. */
+  /* Anchored at the center of the node's icon - which is the center of its grid square - with the
+     .dot and .label positioned around that same (0, 0) local origin. That's exactly where the
+     hit-testing math in app.js expects the marker to be. */
   position: absolute;
   cursor: grab;
   user-select: none;
@@ -264,8 +262,8 @@ main {
 
 .canvas-marker .dot {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: -8px;
+  left: -8px;
   width: 16px;
   height: 16px;
   border-radius: 50%;
@@ -289,8 +287,8 @@ main {
 
 .canvas-marker .label {
   position: absolute;
-  top: 20px;
-  left: 8px;
+  top: 12px;
+  left: 0;
   transform: translateX(-50%);
   font-size: 11px;
   color: var(--text);
@@ -299,6 +297,20 @@ main {
   border-radius: 3px;
   white-space: nowrap;
   pointer-events: none;
+}
+
+/* The square a marker would land on if dropped right now - see the canvas's pointermove handler. */
+#canvas-cell-highlight {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.25);
+  outline: 4px solid #fff;
+  outline-offset: -4px;
+}
+
+#canvas-cell-highlight.occupied {
+  background: rgba(224, 82, 82, 0.35);
+  outline-color: #e05252;
 }
 
 #canvas-effects {

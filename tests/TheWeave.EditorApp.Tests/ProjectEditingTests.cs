@@ -141,10 +141,12 @@ public class ProjectEditingTests
     public void ApplyNodeEdit_UpdatesCoreFields()
     {
         var node = new Node { Card = new Card() };
+        var page = new Page { Nodes = { node } };
+        var project = new WeaveProject { Pages = { page } };
         var edit = new NodeEditRequest
         {
-            X = 150,
-            Y = 275,
+            X = 501,
+            Y = 351,
             Persistent = true,
             IconStyle = "Race",
             CardSize = "Hub",
@@ -159,10 +161,10 @@ public class ProjectEditingTests
             TravelSkipTutorial = true,
         };
 
-        ProjectEditing.ApplyNodeEdit(node, edit);
+        ProjectEditing.ApplyNodeEdit(project, page, node, edit);
 
-        Assert.Equal(150, node.X);
-        Assert.Equal(275, node.Y);
+        Assert.Equal(501, node.X);
+        Assert.Equal(351, node.Y);
         Assert.True(node.Persistent);
         Assert.Equal(IconStyle.Race, node.IconStyle);
         Assert.Equal(CardSize.Hub, node.Card.Size);
@@ -188,10 +190,95 @@ public class ProjectEditingTests
             },
         };
 
-        ProjectEditing.ApplyNodeEdit(node, new NodeEditRequest { CoverImagePath = "  ", AudioUrl = "" });
+        var page = new Page { Nodes = { node } };
+        ProjectEditing.ApplyNodeEdit(new WeaveProject { Pages = { page } }, page, node, new NodeEditRequest { CoverImagePath = "  ", AudioUrl = "" });
 
         Assert.Null(node.Card.CoverImagePath);
         Assert.Null(node.Card.Audio);
+    }
+
+    [Fact]
+    public void ApplyNodeEdit_TopLevel_SnapsToTheCenterOfWhicheverSquareItLandsIn()
+    {
+        var node = new Node();
+        var page = new Page { Nodes = { node } };
+
+        ProjectEditing.ApplyNodeEdit(new WeaveProject { Pages = { page } }, page, node, new NodeEditRequest { X = 530, Y = 330 });
+
+        Assert.Equal(501, node.X); // column C: icon centered at 525
+        Assert.Equal(351, node.Y); // row 1: icon centered at 375
+    }
+
+    [Fact]
+    public void ApplyNodeEdit_SquareAlreadyTaken_ThrowsAndLeavesTheNodeUntouched()
+    {
+        var other = new Node { X = 501, Y = 351, Card = new Card { HeadingText = "Other" } };
+        var node = new Node { X = 201, Y = 201, Card = new Card { HeadingText = "Original" } };
+        var page = new Page { Nodes = { other, node } };
+        var edit = new NodeEditRequest { X = 501, Y = 351, HeadingText = "Edited" };
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            ProjectEditing.ApplyNodeEdit(new WeaveProject { Pages = { page } }, page, node, edit));
+
+        Assert.Contains("C1", ex.Message);
+        Assert.Contains("Other", ex.Message);
+        Assert.Equal(201, node.X);
+        Assert.Equal("Original", node.Card.HeadingText);
+    }
+
+    [Fact]
+    public void ApplyNodeEdit_KeepingItsOwnSquare_IsNotAConflict()
+    {
+        var node = new Node { X = 201, Y = 201 };
+        var page = new Page { Nodes = { node } };
+
+        ProjectEditing.ApplyNodeEdit(new WeaveProject { Pages = { page } }, page, node, new NodeEditRequest { X = 201, Y = 201, HeadingText = "Edited" });
+
+        Assert.Equal("Edited", node.Card.HeadingText);
+    }
+
+    [Fact]
+    public void ApplyNodeEdit_NestedNode_IsNotHeldToTheGrid()
+    {
+        var child = new Node { X = -81, Y = 129 };
+        var parent = new Node { X = 201, Y = 201, Children = { child } };
+        var page = new Page { Nodes = { parent } };
+
+        ProjectEditing.ApplyNodeEdit(new WeaveProject { Pages = { page } }, page, child, new NodeEditRequest { X = -81, Y = 129 });
+
+        Assert.Equal(-81, child.X);
+        Assert.Equal(129, child.Y);
+    }
+
+    [Fact]
+    public void AddNode_AtAPosition_LandsInThatSquare()
+    {
+        var page = new Page();
+        var node = ProjectEditing.AddNode(new WeaveProject { Pages = { page } }, page, null, 530, 330);
+
+        Assert.Equal(501, node.X);
+        Assert.Equal(351, node.Y);
+    }
+
+    [Fact]
+    public void AddNode_AtATakenSquare_ThrowsWithoutAddingAnything()
+    {
+        var page = new Page { Nodes = { new Node { X = 501, Y = 351 } } };
+
+        Assert.Throws<InvalidOperationException>(() =>
+            ProjectEditing.AddNode(new WeaveProject { Pages = { page } }, page, null, 530, 330));
+
+        Assert.Single(page.Nodes);
+    }
+
+    [Fact]
+    public void AddNode_WithNoPosition_TakesTheFirstFreeSquare()
+    {
+        var page = new Page { Nodes = { new Node { X = 201, Y = 201 } } };
+        var node = ProjectEditing.AddNode(new WeaveProject { Pages = { page } }, page, null);
+
+        Assert.Equal(351, node.X); // B0: A0 is taken
+        Assert.Equal(201, node.Y);
     }
 
     [Fact]
@@ -212,24 +299,6 @@ public class ProjectEditingTests
         Assert.Equal("Ouros Renamed", page.Title);
         Assert.Equal("ouros.html", page.OutputFileName); // untouched - blank input means "leave as-is"
         Assert.Equal("img/ouros/ouros.png", page.Background.ImagePath);
-    }
-
-    [Fact]
-    public void ApplyPageEdit_Wraps_OnlyAppliedWhenPresent()
-    {
-        var page = new Page { Id = "ouros", Title = "Ouros", OutputFileName = "ouros.html" };
-        var project = new WeaveProject();
-        project.Pages.Add(page);
-        Assert.True(page.Wraps); // default
-
-        ProjectEditing.ApplyPageEdit(project, page, new PageEditRequest { Wraps = false });
-        Assert.False(page.Wraps);
-
-        ProjectEditing.ApplyPageEdit(project, page, new PageEditRequest { Title = "Ouros" }); // Wraps omitted
-        Assert.False(page.Wraps); // untouched - null means "leave as-is"
-
-        ProjectEditing.ApplyPageEdit(project, page, new PageEditRequest { Wraps = true });
-        Assert.True(page.Wraps);
     }
 
     [Fact]

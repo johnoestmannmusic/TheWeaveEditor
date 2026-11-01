@@ -3,11 +3,12 @@ namespace TheWeave.Core.Model;
 /// <summary>The whole site: every page, node, and asset reference, in one file.</summary>
 public sealed class WeaveProject
 {
-    public int SchemaVersion { get; set; } = 1;
+    /// <summary>Which shape this project is in - see ProjectMigrations.</summary>
+    public int SchemaVersion { get; set; } = 2;
     public string Title { get; set; } = "";
 
-    public int DefaultWorldWidthPx { get; set; } = 3010;
-    public int DefaultWorldHeightPx { get; set; } = 1696;
+    public int DefaultWorldWidthPx { get; set; } = GridLayout.SectorWorldWidthPx;
+    public int DefaultWorldHeightPx { get; set; } = GridLayout.WorldHeightPx;
 
     public ProjectAssets Assets { get; set; } = new();
 
@@ -49,9 +50,8 @@ public sealed class WeaveProject
     /// Outer radius, in world-space pixels, within which a location's own track - or, elsewhere
     /// on the site, the shell's hub theme (see BackgroundMusicPath) as the ship nears a node
     /// that travels back to the home page - becomes audible at all as the ship approaches it,
-    /// fading from silent at this distance up to full volume at the (shorter, fixed) proximity
-    /// radius that already opens a card - see main.js's INTERACT_RADIUS and location-audio
-    /// logic. The same radius applies to every location on every page, so it needs to stay small
+    /// fading from silent at this distance up to full volume at a shorter, fixed inner radius -
+    /// see main.js's LISTEN_INNER_RADIUS and location-audio logic. The same radius applies to every location on every page, so it needs to stay small
     /// enough that no two audio-bearing locations' audible zones overlap anywhere in the
     /// project. 105 is a starting point picked by checking the closest real spacing between two
     /// audio-bearing locations in the live site (~218px, on Ouros) - not auto-derived or kept in

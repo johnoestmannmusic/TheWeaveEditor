@@ -33,7 +33,6 @@ public sealed class PageEditRequest
     public string? BackgroundImagePath { get; set; }
 
     /// <summary>Null means "leave as-is" (matches the other fields' partial-update semantics).</summary>
-    public bool? Wraps { get; set; }
 
     /// <summary>Null means "leave as-is" (matches the other fields' partial-update semantics).</summary>
     public bool? GlobeEffect { get; set; }

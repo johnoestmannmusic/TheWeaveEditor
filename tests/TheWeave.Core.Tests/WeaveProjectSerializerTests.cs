@@ -112,23 +112,36 @@ public class WeaveProjectSerializerTests
     }
 
     [Fact]
-    public void Page_WrapsDefaultsToTrue()
+    public void Deserialize_OlderProject_IsUpgradedOnTheWayIn()
     {
-        var page = new Page();
+        var json = """
+            {
+              "SchemaVersion": 1,
+              "DefaultWorldWidthPx": 3010,
+              "DefaultWorldHeightPx": 1696,
+              "Pages": [ { "Id": "ouros", "Wraps": true, "Nodes": [ { "Id": "a", "X": 173, "Y": 158 } ] } ]
+            }
+            """;
 
-        Assert.True(page.Wraps);
+        var project = WeaveProjectSerializer.Deserialize(json);
+
+        Assert.Equal(ProjectMigrations.CurrentSchemaVersion, project.SchemaVersion);
+        Assert.Equal(3000, project.DefaultWorldWidthPx);
+        var node = Assert.Single(Assert.Single(project.Pages).Nodes);
+        Assert.Equal(201, node.X);
+        Assert.Equal(201, node.Y);
     }
 
     [Fact]
-    public void RoundTrip_PreservesExplicitWrapsFalse()
+    public void Deserialize_CurrentProject_IsLeftAlone()
     {
         var original = BuildSampleProject();
-        original.Pages[0].Wraps = false;
+        original.Pages[0].Nodes[0].X = 12;
 
-        var json = WeaveProjectSerializer.Serialize(original);
-        var restored = WeaveProjectSerializer.Deserialize(json);
+        var restored = WeaveProjectSerializer.Deserialize(WeaveProjectSerializer.Serialize(original), out var notes);
 
-        Assert.False(Assert.Single(restored.Pages).Wraps);
+        Assert.Null(notes);
+        Assert.Equal(12, restored.Pages[0].Nodes[0].X);
     }
 
     [Fact]

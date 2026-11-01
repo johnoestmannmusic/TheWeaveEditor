@@ -2,12 +2,12 @@
 // John Oestmann
 // All JS functionality for The Weave Explorer in here
 //
-// Navigation: fly the ship with Arrow Keys or a gamepad stick (light turning
-// inertia, mostly-instant thrust). Press Z (keyboard) or A (gamepad) to
-// interact with whatever location the ship is currently near - starts/pauses
-// its music, or travels to its linked page. When that location has extra
-// nested locations tucked inside its card (a multi-part story), press X
-// (keyboard) or X (gamepad) to step between them without having to move.
+// Navigation: walk the ship one square at a time with Arrow Keys, a gamepad D-pad, or a gamepad
+// stick - hold a direction to keep going, let go to stop on the square you're heading into (see
+// sokoban.js, which owns the movement itself). Press Z (keyboard) or A (gamepad) to interact with
+// whatever location the ship is standing on - travels to its linked page. When that location has
+// extra nested locations tucked inside its card (a multi-part story), press X (keyboard) or X
+// (gamepad) to step between them without having to move.
 //
 // This file is the canonical shared runtime owned by TheWeave.Exporter - it's
 // generated into every exported site's jsx/main.js, not hand-edited there.
@@ -37,24 +37,23 @@ let activeNodeSince = null;
 let activeRoot = null;   // the top-level node the ship is currently within range of
 let chainIndex = 0;      // activeNode's position within activeRoot's chain
 
-// Globe wraparound (see window.__weavePage, emitted per-page by PageConfigScriptRenderer).
-// worldWidth/worldHeight are the page's authoritative world size - not document.body's actual
-// scrollWidth/Height, which for a wrapping page is 3x larger once the ghost tiles below exist.
-let weavePage = { wraps: false, globeEffect: false, worldWidth: 0, worldHeight: 0, defaultSpawnX: null, defaultSpawnY: null, listeningRadiusPx: null, isHomePage: false };
-// Top-level node element -> its 8 ghost clones (one per non-center tile in the 3x3 wrap grid).
-// Only populated when weavePage.wraps is true.
-let ghostRoots = new Map();
+// The page's own config (see window.__weavePage, emitted per-page by PageConfigScriptRenderer) -
+// worldWidth/worldHeight are the page's authoritative world size, and grid is the board of squares
+// the ship walks (see loadPageConfig).
+let weavePage = { globeEffect: false, worldWidth: 0, worldHeight: 0, defaultSpawnX: null, defaultSpawnY: null, listeningRadiusPx: null, isHomePage: false, grid: null };
 
-// Cosmetic globe-curvature hint (Page.GlobeEffect - see updateGlobeEffect). Independent of
-// weavePage.wraps: it's a purely screen-space effect, so it works the same whether or not this
-// page actually wraps. Every top-level node icon that should get the effect (the real one, plus
-// every ghost tile's copy on a wrapping page) - built once at load rather than re-queried every
-// frame.
+// Cosmetic globe-curvature hint (Page.GlobeEffect - see updateGlobeEffect). A purely screen-space
+// effect. Every top-level node icon that should get the effect - built once at load rather than
+// re-queried every frame.
 let globeEffectIcons = [];
 
 // Ship tuning
 const SHIP_WIDTH = 40;
-const INTERACT_RADIUS = 100;
+const NODE_ICON_SIZE = 48; // matches .nodeImage's width in main.css
+const STEP_MS = 240; // how long walking one square takes
+const MS_PER_FRAME = 1000 / 60; // loop()'s dt is measured in 60fps frames
+// Sprite rotation for each direction sokoban.js can be facing.
+const FACING_ANGLES = { up: -Math.PI / 2, down: Math.PI / 2, left: Math.PI, right: 0 };
 
 // Location-zoned audio tuning (see updateLocationAudio). LISTEN_RADIUS_FALLBACK mirrors
 // WeaveProject's own schema default (105px) - used only if a page somehow loads without
@@ -63,50 +62,46 @@ const INTERACT_RADIUS = 100;
 // track starts buffering than it needs to actually be heard - location tracks are commonly
 // hosted at an external URL (see Card.Audio.Url), so buffering has to have a head start on
 // becoming audible or there'd be a silent gap right as a location should start fading in.
-const LISTEN_INNER_RADIUS = INTERACT_RADIUS; // full volume within this distance - matches card-open range
+const LISTEN_INNER_RADIUS = 100; // full volume within this distance
 const LISTEN_RADIUS_FALLBACK = 105;
 const PRELOAD_RADIUS_MULTIPLIER = 3;
 let listenRadius = LISTEN_RADIUS_FALLBACK;
 let preloadRadius = LISTEN_RADIUS_FALLBACK * PRELOAD_RADIUS_MULTIPLIER;
-const AUDIO_VOLUME_EASE = 0.85; // per-second retention factor, same Math.pow(x, dt) shape as TURN_DAMPING
-const TURN_ACCEL = 0.006;
-const TURN_DAMPING = 0.86;
-const MAX_TURN_SPEED = 0.055;
-const THRUST_ACCEL = 0.3;
-const LINEAR_DAMPING = 0.965;
-const MAX_SPEED = 6.5;
-const GAMEPAD_DEADZONE = 0.2;
-const STICKY_MARGIN = 15;
+const AUDIO_VOLUME_EASE = 0.85; // per-second retention factor, applied as Math.pow(x, dt)
+// Well above a typical stick's resting drift: pushing it now picks one of four whole directions
+// (see readPadDirection) rather than a proportional amount of anything, so a light, accidental lean
+// shouldn't walk the ship anywhere.
+const GAMEPAD_DEADZONE = 0.5;
 
 // Camera tuning. The camera doesn't track the ship 1:1 - it eases toward a target point that
 // leads the ship by LOOK_AHEAD_FRACTION of the viewport in whichever direction it's currently
 // facing, so more of what's ahead is visible than what's behind (2/3 ahead, 1/3 behind - see
-// updateCamera). CAMERA_EASE is a per-second retention factor (same Math.pow(x, dt) shape as
-// TURN_DAMPING/LINEAR_DAMPING above) - without easing, the look-ahead point itself swings with
-// every small change in ship.angle, which read as camera "shake" whenever the ship turned or
-// reversed thrust.
+// updateCamera). CAMERA_EASE is a per-second retention factor, applied as Math.pow(x, dt) - without
+// easing, the look-ahead point would snap across the screen every time the ship turned to face a
+// new direction.
 const LOOK_AHEAD_FRACTION = 1 / 6; // fraction of viewport width/height, applied per-axis
 const CAMERA_EASE = 0.95;
 const CARD_FOCUS_EASE = 0.97; // slower than CAMERA_EASE - settling on a card should read as deliberate, not a snap
 const CARD_FOCUS_DELAY_MS = 450;
 
-// Ship state
+// Ship state - x/y/angle are copied from playerMover every frame (see syncShipToMover), which is
+// what actually decides where the ship is.
 let shipEl;
 let ship = {
   x: 0,
   y: 0,
-  vx: 0,
-  vy: 0,
-  angle: -Math.PI / 2, // sprite's forward (top of image) starts facing "up"
-  angularVel: 0,
+  angle: FACING_ANGLES.up, // sprite's forward (top of image) starts facing "up"
 };
+let playerMover = null; // see sokoban.js's createMover - built by initShip
+
+// "col,row" -> the top-level node sitting on that square (see indexNodesByCell), which is how the
+// ship finds out what it's standing on.
+let rootByCell = new Map();
 
 // Camera state - the eased point (tracking either the ship or a focused card) updateCamera
-// scrolls to keep centered. Canonical (unshifted) world coordinates, exactly like ship.x/y - see
-// updateCamera.
+// scrolls to keep centered.
 let camera = { x: 0, y: 0, initialized: false };
-// The separately-eased look-ahead bias added on top of camera.x/y - see updateCamera for why
-// this has to stay decoupled from camera.x/y's own (wrapped) easing.
+// The separately-eased look-ahead bias added on top of camera.x/y - see updateCamera.
 let lookAhead = { x: 0, y: 0, initialized: false };
 // Whether updateCamera is currently tracking a focused card (set at the end of every call) -
 // consulted by showChainMember so X-cycling while already settled on a card doesn't re-arm
@@ -114,30 +109,23 @@ let lookAhead = { x: 0, y: 0, initialized: false };
 let cameraFocused = false;
 
 // Input state
-let keyState = {};
-let turnInput = 0;
-let thrustInput = 0;
+const KEY_DIRECTIONS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+let padDirection = null; // whichever direction the gamepad is currently holding on playerMover
 let gamepadInteractWasDown = false;
 let gamepadCycleWasDown = false;
 let lastFrameTime = null;
 
 // Order of initialization
 document.addEventListener('DOMContentLoaded', function() {
-  // loadPageConfig runs first now (it didn't used to need to - see its own history - but
-  // applyDriftEffect needs weavePage.wraps/worldWidth/worldHeight already known, to place a
-  // drift sprite in the same shifted render space a wrapping page's background/nodes use - see
-  // applyDriftEffect's own comment). A crossfade effect's own #bgmap2 is already present in the
-  // static markup regardless of this order (PageRenderer renders it whenever
-  // Page.SecondaryBackground is set, which CrossfadeLayerEffect keeps in sync with - see
+  // loadPageConfig runs first: initShip needs the grid it builds. A crossfade effect's own #bgmap2
+  // is already present in the static markup regardless of this order (PageRenderer renders it
+  // whenever Page.SecondaryBackground is set, which CrossfadeLayerEffect keeps in sync with - see
   // ProjectEditing's SyncSecondaryBackground).
   loadPageConfig();
   applyPageEffects();
   initShip();
   loadNodes();
-  if (weavePage.wraps) {
-    shiftTopLevelNodesForWrap();
-    buildWrapGhosts();
-  }
+  indexNodesByCell();
   if (weavePage.globeEffect) buildGlobeEffect();
   bindInput();
   claimOwnFocus();
@@ -174,187 +162,58 @@ function clamp(value, min, max){
   return Math.max(min, Math.min(max, value));
 }
 
-// Reads window.__weavePage (absent only on pages exported before this existed - falls back to
-// today's document size and no wrap) and makes the world size real: body and both background
-// layers get explicitly sized to it, rather than relying on whatever size the background image
-// happens to be. This is what per-page WorldWidthPx/HeightPx actually needs to work in the
-// exported site (the editor canvas already honors it - see app.js's worldW/worldH).
-//
-// On a wrapping page, the real background is also *positioned* at (worldWidth, worldHeight)
-// instead of (0, 0) - see the big comment on buildWrapGhosts() for why: browsers never extend a
-// document's scrollable region into negative coordinates, so putting anything at a negative
-// offset makes it permanently unreachable by scrolling, full stop (confirmed empirically, not
-// assumed). shiftTopLevelNodesForWrap() applies the same shift to every real node once they
-// exist (loadNodes() hasn't run yet at this point).
+// Reads window.__weavePage and makes the world size real: body and both background layers get
+// explicitly sized to it, rather than relying on whatever size the background image happens to
+// be. This is what per-page WorldWidthPx/HeightPx actually needs to work in the exported site (the
+// editor canvas already honors it - see app.js's worldW/worldH). Also builds the page's grid of
+// walkable squares, from the geometry GridLayout worked out for this page's map.
 function loadPageConfig(){
   let cfg = window.__weavePage;
 
-  weavePage.wraps = cfg ? !!cfg.wraps : false;
-  weavePage.globeEffect = cfg ? !!cfg.globeEffect : false;
-  weavePage.worldWidth = cfg ? cfg.worldWidth : document.body.scrollWidth;
-  weavePage.worldHeight = cfg ? cfg.worldHeight : document.body.scrollHeight;
+  weavePage.globeEffect = !!cfg.globeEffect;
+  weavePage.worldWidth = cfg.worldWidth;
+  weavePage.worldHeight = cfg.worldHeight;
+  weavePage.grid = WeaveSokoban.createGrid(cfg.grid);
   // Page.DefaultSpawnX/Y - where initShip() puts the ship when this page is opened with no
   // travel/query-string position at all (e.g. a bare URL, or the shell's iframe on first load).
   // Null/undefined (no Page override configured) leaves these null - initShip() itself falls
   // back to its own hardcoded default in that case.
-  weavePage.defaultSpawnX = cfg && cfg.defaultSpawnX != null ? cfg.defaultSpawnX : null;
-  weavePage.defaultSpawnY = cfg && cfg.defaultSpawnY != null ? cfg.defaultSpawnY : null;
+  weavePage.defaultSpawnX = cfg.defaultSpawnX ?? null;
+  weavePage.defaultSpawnY = cfg.defaultSpawnY ?? null;
 
   // WeaveProject.ListeningRadiusPx - project-wide, not per-page (see updateLocationAudio).
   // Floored well above LISTEN_INNER_RADIUS so the fade math there never divides by ~0, even if
-  // the project value is missing, zero, or set below the card-open radius by mistake.
-  weavePage.listeningRadiusPx = cfg && cfg.listeningRadiusPx != null ? cfg.listeningRadiusPx : null;
+  // the project value is missing, zero, or set below the inner radius by mistake.
+  weavePage.listeningRadiusPx = cfg.listeningRadiusPx ?? null;
   listenRadius = Math.max(weavePage.listeningRadiusPx || LISTEN_RADIUS_FALLBACK, LISTEN_INNER_RADIUS + 1);
   preloadRadius = listenRadius * PRELOAD_RADIUS_MULTIPLIER;
 
   // Whether this is WeaveProject.HomePageId's own page - see updateHubMusicSignal.
-  weavePage.isHomePage = cfg ? !!cfg.isHomePage : false;
+  weavePage.isHomePage = !!cfg.isHomePage;
 
   document.body.style.width = weavePage.worldWidth + "px";
   document.body.style.height = weavePage.worldHeight + "px";
-
-  let shiftX = weavePage.wraps ? weavePage.worldWidth : 0;
-  let shiftY = weavePage.wraps ? weavePage.worldHeight : 0;
 
   for (const id of ['bgmap', 'bgmap2']) {
     let img = document.getElementById(id);
     if (!img) continue;
     img.style.width = weavePage.worldWidth + "px";
     img.style.height = weavePage.worldHeight + "px";
-    img.style.left = shiftX + "px";
-    img.style.top = shiftY + "px";
-  }
-}
-
-// Moves every real top-level node from canonical [0, worldWidth) x [0, worldHeight) - the space
-// ship.x/y and every authored Node.X/Y live in - into the same (worldWidth, worldHeight)-shifted
-// render space loadPageConfig() already put the background in. Nested chain members ride along
-// for free (they're positioned relative to their parent's card, not the world - see the README's
-// nesting section), so only top-level nodes need touching.
-//
-// ship.x/y and getNodeCenter()-based proximity math are deliberately left reading/writing
-// canonical (unshifted) coordinates throughout - wrappedDelta()'s result is unaffected by adding
-// a whole worldWidth/worldHeight to one side of the subtraction (it's a mod-worldWidth
-// operation), so shifting *only* what's actually drawn - this function, renderShip(),
-// updateCamera() - leaves the whole proximity/interaction logic layer untouched and still correct.
-function shiftTopLevelNodesForWrap(){
-  nodeMeta.forEach((meta, node) => {
-    if (!meta.isTopLevel || meta.isModal) return;
-    let left = parseFloat(node.style.left) || 0;
-    let top = parseFloat(node.style.top) || 0;
-    node.style.left = (left + weavePage.worldWidth) + "px";
-    node.style.top = (top + weavePage.worldHeight) + "px";
-  });
-}
-
-// Globe wrap, the visual half: tiles the background(s) and every top-level node into a static
-// 3x3 grid (8 ghost copies plus the real, center tile) around the shifted real content, offset
-// by whole world-size steps - so the full grid spans non-negative render coordinates
-// [0, 3*worldWidth) x [0, 3*worldHeight): the west/north tiles sit exactly at 0, not at a
-// negative offset a browser would refuse to ever scroll to. The browser's own scrollable
-// overflow already extends to include them - same mechanism that makes document.body.scrollWidth
-// pick up #bgmap today - so no extra CSS/layout work is needed beyond appending more
-// absolutely-positioned elements. Combined with updateShip() keeping ship.x/y wrapped into
-// canonical [0, worldWidth) and updateCamera()/renderShip()'s matching +worldWidth/+worldHeight
-// render offset, the ship can fly straight through what looks like an edge and the camera just
-// keeps scrolling into the neighboring (ghost) tile - which is pixel-identical to the
-// wrapped-around real content, so there's nothing to detect or teleport.
-const WRAP_TILE_OFFSETS = [-1, 0, 1];
-
-function buildWrapGhosts(){
-  let backgrounds = ['bgmap', 'bgmap2']
-    .map(id => document.getElementById(id))
-    .filter(img => img);
-
-  let topLevelNodes = [];
-  nodeMeta.forEach((meta, node) => { if (meta.isTopLevel && !meta.isModal) topLevelNodes.push(node); });
-
-  for (const dx of WRAP_TILE_OFFSETS) {
-    for (const dy of WRAP_TILE_OFFSETS) {
-      if (dx === 0 && dy === 0) continue;
-
-      let offsetX = dx * weavePage.worldWidth;
-      let offsetY = dy * weavePage.worldHeight;
-
-      for (const bg of backgrounds) cloneBackgroundTile(bg, offsetX, offsetY);
-
-      for (const node of topLevelNodes) {
-        let ghost = cloneNodeTile(node, offsetX, offsetY);
-        if (!ghostRoots.has(node)) ghostRoots.set(node, []);
-        ghostRoots.get(node).push(ghost);
-      }
-    }
-  }
-}
-
-// offsetX/offsetY are relative to img's own current (already-shifted) position, not absolute -
-// matching cloneNodeTile below, and what actually keeps every tile's math consistent.
-function cloneBackgroundTile(img, offsetX, offsetY){
-  let clone = img.cloneNode(true);
-  clone.removeAttribute('id');
-  let baseLeft = parseFloat(img.style.left) || 0;
-  let baseTop = parseFloat(img.style.top) || 0;
-  clone.style.left = (baseLeft + offsetX) + "px";
-  clone.style.top = (baseTop + offsetY) + "px";
-  document.body.appendChild(clone);
-}
-
-function cloneNodeTile(node, offsetX, offsetY){
-  let clone = node.cloneNode(true);
-  let baseLeft = parseFloat(node.style.left) || 0;
-  let baseTop = parseFloat(node.style.top) || 0;
-  clone.style.left = (baseLeft + offsetX) + "px";
-  clone.style.top = (baseTop + offsetY) + "px";
-  document.body.appendChild(clone);
-  return clone;
-}
-
-// Mirrors a top-level node's whole chain (icon + card visibility, per member) onto every one of
-// its 8 ghost clones - called anywhere hideChain/showChainMember/onInteract's informational-card
-// toggle change that state, so a card opened near a seam looks open on every visual copy of it,
-// not just the real one. Ghost chain members are found by re-walking each clone the same way
-// loadNodes() built the real chain (cloneNode(true) preserves document order exactly, so zipping
-// by index is reliable) rather than kept as precomputed state, since this only runs on user
-// interaction, not every frame.
-function syncGhosts(root){
-  let ghosts = ghostRoots.get(root);
-  if (!ghosts) return;
-
-  let realChain = nodeMeta.get(root).chain;
-
-  for (const ghostRoot of ghosts) {
-    let ghostChain = [ghostRoot, ...ghostRoot.querySelectorAll(".node")];
-    for (let i = 0; i < realChain.length; i++) {
-      let realMeta = nodeMeta.get(realChain[i]);
-      ghostChain[i].querySelector(".nodeImage").src = realMeta.img.src;
-      ghostChain[i].querySelector(".floatInfo").style.display = realMeta.info.style.display;
-      ghostChain[i].classList.toggle('cardOpen', realChain[i].classList.contains('cardOpen'));
-    }
   }
 }
 
 // Sets up the cosmetic globe-curvature hint (Page.GlobeEffect): a fixed vignette overlay (see
 // #globeVignette in main.css) plus the per-frame icon scale/fade updateGlobeEffect() drives.
-// Only ever called when weavePage.globeEffect is true. Ghost tiles are already built by this
-// point (see DOMContentLoaded), so ghostRoots is complete if this page also wraps; on a
-// non-wrapping page ghostRoots is empty and globeEffectIcons ends up holding just the real
-// top-level icons, which is exactly what a bounded (non-wrapping) map that still wants the
-// vignette/fisheye look needs.
+// Only ever called when weavePage.globeEffect is true.
 function buildGlobeEffect(){
   nodeMeta.forEach((meta, node) => {
     if (meta.isTopLevel && !meta.isModal) globeEffectIcons.push(meta.img);
-  });
-  ghostRoots.forEach(ghosts => {
-    for (const ghost of ghosts) {
-      let img = ghost.querySelector(".nodeImage");
-      if (img) globeEffectIcons.push(img);
-    }
   });
 
   // Appended to <html>, deliberately *not* document.body - body gets a `transform` applied every
   // frame (updateCamera's sub-pixel scroll correction), and per the CSS spec a `transform` on an
   // ancestor changes what a `position: fixed` descendant is contained by: instead of the
-  // viewport, it becomes the *transformed ancestor's own box* - here, the whole (huge, tiled)
+  // viewport, it becomes the *transformed ancestor's own box* - here, the whole (huge)
   // world, not the screen. A child of body would size itself to that instead of the viewport,
   // which is what made the vignette look "attached to the background" rather than the screen.
   // <html> itself never gets a transform, so a fixed child of it is immune to that regardless of
@@ -398,28 +257,9 @@ function updateGlobeEffect(){
   }
 }
 
-// Shortest signed distance from a to b along one axis of a world that wraps at `size` - e.g.
-// two points 10px apart across the seam of a 3000px-wide world return 10, not 2990. Used so
-// proximity/interaction reach a node through its nearest ghost copy instead of only the literal,
-// possibly-far-away real one.
-function wrappedDelta(diff, size){
-  let d = diff % size;
-  if (d > size / 2) d -= size;
-  if (d < -size / 2) d += size;
-  return d;
-}
-
-// Applies wrappedDelta to both axes when this page wraps; passes an [dx, dy] pair through
-// unchanged otherwise. Only used for distance comparisons (see updateNodeProximity) - never for
-// anything that needs an actual position, since the "shortest path" isn't a real point.
-function wrappedOffset(dx, dy){
-  return weavePage.wraps
-    ? [wrappedDelta(dx, weavePage.worldWidth), wrappedDelta(dy, weavePage.worldHeight)]
-    : [dx, dy];
-}
-
-// Set up the ship's starting position (from URL params, or a sane default)
-// and the DOM element that represents it.
+// Set up the ship's starting square (from URL params, or a sane default) and the DOM element that
+// represents it. Whatever position that comes to, it snaps to the nearest square - a travel link
+// or page default is free to say roughly where, not exactly which square.
 function initShip() {
 
   let params = new URLSearchParams(document.location.search);
@@ -429,22 +269,28 @@ function initShip() {
   let destY  = parseInt(params.get("destY"));
   tutorialSwitch = params.get("tutorial");
 
+  let spawnX = 120;
+  let spawnY = 120;
+
   if (!isNaN(destX) && !isNaN(destY)) {
-    ship.x = destX;
-    ship.y = destY;
+    spawnX = destX;
+    spawnY = destY;
   } else if (!isNaN(startX) && !isNaN(startY)) {
-    ship.x = startX;
-    ship.y = startY;
+    spawnX = startX;
+    spawnY = startY;
   } else if (weavePage.defaultSpawnX !== null && weavePage.defaultSpawnY !== null) {
     // Page.DefaultSpawnX/Y (see loadPageConfig) - this page's own configured spot for "opened
     // with nothing telling it where to put the ship", e.g. a bare URL or the shell's iframe on
     // first load.
-    ship.x = weavePage.defaultSpawnX;
-    ship.y = weavePage.defaultSpawnY;
-  } else {
-    ship.x = 120;
-    ship.y = 120;
+    spawnX = weavePage.defaultSpawnX;
+    spawnY = weavePage.defaultSpawnY;
   }
+
+  playerMover = WeaveSokoban.createMover(weavePage.grid, {
+    cell: weavePage.grid.cellAt(spawnX, spawnY),
+    stepMs: STEP_MS,
+  });
+  syncShipToMover();
 
   console.log("PARAMS | x: " + startX + " y: " + startY + " | destX: " + destX + " destY: " + destY + " | tutorial: " + tutorialSwitch);
 
@@ -531,7 +377,7 @@ function loadNodes() {
 
   });
 
-  // A multi-part location's nested nodes aren't reachable by flying to them
+  // A multi-part location's nested nodes aren't reachable by walking to them
   // directly (see getNodeCenter) - the X button instead steps through each
   // top-level node's own chain (itself, then every descendant, depth-first)
   // without the ship needing to move. Branching Children would flatten into
@@ -554,6 +400,25 @@ function loadNodes() {
   showCurrentModal();
 
 };
+
+// Maps every top-level node to the square it sits on, for updateNodeProximity. Reads the authored
+// position rather than getNodeCenter()'s live measurement, since this runs before images have
+// loaded and an unloaded icon doesn't have its real height yet. A nested node never gets an entry:
+// it's reached by X from its root, not by being walked to.
+function indexNodesByCell(){
+  nodeMeta.forEach((meta, node) => {
+    if (!meta.isTopLevel || meta.isModal) return;
+
+    let x = (parseFloat(node.style.left) || 0) + NODE_ICON_SIZE / 2;
+    let y = (parseFloat(node.style.top) || 0) + NODE_ICON_SIZE / 2;
+    let key = cellKey(weavePage.grid.cellAt(x, y));
+    if (!rootByCell.has(key)) rootByCell.set(key, node);
+  });
+}
+
+function cellKey(cell){
+  return cell.col + "," + cell.row;
+}
 
 // sessionStorage (not localStorage) so a modal comes back on a genuinely new visit - opening the
 // site again after closing the tab/browser - but not on every page loaded during the *same*
@@ -648,7 +513,7 @@ function getNodeCenter(meta){
   };
 }
 
-// When this page is embedded in the persistent shell's iframe (see shell.js), arrow-key flight
+// When this page is embedded in the persistent shell's iframe (see shell.js), arrow-key movement
 // needs real keyboard events to land in THIS document, not the shell's. The shell tries to
 // help by calling this iframe's contentWindow.focus() from the outside, but that's a parent
 // reaching into a child - browsers are free to silently ignore it as focus-stealing protection,
@@ -673,16 +538,17 @@ function claimOwnFocus(){
 function bindInput(){
 
   document.addEventListener('keydown', (e) => {
-    keyState[e.key] = true;
     notifyShellOfInteraction();
 
     // Stops the browser's own default handling of these keys (page/iframe scroll for the
     // arrows, in particular) from ever competing with the game's own movement - see
     // claimOwnFocus's header for the failure mode this guards against.
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown'
-      || e.key === 'z' || e.key === 'Z' || e.key === 'x' || e.key === 'X') {
+    let direction = KEY_DIRECTIONS[e.key];
+    if (direction || e.key === 'z' || e.key === 'Z' || e.key === 'x' || e.key === 'X') {
       e.preventDefault();
     }
+
+    if (direction) playerMover.press(direction);
 
     // A modal card (see modalQueue) takes over Z entirely while it's showing - closing it,
     // never onInteract() - and blocks X too, so cycling a location chain underneath it isn't
@@ -697,7 +563,15 @@ function bindInput(){
   });
 
   document.addEventListener('keyup', (e) => {
-    keyState[e.key] = false;
+    let direction = KEY_DIRECTIONS[e.key];
+    if (direction) playerMover.release(direction);
+  });
+
+  // A key released while another window has focus never fires keyup here - without this, the ship
+  // would keep walking until it hit the edge of the map.
+  window.addEventListener('blur', () => {
+    playerMover.releaseAll();
+    padDirection = null;
   });
 
   // Gamepads don't fire events for stick movement, so they're polled each
@@ -709,24 +583,17 @@ function bindInput(){
 // is denied by permissions policy - notably, an opaque-origin iframe (which is what every
 // file://-opened exported site's shell iframe is - confirmed empirically) can never be granted
 // it via the shell's own <iframe allow="gamepad">, no matter what that attribute says. Left
-// uncaught, that exception would escape updateInput() and loop() entirely, which - since it's
-// thrown before turnInput/thrustInput are even set at the bottom of this function, and since an
-// uncaught exception in a requestAnimationFrame callback stops that callback from ever
-// rescheduling itself - would silently kill keyboard controls and the whole render loop too,
-// not just gamepad support. Tracking this in a flag (rather than a try/catch every single
-// frame forever) means the one denial is paid once; every frame after that just skips straight
-// past gamepad polling, leaving keyboard flight completely unaffected.
+// uncaught, that exception would escape updateInput() and loop() entirely, which - since an
+// uncaught exception in a requestAnimationFrame callback stops that callback from ever rescheduling
+// itself - would silently kill keyboard controls and the whole render loop too, not just gamepad
+// support. Tracking this in a flag (rather than a try/catch every single frame forever) means the
+// one denial is paid once; every frame after that just skips straight past gamepad polling, leaving
+// keyboard movement completely unaffected.
 let gamepadSupported = true;
 
+// Keyboard directions go straight to playerMover as they happen (see bindInput) - only the gamepad
+// needs polling, feeding playerMover the same press/release events whenever its direction changes.
 function updateInput(){
-
-  let turn = 0;
-  let thrust = 0;
-
-  if (keyState['ArrowLeft'])  turn  -= 1;
-  if (keyState['ArrowRight']) turn  += 1;
-  if (keyState['ArrowUp'])    thrust += 1;
-  if (keyState['ArrowDown'])  thrust -= 1;
 
   let pads = null;
   if (gamepadSupported && navigator.getGamepads) {
@@ -737,15 +604,15 @@ function updateInput(){
     }
   }
 
+  let nextPadDirection = null;
+
   if (pads) {
     for (let i = 0; i < pads.length; i++) {
       let pad = pads[i];
       if (!pad) continue;
 
-      let ax = pad.axes[0] || 0;
-      let ay = pad.axes[1] || 0;
-      if (Math.abs(ax) > GAMEPAD_DEADZONE) { turn += ax; notifyShellOfInteraction(); }
-      if (Math.abs(ay) > GAMEPAD_DEADZONE) { thrust -= ay; notifyShellOfInteraction(); }
+      nextPadDirection = readPadDirection(pad);
+      if (nextPadDirection) notifyShellOfInteraction();
 
       // Same modal takeover as the keyboard's Z/X handling in bindInput() - see its comment.
       let aDown = !!(pad.buttons[0] && pad.buttons[0].pressed);
@@ -765,80 +632,58 @@ function updateInput(){
     }
   }
 
-  turnInput = clamp(turn, -1, 1);
-  thrustInput = clamp(thrust, -1, 1);
+  if (nextPadDirection !== padDirection) {
+    if (padDirection) playerMover.release(padDirection);
+    if (nextPadDirection) playerMover.press(nextPadDirection);
+    padDirection = nextPadDirection;
+  }
+}
+
+// One of the four directions, or null: the D-pad if it's pressed (standard gamepad mapping: buttons
+// 12-15), otherwise whichever axis the stick is pushed furthest along.
+function readPadDirection(pad){
+  if (pad.buttons[12] && pad.buttons[12].pressed) return 'up';
+  if (pad.buttons[13] && pad.buttons[13].pressed) return 'down';
+  if (pad.buttons[14] && pad.buttons[14].pressed) return 'left';
+  if (pad.buttons[15] && pad.buttons[15].pressed) return 'right';
+
+  let ax = pad.axes[0] || 0;
+  let ay = pad.axes[1] || 0;
+  if (Math.max(Math.abs(ax), Math.abs(ay)) < GAMEPAD_DEADZONE) return null;
+  if (Math.abs(ax) > Math.abs(ay)) return ax > 0 ? 'right' : 'left';
+  return ay > 0 ? 'down' : 'up';
 }
 
 function updateShip(dt){
 
   // A modal card (see modalQueue) traps input entirely while it's showing - the ship simply
-  // doesn't move, rather than quietly accumulating velocity from held keys that would otherwise
-  // suddenly release the moment the modal closes.
-  if (modalQueue.length > 0) return;
-
-  // Turning has a little momentum rather than snapping instantly
-  ship.angularVel += turnInput * TURN_ACCEL * dt;
-  ship.angularVel *= Math.pow(TURN_DAMPING, dt);
-  ship.angularVel = clamp(ship.angularVel, -MAX_TURN_SPEED, MAX_TURN_SPEED);
-  ship.angle += ship.angularVel * dt;
-
-  // Thrust along facing direction, with light drag
-  if (thrustInput !== 0) {
-    ship.vx += Math.cos(ship.angle) * THRUST_ACCEL * thrustInput * dt;
-    ship.vy += Math.sin(ship.angle) * THRUST_ACCEL * thrustInput * dt;
-  }
-  ship.vx *= Math.pow(LINEAR_DAMPING, dt);
-  ship.vy *= Math.pow(LINEAR_DAMPING, dt);
-
-  let speed = Math.hypot(ship.vx, ship.vy);
-  if (speed > MAX_SPEED) {
-    ship.vx = (ship.vx / speed) * MAX_SPEED;
-    ship.vy = (ship.vy / speed) * MAX_SPEED;
+  // doesn't move, and a press made underneath it doesn't suddenly fire the moment the modal closes.
+  if (modalQueue.length > 0) {
+    playerMover.clearQueue();
+    return;
   }
 
-  ship.x += ship.vx * dt;
-  ship.y += ship.vy * dt;
-
-  if (weavePage.wraps) {
-    let preWrapX = ship.x;
-    let preWrapY = ship.y;
-    ship.x = ((ship.x % weavePage.worldWidth) + weavePage.worldWidth) % weavePage.worldWidth;
-    ship.y = ((ship.y % weavePage.worldHeight) + weavePage.worldHeight) % weavePage.worldHeight;
-    // camera.x/y track ship.x/y continuously across many frames of easing (see updateCamera) -
-    // completely separately from this modulo. Left alone, the instant ship.x/y actually wraps
-    // here, camera.x/y would keep gliding along their old, now-unmoored continuous trajectory
-    // while the ship jumps back into canonical range under them, so the two drift apart by a
-    // full world-size step. Applying the exact same correction keeps camera.x/y in sync - since
-    // it happens in lockstep with ship.x/y's own jump, nothing camera.x/y was already smoothly
-    // doing (following the ship, or holding on a focused card) gets disturbed; a genuine
-    // no-op (0 correction) on every frame that isn't an actual wrap.
-    camera.x += ship.x - preWrapX;
-    camera.y += ship.y - preWrapY;
-  } else {
-    ship.x = clamp(ship.x, 0, document.body.scrollWidth);
-    ship.y = clamp(ship.y, 0, document.body.scrollHeight);
-  }
-
+  playerMover.update(dt * MS_PER_FRAME);
+  syncShipToMover();
   renderShip();
 }
 
-function renderShip(){
-  // Matches the render-space shift applied to real content/updateCamera on a wrapping page (see
-  // loadPageConfig/shiftTopLevelNodesForWrap) - without it the ship renders a full world-size
-  // away from wherever the camera is actually looking.
-  let renderX = weavePage.wraps ? ship.x + weavePage.worldWidth : ship.x;
-  let renderY = weavePage.wraps ? ship.y + weavePage.worldHeight : ship.y;
+function syncShipToMover(){
+  let position = playerMover.position;
+  ship.x = position.x;
+  ship.y = position.y;
+  ship.angle = FACING_ANGLES[playerMover.facing];
+}
 
+function renderShip(){
   // Deliberately *not* rounded, unlike the scroll target in updateCamera - the world content
   // (background, nodes) is all static, already-integer-positioned markup, so rounding only the
   // scroll keeps it crisp; the ship is the one thing that actually needs to move smoothly every
-  // frame. Rounding it too was tried and reverted: MAX_SPEED (6.5px/frame) isn't a whole number,
-  // so snapping the ship's position to the nearest pixel every frame doesn't read as smoother -
-  // it visibly alternates 6px/7px/6px/7px steps instead of a steady 6.5px glide, which is its own
-  // kind of shake. A single small, already-anti-aliased (it's rotated via CSS transform) sprite
-  // sitting at a sub-pixel offset is far less noticeable than that stepping.
-  shipEl.style.left = (renderX - SHIP_WIDTH / 2) + "px";
-  shipEl.style.top = (renderY - SHIP_WIDTH / 2) + "px";
+  // frame. Rounding it too would make a steady glide visibly alternate between neighboring whole
+  // pixel steps, which is its own kind of shake - a single small sprite sitting at a sub-pixel
+  // offset is far less noticeable than that.
+  shipEl.style.left = (ship.x - SHIP_WIDTH / 2) + "px";
+  shipEl.style.top = (ship.y - SHIP_WIDTH / 2) + "px";
   // Sprite's forward points "up" (angle -90deg) at rest, so offset by +90deg
   shipEl.style.transform = "rotate(" + (ship.angle + Math.PI / 2) + "rad)";
 }
@@ -846,54 +691,33 @@ function renderShip(){
 // dt defaults to 1 because the one call site that omits it (initShip's very first call) always
 // takes the "not yet initialized" snap path below, which doesn't use dt at all.
 //
-// This is split into two independently-eased pieces - *what* the camera tracks (camera.x/y,
-// wrapped/canonical, matching ship.x/y's own coordinate space) and *how far ahead of that it
-// leads* (lookAhead.x/y, a small plain offset) - because merging them caused a real bug: adding
-// the look-ahead directly to ship.x before easing let the sum legitimately exceed
-// [0, worldWidth) whenever the ship was merely close to an edge (not actually wrapping), and
-// running that sum through the same wrapped-shortest-path logic the *ship's own* discontinuous
-// wrap needs made it alias to the canonically-equivalent point on the far side of the map -
-// invisible for the tiled, periodic background (it looks the same either way), but not for the
-// ship: a single, non-tiled element rendered straight off the real, un-aliased ship.x/y, which
-// would end up nowhere near where the camera had just settled. Keeping the look-ahead as a
-// separate, always-small, never-wrapped offset - added only once, at the very end, after
-// camera.x/y has already resolved to a true, un-aliased position - avoids the whole class of bug.
+// This is split into two independently-eased pieces - *what* the camera tracks (camera.x/y) and
+// *how far ahead of that it leads* (lookAhead.x/y, a small plain offset) - so a change of heading
+// and a change of target each ease at their own rate.
 function updateCamera(dt = 1){
-  // What the camera tracks: the ship's own (canonical) position, unless a card is open *and the
-  // player has actually settled on it* (the same activeNode for CARD_FOCUS_DELAY_MS - see setter
-  // sites in showChainMember/hideChain), in which case it tracks that card's actual rendered
-  // center instead. The delay is deliberate: without it, merely flying near a location - or
-  // quickly X-cycling through a chain - would drag the camera around before the player had any
-  // intention of reading that particular card. Most needed for a deeper chain member (X-cycled
-  // multi-part location), whose card can sit well away from the node itself once its own
-  // Card.Offset stacks on top of every ancestor's. Reads getBoundingClientRect() rather than
-  // re-deriving the offset math, so it's automatically correct for any card size/offset/nesting
-  // depth - un-shifted back out of render-space to match ship.x/y's own canonical convention (see
-  // loadPageConfig/shiftTopLevelNodesForWrap for that shift), for the same alias-avoidance reason
-  // as above. A straight center-on-card (rather than the minimal shift needed to only just bring
-  // it inside the viewport) is deliberate too - the minimal-shift version tended to leave the
-  // card pinned against whichever edge it had been overflowing, i.e. in a corner, instead of
-  // settling somewhere comfortable.
+  // What the camera tracks: the ship's own position, unless a card is open *and the player has
+  // actually settled on it* (the same activeNode for CARD_FOCUS_DELAY_MS - see setter sites in
+  // showChainMember/hideChain), in which case it tracks that card's actual rendered center instead.
+  // The delay is deliberate: without it, quickly X-cycling through a chain would drag the camera
+  // around before the player had any intention of reading that particular card. Reads
+  // getBoundingClientRect() rather than re-deriving the offset math, so it's automatically correct
+  // for any card size/offset/nesting depth. A straight center-on-card (rather than the minimal
+  // shift needed to only just bring it inside the viewport) is deliberate too - the minimal-shift
+  // version tended to leave the card pinned against whichever edge it had been overflowing, i.e. in
+  // a corner, instead of settling somewhere comfortable.
   let focused = false;
   let trackX = ship.x;
   let trackY = ship.y;
   let easeFactor = CAMERA_EASE;
 
-  // thrustInput === 0 is a live, continuous condition (not just checked once) - holding
-  // accelerate means the player is driving past, not settling to look, so focus is withheld the
-  // whole time it's held, and drops out immediately (back to plain ship-tracking) the instant
-  // it's pressed again even mid-focus. It's deliberately not folded into activeNodeSince's own
-  // delay/reset bookkeeping - accelerating doesn't invalidate *how long this has been the active
-  // node* (X-cycling while thrusting still shouldn't re-arm CARD_FOCUS_DELAY_MS once released),
-  // it just independently gates whether that settled state is allowed to pull the camera in.
-  if (thrustInput === 0 && activeNode && activeNodeSince !== null && performance.now() - activeNodeSince >= CARD_FOCUS_DELAY_MS) {
+  // !isMoving is a live, continuous condition (not just checked once) - a card only ever opens once
+  // the ship has stopped, but walking off again should drop back to plain ship-tracking immediately.
+  if (!playerMover.isMoving && activeNode && activeNodeSince !== null && performance.now() - activeNodeSince >= CARD_FOCUS_DELAY_MS) {
     let info = nodeMeta.get(activeNode).info;
     if (info.style.display !== 'none') {
       let rect = info.getBoundingClientRect();
-      let shiftX = weavePage.wraps ? weavePage.worldWidth : 0;
-      let shiftY = weavePage.wraps ? weavePage.worldHeight : 0;
-      trackX = rect.left + rect.width / 2 + window.scrollX - shiftX;
-      trackY = rect.top + rect.height / 2 + window.scrollY - shiftY;
+      trackX = rect.left + rect.width / 2 + window.scrollX;
+      trackY = rect.top + rect.height / 2 + window.scrollY;
       focused = true;
       easeFactor = CARD_FOCUS_EASE;
     }
@@ -904,31 +728,6 @@ function updateCamera(dt = 1){
     camera.x = trackX;
     camera.y = trackY;
     camera.initialized = true;
-  } else if (weavePage.wraps) {
-    // Ease along the *shortest wrapped path* toward the tracked point, not the raw straight-line
-    // distance - otherwise the moment ship.x/y itself wraps (a discontinuous jump in canonical
-    // terms - see updateShip), the eased camera would try to visibly glide all the way across the
-    // map instead of the short way round. Continuously re-targeting trackX every frame (rather
-    // than committing to a fixed start/end pan) is deliberate: if the ship carries a little
-    // momentum past a node during CARD_FOCUS_DELAY_MS before the card settles, this just curves
-    // smoothly toward wherever the real target is *now* instead of first finishing a trip toward
-    // a since-stale point and then visibly reversing.
-    let ease = 1 - Math.pow(easeFactor, dt);
-    camera.x += wrappedDelta(trackX - camera.x, weavePage.worldWidth) * ease;
-    camera.y += wrappedDelta(trackY - camera.y, weavePage.worldHeight) * ease;
-
-    // Defensive: re-express camera.x/y via whichever periodic representative sits closest to
-    // trackX/trackY, so it can never drift more than half a world-size away from what it's
-    // actually tracking, regardless of how it got there. The per-frame wrap-sync correction in
-    // updateShip handles the common case (the ship's own gradual, natural wrap) already, but
-    // wrappedDelta's "shortest path" is only ever a *small step* toward the right periodic
-    // class - given a sufficiently large one-off gap (camera.x left over from tracking something
-    // very different, e.g. right after a focus change) it can take many frames of tiny steps to
-    // fully arrive, and past a few worldWidths out camera.x is numerically outside the actual
-    // rendered 3x3 tile grid the whole time it's converging - i.e. pointed at nothing. This is a
-    // no-op whenever camera.x/y are already close to trackX/trackY, which is the normal case.
-    camera.x = trackX + wrappedDelta(camera.x - trackX, weavePage.worldWidth);
-    camera.y = trackY + wrappedDelta(camera.y - trackY, weavePage.worldHeight);
   } else {
     let ease = 1 - Math.pow(easeFactor, dt);
     camera.x += (trackX - camera.x) * ease;
@@ -936,15 +735,12 @@ function updateCamera(dt = 1){
   }
 
   // Lead the ship by a fraction of the viewport in whichever direction it's currently facing (and
-  // not at all while focused on a card), so flying feels like more of the world ahead is visible
-  // than what's behind (2/3 ahead, 1/3 behind: the ship sits 1/3 of the way from the trailing
-  // edge along its heading, which means the *camera's* center has to sit ahead of the ship by
-  // (1/2 - 1/3) = 1/6 of the viewport). Each axis uses its own viewport dimension (not a single
-  // shared magnitude) so a purely-horizontal or purely-vertical heading gets the exact 2/3-1/3
-  // split rather than one skewed by the viewport's aspect ratio. Eased on its own (plain, no
-  // wrapping needed - it's always a small bounded vector, never a world position) so a sudden
-  // heading change doesn't yank the view - this is what actually keeps turning/thrust-reversal
-  // from reading as camera "shake".
+  // not at all while focused on a card), so more of the world ahead is visible than what's behind
+  // (2/3 ahead, 1/3 behind: the ship sits 1/3 of the way from the trailing edge along its heading,
+  // which means the *camera's* center has to sit ahead of the ship by (1/2 - 1/3) = 1/6 of the
+  // viewport). Each axis uses its own viewport dimension (not a single shared magnitude) so a
+  // heading gets the exact 2/3-1/3 split rather than one skewed by the viewport's aspect ratio.
+  // Eased on its own so turning to face a new direction doesn't yank the view.
   let desiredLookX = focused ? 0 : Math.cos(ship.angle) * window.innerWidth * LOOK_AHEAD_FRACTION;
   let desiredLookY = focused ? 0 : Math.sin(ship.angle) * window.innerHeight * LOOK_AHEAD_FRACTION;
 
@@ -961,13 +757,8 @@ function updateCamera(dt = 1){
   let maxScrollX = Math.max(0, document.body.scrollWidth - window.innerWidth);
   let maxScrollY = Math.max(0, document.body.scrollHeight - window.innerHeight);
 
-  // Wrapping pages: camera.x/y are canonical, matching ship.x/y (see above), but the real content
-  // sits at document scroll-coordinates [worldWidth, 2*worldWidth) - the west/north ghost tile
-  // occupies [0, worldWidth) instead. Shifting by +worldWidth/+worldHeight accounts for that,
-  // matching renderShip's own shift. The look-ahead offset is added last, in this same
-  // already-un-aliased render space, exactly where the ship itself actually renders.
-  let targetX = (weavePage.wraps ? camera.x + weavePage.worldWidth : camera.x) + lookAhead.x;
-  let targetY = (weavePage.wraps ? camera.y + weavePage.worldHeight : camera.y) + lookAhead.y;
+  let targetX = camera.x + lookAhead.x;
+  let targetY = camera.y + lookAhead.y;
 
   let clampedX = clamp(targetX - window.innerWidth / 2, 0, maxScrollX);
   let clampedY = clamp(targetY - window.innerHeight / 2, 0, maxScrollY);
@@ -975,15 +766,11 @@ function updateCamera(dt = 1){
   // window.scrollTo() turns out to only have whole-pixel precision in practice - confirmed
   // directly (a minimal test page, no game code involved): Chrome silently rounds whatever
   // fractional value is passed here before it's readable back via window.scrollX/Y, regardless of
-  // what's passed in. That's invisible for a *constant* rate of travel (rounding a steadily-
-  // increasing value just steps it forward a whole pixel at a time, on average tracking the true
-  // rate correctly - see renderShip's ship.x/y, which travel at exactly MAX_SPEED and are
-  // deliberately left unrounded for this reason), but whenever the rate of change *itself* isn't
-  // a whole number of pixels/frame - which during active turning it practically never is, since
-  // the look-ahead vector's rate of change traces a sinusoid, not a line - the rounding lands on
-  // a different side of the true value frame to frame in a way that reads as a faint stepping,
-  // and it now affects everything on screen (ship included - the ship's own position is
-  // unrounded, but it's still rendered *relative to* this same rounded scroll).
+  // what's passed in. Whenever the camera is easing, its rate of change isn't a whole number of
+  // pixels/frame, so the rounding lands on a different side of the true value frame to frame in a
+  // way that reads as a faint stepping, and it affects everything on screen (ship included - the
+  // ship's own position is unrounded, but it's still rendered *relative to* this same rounded
+  // scroll).
   //
   // A CSS translate on body supplies exactly the fractional remainder scrollTo() rounded away.
   // This is purely a paint-time adjustment - it doesn't disturb the scroll mechanism's own
@@ -995,40 +782,19 @@ function updateCamera(dt = 1){
     "translate(" + (window.scrollX - clampedX) + "px, " + (window.scrollY - clampedY) + "px)";
 }
 
-// Which top-level location the ship is currently near drives proximity - a
-// multi-part location's nested nodes aren't out on the map to fly near (see
-// getNodeCenter), so they never compete here. Once a root is active, X steps
-// through its chain (see cycleChainNode); this only decides *which root*,
-// resetting back to the start of its chain whenever the root itself changes.
+// Which top-level location the ship is standing on drives the open card - a multi-part location's
+// nested nodes aren't out on the map to walk to (see getNodeCenter), so they never compete here.
+// Once a root is active, X steps through its chain (see cycleChainNode); this only decides *which
+// root*, resetting back to the start of its chain whenever the root itself changes. Only counts
+// once the ship has actually stopped, so holding a direction straight across a node doesn't flash
+// its card open and shut on the way past.
 function updateNodeProximity(){
 
-  let closestRoot = null;
-  let closestDist = INTERACT_RADIUS;
+  let root = playerMover.isMoving ? null : (rootByCell.get(cellKey(playerMover.cell)) ?? null);
 
-  nodeMeta.forEach((meta, node) => {
-    if (!meta.isTopLevel || meta.isModal) return;
-
-    let center = getNodeCenter(meta);
-    let d = Math.hypot(...wrappedOffset(ship.x - center.x, ship.y - center.y));
-    if (d < closestDist) {
-      closestDist = d;
-      closestRoot = node;
-    }
-  });
-
-  // Stick with the current root unless it's out of range or something is
-  // meaningfully closer - avoids flickering between two nearby locations.
-  if (activeRoot && closestRoot !== activeRoot) {
-    let rootCenter = getNodeCenter(nodeMeta.get(activeRoot));
-    let rootDist = Math.hypot(...wrappedOffset(ship.x - rootCenter.x, ship.y - rootCenter.y));
-    if (rootDist < INTERACT_RADIUS && rootDist <= closestDist + STICKY_MARGIN) {
-      closestRoot = activeRoot;
-    }
-  }
-
-  if (closestRoot !== activeRoot) {
+  if (root !== activeRoot) {
     if (activeRoot) hideChain(activeRoot);
-    activeRoot = closestRoot;
+    activeRoot = root;
     chainIndex = 0;
     if (activeRoot) showChainMember(activeRoot, 0);
   }
@@ -1036,10 +802,10 @@ function updateNodeProximity(){
 
 // Location-zoned music: every top-level root's own track (or whichever chain member the player
 // has X-cycled to - see cycleChainNode) fades in as the ship approaches that root's center, up
-// to full volume within LISTEN_INNER_RADIUS (the same distance that already opens the card), and
-// fades to silent by listenRadius. listenRadius is one shared, project-configured value (see
-// loadPageConfig) rather than something computed from node spacing here - the editor is
-// responsible for keeping it small enough that no two locations' audible zones overlap.
+// to full volume within LISTEN_INNER_RADIUS, and fades to silent by listenRadius. listenRadius is
+// one shared, project-configured value (see loadPageConfig) rather than something computed from node
+// spacing here - the editor is responsible for keeping it small enough that no two locations'
+// audible zones overlap.
 //
 // Distance is measured to the *root* even when a deeper chain member is the one actually
 // sounding, since only top-level nodes have a real map position (see getNodeCenter) - a nested
@@ -1055,7 +821,7 @@ function updateLocationAudio(dt){
     if (!meta.isTopLevel || meta.isModal) return;
 
     let center = getNodeCenter(meta);
-    let d = Math.hypot(...wrappedOffset(ship.x - center.x, ship.y - center.y));
+    let d = Math.hypot(ship.x - center.x, ship.y - center.y);
 
     // Start buffering well before the track needs to be audible - see PRELOAD_RADIUS_MULTIPLIER's
     // own comment on why (external-URL tracks need a head start). The whole chain preloads
@@ -1112,7 +878,7 @@ function updateHubMusicSignal(){
       if (!meta.isTopLevel || meta.isModal || !meta.travelHome) return;
 
       let center = getNodeCenter(meta);
-      let d = Math.hypot(...wrappedOffset(ship.x - center.x, ship.y - center.y));
+      let d = Math.hypot(ship.x - center.x, ship.y - center.y);
       let a = clamp((listenRadius - d) / (listenRadius - LISTEN_INNER_RADIUS), 0, 1);
       if (a > audibility) audibility = a;
     });
@@ -1144,7 +910,6 @@ function hideChain(root){
   }
   activeNode = null;
   activeNodeSince = null;
-  if (weavePage.wraps) syncGhosts(root);
 }
 
 // Shows chain[index] and clears activeNode/img back to every OTHER member. Nested cards
@@ -1185,23 +950,16 @@ function showChainMember(root, index){
   // can never focus at all.
   if (activeNode !== chain[index] && (activeNodeSince === null || !cameraFocused)) activeNodeSince = performance.now();
   activeNode = chain[index];
-  if (weavePage.wraps) syncGhosts(root);
 }
 
 // X (keyboard) / X (gamepad): step to the next location in the current
-// root's chain - the way to reach a multi-part location's later parts
-// without flying the ship into their (screen-space, card-relative) icons.
+// root's chain - the way to reach a multi-part location's later parts,
+// since they aren't out on the map to walk to.
 function cycleChainNode(){
   if (!activeRoot) return;
 
   let chain = nodeMeta.get(activeRoot).chain;
   if (chain.length <= 1) return;
-
-  // Cancel any residual drift so browsing a multi-part location's chain
-  // doesn't require also fighting momentum to stay within INTERACT_RADIUS -
-  // easy to coast out of range between presses otherwise.
-  ship.vx = 0;
-  ship.vy = 0;
 
   chainIndex = (chainIndex + 1) % chain.length;
   showChainMember(activeRoot, chainIndex);
@@ -1218,7 +976,6 @@ function onInteract(){
   } else if (!meta.audio) {
     // Informational-only card (e.g. tutorial) - interact just toggles it
     setCardOpen(activeNode, meta, meta.info.style.display === 'none');
-    if (weavePage.wraps) syncGhosts(activeRoot);
   }
   // A card with location audio and no travel link has nothing left for Z to do - the music
   // itself is proximity-driven now (see updateLocationAudio), not toggled by interact.
@@ -1265,19 +1022,10 @@ function applyCrossfadeEffect(fx){
 }
 
 function applyDriftEffect(fx){
-  // fx.x/y are authored in the same canonical [0, worldWidth) x [0, worldHeight) space every
-  // other authored position (Node.X/Y, etc.) lives in - a wrapping page's *real* content is
-  // rendered shifted by a whole world-size step (see loadPageConfig/shiftTopLevelNodesForWrap's
-  // own comments on why), so a drift sprite needs that same shift or it ends up sitting in the
-  // unshifted west/north ghost-tile position instead of alongside the real, visible world - miles
-  // from wherever the ship actually starts, which read as "the sprite doesn't appear" even
-  // though it's really just rendered off in the wrong tile.
-  let shiftX = weavePage.wraps ? weavePage.worldWidth : 0;
-  let shiftY = weavePage.wraps ? weavePage.worldHeight : 0;
 
   let outer = document.createElement('div');
-  outer.style.left = (fx.x + shiftX) + "px";
-  outer.style.top = (fx.y + shiftY) + "px";
+  outer.style.left = fx.x + "px";
+  outer.style.top = fx.y + "px";
   if (fx.blendMode) outer.style.mixBlendMode = fx.blendMode;
 
   let img = document.createElement('img');

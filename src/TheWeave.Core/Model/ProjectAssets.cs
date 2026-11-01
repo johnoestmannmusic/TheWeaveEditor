@@ -5,6 +5,10 @@ public sealed class ProjectAssets
 {
     public string CssPath { get; set; } = "css/main.css";
     public string JsPath { get; set; } = "jsx/main.js";
+
+    /// <summary>Grid movement (see runtime/sokoban.js) - every page loads it just before JsPath.</summary>
+    public string SokobanJsPath { get; set; } = "jsx/sokoban.js";
+
     public string ImgRoot { get; set; } = "img";
     public string FntRoot { get; set; } = "fnt";
     public string MusRoot { get; set; } = "mus";
