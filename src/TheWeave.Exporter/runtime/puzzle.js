@@ -1,9 +1,9 @@
 // puzzle.js
 // John Oestmann
 // Sokoban puzzles played over a track's album art: what each object looks like, what colours they're
-// drawn in, and the rules for placing them on a board. Knows nothing about the DOM - callers pass in a
-// canvas context or plain pixel data. Shared by the Editor's Puzzle Editor and the exported site, so
-// that a puzzle looks the same in both.
+// drawn in, the rules for placing them on a board, and the rules for playing one. Knows nothing about
+// the DOM - callers pass in a canvas context or plain pixel data. Shared by the Editor's Puzzle Editor
+// and the exported site, so that a puzzle looks the same in both.
 //
 // This file is part of the canonical shared runtime owned by TheWeave.Exporter - it's generated into
 // every exported site's jsx/puzzle.js, not hand-edited there.
@@ -69,6 +69,166 @@
     let switches = letters('Switch');
     if (kind === 'Switch') return gates.find(letter => !switches.includes(letter)) ?? firstUnused(gates, switches);
     return switches.find(letter => !gates.includes(letter)) ?? firstUnused(gates, switches);
+  }
+
+  // ---------- playing ----------
+
+  const OPPOSITES = { Up: 'Down', Down: 'Up', Left: 'Right', Right: 'Left' };
+  // sokoban.js's directions are lower case, and a puzzle's are capitalized as they are in the project file.
+  const MOVER_DIRECTIONS = { Up: 'up', Down: 'down', Left: 'left', Right: 'right' };
+  const PUZZLE_DIRECTIONS = { up: 'Up', down: 'Down', left: 'Left', right: 'Right' };
+
+  // Whether a puzzle can be solved at all, which is what decides if it can hold anything back.
+  function hasFinish(puzzle){
+    return !!puzzle && puzzle.objects.some(object => object.kind === 'Finish');
+  }
+
+  // One playthrough of a puzzle. Holds where everything is, and answers what happens next - the caller
+  // owns the ship's actual movement, through sokoban.js's canEnter and onArrive hooks.
+  function createPuzzleGame(puzzle) {
+    let streams = new Map();
+    let objects = [];
+    let start = { col: DEFAULT_START.col, row: DEFAULT_START.row };
+
+    for (const object of puzzle.objects) {
+      if (object.kind === 'Stream') streams.set(cellKey(object), object.direction);
+      else if (object.kind === 'Start') start = { col: object.col, row: object.row };
+      else objects.push({ ...object, fromCol: object.col, fromRow: object.row, open: false });
+    }
+
+    let shipCell = start;
+    let solved = false;
+
+    function cellKey(cell){
+      return cell.col + "," + cell.row;
+    }
+
+    function objectAt(cell){
+      return objects.find(object => isAt(object, cell)) ?? null;
+    }
+
+    function isSolid(object){
+      return object.kind === 'Wall' || (object.kind === 'Gate' && !object.open);
+    }
+
+    function nextCell(cell, direction){
+      let delta = DIRECTION_DELTAS[direction];
+      return { col: cell.col + delta.x, row: cell.row + delta.y };
+    }
+
+    // What standing on a square does to the board, and where that leaves the ship: null, or
+    // { teleportTo } or { finished } for the caller to act on.
+    function arriveAt(cell){
+      shipCell = cell;
+      let object = objectAt(cell);
+      if (!object) return null;
+
+      switch (object.kind) {
+        case 'Key':
+          objects.splice(objects.indexOf(object), 1);
+          return null;
+
+        case 'Switch':
+          if (objects.some(other => other.kind === 'Key')) return null;
+          for (const gate of objects) {
+            if (gate.kind === 'Gate' && gate.letter === object.letter) gate.open = !gate.open;
+          }
+          return null;
+
+        case 'Teleporter': {
+          let partners = objects.filter(other => other.kind === 'Teleporter' && other.letter === object.letter);
+          if (partners.length !== 2) return null;
+          let partner = partners.find(other => other !== object);
+          let destination = { col: partner.col, row: partner.row };
+          shipCell = destination;
+          return { teleportTo: destination };
+        }
+
+        case 'Finish':
+          solved = true;
+          return { finished: true };
+      }
+
+      return null;
+    }
+
+    // Which objects on Streams can move this tick, all at once, so a full loop keeps circulating.
+    // Starts from everything that might, then takes out whatever turns out to be blocked, until
+    // what's left can all really go.
+    function resolveStreamMoves(occupiedByShip){
+      let moves = new Map();
+      for (const object of objects) {
+        let direction = streams.get(cellKey(object));
+        if (!direction) continue;
+        let to = nextCell(object, direction);
+        if (streams.has(cellKey(to))) moves.set(object, to);
+      }
+
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const [object, to] of moves) {
+          let occupant = objectAt(to);
+          let occupantLeaving = occupant && moves.has(occupant);
+          let swapping = occupantLeaving && isAt(moves.get(occupant), object);
+          let shipInTheWay = isSolid(object) && occupiedByShip.some(cell => isAt(cell, to));
+          let contested = [...moves].some(([other, otherTo]) => other !== object && isAt(otherTo, to) && objects.indexOf(other) < objects.indexOf(object));
+
+          if ((occupant && !occupantLeaving) || swapping || shipInTheWay || contested) {
+            moves.delete(object);
+            changed = true;
+          }
+        }
+      }
+
+      return moves;
+    }
+
+    return {
+      start,
+      get objects(){ return objects; },
+      get shipCell(){ return shipCell; },
+      get isSolved(){ return solved; },
+      streams: puzzle.objects.filter(object => object.kind === 'Stream'),
+
+      // For sokoban.js's canEnter. A Stream can't be walked against, whether already on it or coming
+      // onto it head-on.
+      canEnter(from, to, moverDirection){
+        let direction = PUZZLE_DIRECTIONS[moverDirection];
+        let against = streams.get(cellKey(from)) === OPPOSITES[direction] || streams.get(cellKey(to)) === OPPOSITES[direction];
+        if (against) return false;
+        let object = objectAt(to);
+        return !(object && isSolid(object));
+      },
+
+      shipArrivedAt: arriveAt,
+
+      // Which way a Stream is carrying a ship on this square, as sokoban.js's direction, or null.
+      carryDirection(cell){
+        let direction = streams.get(cellKey(cell));
+        return direction ? MOVER_DIRECTIONS[direction] : null;
+      },
+
+      // Moves everything on a Stream along by a square. shipHeadingTo is the square the ship is
+      // stepping onto, if it's moving. Returns what something moving under a stationary ship did, in
+      // the same form as shipArrivedAt.
+      tick(shipHeadingTo){
+        for (const object of objects) {
+          object.fromCol = object.col;
+          object.fromRow = object.row;
+        }
+
+        let occupied = shipHeadingTo ? [shipCell, shipHeadingTo] : [shipCell];
+        let moves = resolveStreamMoves(occupied);
+        for (const [object, to] of moves) {
+          object.col = to.col;
+          object.row = to.row;
+        }
+
+        let cameUnder = !shipHeadingTo && [...moves.keys()].some(object => isAt(object, shipCell));
+        return cameUnder ? arriveAt(shipCell) : null;
+      },
+    };
   }
 
   // ---------- colours ----------
@@ -319,8 +479,20 @@
 
       case 'Gate':
         polygon(ctx, cx, cy, radius, 8, Math.PI / 8);
-        fillAndOutline(ctx, palette.gate, palette, tile);
-        drawLetter(ctx, object.letter, palette.gate, palette, cx, cy, tile, font);
+        if (object.open) {
+          // Just the frame of itself, to show that it can be walked through.
+          ctx.lineJoin = 'round';
+          ctx.lineWidth = Math.max(1, tile * 0.14);
+          ctx.strokeStyle = palette.outline;
+          ctx.stroke();
+          ctx.lineWidth = Math.max(1, tile * 0.07);
+          ctx.strokeStyle = palette.gate;
+          ctx.stroke();
+          drawLetter(ctx, object.letter, palette.outline, palette, cx, cy, tile, font);
+        } else {
+          fillAndOutline(ctx, palette.gate, palette, tile);
+          drawLetter(ctx, object.letter, palette.gate, palette, cx, cy, tile, font);
+        }
         break;
 
       case 'Finish':
@@ -369,5 +541,5 @@
     }
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, suggestLetter, pickPalette, drawObject, drawObjects };
+  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, suggestLetter, pickPalette, drawObject, drawObjects, hasFinish, createPuzzleGame };
 });

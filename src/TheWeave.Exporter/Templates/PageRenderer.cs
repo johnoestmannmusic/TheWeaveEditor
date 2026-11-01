@@ -4,6 +4,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using TheWeave.Core.Model;
 using TheWeave.Exporter;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace TheWeave.Exporter.Templates;
 
@@ -60,6 +62,7 @@ public sealed class PageRenderer
         sb.AppendLine($"  <title>{EscapeText(page.Title)}</title>");
         sb.AppendLine($"  <link href=\"{EscapeAttr(_project.Assets.CssPath)}?v={RuntimeAssets.Version}\" rel=\"stylesheet\">");
         sb.AppendLine($"  <script src=\"{EscapeAttr(_project.Assets.SokobanJsPath)}?v={RuntimeAssets.Version}\"></script>");
+        sb.AppendLine($"  <script src=\"{EscapeAttr(_project.Assets.PuzzleJsPath)}?v={RuntimeAssets.Version}\"></script>");
         sb.AppendLine($"  <script src=\"{EscapeAttr(_project.Assets.JsPath)}?v={RuntimeAssets.Version}\"></script>");
         sb.AppendLine();
         sb.AppendLine(PageConfigScriptRenderer.Render(page, _project));
@@ -124,7 +127,7 @@ public sealed class PageRenderer
                 : "";
 
         sb.AppendLine($"{pad}<!-- {SafeComment(node.Card.HeadingText)} -->");
-        sb.AppendLine($"{pad}<div class=\"node\"{persistentAttr}{modalAttr}{travelHomeAttr} style=\"left: {Px(left)}px; top: {Px(top)}px;\">");
+        sb.AppendLine($"{pad}<div class=\"node\"{persistentAttr}{modalAttr}{travelHomeAttr}{BuildPuzzleAttr(node)} style=\"left: {Px(left)}px; top: {Px(top)}px;\">");
         sb.AppendLine($"{pad}  <img class=\"nodeImage\" src=\"{iconSrc}\">");
 
         sb.AppendLine();
@@ -224,6 +227,25 @@ public sealed class PageRenderer
 
     // Mirrors main.js's onInteract, which is what Z/gamepad A will actually do on this card: a track
     // opens Track Focus, unless it's a travel location, where Z travels instead.
+    private static readonly JsonSerializerOptions PuzzleJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
+
+    // A track's puzzle, for main.js to play on its Sokoban board. Only where it could be played: the
+    // board needs Track Focus and the art. The id is another exception to Node.Id staying out of the
+    // HTML, for the same reason as a modal's: main.js remembers across visits which were solved.
+    private static string BuildPuzzleAttr(Node node)
+    {
+        var puzzle = node.Puzzle;
+        if (puzzle is null || !OpensTrackFocus(node.Card) || string.IsNullOrEmpty(node.Card.CoverImagePath))
+            return "";
+
+        var json = JsonSerializer.Serialize(new { id = node.Id, objects = puzzle.Objects, palette = puzzle.Palette }, PuzzleJsonOptions);
+        return $" data-puzzle=\"{EscapeAttr(json)}\"";
+    }
+
     private static bool OpensTrackFocus(Card card) =>
         card.Audio is not null && card.Action.Kind != ActionKind.Travel && card.Size != CardSize.Modal;
 

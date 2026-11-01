@@ -212,3 +212,73 @@ test('the same code drives a 10x10 board over 240px album art at any whole-numbe
     assert.deepEqual(m.cell, { col: 9, row: 0 });
   }
 });
+
+test('onArrive is told about each square as it is reached', () => {
+  let reached = [];
+  let m = mover(mapGrid(), { onArrive: (cell) => reached.push(cell) });
+  m.press('right');
+  m.update(STEP_MS * 2.5);
+  m.release('right');
+  assert.deepEqual(reached, [{ col: 6, row: 5 }, { col: 7, row: 5 }]);
+  m.update(STEP_MS);
+  assert.deepEqual(reached[2], { col: 8, row: 5 });
+});
+
+test('hasInput is true for a held direction or a waiting press, and false otherwise', () => {
+  let m = mover();
+  assert.equal(m.hasInput, false);
+  m.press('right');
+  assert.equal(m.hasInput, true);
+  m.release('right');
+  assert.equal(m.hasInput, true); // the tap is still waiting for its step
+  m.update(STEP_MS);
+  assert.equal(m.hasInput, false);
+});
+
+test('queueing from onArrive continues straight on, with no time lost', () => {
+  let m;
+  m = mover(mapGrid(), { onArrive: (cell) => { if (cell.col < 8) m.queue('right'); } });
+  m.queue('right');
+  m.update(STEP_MS * 2.5);
+  let start = mapGrid().centerOf({ col: 5, row: 5 });
+  assert.deepEqual(m.position, { x: start.x + 150 * 2.5, y: start.y });
+});
+
+test('queue asks for one step, like a tap, without anything being held', () => {
+  let m = mover();
+  m.queue('down');
+  m.update(STEP_MS);
+  m.update(STEP_MS);
+  assert.deepEqual(m.cell, { col: 5, row: 6 });
+  assert.equal(m.isMoving, false);
+});
+
+test('a queued step still has to be allowed', () => {
+  let m = mover(mapGrid(), { canEnter: () => false });
+  m.queue('down');
+  m.update(STEP_MS);
+  assert.deepEqual(m.cell, { col: 5, row: 5 });
+});
+
+test('teleport jumps straight to a square, even from onArrive, and whatever is held carries on from there', () => {
+  let m;
+  m = mover(mapGrid(), { onArrive: (cell) => { if (cell.col === 6) m.teleport({ col: 0, row: 0 }); } });
+  m.press('right');
+  m.update(STEP_MS);
+  assert.deepEqual(m.position, mapGrid().centerOf({ col: 0, row: 0 }));
+  m.release('right');
+  m.update(STEP_MS);
+  assert.deepEqual(m.cell, { col: 1, row: 0 });
+  assert.equal(m.isMoving, false);
+});
+
+test('teleporting mid-step abandons that step', () => {
+  let m = mover();
+  m.press('right');
+  m.update(STEP_MS / 2);
+  m.release('right');
+  m.teleport({ col: 2, row: 2 });
+  assert.equal(m.isMoving, false);
+  m.update(STEP_MS);
+  assert.deepEqual(m.cell, { col: 2, row: 2 });
+});

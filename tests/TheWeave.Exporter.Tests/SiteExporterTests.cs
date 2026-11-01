@@ -25,6 +25,7 @@ public class SiteExporterTests
         Assert.True(File.Exists(Path.Combine(outDir.Path, "css", "main.css")));
         Assert.True(File.Exists(Path.Combine(outDir.Path, "jsx", "main.js")));
         Assert.Contains("createMover", File.ReadAllText(Path.Combine(outDir.Path, "jsx", "sokoban.js")));
+        Assert.Contains("createPuzzleGame", File.ReadAllText(Path.Combine(outDir.Path, "jsx", "puzzle.js")));
 
         var js = File.ReadAllText(Path.Combine(outDir.Path, "jsx", "main.js"));
         Assert.Contains("applyPageEffects", js);

@@ -8,6 +8,70 @@ namespace TheWeave.Exporter.Tests;
 
 public class PageRendererTests
 {
+    private static string RenderTrackWithPuzzle(Card card)
+    {
+        var project = new WeaveProject();
+        var page = new Page
+        {
+            Id = "ouros",
+            Background = new ImageRef { ImagePath = "img/ouros.png" },
+            Nodes =
+            {
+                new Node
+                {
+                    Id = "track",
+                    Card = card,
+                    Puzzle = new Puzzle
+                    {
+                        PaletteSource = "img/track.png",
+                        Palette = { ["wall"] = "#112233" },
+                        Objects =
+                        {
+                            new PuzzleObject { Kind = PuzzleObjectKind.Gate, Col = 2, Row = 3, Letter = "A" },
+                            new PuzzleObject { Kind = PuzzleObjectKind.Stream, Col = 4, Row = 5, Direction = PuzzleDirection.Left },
+                        },
+                    },
+                },
+            },
+        };
+        project.Pages.Add(page);
+        return new PageRenderer(project).RenderPage(page);
+    }
+
+    private static Card PlayableCard() => new() { CoverImagePath = "img/track.png", Audio = new AudioRef { Url = "track.ogg" } };
+
+    [Fact]
+    public void RenderPage_WritesAPlayablePuzzle_AsEscapedJson()
+    {
+        var html = RenderTrackWithPuzzle(PlayableCard());
+
+        var attr = System.Text.RegularExpressions.Regex.Match(html, "data-puzzle=\"([^\"]*)\"").Groups[1].Value;
+        var json = System.Net.WebUtility.HtmlDecode(attr);
+        Assert.Equal(
+            "{\"id\":\"track\",\"objects\":[{\"kind\":\"Gate\",\"col\":2,\"row\":3,\"letter\":\"A\"},{\"kind\":\"Stream\",\"col\":4,\"row\":5,\"direction\":\"Left\"}],\"palette\":{\"wall\":\"#112233\"}}",
+            json);
+    }
+
+    [Fact]
+    public void RenderPage_LeavesOutAPuzzleThatCantBePlayed()
+    {
+        Assert.DoesNotContain("data-puzzle", RenderTrackWithPuzzle(new Card { CoverImagePath = "img/track.png" }));
+        Assert.DoesNotContain("data-puzzle", RenderTrackWithPuzzle(new Card { Audio = new AudioRef { Url = "track.ogg" } }));
+
+        var travel = PlayableCard();
+        travel.Action = new CardAction { Kind = ActionKind.Travel, TargetPageId = "ouros" };
+        Assert.DoesNotContain("data-puzzle", RenderTrackWithPuzzle(travel));
+    }
+
+    [Fact]
+    public void RenderPage_ANodeWithNoPuzzle_HasNoPuzzleAttribute()
+    {
+        var project = new WeaveProject();
+        var page = new Page { Id = "ouros", Background = new ImageRef { ImagePath = "img/ouros.png" }, Nodes = { new Node { Id = "track", Card = PlayableCard() } } };
+
+        Assert.DoesNotContain("data-puzzle", new PageRenderer(project).RenderPage(page));
+    }
+
     private const string ExactGridJson =
         "{\"columns\":20,\"rows\":10,\"cellWidth\":150,\"cellHeight\":150,\"originX\":0,\"originY\":150}";
 
@@ -53,6 +117,7 @@ public class PageRendererTests
               <title>The Weave Explorer</title>
               <link href="css/main.css?v={{RuntimeAssets.Version}}" rel="stylesheet">
               <script src="jsx/sokoban.js?v={{RuntimeAssets.Version}}"></script>
+              <script src="jsx/puzzle.js?v={{RuntimeAssets.Version}}"></script>
               <script src="jsx/main.js?v={{RuntimeAssets.Version}}"></script>
 
               <script>

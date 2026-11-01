@@ -12,8 +12,9 @@ public static class AssetCopier
         WriteFile(Path.Combine(outputDir, project.Assets.CssPath), RuntimeAssets.ReadMainCss());
         WriteFile(Path.Combine(outputDir, project.Assets.JsPath), RuntimeAssets.ReadMainJs());
         WriteFile(Path.Combine(outputDir, project.Assets.SokobanJsPath), RuntimeAssets.ReadSokobanJs());
+        WriteFile(Path.Combine(outputDir, project.Assets.PuzzleJsPath), RuntimeAssets.ReadPuzzleJs());
         WriteFile(Path.Combine(outputDir, project.Assets.ShellJsPath), RuntimeAssets.ReadShellJs());
-        return new[] { Normalize(project.Assets.CssPath), Normalize(project.Assets.JsPath), Normalize(project.Assets.SokobanJsPath), Normalize(project.Assets.ShellJsPath) };
+        return new[] { Normalize(project.Assets.CssPath), Normalize(project.Assets.JsPath), Normalize(project.Assets.SokobanJsPath), Normalize(project.Assets.PuzzleJsPath), Normalize(project.Assets.ShellJsPath) };
     }
 
     /// <summary>

@@ -53,7 +53,7 @@ public class WeaveProjectSerializerTests
 
         var json = WeaveProjectSerializer.Serialize(project);
 
-        Assert.DoesNotContain("Puzzle", json);
+        Assert.DoesNotContain("\"Puzzle\"", json);
         Assert.Null(WeaveProjectSerializer.Deserialize(json).Pages[0].Nodes[0].Puzzle);
     }
 
