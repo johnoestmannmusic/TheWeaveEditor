@@ -19,18 +19,10 @@ public sealed class Page
     public int? WorldHeightPx { get; set; }
 
     /// <summary>
-    /// True (the default) makes this page a globe: flying off any edge wraps seamlessly to the
-    /// opposite edge, in both X and Y. Set false for a page with genuine hard edges - e.g. The
-    /// Weave, whose two sectors are joined side-by-side into one wide, non-wrapping map.
-    /// </summary>
-    public bool Wraps { get; set; } = true;
-
-    /// <summary>
     /// True (the default) draws a cosmetic globe-curvature hint on this page - a faint edge
     /// vignette plus nodes scaling/fading slightly as they near the screen edge, to sell a
-    /// sense of a curved horizon. Purely visual, and independent of Wraps (a page can wrap
-    /// without the visual, or vice versa), but in practice usually toggled off together with
-    /// Wraps - e.g. for a building interior, where "curved horizon" makes no sense.
+    /// sense of a curved horizon. Purely visual - e.g. toggled off for a building interior, where
+    /// "curved horizon" makes no sense.
     /// </summary>
     public bool GlobeEffect { get; set; } = true;
 

@@ -449,10 +449,6 @@ function renderPageInspector(container, page) {
       <input type="text" id="f-page-bg" value="${escapeAttr(page.background?.imagePath ?? '')}">
     </div>
     <div class="field checkbox">
-      <input type="checkbox" id="f-page-wraps" ${page.wraps !== false ? 'checked' : ''}>
-      <label for="f-page-wraps">Wraps like a globe (flying off an edge wraps to the opposite edge)</label>
-    </div>
-    <div class="field checkbox">
       <input type="checkbox" id="f-page-globe-effect" ${page.globeEffect !== false ? 'checked' : ''}>
       <label for="f-page-globe-effect">Globe curvature visual (edge vignette + node fisheye - e.g. turn off for a building interior)</label>
     </div>
@@ -494,7 +490,6 @@ function renderPageInspector(container, page) {
       title: document.getElementById('f-page-title').value,
       outputFileName: document.getElementById('f-page-file').value,
       backgroundImagePath: document.getElementById('f-page-bg').value,
-      wraps: document.getElementById('f-page-wraps').checked,
       globeEffect: document.getElementById('f-page-globe-effect').checked,
       isHome: document.getElementById('f-page-is-home').checked,
       defaultSpawnX: numOrNull('f-page-spawn-x'),
@@ -510,7 +505,6 @@ function renderPageInspector(container, page) {
     document.getElementById(id).addEventListener('blur', savePage);
 
   // A checkbox has no meaningful "blur to commit" moment - it saves on change instead.
-  document.getElementById('f-page-wraps').addEventListener('change', savePage);
   document.getElementById('f-page-globe-effect').addEventListener('change', savePage);
   document.getElementById('f-page-is-home').addEventListener('change', savePage);
 

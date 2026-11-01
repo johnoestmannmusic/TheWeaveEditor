@@ -8,6 +8,9 @@ namespace TheWeave.Exporter.Tests;
 
 public class PageRendererTests
 {
+    private const string SingleSectorGridJson =
+        "{\"columns\":19,\"rows\":10,\"cellWidth\":150.5,\"cellHeight\":150.8896797153025,\"originX\":150.5,\"originY\":150.8896797153025,\"gapColumns\":[]}";
+
     // A minimal single-node page, checked byte-for-byte against a pinned expected output -
     // the one true "golden file" case, kept deliberately small so it's easy to eyeball.
     [Fact]
@@ -47,10 +50,11 @@ public class PageRendererTests
               <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
               <title>The Weave Explorer</title>
               <link href="css/main.css?v={{RuntimeAssets.Version}}" rel="stylesheet">
+              <script src="jsx/sokoban.js?v={{RuntimeAssets.Version}}"></script>
               <script src="jsx/main.js?v={{RuntimeAssets.Version}}"></script>
 
               <script>
-                window.__weavePage = {"wraps":true,"globeEffect":true,"worldWidth":3010,"worldHeight":1696,"defaultSpawnX":null,"defaultSpawnY":null,"listeningRadiusPx":105,"isHomePage":false};
+                window.__weavePage = {"globeEffect":true,"worldWidth":3010,"worldHeight":1696,"defaultSpawnX":null,"defaultSpawnY":null,"listeningRadiusPx":105,"isHomePage":false,"grid":{{SingleSectorGridJson}}};
               </script>
               </head>
 
@@ -316,24 +320,23 @@ public class PageRendererTests
     }
 
     [Fact]
-    public void RenderPage_WeavePageConfig_UsesPageWorldSizeAndWrapsFlag()
+    public void RenderPage_WeavePageConfig_UsesPageWorldSizeAndGrid()
     {
         var project = new WeaveProject { DefaultWorldWidthPx = 3010, DefaultWorldHeightPx = 1696 };
-        var wrapping = MakePage("planet", "planet.html");
-        project.Pages.Add(wrapping);
+        var planet = MakePage("planet", "planet.html");
+        project.Pages.Add(planet);
 
-        var wrappingHtml = new PageRenderer(project).RenderPage(wrapping);
-        Assert.Contains("window.__weavePage = {\"wraps\":true,\"globeEffect\":true,\"worldWidth\":3010,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"listeningRadiusPx\":105,\"isHomePage\":false};", wrappingHtml);
+        var planetHtml = new PageRenderer(project).RenderPage(planet);
+        Assert.Contains("window.__weavePage = {\"globeEffect\":true,\"worldWidth\":3010,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"listeningRadiusPx\":105,\"isHomePage\":false,\"grid\":{\"columns\":19,\"rows\":10,\"cellWidth\":150.5,\"cellHeight\":150.8896797153025,\"originX\":150.5,\"originY\":150.8896797153025,\"gapColumns\":[]}};", planetHtml);
 
         var merged = MakePage("index", "index.html");
-        merged.Wraps = false;
         merged.GlobeEffect = false;
         merged.WorldWidthPx = 6020;
         merged.WorldHeightPx = 1696;
         project.Pages.Add(merged);
 
         var mergedHtml = new PageRenderer(project).RenderPage(merged);
-        Assert.Contains("window.__weavePage = {\"wraps\":false,\"globeEffect\":false,\"worldWidth\":6020,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"listeningRadiusPx\":105,\"isHomePage\":false};", mergedHtml);
+        Assert.Contains("window.__weavePage = {\"globeEffect\":false,\"worldWidth\":6020,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"listeningRadiusPx\":105,\"isHomePage\":false,\"grid\":{\"columns\":38,\"rows\":10,\"cellWidth\":150.5,\"cellHeight\":150.8896797153025,\"originX\":150.5,\"originY\":150.8896797153025,\"gapColumns\":[19]}};", mergedHtml);
     }
 
     [Fact]

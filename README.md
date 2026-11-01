@@ -45,11 +45,14 @@ Neocities, replacing hand-authoring HTML per location.
 - Configurable ship spawn points: a page's own default landing spot, plus directional defaults
   for travel links (arriving at a planet centers on its map; returning to the starting map lands
   back near the hub icon you left, nudged just above it) — all overridable per travel link.
-- Keyboard and gamepad controls: arrow keys/stick to fly, Z/gamepad A to interact (play a track,
-  travel, or close a popup), X/gamepad X to step through a multi-part location's nested parts in
-  place. Contextual hint icons show next to whichever action is actually available.
-- Optional per-page world wrapping (seamless edge-to-edge looping) and a cosmetic globe-curvature
-  vignette, independently toggleable per page.
+- Sokoban-style grid movement along the grid drawn on every map (columns A-S, rows 0-9): hold an
+  arrow key, D-pad direction, or stick direction to walk square by square, and let go to stop on
+  the square you're heading into. Every map has hard edges. The movement itself lives in
+  `runtime/sokoban.js`, with no knowledge of the DOM or these maps, so other boards can reuse it.
+- Keyboard and gamepad controls: Z/gamepad A to interact (travel, or close a popup), X/gamepad X to
+  step through a multi-part location's nested parts in place. Contextual hint icons show next to
+  whichever action is actually available.
+- An optional cosmetic globe-curvature vignette, toggleable per page.
 - Export cleans up after itself: files from a previous export that the current run didn't
   (re)write — a renamed/deleted page, an orphaned cover image — are removed, so exporting
   repeatedly to the same folder doesn't accumulate stale files. It only ever touches the
@@ -60,8 +63,8 @@ Neocities, replacing hand-authoring HTML per location.
 - `src/TheWeave.Core` — the project file schema, serialization, and validation. No UI or I/O
   framework dependencies beyond the .NET BCL, so it's fully unit-testable in isolation.
 - `src/TheWeave.Exporter` — renders a project to a static HTML/CSS/JS site. Also owns the
-  canonical shared runtime (`runtime/main.css`, `runtime/main.js`, `runtime/shell.js`) embedded
-  in the assembly.
+  canonical shared runtime (`runtime/main.css`, `runtime/main.js`, `runtime/sokoban.js`,
+  `runtime/shell.js`) embedded in the assembly.
 - `src/TheWeave.Importer` — parses an existing hand-authored site into a project file, for
   one-time migration. Built on [AngleSharp](https://anglesharp.github.io/).
 - `src/TheWeave.EditorApp` — the desktop editor shell, built on
@@ -76,7 +79,10 @@ Requires the .NET SDK (developed against .NET 10).
 
 ```
 dotnet test
+node --test tests/runtime/*.test.js
 ```
+
+The second command covers the runtime's grid movement module and needs Node.js 20 or newer.
 
 To run the editor itself:
 

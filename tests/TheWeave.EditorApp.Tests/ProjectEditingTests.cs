@@ -215,24 +215,6 @@ public class ProjectEditingTests
     }
 
     [Fact]
-    public void ApplyPageEdit_Wraps_OnlyAppliedWhenPresent()
-    {
-        var page = new Page { Id = "ouros", Title = "Ouros", OutputFileName = "ouros.html" };
-        var project = new WeaveProject();
-        project.Pages.Add(page);
-        Assert.True(page.Wraps); // default
-
-        ProjectEditing.ApplyPageEdit(project, page, new PageEditRequest { Wraps = false });
-        Assert.False(page.Wraps);
-
-        ProjectEditing.ApplyPageEdit(project, page, new PageEditRequest { Title = "Ouros" }); // Wraps omitted
-        Assert.False(page.Wraps); // untouched - null means "leave as-is"
-
-        ProjectEditing.ApplyPageEdit(project, page, new PageEditRequest { Wraps = true });
-        Assert.True(page.Wraps);
-    }
-
-    [Fact]
     public void ApplyPageEdit_GlobeEffect_OnlyAppliedWhenPresent()
     {
         var page = new Page { Id = "ouros", Title = "Ouros", OutputFileName = "ouros.html" };

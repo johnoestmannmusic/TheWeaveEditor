@@ -166,8 +166,6 @@ internal static class ProjectEditing
         if (!string.IsNullOrWhiteSpace(edit.BackgroundImagePath))
             page.Background = new ImageRef { ImagePath = edit.BackgroundImagePath.Trim() };
 
-        if (edit.Wraps is bool wraps)
-            page.Wraps = wraps;
 
         if (edit.GlobeEffect is bool globeEffect)
             page.GlobeEffect = globeEffect;

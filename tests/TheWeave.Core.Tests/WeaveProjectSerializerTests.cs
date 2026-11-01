@@ -112,26 +112,6 @@ public class WeaveProjectSerializerTests
     }
 
     [Fact]
-    public void Page_WrapsDefaultsToTrue()
-    {
-        var page = new Page();
-
-        Assert.True(page.Wraps);
-    }
-
-    [Fact]
-    public void RoundTrip_PreservesExplicitWrapsFalse()
-    {
-        var original = BuildSampleProject();
-        original.Pages[0].Wraps = false;
-
-        var json = WeaveProjectSerializer.Serialize(original);
-        var restored = WeaveProjectSerializer.Deserialize(json);
-
-        Assert.False(Assert.Single(restored.Pages).Wraps);
-    }
-
-    [Fact]
     public void Page_GlobeEffectDefaultsToTrue()
     {
         var page = new Page();

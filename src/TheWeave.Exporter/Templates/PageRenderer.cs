@@ -59,6 +59,7 @@ public sealed class PageRenderer
         sb.AppendLine("  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\">");
         sb.AppendLine($"  <title>{EscapeText(page.Title)}</title>");
         sb.AppendLine($"  <link href=\"{EscapeAttr(_project.Assets.CssPath)}?v={RuntimeAssets.Version}\" rel=\"stylesheet\">");
+        sb.AppendLine($"  <script src=\"{EscapeAttr(_project.Assets.SokobanJsPath)}?v={RuntimeAssets.Version}\"></script>");
         sb.AppendLine($"  <script src=\"{EscapeAttr(_project.Assets.JsPath)}?v={RuntimeAssets.Version}\"></script>");
         sb.AppendLine();
         sb.AppendLine(PageConfigScriptRenderer.Render(page, _project));
