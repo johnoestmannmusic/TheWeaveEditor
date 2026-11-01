@@ -7,7 +7,8 @@
 // sokoban.js, which owns the movement itself). Press Z (keyboard) or A (gamepad) to interact with
 // whatever location the ship is standing on - travels to its linked page, or opens a track's Track
 // Focus screen. When that location has extra nested locations tucked inside its card (a multi-part
-// story), press X (keyboard) or X (gamepad) in Track Focus to step between them.
+// story), press X (keyboard) or X (gamepad) in Track Focus to step between them. Z / A in Track Focus
+// starts the Sokoban board over the album art, and Esc (keyboard) or B (gamepad) backs out of it.
 //
 // This file is the canonical shared runtime owned by TheWeave.Exporter - it's
 // generated into every exported site's jsx/main.js, not hand-edited there.
@@ -29,6 +30,10 @@ let modalQueue = [];
 let modalBackdrop = null;
 // The open Track Focus screen's root element, or null while it's closed - see openTrackFocus.
 let trackFocusEl = null;
+let trackFocusScale = 1; // whole-number scale the art is drawn at - see updateTrackFocusScale
+// The Sokoban board's own mover and ship while it's being played, null otherwise - see startBoardGame.
+let boardMover = null;
+let boardShipEl = null;
 let activeNode = null;   // the current track: activeRoot, or the chain member Track Focus is on
 let activeRoot = null;   // the top-level node the ship is currently within range of
 let chainIndex = 0;      // activeNode's position within activeRoot's chain
@@ -474,16 +479,17 @@ function bindInput(){
       e.preventDefault();
     }
 
-    if (direction) playerMover.press(direction);
+    // Not on e.repeat: a key held since before the board started shouldn't reach its new mover.
+    if (direction && !e.repeat) activeMover().press(direction);
 
     if ((e.key === 'z' || e.key === 'Z') && !e.repeat) onInteractButton();
     if ((e.key === 'x' || e.key === 'X') && !e.repeat) cycleChainNode();
-    if (e.key === 'Escape' && !e.repeat) closeTrackFocus();
+    if (e.key === 'Escape' && !e.repeat) onBackButton();
   });
 
   document.addEventListener('keyup', (e) => {
     let direction = KEY_DIRECTIONS[e.key];
-    if (direction) playerMover.release(direction);
+    if (direction) activeMover().release(direction);
   });
 
   window.addEventListener('resize', updateTrackFocusScale);
@@ -491,10 +497,7 @@ function bindInput(){
 
   // A key released while another window has focus never fires keyup here - without this, the ship
   // would keep walking until it hit the edge of the map.
-  window.addEventListener('blur', () => {
-    playerMover.releaseAll();
-    padDirection = null;
-  });
+  window.addEventListener('blur', releaseDirections);
 
   // Gamepads don't fire events for stick movement, so they're polled each
   // frame in updateInput() instead - nothing to bind here besides buttons,
@@ -543,7 +546,7 @@ function updateInput(){
 
       // Standard gamepad mapping: button 1 is B (Xbox) / Circle (PlayStation).
       let bDown = !!(pad.buttons[1] && pad.buttons[1].pressed);
-      if (bDown && !gamepadBackWasDown) closeTrackFocus();
+      if (bDown && !gamepadBackWasDown) onBackButton();
       gamepadBackWasDown = bDown;
 
       // Standard gamepad mapping: button 2 is X (Xbox) / Square (PlayStation).
@@ -556,8 +559,8 @@ function updateInput(){
   }
 
   if (nextPadDirection !== padDirection) {
-    if (padDirection) playerMover.release(padDirection);
-    if (nextPadDirection) playerMover.press(nextPadDirection);
+    if (padDirection) activeMover().release(padDirection);
+    if (nextPadDirection) activeMover().press(nextPadDirection);
     padDirection = nextPadDirection;
   }
 }
@@ -594,6 +597,17 @@ function updateShip(dt){
 
   syncShipToMover();
   renderShip();
+}
+
+// Whichever mover the arrow keys, D-pad and stick are currently driving.
+function activeMover(){
+  return boardMover ?? playerMover;
+}
+
+// Forgets every held direction, including any a new mover should never inherit.
+function releaseDirections(){
+  activeMover().releaseAll();
+  padDirection = null;
 }
 
 function syncShipToMover(){
@@ -850,7 +864,7 @@ function canAdvanceChain(member){
 // X (keyboard) / X (gamepad): in Track Focus, step to the next part of the current location, wrapping
 // back to the first. Its music crossfades on its own, since updateLocationAudio follows activeNode.
 function cycleChainNode(){
-  if (!trackFocusEl) return;
+  if (!trackFocusEl || boardMover) return;
 
   let chain = nodeMeta.get(activeRoot).chain;
   if (chain.length <= 1 || !canAdvanceChain(activeNode)) return;
@@ -866,11 +880,19 @@ function isScreenCovered(){
 }
 
 // Z (keyboard) / A (gamepad). Whatever is covering the screen takes this over entirely: a modal
-// card (see modalQueue) first, then Track Focus - closing it, never onInteract().
+// card (see modalQueue) first, then Track Focus, which starts its board. It has no use on the board
+// itself yet.
 function onInteractButton(){
   if (modalQueue.length > 0) closeCurrentModal();
-  else if (trackFocusEl) closeTrackFocus();
+  else if (boardMover) return;
+  else if (trackFocusEl) startBoardGame();
   else onInteract();
+}
+
+// Esc (keyboard) / B (gamepad): back out one level, from the board to Track Focus to the map.
+function onBackButton(){
+  if (boardMover) leaveBoardGame();
+  else closeTrackFocus();
 }
 
 function onInteract(){
@@ -937,10 +959,11 @@ function renderTrackFocus(){
     art.src = cover.src;
     frame.appendChild(art);
 
-    // Empty for now: where a 10x10 board laid over the art goes, sized to exactly match it - see
-    // updateTrackFocusScale for the tile size it gets to work with.
+    // Where the 10x10 board laid over the art goes, sized to exactly match it - see startBoardGame,
+    // and updateTrackFocusScale for the tile size it gets to work with.
     let board = document.createElement('div');
     board.id = 'trackFocusBoard';
+    if (boardMover) board.appendChild(buildBoardShip());
     frame.appendChild(board);
 
     content.appendChild(frame);
@@ -957,24 +980,35 @@ function renderTrackFocus(){
 
   let actions = document.createElement('div');
   actions.id = 'trackFocusActions';
-  if (nodeMeta.get(activeRoot).chain.length > 1) {
-    actions.appendChild(buildTrackFocusAction('[ Next ]', 'img/ui/key_x.gif', cycleChainNode));
+  if (boardMover) {
+    actions.appendChild(buildTrackFocusAction('[ Leave ]', ESC_HINT, leaveBoardGame));
+  } else {
+    if (cover) actions.appendChild(buildTrackFocusAction('[ Start ]', 'img/ui/key_z.gif', startBoardGame));
+    if (nodeMeta.get(activeRoot).chain.length > 1) {
+      actions.appendChild(buildTrackFocusAction('[ Next ]', 'img/ui/key_x.gif', cycleChainNode));
+    }
+    actions.appendChild(buildTrackFocusAction('[ Close ]', ESC_HINT, closeTrackFocus));
+    // Only reachable from here for a chain's later parts, since their cards never open on the map.
+    if (download) actions.appendChild(download.cloneNode(true));
   }
-  actions.appendChild(buildTrackFocusAction('[ Close ]', 'img/ui/key_z.gif', closeTrackFocus));
-  // Only reachable from here for a chain's later parts, since their cards never open on the map.
-  if (download) actions.appendChild(download.cloneNode(true));
   text.appendChild(actions);
 
   content.appendChild(text);
   trackFocusEl.appendChild(content);
 
   // Clicking anywhere that isn't the art or the text dismisses it, same as a modal's backdrop.
+  // Not while playing, though: nobody should lose their place on the board to a stray click.
   content.addEventListener('click', (e) => {
-    if (e.target === content) closeTrackFocus();
+    if (e.target === content && !boardMover) closeTrackFocus();
   });
+
+  trackFocusEl.classList.toggle('boardPlaying', boardMover !== null);
 }
 
-function buildTrackFocusAction(label, hintSrc, onClick){
+// The key hint for an action with no drawn key to show.
+const ESC_HINT = 'Esc';
+
+function buildTrackFocusAction(label, hint, onClick){
   let action = document.createElement('span');
   action.className = 'trackFocusAction';
 
@@ -983,10 +1017,14 @@ function buildTrackFocusAction(label, hintSrc, onClick){
   text.addEventListener('click', onClick);
   action.appendChild(text);
 
-  let hint = document.createElement('img');
-  hint.className = 'keyHint';
-  hint.src = hintSrc;
-  action.appendChild(hint);
+  if (hint === ESC_HINT) {
+    action.append(' ' + hint);
+  } else {
+    let hintImg = document.createElement('img');
+    hintImg.className = 'keyHint';
+    hintImg.src = hint;
+    action.appendChild(hintImg);
+  }
 
   return action;
 }
@@ -1005,6 +1043,7 @@ function closeTrackFocus(){
 // source pixels each - at a whole-number scale. So that's what this picks: the largest that fits.
 const TRACK_FOCUS_ART_PX = 240;
 const TRACK_FOCUS_BOARD_SQUARES = 10;
+const BOARD_TILE_PX = TRACK_FOCUS_ART_PX / TRACK_FOCUS_BOARD_SQUARES;
 const TRACK_FOCUS_MAX_HEIGHT_FRACTION = 0.8;
 const TRACK_FOCUS_MAX_WIDTH_FRACTION = 0.45;
 
@@ -1015,10 +1054,69 @@ function updateTrackFocusScale(){
     window.innerHeight * TRACK_FOCUS_MAX_HEIGHT_FRACTION,
     window.innerWidth * TRACK_FOCUS_MAX_WIDTH_FRACTION
   );
-  let scale = Math.max(1, Math.floor(available / TRACK_FOCUS_ART_PX));
+  trackFocusScale = Math.max(1, Math.floor(available / TRACK_FOCUS_ART_PX));
 
-  trackFocusEl.style.setProperty('--focus-scale', scale);
-  trackFocusEl.style.setProperty('--focus-cell', (TRACK_FOCUS_ART_PX / TRACK_FOCUS_BOARD_SQUARES * scale) + 'px');
+  trackFocusEl.style.setProperty('--focus-scale', trackFocusScale);
+  trackFocusEl.style.setProperty('--focus-cell', (BOARD_TILE_PX * trackFocusScale) + 'px');
+}
+
+// The Sokoban board: the ship walking a 10x10 grid over the album art, on the same reusable movement
+// as the map (see sokoban.js). Everything is measured in the art's own pixels, then multiplied up by
+// trackFocusScale to draw, so a window resize mid-game has nothing to rebuild and the ship always
+// matches the art's pixel size. There's nothing to push or solve on it yet - this is just the ship.
+const BOARD_STEP_MS = 180;
+const BOARD_START_CELL = { col: 5, row: 9 };
+// img/ui/pilot-ship.png's own size.
+const BOARD_SHIP_WIDTH = 12;
+const BOARD_SHIP_HEIGHT = 16;
+
+function startBoardGame(){
+  if (!trackFocusEl || boardMover || !document.getElementById('trackFocusBoard')) return;
+
+  releaseDirections();
+  boardMover = WeaveSokoban.createMover(
+    WeaveSokoban.createGrid({
+      columns: TRACK_FOCUS_BOARD_SQUARES,
+      rows: TRACK_FOCUS_BOARD_SQUARES,
+      cellWidth: BOARD_TILE_PX,
+      cellHeight: BOARD_TILE_PX,
+    }),
+    { cell: BOARD_START_CELL, stepMs: BOARD_STEP_MS }
+  );
+  renderTrackFocus();
+  renderBoardShip();
+}
+
+function leaveBoardGame(){
+  if (!boardMover) return;
+
+  releaseDirections();
+  boardMover = null;
+  boardShipEl = null;
+  renderTrackFocus();
+}
+
+function buildBoardShip(){
+  boardShipEl = document.createElement('img');
+  boardShipEl.id = 'trackFocusBoardShip';
+  boardShipEl.src = 'img/ui/pilot-ship.png';
+  return boardShipEl;
+}
+
+function updateBoardGame(dtMs){
+  if (!boardMover) return;
+  boardMover.update(dtMs);
+  renderBoardShip();
+}
+
+function renderBoardShip(){
+  let position = boardMover.position;
+  boardShipEl.style.width = (BOARD_SHIP_WIDTH * trackFocusScale) + "px";
+  boardShipEl.style.height = (BOARD_SHIP_HEIGHT * trackFocusScale) + "px";
+  boardShipEl.style.left = ((position.x - BOARD_SHIP_WIDTH / 2) * trackFocusScale) + "px";
+  boardShipEl.style.top = ((position.y - BOARD_SHIP_HEIGHT / 2) * trackFocusScale) + "px";
+  // Sprite's forward points "up" at rest, same as the map ship - see renderShip.
+  boardShipEl.style.transform = "rotate(" + (FACING_ANGLES[boardMover.facing] + Math.PI / 2) + "rad)";
 }
 
 // Generic per-page visual effects (drifting sprites, a cross-fading second
@@ -1111,6 +1209,7 @@ function loop(timestamp){
   updateInput();
   updateShip(dt);
   updateView(dt * MS_PER_FRAME);
+  updateBoardGame(dt * MS_PER_FRAME);
   updateNodeProximity();
   updateLocationAudio(dt);
   updateHubMusicSignal();

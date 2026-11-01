@@ -335,7 +335,7 @@ h3 {
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
 }
 
-#trackFocusArt img {
+#trackFocusArt > img {
   position: absolute;
   top: 0;
   left: 0;
@@ -350,6 +350,20 @@ h3 {
   left: 0;
   width: 100%;
   height: 100%;
+}
+
+/* The board's squares, one source pixel wide, showing only once it's being played. */
+#trackFocus.boardPlaying #trackFocusBoard {
+  --board-line: calc(var(--focus-scale) * 1px);
+  background:
+    linear-gradient(to right, rgba(255, 255, 255, 0.3) var(--board-line), transparent var(--board-line)) 0 0 / var(--focus-cell) var(--focus-cell),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.3) var(--board-line), transparent var(--board-line)) 0 0 / var(--focus-cell) var(--focus-cell);
+}
+
+/* Drawn at the art's own pixel size - see main.js's renderBoardShip, which positions it. */
+#trackFocusBoardShip {
+  image-rendering: pixelated;
+  transform-origin: center center;
 }
 
 /* Everything in here flows normally - see the top of this file on the site-wide position:absolute

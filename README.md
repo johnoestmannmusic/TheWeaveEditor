@@ -53,12 +53,14 @@ Neocities, replacing hand-authoring HTML per location.
   the square you're heading into. Every map has hard edges. The movement itself lives in
   `runtime/sokoban.js`, with no knowledge of the DOM or these maps, so other boards can reuse it.
 - Keyboard and gamepad controls: Z/gamepad A to interact (travel, open a track's Track Focus screen,
-  or close a popup), X/gamepad X in Track Focus to step through a multi-part location's nested parts.
-  Contextual hint icons show next to whichever action is actually available.
+  start its Sokoban board, or close a popup), X/gamepad X in Track Focus to step through a multi-part
+  location's nested parts, Esc/gamepad B to back out. Contextual hints show next to whichever action
+  is actually available.
 - Track Focus: a full-screen view of a track, with its album art enlarged to a whole-number scale on
   the left and its title and poetry on the right, over the dimmed map and a blurred, blown-up copy
-  of the art. Z/gamepad A, gamepad B, Esc, or clicking the backdrop closes it; the track keeps
-  playing throughout.
+  of the art. Esc, gamepad B, or clicking the backdrop closes it; the track keeps playing throughout.
+- A Sokoban board over the album art, started with Z/gamepad A from Track Focus: the ship walks a
+  10x10 grid using the same movement as the map. There are no boxes or goals to it yet.
 - Static screens instead of a follow camera: each map splits into 10x5-square screens (4 per map, 8
   on The Weave), and walking off one slides the view to the next. The picture is drawn at a
   whole-number scale, with dark bars around it. Cards always fit on the screen.
