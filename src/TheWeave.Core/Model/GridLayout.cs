@@ -19,6 +19,13 @@ public sealed class GridLayout
     public const int RowCount = 10;
 
     /// <summary>
+    /// Where a planet is entered and left from: the top of its number column, one square left of A0.
+    /// Entering lands here (see PageRenderer.BuildTravelQuery), and a planet's node back to the home
+    /// page sits here unless moved.
+    /// </summary>
+    public static readonly GridCell EntrySquare = new(0, 0);
+
+    /// <summary>
     /// How many squares one static screen shows: a sector's columns halve into 10, so a left screen
     /// shows the number column and A-I, and a right screen shows J-S. Rows 0-9 halve into 5.
     ///

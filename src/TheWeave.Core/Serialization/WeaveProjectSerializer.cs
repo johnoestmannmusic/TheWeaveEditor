@@ -28,6 +28,15 @@ public static class WeaveProjectSerializer
         return project;
     }
 
+    /// <summary>The version a project file was saved at, without upgrading it - see ProjectMigrations.</summary>
+    public static int ReadSchemaVersion(string path)
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        return document.RootElement.TryGetProperty(nameof(WeaveProject.SchemaVersion), out var version)
+            ? version.GetInt32()
+            : ProjectMigrations.CurrentSchemaVersion;
+    }
+
     public static void SaveToFile(WeaveProject project, string path) =>
         File.WriteAllText(path, Serialize(project));
 

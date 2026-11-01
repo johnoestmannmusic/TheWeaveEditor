@@ -302,6 +302,7 @@ public static class Program
     // project state.
     private static void LoadProject(string path)
     {
+        var savedVersion = WeaveProjectSerializer.ReadSchemaVersion(path);
         _project = WeaveProjectSerializer.LoadFromFile(path, out var upgradeNotes);
         _projectPath = path;
         _contentRoot = Path.GetDirectoryName(Path.GetFullPath(path));
@@ -309,13 +310,13 @@ public static class Program
 
         if (upgradeNotes is not null)
         {
-            var backupPath = path + ".v1.bak";
+            var backupPath = $"{path}.v{savedVersion}.bak";
             if (!File.Exists(backupPath))
                 File.Copy(path, backupPath);
 
             WeaveProjectSerializer.SaveToFile(_project, path);
 
-            _startupWarnings = new List<string> { $"Project moved onto the map grid. The previous version is saved as {backupPath}." };
+            _startupWarnings = new List<string> { $"Project upgraded. The previous version is saved as {backupPath}." };
             _startupWarnings.AddRange(upgradeNotes);
         }
     }

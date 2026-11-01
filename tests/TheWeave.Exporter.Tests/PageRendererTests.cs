@@ -464,18 +464,14 @@ public class PageRendererTests
     }
 
     [Fact]
-    public void RenderPage_TravelFromHomePageWithNoExplicitSpawn_DefaultsToCenterOfTargetMap()
+    public void RenderPage_TravelFromHomePageWithNoExplicitSpawn_LandsOnTheEntrySquare()
     {
         var project = new WeaveProject { HomePageId = "index" };
         var index = MakePage("index", "index.html");
         var azurus = MakePage("azurus", "azurus.html");
-        azurus.WorldWidthPx = 3000;
-        azurus.WorldHeightPx = 2000;
 
-        // index is the hub (HomePageId) - traveling *from* it should land in the middle of the
-        // destination's own map, not wherever azurus's own "return to hub" node happens to sit
-        // (which the same no-explicit-spawn default uses for the *other* direction - see the
-        // reciprocal test below).
+        // index is the hub (HomePageId) - traveling *from* it always lands on the entry square, even
+        // if azurus's own "return to hub" node has been moved somewhere else.
         index.Nodes.Add(new Node
         {
             Id = "azurus-icon",
@@ -495,11 +491,11 @@ public class PageRendererTests
 
         var html = new PageRenderer(project).RenderPage(index);
 
-        Assert.Contains("<a href=\"./azurus.html?x=1500&amp;y=1000\">[ TRAVEL ]</a>", html);
+        Assert.Contains("<a href=\"./azurus.html?x=75&amp;y=225\">[ TRAVEL ]</a>", html);
     }
 
     [Fact]
-    public void RenderPage_TravelFromHomePageWithNoWorldSizeSet_DefaultsToCenterOfProjectDefaultSize()
+    public void RenderPage_TravelFromHomePage_EntrySquareFollowsTheTargetPagesOwnGrid()
     {
         var project = new WeaveProject { HomePageId = "index", DefaultWorldWidthPx = 3010, DefaultWorldHeightPx = 1696 };
         var index = MakePage("index", "index.html");
@@ -515,11 +511,11 @@ public class PageRendererTests
 
         var html = new PageRenderer(project).RenderPage(index);
 
-        Assert.Contains("<a href=\"./azurus.html?x=1505&amp;y=848\">[ TRAVEL ]</a>", html);
+        Assert.Contains("<a href=\"./azurus.html?x=75.25&amp;y=226.335\">[ TRAVEL ]</a>", html);
     }
 
     [Fact]
-    public void RenderPage_TravelBackToHomePageWithNoExplicitSpawn_UsesReciprocalNodePositionNudgedUp()
+    public void RenderPage_TravelBackToHomePageWithNoExplicitSpawn_LandsExactlyOnThePlanetsNode()
     {
         var project = new WeaveProject { HomePageId = "index" };
         var index = MakePage("index", "index.html");
@@ -532,9 +528,8 @@ public class PageRendererTests
             Y = 350,
             Card = new Card { HeadingText = "AZURUS", Action = new CardAction { Kind = ActionKind.Travel, TargetPageId = "azurus" } },
         });
-        // azurus isn't the hub, so the *other* direction's rule (center-of-map) doesn't apply
-        // here - this should still land back near the hub icon above, same as before HomePageId
-        // existed at all, just one square up so the ship doesn't spawn sitting right on the icon.
+        // azurus isn't the hub, so the *other* direction's rule (the entry square) doesn't apply here -
+        // this lands right on the hub icon above, making it obvious where the ship came from.
         azurus.Nodes.Add(new Node
         {
             Id = "return-to-weave",
@@ -546,8 +541,8 @@ public class PageRendererTests
         var html = new PageRenderer(project).RenderPage(azurus);
 
         // index is HomePageId, so its actual output file is theweave.html (see
-        // PageRenderer.HomePageFileName), not index.html. y=350-150=200.
-        Assert.Contains("<a href=\"./theweave.html?x=1101&amp;y=200\">[ TRAVEL ]</a>", html);
+        // PageRenderer.HomePageFileName), not index.html.
+        Assert.Contains("<a href=\"./theweave.html?x=1101&amp;y=350\">[ TRAVEL ]</a>", html);
     }
 
     [Fact]

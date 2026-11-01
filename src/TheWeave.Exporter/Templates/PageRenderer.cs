@@ -280,23 +280,16 @@ public sealed class PageRenderer
     // TravelSpawnX/Y are an explicit override - when neither is set, the default depends on
     // direction:
     //
-    // - Leaving the hub (sourcePage is WeaveProject.HomePageId) for a planet: land in the middle
-    //   of that planet's own map. A planet's "return to the hub" node - the thing a reciprocal
-    //   lookup would otherwise find - sits whereever its own author put a return button, usually
-    //   a corner, which is a strange place to *arrive* even though it's exactly right to arrive
-    //   *at* the hub itself. worldWidth/HeightPx match what PageConfigScriptRenderer computes
-    //   for that same page, so this always agrees with the actual rendered map size.
-    // - Any other direction (most commonly a planet's own "return to the hub" link): defaults to
-    //   wherever the *return trip* would land - the position of whichever node on the target page
-    //   has its own Travel action pointing back at sourcePage. This is what makes "travel to a
-    //   planet, then travel back to the hub" land the ship right back near the hub icon it just
-    //   left, without needing every reciprocal pair of travel links hand-tuned to agree - a real,
-    //   previously-stale problem (a hub icon moving after its planet's own return link had its
-    //   spawn coordinates typed in by hand once) that a computed default can't get wrong the way
-    //   a copy-pasted constant can. Landing back on WeaveProject.HomePageId specifically lands one
-    //   square above the hub icon, so the ship doesn't spawn sitting exactly on top of it - every
-    //   other reciprocal landing (a nested sub-location's own "back" link) still lands exactly on
-    //   the node, same as before.
+    // - Leaving the hub (sourcePage is WeaveProject.HomePageId) for a planet: land on the planet's
+    //   GridLayout.EntrySquare, where its node back to the hub also sits, so a planet is always
+    //   entered and left from the same place.
+    // - Any other direction (most commonly a planet's own "return to the hub" link): land exactly on
+    //   whichever node on the target page has its own Travel action pointing back at sourcePage. This
+    //   is what makes "travel to a planet, then travel back to the hub" put the ship back on the icon
+    //   it just left, making it obvious where it came from, without needing every reciprocal pair of
+    //   travel links hand-tuned to agree - a real, previously-stale problem (a hub icon moving after
+    //   its planet's own return link had its spawn coordinates typed in by hand once) that a computed
+    //   default can't get wrong the way a copy-pasted constant can.
     private string BuildTravelQuery(Page sourcePage, CardAction action)
     {
         var parts = new List<string>();
@@ -312,8 +305,9 @@ public sealed class PageRenderer
 
             if (targetPage is not null && _project.HomePageId is not null && sourcePage.Id == _project.HomePageId)
             {
-                x = (targetPage.WorldWidthPx ?? _project.DefaultWorldWidthPx) / 2.0;
-                y = (targetPage.WorldHeightPx ?? _project.DefaultWorldHeightPx) / 2.0;
+                var grid = GridLayout.For(targetPage, _project);
+                x = grid.ColumnCenter(GridLayout.EntrySquare.Col);
+                y = grid.RowCenter(GridLayout.EntrySquare.Row);
             }
             else
             {
@@ -322,8 +316,6 @@ public sealed class PageRenderer
                 {
                     x = reciprocal.Value.X;
                     y = reciprocal.Value.Y;
-                    if (targetPage is not null && targetPage.Id == _project.HomePageId)
-                        y -= GridLayout.For(targetPage, _project).CellHeight;
                 }
             }
         }
