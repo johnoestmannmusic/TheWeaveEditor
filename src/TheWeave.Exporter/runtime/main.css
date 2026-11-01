@@ -23,9 +23,9 @@
 }
 
 body {
-  /* 500px scaled by 6 */
-  width: 3010px;
-  height: 1696px;
+  /* 500x281 scaled by 6 */
+  width: 3000px;
+  height: 1686px;
   /* World coordinates start at the viewport's very corner, with nothing peeking out around the map
      at its hard edges. */
   margin: 0;
@@ -183,6 +183,13 @@ h3 {
 .nodeImage {
   /* 8px scaled by 6 */
   width: 48px;
+}
+
+/* A nested node is one more part of its root's location, reached with X, not a separate place on
+   the map - so it has no icon of its own. visibility rather than display, so the element keeps its
+   place in the layout. */
+.node .node > .nodeImage {
+  visibility: hidden;
 }
 
 /* Hint that X/gamepad X cycles to *this* node next (see updateChainHint() in main.js) - one

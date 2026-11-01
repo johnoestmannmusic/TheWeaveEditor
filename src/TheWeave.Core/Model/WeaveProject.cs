@@ -3,11 +3,12 @@ namespace TheWeave.Core.Model;
 /// <summary>The whole site: every page, node, and asset reference, in one file.</summary>
 public sealed class WeaveProject
 {
-    public int SchemaVersion { get; set; } = 1;
+    /// <summary>Which shape this project is in - see ProjectMigrations.</summary>
+    public int SchemaVersion { get; set; } = 2;
     public string Title { get; set; } = "";
 
-    public int DefaultWorldWidthPx { get; set; } = 3010;
-    public int DefaultWorldHeightPx { get; set; } = 1696;
+    public int DefaultWorldWidthPx { get; set; } = GridLayout.SectorWorldWidthPx;
+    public int DefaultWorldHeightPx { get; set; } = GridLayout.WorldHeightPx;
 
     public ProjectAssets Assets { get; set; } = new();
 

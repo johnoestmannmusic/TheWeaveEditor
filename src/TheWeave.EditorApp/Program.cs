@@ -27,6 +27,7 @@ public static class Program
     private static string? _projectPath;
     private static readonly EditorSettings _settings = EditorSettings.Load();
     private static UndoHistory _undoHistory = new();
+    private static List<string>? _startupWarnings; // see LoadProject
 
     /// <summary>
     /// Where this project's content assets (img/, fnt/) actually live on disk - the imported
@@ -94,12 +95,7 @@ public static class Program
         var pathToOpen = args.Length > 0 ? args[0] : _settings.LastProjectPath;
 
         if (pathToOpen is not null && File.Exists(pathToOpen))
-        {
-            _project = WeaveProjectSerializer.LoadFromFile(pathToOpen);
-            _projectPath = pathToOpen;
-            _contentRoot = Path.GetDirectoryName(Path.GetFullPath(pathToOpen));
-            _undoHistory = UndoHistory.Load(pathToOpen);
-        }
+            LoadProject(pathToOpen);
 
         var window = new PhotinoWindow()
             .SetTitle("The Weave Editor")
@@ -136,7 +132,8 @@ public static class Program
             switch (message.Type)
             {
                 case "ready":
-                    SendProjectState(window);
+                    SendProjectState(window, _startupWarnings);
+                    _startupWarnings = null;
                     break;
 
                 case "new-project":
@@ -216,13 +213,18 @@ public static class Program
                 case "add-node":
                     RequireProject();
                     var pageForAdd = RequirePage(message.PageId);
-                    ApplyMutation(window, () => ProjectEditing.AddNode(_project!, pageForAdd, message.ParentNodeId, message.X ?? 100, message.Y ?? 100));
+                    ApplyMutation(window, () => ProjectEditing.AddNode(_project!, pageForAdd, message.ParentNodeId, message.X, message.Y));
                     break;
 
                 case "update-node":
                     RequireProject();
-                    var nodeToEdit = RequireNode(RequirePage(message.PageId), message.NodeId);
-                    ApplyMutation(window, () => ProjectEditing.ApplyNodeEdit(nodeToEdit, message.Node ?? new NodeEditRequest()));
+                    var pageForEdit = RequirePage(message.PageId);
+                    var nodeToEdit = RequireNode(pageForEdit, message.NodeId);
+                    var nodeEdit = message.Node ?? new NodeEditRequest();
+                    // Rejects a taken square here, before ApplyMutation records an undo step for a
+                    // change that isn't going to happen.
+                    ProjectEditing.ResolveNodePosition(_project!, pageForEdit, nodeToEdit, nodeEdit.X, nodeEdit.Y);
+                    ApplyMutation(window, () => ProjectEditing.ApplyNodeEdit(_project!, pageForEdit, nodeToEdit, nodeEdit));
                     break;
 
                 case "delete-node":
@@ -288,12 +290,34 @@ public static class Program
         if (paths.Length == 0)
             return;
 
-        _project = WeaveProjectSerializer.LoadFromFile(paths[0]);
-        _projectPath = paths[0];
-        _contentRoot = Path.GetDirectoryName(Path.GetFullPath(paths[0]));
-        _undoHistory = UndoHistory.Load(paths[0]);
+        LoadProject(paths[0]);
         RememberLastProjectPath();
-        SendProjectState(window);
+        SendProjectState(window, _startupWarnings);
+        _startupWarnings = null;
+    }
+
+    // A project written by an older version gets upgraded as it loads (see ProjectMigrations), which
+    // can move things around - so the original file is kept as a backup, once, before the upgraded
+    // version replaces it. Anything the upgrade has to say is shown the next time the UI gets the
+    // project state.
+    private static void LoadProject(string path)
+    {
+        _project = WeaveProjectSerializer.LoadFromFile(path, out var upgradeNotes);
+        _projectPath = path;
+        _contentRoot = Path.GetDirectoryName(Path.GetFullPath(path));
+        _undoHistory = UndoHistory.Load(path);
+
+        if (upgradeNotes is not null)
+        {
+            var backupPath = path + ".v1.bak";
+            if (!File.Exists(backupPath))
+                File.Copy(path, backupPath);
+
+            WeaveProjectSerializer.SaveToFile(_project, path);
+
+            _startupWarnings = new List<string> { $"Project moved onto the map grid. The previous version is saved as {backupPath}." };
+            _startupWarnings.AddRange(upgradeNotes);
+        }
     }
 
     // Shared shape for every plain in-memory edit: record the pre-mutation state for undo,
@@ -387,12 +411,13 @@ public static class Program
             return;
 
         var result = await new SiteImporter().ImportDirectoryAsync(folders[0]);
+        var upgradeNotes = ProjectMigrations.Upgrade(result.Project) ?? new List<string>();
         _project = result.Project;
         _projectPath = null;
         _contentRoot = Path.GetFullPath(folders[0]);
         _undoHistory = new UndoHistory();
 
-        SendProjectState(window, result.Warnings.Select(w => w.ToString()).ToList());
+        SendProjectState(window, result.Warnings.Select(w => w.ToString()).Concat(upgradeNotes).ToList());
     }
 
     private static void ExportSite(PhotinoWindow window)
@@ -555,6 +580,7 @@ public static class Program
             path = _projectPath,
             contentRoot = _contentRoot,
             project = _project,
+            grids = _project?.Pages.ToDictionary(p => p.Id, p => BuildGridPayload(p, _project)),
             validationIssues = issues.Select(i => i.ToString()).ToList(),
             warnings = warnings ?? new List<string>(),
             canUndo = _undoHistory.CanUndo,
@@ -562,6 +588,22 @@ public static class Program
         };
 
         window.SendWebMessage(JsonSerializer.Serialize(payload, OutboundOptions));
+    }
+
+    // Everything the canvas and the square pickers need to know about a page's grid, already worked
+    // out, so app.js has no second copy of GridLayout's maths to keep in sync.
+    private static object BuildGridPayload(Page page, WeaveProject project)
+    {
+        var grid = GridLayout.For(page, project);
+        return new
+        {
+            cellWidth = grid.CellWidth,
+            cellHeight = grid.CellHeight,
+            nodeIconSize = GridLayout.NodeIconSizePx,
+            columnCenters = Enumerable.Range(0, grid.Columns).Select(grid.ColumnCenter).ToList(),
+            rowCenters = Enumerable.Range(0, grid.Rows).Select(grid.RowCenter).ToList(),
+            columnLabels = Enumerable.Range(0, grid.Columns).Select(grid.ColumnLabel).ToList(),
+        };
     }
 
     private static void SendStatus(PhotinoWindow window, string message) =>

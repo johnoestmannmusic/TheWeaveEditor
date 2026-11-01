@@ -20,8 +20,9 @@ Neocities, replacing hand-authoring HTML per location.
   visitor opens the site (heading, cover, audio, poetry, plus a separate "Updates" panel) — kept
   out of the tree/canvas since it isn't a real map location.
 - Live map canvas: select a page and its real background renders with every top-level location
-  as a draggable, color-coded marker. Click to select (syncs with the tree/Inspector), drag to
-  reposition, double-click empty space to add a new location, scroll to zoom, click-drag to pan.
+  as a draggable, color-coded marker, always centered in a square of the map's grid. Click to
+  select (syncs with the tree/Inspector), drag to move it to another free square, double-click an
+  empty square to add a new location, scroll to zoom, click-drag to pan.
 - Live Effects panel: add/edit/delete a page's crossfade or drifting-sprite effects and watch
   them actually animate on the canvas while you edit, using the same rendering the exported site
   uses.
@@ -130,11 +131,15 @@ heading, poetry, action link). A page's top-level locations are direct children 
 **Nesting = literally inside the parent's card.** A "next part of the story" location (e.g.
 Ouros' Salanth Town Gardens → Jherop Phantom → The Gardener's Funeral) is not a sibling with a
 `ParentId` — its whole `<div class="node">` is placed *inside* its parent's
-`<div class="floatInfo">`, as one more child alongside the poetry text. That's what makes
-`Node.X`/`Node.Y` "parent-card-relative" instead of world-relative for a nested node: its
-containing block genuinely is the parent's card. `PageRenderer.RenderCard` reflects this
-directly — `foreach (var child in node.Children) RenderNode(...)` runs *inside* the method that
-also opens/closes that same `.floatInfo`.
+`<div class="floatInfo">`, as one more child alongside the poetry text. `PageRenderer.RenderCard`
+reflects this directly — `foreach (var child in node.Children) RenderNode(...)` runs *inside* the
+method that also opens/closes that same `.floatInfo`.
+
+**A nested node shares its parent's square.** Its containing block is the parent's card, so
+`PageRenderer.RenderNode` positions it by cancelling out that card's own offset and border, which
+lands it back on the parent's icon. Its stored `Node.X`/`Node.Y` aren't used. Its icon is hidden
+(see `main.css`), and its card gets offset the same way the parent's did, so it lands exactly on
+top of the parent's card and X swaps cards in place.
 
 **Closing tags matter more than they look like they should.** A childless node's `.floatInfo`
 must be explicitly closed before the *next sibling* `.node` starts. Miss that and the browser's

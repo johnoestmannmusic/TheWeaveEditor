@@ -87,13 +87,13 @@ internal static class ProjectEditing
         return false;
     }
 
-    public static Node AddNode(WeaveProject project, Page page, string? parentNodeId, double x = 100, double y = 100)
+    /// <param name="x">Where on the map to add a top-level location: it goes in that square, and
+    /// that square has to be free. Null on either axis means anywhere - the first free square.</param>
+    public static Node AddNode(WeaveProject project, Page page, string? parentNodeId, double? x = null, double? y = null)
     {
         var node = new Node
         {
             Id = GenerateNodeId(project, "new location"),
-            X = x,
-            Y = y,
             Card = new Card { HeadingText = "New Location" },
         };
 
@@ -105,10 +105,46 @@ internal static class ProjectEditing
         }
         else
         {
+            (node.X, node.Y) = x is double px && y is double py
+                ? ResolveSquare(project, page, null, px, py)
+                : FirstFreeSquare(project, page);
             page.Nodes.Add(node);
         }
 
         return node;
+    }
+
+    /// <summary>
+    /// Where a location is allowed to go, given where it was asked to: the center of that position's
+    /// square. Throws if another location is already there, which is the only way a top-level node's
+    /// position ever fails. A nested node or a modal card isn't on the map, so anything goes.
+    /// </summary>
+    public static (double X, double Y) ResolveNodePosition(WeaveProject project, Page page, Node node, double x, double y) =>
+        IsOnMap(page, node) ? ResolveSquare(project, page, node, x, y) : (x, y);
+
+    private static bool IsOnMap(Page page, Node node) =>
+        node.Card.Size != CardSize.Modal && page.Nodes.Contains(node);
+
+    // x/y are a top-left icon corner, same as Node.X/Y.
+    private static (double X, double Y) ResolveSquare(WeaveProject project, Page page, Node? moving, double x, double y)
+    {
+        var grid = GridLayout.For(page, project);
+        var cell = grid.CellAt(x + GridLayout.NodeIconSizePx / 2, y + GridLayout.NodeIconSizePx / 2);
+
+        var occupant = page.Nodes.FirstOrDefault(n => n != moving && n.Card.Size != CardSize.Modal && grid.CellOf(n) == cell);
+        if (occupant is not null)
+            throw new InvalidOperationException($"Square {grid.LabelOf(cell)} already has '{occupant.Card.HeadingText}' on it.");
+
+        return grid.NodePositionFor(cell);
+    }
+
+    private static (double X, double Y) FirstFreeSquare(WeaveProject project, Page page)
+    {
+        var grid = GridLayout.For(page, project);
+        var taken = page.Nodes.Where(n => n.Card.Size != CardSize.Modal).Select(grid.CellOf).ToHashSet();
+        var cell = grid.NearestFreeCell(new GridCell(0, 0), taken)
+            ?? throw new InvalidOperationException("Every square on this map already has a location on it.");
+        return grid.NodePositionFor(cell);
     }
 
     public static Page AddPage(WeaveProject project, string? titleSeed, string? outputFileName, string? backgroundImagePath)
@@ -128,10 +164,10 @@ internal static class ProjectEditing
         return page;
     }
 
-    public static void ApplyNodeEdit(Node node, NodeEditRequest edit)
+    public static void ApplyNodeEdit(WeaveProject project, Page page, Node node, NodeEditRequest edit)
     {
-        node.X = edit.X;
-        node.Y = edit.Y;
+        // Resolved before anything else changes, so a rejected square leaves the whole node untouched.
+        (node.X, node.Y) = ResolveNodePosition(project, page, node, edit.X, edit.Y);
         node.Persistent = edit.Persistent;
         node.IconStyle = Enum.TryParse<IconStyle>(edit.IconStyle, out var iconStyle) ? iconStyle : IconStyle.Default;
 

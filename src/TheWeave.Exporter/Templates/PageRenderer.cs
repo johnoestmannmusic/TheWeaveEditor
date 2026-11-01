@@ -78,7 +78,7 @@ public sealed class PageRenderer
         sb.AppendLine();
 
         foreach (var node in page.Nodes)
-            RenderNode(sb, page, node, indent: 4, partOfChain: false);
+            RenderNode(sb, page, node, parent: null, indent: 4, partOfChain: false);
 
         var effectsScript = EffectsScriptRenderer.Render(page.Effects, _assets);
         if (effectsScript is not null)
@@ -94,9 +94,20 @@ public sealed class PageRenderer
         return sb.ToString();
     }
 
-    private void RenderNode(StringBuilder sb, Page sourcePage, Node node, int indent, bool partOfChain)
+    // .floatInfo's border-width in main.css. A nested node is positioned inside its parent's card -
+    // from just inside that border, not its outer edge.
+    private const double CardBorderPx = 1;
+
+    private void RenderNode(StringBuilder sb, Page sourcePage, Node node, Node? parent, int indent, bool partOfChain)
     {
         var pad = new string(' ', indent);
+
+        // A nested node shares its parent's square: this cancels out the parent card's own offset,
+        // landing back on the parent's icon. Its card then gets offset the same way the parent's
+        // did, so it lands exactly on top of the parent's card, and X-cycling swaps cards in place.
+        var left = parent is null ? node.X : -parent.Card.Offset.Left - CardBorderPx;
+        var top = parent is null ? node.Y : -parent.Card.Offset.Top - CardBorderPx;
+
         var iconSrc = node.IconStyle == IconStyle.Race ? "img/node-race.png" : "img/node.png";
         var persistentAttr = node.Persistent ? " data-persistent=\"true\"" : "";
         // Node.Id is otherwise never exposed in the exported HTML (it's purely an internal
@@ -122,7 +133,7 @@ public sealed class PageRenderer
         var isPartOfChain = partOfChain || node.Children.Count > 0;
 
         sb.AppendLine($"{pad}<!-- {SafeComment(node.Card.HeadingText)} -->");
-        sb.AppendLine($"{pad}<div class=\"node\"{persistentAttr}{modalAttr}{travelHomeAttr} style=\"left: {Px(node.X)}px; top: {Px(node.Y)}px;\">");
+        sb.AppendLine($"{pad}<div class=\"node\"{persistentAttr}{modalAttr}{travelHomeAttr} style=\"left: {Px(left)}px; top: {Px(top)}px;\">");
         sb.AppendLine($"{pad}  <img class=\"nodeImage\" src=\"{iconSrc}\">");
 
         // A hint that X/gamepad X cycles to the *next* chain member - see updateChainHint() in
@@ -210,7 +221,7 @@ public sealed class PageRenderer
             RenderStaticPanel(sb, panel, indent);
 
         foreach (var child in node.Children)
-            RenderNode(sb, sourcePage, child, indent, partOfChain);
+            RenderNode(sb, sourcePage, child, node, indent, partOfChain);
 
         // Closes the .floatInfo opened above. Deliberately emitted after any nested children
         // (rather than right after the poetry-text div) so a childless node's card - the common
@@ -277,12 +288,10 @@ public sealed class PageRenderer
     //   left, without needing every reciprocal pair of travel links hand-tuned to agree - a real,
     //   previously-stale problem (a hub icon moving after its planet's own return link had its
     //   spawn coordinates typed in by hand once) that a computed default can't get wrong the way
-    //   a copy-pasted constant can. Landing back on WeaveProject.HomePageId specifically nudges up
-    //   RECIPROCAL_HOME_LANDING_OFFSET_Y so the ship doesn't spawn sitting exactly on top of the
-    //   hub icon - every other reciprocal landing (a nested sub-location's own "back" link) still
-    //   lands exactly on the node, same as before.
-    private const double ReciprocalHomeLandingOffsetY = 50;
-
+    //   a copy-pasted constant can. Landing back on WeaveProject.HomePageId specifically lands one
+    //   square above the hub icon, so the ship doesn't spawn sitting exactly on top of it - every
+    //   other reciprocal landing (a nested sub-location's own "back" link) still lands exactly on
+    //   the node, same as before.
     private string BuildTravelQuery(Page sourcePage, CardAction action)
     {
         var parts = new List<string>();
@@ -309,7 +318,7 @@ public sealed class PageRenderer
                     x = reciprocal.Value.X;
                     y = reciprocal.Value.Y;
                     if (targetPage is not null && targetPage.Id == _project.HomePageId)
-                        y -= ReciprocalHomeLandingOffsetY;
+                        y -= GridLayout.For(targetPage, _project).CellHeight;
                 }
             }
         }

@@ -8,6 +8,9 @@ namespace TheWeave.Exporter.Tests;
 
 public class PageRendererTests
 {
+    private const string ExactGridJson =
+        "{\"columns\":19,\"rows\":10,\"cellWidth\":150,\"cellHeight\":150,\"originX\":150,\"originY\":150,\"gapColumns\":[]}";
+
     private const string SingleSectorGridJson =
         "{\"columns\":19,\"rows\":10,\"cellWidth\":150.5,\"cellHeight\":150.8896797153025,\"originX\":150.5,\"originY\":150.8896797153025,\"gapColumns\":[]}";
 
@@ -54,7 +57,7 @@ public class PageRendererTests
               <script src="jsx/main.js?v={{RuntimeAssets.Version}}"></script>
 
               <script>
-                window.__weavePage = {"globeEffect":true,"worldWidth":3010,"worldHeight":1696,"defaultSpawnX":null,"defaultSpawnY":null,"listeningRadiusPx":105,"isHomePage":false,"grid":{{SingleSectorGridJson}}};
+                window.__weavePage = {"globeEffect":true,"worldWidth":3000,"worldHeight":1686,"defaultSpawnX":null,"defaultSpawnY":null,"listeningRadiusPx":105,"isHomePage":false,"grid":{{ExactGridJson}}};
               </script>
               </head>
 
@@ -320,6 +323,37 @@ public class PageRendererTests
     }
 
     [Fact]
+    public void RenderPage_NestedNode_SitsExactlyOnItsParentWhateverItsStoredPosition()
+    {
+        var project = new WeaveProject();
+        var page = MakePage("ouros", "ouros.html");
+        page.Nodes.Add(new Node
+        {
+            Id = "root",
+            X = 201,
+            Y = 351,
+            Card = new Card { Offset = new Offset { Top = -130, Left = 80 } },
+            Children =
+            {
+                new Node
+                {
+                    Id = "child",
+                    X = -81,
+                    Y = 193,
+                    Card = new Card { Offset = new Offset { Top = -130, Left = 80 } },
+                },
+            },
+        });
+        project.Pages.Add(page);
+
+        var html = new PageRenderer(project).RenderPage(page);
+
+        Assert.Contains("<div class=\"node\" style=\"left: 201px; top: 351px;\">", html);
+        // -(card offset) - (card border) from inside the parent's card, which is back at the parent.
+        Assert.Contains("<div class=\"node\" style=\"left: -81px; top: 129px;\">", html);
+    }
+
+    [Fact]
     public void RenderPage_WeavePageConfig_UsesPageWorldSizeAndGrid()
     {
         var project = new WeaveProject { DefaultWorldWidthPx = 3010, DefaultWorldHeightPx = 1696 };
@@ -504,7 +538,7 @@ public class PageRendererTests
         });
         // azurus isn't the hub, so the *other* direction's rule (center-of-map) doesn't apply
         // here - this should still land back near the hub icon above, same as before HomePageId
-        // existed at all, just nudged 50px up so the ship doesn't spawn sitting right on the icon.
+        // existed at all, just one square up so the ship doesn't spawn sitting right on the icon.
         azurus.Nodes.Add(new Node
         {
             Id = "return-to-weave",
@@ -516,8 +550,8 @@ public class PageRendererTests
         var html = new PageRenderer(project).RenderPage(azurus);
 
         // index is HomePageId, so its actual output file is theweave.html (see
-        // PageRenderer.HomePageFileName), not index.html. y=350-50=300.
-        Assert.Contains("<a href=\"./theweave.html?x=1101&amp;y=300\">[ TRAVEL ]</a>", html);
+        // PageRenderer.HomePageFileName), not index.html. y=350-150=200.
+        Assert.Contains("<a href=\"./theweave.html?x=1101&amp;y=200\">[ TRAVEL ]</a>", html);
     }
 
     [Fact]

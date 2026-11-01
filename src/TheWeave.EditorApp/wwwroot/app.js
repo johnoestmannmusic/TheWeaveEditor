@@ -18,7 +18,7 @@ const expandedPageIds = new Set();
 const expandedNodeIds = new Set();
 const canvasViewByPage = new Map(); // pageId -> { scale, offsetX, offsetY, worldW, worldH }
 let effectFormState = null; // { pageId, effectId (null if adding), kind } while the effect form is open
-const BG_WIDTH_INSET_PX = 10; // matches #bgmap's fixed width vs. the world size in main.css
+let grids = {}; // pageId -> that page's grid of squares, worked out by Program.cs's BuildGridPayload
 
 function send(type, extra) {
   window.external.sendMessage(JSON.stringify({ type, ...extra }));
@@ -66,6 +66,7 @@ window.external.receiveMessage((raw) => {
 
   if (message.type === 'project-state') {
     project = message.project;
+    grids = message.grids ?? {};
     projectPath = message.path;
     contentRoot = message.contentRoot;
     reconcileSelection();
@@ -84,6 +85,9 @@ window.external.receiveMessage((raw) => {
     setStatus(message.message, false);
     showToast(message.message, false);
   } else if (message.type === 'error') {
+    // A rejected edit (e.g. a square that's already taken) changes nothing on the C# side, so this
+    // puts the form back in step with what's actually saved.
+    if (project) renderAll();
     setStatus(message.message, true);
     showToast(message.message, true);
   } else if (message.type === 'image-picked') {
@@ -456,17 +460,8 @@ function renderPageInspector(container, page) {
       <input type="checkbox" id="f-page-is-home" ${project.homePageId === page.id ? 'checked' : ''}>
       <label for="f-page-is-home">Starting map (the persistent shell loads this page by default - see Hub theme)</label>
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Default spawn X (px)</label>
-        <input type="number" id="f-page-spawn-x" value="${page.defaultSpawnX ?? ''}" placeholder="120">
-      </div>
-      <div class="field">
-        <label>Default spawn Y (px)</label>
-        <input type="number" id="f-page-spawn-y" value="${page.defaultSpawnY ?? ''}" placeholder="120">
-      </div>
-    </div>
-    <div class="field-hint">Where the ship starts when this page is opened with no travel link or query string at all (e.g. a bare URL, or the shell's iframe on first load). Blank falls back to the runtime's own default (120, 120). Doesn't affect arriving via a travel link - that's each link's own Spawn X/Y on the destination location's Action, further down.</div>
+    ${cellPickerHtml('f-page-spawn', 'Default spawn', grids[page.id], page.defaultSpawnX, page.defaultSpawnY, 'A0')}
+    <div class="field-hint">Where the ship starts when this page is opened with no travel link or query string at all (e.g. a bare URL, or the shell's iframe on first load). Doesn't affect arriving via a travel link - that's each link's own Arrival square on the destination location's Action, further down.</div>
 
     <fieldset>
       <legend>Effects</legend>
@@ -479,12 +474,9 @@ function renderPageInspector(container, page) {
     </fieldset>
   `;
 
-  const numOrNull = (id) => {
-    const v = document.getElementById(id).value;
-    return v === '' ? null : Number(v);
-  };
-
-  const savePage = () => send('update-page', {
+  const savePage = () => {
+    const spawn = readCellCenter('f-page-spawn', grids[page.id]);
+    send('update-page', {
     pageId: page.id,
     page: {
       title: document.getElementById('f-page-title').value,
@@ -492,21 +484,22 @@ function renderPageInspector(container, page) {
       backgroundImagePath: document.getElementById('f-page-bg').value,
       globeEffect: document.getElementById('f-page-globe-effect').checked,
       isHome: document.getElementById('f-page-is-home').checked,
-      defaultSpawnX: numOrNull('f-page-spawn-x'),
-      defaultSpawnY: numOrNull('f-page-spawn-y'),
+      defaultSpawnX: spawn?.x ?? null,
+      defaultSpawnY: spawn?.y ?? null,
     },
-  });
+    });
+  };
 
   // Auto-saves as soon as a field loses focus, rather than requiring a separate "Save
   // Changes" click - safe to do on blur (unlike on every keystroke) since the full
   // re-render this triggers only ever happens after the user has already moved on from
   // the field they were editing.
-  for (const id of ['f-page-title', 'f-page-file', 'f-page-bg', 'f-page-spawn-x', 'f-page-spawn-y'])
+  for (const id of ['f-page-title', 'f-page-file', 'f-page-bg'])
     document.getElementById(id).addEventListener('blur', savePage);
 
-  // A checkbox has no meaningful "blur to commit" moment - it saves on change instead.
-  document.getElementById('f-page-globe-effect').addEventListener('change', savePage);
-  document.getElementById('f-page-is-home').addEventListener('change', savePage);
+  // A checkbox or select has no meaningful "blur to commit" moment - it saves on change instead.
+  for (const id of ['f-page-globe-effect', 'f-page-is-home', 'f-page-spawn-col', 'f-page-spawn-row'])
+    document.getElementById(id).addEventListener('change', savePage);
 
   renderEffectsList(page);
 
@@ -760,9 +753,86 @@ function renderEffectForm(page, fx) {
   });
 }
 
+// The index in a list of square centers that's nearest a position. A position off either end of the
+// list just lands on that end's square.
+function nearestCenterIndex(centers, value) {
+  let nearest = 0;
+  centers.forEach((center, i) => {
+    if (Math.abs(center - value) < Math.abs(centers[nearest] - value)) nearest = i;
+  });
+  return nearest;
+}
+
+function cellAtPoint(grid, x, y) {
+  return { col: nearestCenterIndex(grid.columnCenters, x), row: nearestCenterIndex(grid.rowCenters, y) };
+}
+
+function cellOfNode(grid, node) {
+  return cellAtPoint(grid, node.x + grid.nodeIconSize / 2, node.y + grid.nodeIconSize / 2);
+}
+
+// Whichever map location (other than exceptNodeId) is already on a square, or undefined.
+function nodeOnCell(page, grid, cell, exceptNodeId) {
+  return page.nodes.find((n) => {
+    if (isModalNode(n) || n.id === exceptNodeId) return false;
+    const c = cellOfNode(grid, n);
+    return c.col === cell.col && c.row === cell.row;
+  });
+}
+
+function nodePositionForCell(grid, cell) {
+  return {
+    x: grid.columnCenters[cell.col] - grid.nodeIconSize / 2,
+    y: grid.rowCenters[cell.row] - grid.nodeIconSize / 2,
+  };
+}
+
+// Column + Row dropdowns for choosing a square. x/y are the world position currently stored, shown
+// as whichever square is nearest. With emptyLabel, the dropdowns also offer leaving it unset.
+function cellPickerHtml(idPrefix, label, grid, x, y, emptyLabel) {
+  const cell = x != null && y != null ? cellAtPoint(grid, x, y) : null;
+  const option = (value, text, selected) => `<option value="${value}"${selected ? ' selected' : ''}>${escapeHtml(text)}</option>`;
+  const empty = emptyLabel ? option('', `Default (${emptyLabel})`, !cell) : '';
+
+  return `
+    <div class="field-row">
+      <div class="field">
+        <label>${escapeHtml(label)} column</label>
+        <select id="${idPrefix}-col">
+          ${empty}
+          ${grid.columnLabels.map((text, i) => option(i, text, cell?.col === i)).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>${escapeHtml(label)} row</label>
+        <select id="${idPrefix}-row">
+          ${empty}
+          ${grid.rowCenters.map((_, i) => option(i, String(i), cell?.row === i)).join('')}
+        </select>
+      </div>
+    </div>
+  `;
+}
+
+// The chosen square as { col, row }, or null if the picker isn't showing or is left on Default.
+function readCellPicker(idPrefix) {
+  const col = document.getElementById(`${idPrefix}-col`)?.value;
+  const row = document.getElementById(`${idPrefix}-row`)?.value;
+  return col && row ? { col: Number(col), row: Number(row) } : null;
+}
+
+// The chosen square's center, for a spawn position - or null, same as readCellPicker.
+function readCellCenter(idPrefix, grid) {
+  const cell = readCellPicker(idPrefix);
+  return cell ? { x: grid.columnCenters[cell.col], y: grid.rowCenters[cell.row] } : null;
+}
+
 function renderNodeInspector(container, pageId, node) {
   const otherPages = (project.pages ?? []).filter((p) => p.id !== pageId || true); // any page, including self-links if ever wanted
   const action = node.card.action ?? { kind: 'None' };
+  const grid = grids[pageId];
+  const onMap = findPage(pageId).nodes.includes(node) && !isModalNode(node);
+  const arrivalGrid = grids[action.targetPageId];
 
   container.innerHTML = `
     <h2>Location</h2>
@@ -778,16 +848,9 @@ function renderNodeInspector(container, pageId, node) {
       <input type="text" id="f-heading" value="${escapeAttr(node.card.headingText)}">
     </div>
 
-    <div class="field-row">
-      <div class="field">
-        <label>X</label>
-        <input type="number" id="f-x" value="${node.x}">
-      </div>
-      <div class="field">
-        <label>Y</label>
-        <input type="number" id="f-y" value="${node.y}">
-      </div>
-    </div>
+    ${onMap
+      ? cellPickerHtml('f-square', 'Map', grid, node.x + grid.nodeIconSize / 2, node.y + grid.nodeIconSize / 2)
+      : isModalNode(node) ? '' : '<div class="field-hint">Shares its parent\'s square on the map - press X there to reach it.</div>'}
 
     <div class="field-row">
       <div class="field">
@@ -869,16 +932,7 @@ function renderNodeInspector(container, pageId, node) {
             ${otherPages.map((p) => `<option value="${escapeAttr(p.id)}" ${p.id === action.targetPageId ? 'selected' : ''}>${escapeHtml(p.title || p.id)}</option>`).join('')}
           </select>
         </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Arrival X</label>
-            <input type="number" id="f-spawn-x" value="${action.travelSpawnX ?? ''}">
-          </div>
-          <div class="field">
-            <label>Arrival Y</label>
-            <input type="number" id="f-spawn-y" value="${action.travelSpawnY ?? ''}">
-          </div>
-        </div>
+        ${arrivalGrid ? cellPickerHtml('f-spawn', 'Arrival', arrivalGrid, action.travelSpawnX, action.travelSpawnY, 'automatic') : ''}
         <div class="field checkbox">
           <input type="checkbox" id="f-skip-tutorial" ${action.travelSkipTutorial ? 'checked' : ''}>
           <label for="f-skip-tutorial">Skip destination's tutorial/intro card</label>
@@ -912,12 +966,16 @@ function renderNodeInspector(container, pageId, node) {
       return v === '' ? null : Number(v);
     };
 
+    const square = onMap ? readCellPicker('f-square') : null;
+    const position = square ? nodePositionForCell(grid, square) : { x: node.x, y: node.y };
+    const arrival = arrivalGrid ? readCellCenter('f-spawn', arrivalGrid) : null;
+
     send('update-node', {
       pageId,
       nodeId: node.id,
       node: {
-        x: Number(document.getElementById('f-x').value),
-        y: Number(document.getElementById('f-y').value),
+        x: position.x,
+        y: position.y,
         persistent: document.getElementById('f-persistent').checked,
         iconStyle: document.getElementById('f-icon-style').value,
         cardSize: document.getElementById('f-card-size').value,
@@ -930,8 +988,8 @@ function renderNodeInspector(container, pageId, node) {
         actionKind: document.getElementById('f-action-kind').value,
         actionUrl: document.getElementById('f-action-url')?.value ?? null,
         targetPageId: document.getElementById('f-target-page')?.value || null,
-        travelSpawnX: numOrNull('f-spawn-x'),
-        travelSpawnY: numOrNull('f-spawn-y'),
+        travelSpawnX: arrival?.x ?? null,
+        travelSpawnY: arrival?.y ?? null,
         travelSkipTutorial: document.getElementById('f-skip-tutorial')?.checked ?? false,
       },
     });
@@ -941,13 +999,17 @@ function renderNodeInspector(container, pageId, node) {
   // keystroke - a keystroke-triggered save would fight the user's own typing, since every
   // save re-renders this whole form from the authoritative C# state. Select/checkbox fields
   // have no such conflict, so they save immediately on change.
-  for (const id of ['f-heading', 'f-x', 'f-y', 'f-custom-width', 'f-custom-height', 'f-cover',
-                     'f-audio', 'f-poetry', 'f-action-url', 'f-spawn-x', 'f-spawn-y'])
+  for (const id of ['f-heading', 'f-custom-width', 'f-custom-height', 'f-cover',
+                     'f-audio', 'f-poetry', 'f-action-url'])
     document.getElementById(id).addEventListener('blur', saveNode);
 
   for (const id of ['f-icon-style', 'f-persistent', 'f-card-size', 'f-action-kind',
                      'f-target-page', 'f-skip-tutorial'])
     document.getElementById(id).addEventListener('change', saveNode);
+
+  // The square pickers only exist where a square applies - see the form above.
+  for (const id of ['f-square-col', 'f-square-row', 'f-spawn-col', 'f-spawn-row'])
+    document.getElementById(id)?.addEventListener('change', saveNode);
 }
 
 // Live-updates the cover image <img> preview as the path field changes, whether typed by hand
@@ -973,9 +1035,10 @@ function selectOptions(values, current) {
 // The background image and each top-level node's marker live in #canvas-world, which carries
 // a single CSS transform (translate + scale) per page - dragging a marker only ever needs to
 // convert a *screen-space* pointer delta into a *world-space* one by dividing by the current
-// scale, since the transform's translation cancels out of any delta. Nested nodes aren't
-// placed on the canvas at all (their real position is relative to their parent's card, which
-// this canvas doesn't render); they stay reachable via the tree's "+ Add nested location".
+// scale, since the transform's translation cancels out of any delta. Markers only ever sit in the
+// middle of a grid square - see the pointermove handler. Nested nodes aren't placed on the canvas
+// at all (they share their parent's square); they stay reachable via the tree's "+ Add nested
+// location".
 
 function toFileUrl(root, relativePath) {
   if (!root || !relativePath) return '';
@@ -992,8 +1055,8 @@ function getOrInitCanvasView(pageId) {
 
 function computeFitView(pageId) {
   const page = findPage(pageId);
-  const worldW = page?.worldWidthPx ?? project?.defaultWorldWidthPx ?? 3010;
-  const worldH = page?.worldHeightPx ?? project?.defaultWorldHeightPx ?? 1696;
+  const worldW = page?.worldWidthPx ?? project?.defaultWorldWidthPx ?? 3000;
+  const worldH = page?.worldHeightPx ?? project?.defaultWorldHeightPx ?? 1686;
   const viewportEl = document.getElementById('canvas-viewport');
   const vw = viewportEl.clientWidth || 800;
   const vh = viewportEl.clientHeight || 600;
@@ -1037,9 +1100,9 @@ function renderCanvas() {
     bgEl.src = bgUrl;
     bgEl.dataset.src = bgUrl;
   }
-  // The exported site's #bgmap is deliberately 10px narrower than the world (see main.css) -
-  // match that here so the map art lines up with node positions the same way it does live.
-  bgEl.style.width = (view.worldW - BG_WIDTH_INSET_PX) + 'px';
+  // Same as the exported site's own loadPageConfig: the map art fills the world exactly.
+  bgEl.style.width = view.worldW + 'px';
+  bgEl.style.height = view.worldH + 'px';
 
   const nodesEl = document.getElementById('canvas-nodes');
   nodesEl.innerHTML = '';
@@ -1047,7 +1110,7 @@ function renderCanvas() {
     // A modal card ignores its own X/Y entirely (see main.js's modalQueue) - a marker for it
     // here would be pure noise, and it's edited via its own tab instead (selectTutorialModal).
     if (isModalNode(node)) continue;
-    nodesEl.appendChild(renderCanvasMarker(node));
+    nodesEl.appendChild(renderCanvasMarker(node, grids[page.id]));
   }
 
   renderEffectPreviews(page);
@@ -1068,7 +1131,7 @@ function renderEffectPreviews(page) {
     if (fx.$type === 'crossfade') {
       const img = document.createElement('img');
       img.className = 'effect-preview-crossfade';
-      img.style.width = (page.worldWidthPx ?? project?.defaultWorldWidthPx ?? 3010) + 'px';
+      img.style.width = (page.worldWidthPx ?? project?.defaultWorldWidthPx ?? 3000) + 'px';
       img.style.opacity = '0';
       img.src = toFileUrl(contentRoot, fx.imagePath);
       layer.appendChild(img);
@@ -1105,13 +1168,13 @@ function renderEffectPreviews(page) {
   }
 }
 
-function renderCanvasMarker(node) {
+function renderCanvasMarker(node, grid) {
   const el = document.createElement('div');
   const kind = (node.card.action?.kind ?? 'None').toLowerCase();
   el.className = `canvas-marker kind-${kind}` + (node.id === selectedNodeId ? ' selected' : '');
   el.dataset.nodeId = node.id;
-  el.style.left = node.x + 'px';
-  el.style.top = node.y + 'px';
+  el.style.left = (node.x + grid.nodeIconSize / 2) + 'px';
+  el.style.top = (node.y + grid.nodeIconSize / 2) + 'px';
   el.innerHTML = `<div class="dot"></div><div class="label">${escapeHtml(node.card.headingText || node.id)}</div>`;
   return el;
 }
@@ -1152,8 +1215,22 @@ const MARKER_HIT_RADIUS_PX = 16; // screen-space; deliberately independent of DO
 // be unreliable in this WebKit build (clicks landing dead-center on a visually huge, zoomed-in
 // marker still missed it). This reuses the exact same transform math already proven reliable
 // for pan/zoom/double-click, so it's also simpler than it looks.
-function screenPositionOf(node, view) {
-  return { x: node.x * view.scale + view.offsetX, y: node.y * view.scale + view.offsetY };
+function screenPositionOf(node, view, grid) {
+  return {
+    x: (node.x + grid.nodeIconSize / 2) * view.scale + view.offsetX,
+    y: (node.y + grid.nodeIconSize / 2) * view.scale + view.offsetY,
+  };
+}
+
+// Shows which square a dragged marker would land on, and whether it's free to.
+function showCellHighlight(grid, cell, occupied) {
+  const el = document.getElementById('canvas-cell-highlight');
+  el.hidden = false;
+  el.classList.toggle('occupied', occupied);
+  el.style.left = (grid.columnCenters[cell.col] - grid.cellWidth / 2) + 'px';
+  el.style.top = (grid.rowCenters[cell.row] - grid.cellHeight / 2) + 'px';
+  el.style.width = grid.cellWidth + 'px';
+  el.style.height = grid.cellHeight + 'px';
 }
 
 function findMarkerAtScreenPoint(page, view, sx, sy) {
@@ -1161,7 +1238,7 @@ function findMarkerAtScreenPoint(page, view, sx, sy) {
   let closestDist = MARKER_HIT_RADIUS_PX;
   for (const node of page.nodes) {
     if (isModalNode(node)) continue; // not shown on the canvas at all - see renderCanvas
-    const p = screenPositionOf(node, view);
+    const p = screenPositionOf(node, view, grids[page.id]);
     const d = Math.hypot(sx - p.x, sy - p.y);
     if (d < closestDist) {
       closestDist = d;
@@ -1209,9 +1286,11 @@ canvasViewportEl.addEventListener('pointerdown', (e) => {
       pointerId: e.pointerId,
       startClientX: e.clientX,
       startClientY: e.clientY,
-      startWorldX: hit.x,
-      startWorldY: hit.y,
+      startWorldX: hit.x + grids[page.id].nodeIconSize / 2,
+      startWorldY: hit.y + grids[page.id].nodeIconSize / 2,
       moved: false,
+      cell: null, // the square the marker would land on right now, once it's been dragged at all
+      cellOccupant: null,
     };
   } else {
     canvasViewportEl.classList.add('panning');
@@ -1236,12 +1315,18 @@ canvasViewportEl.addEventListener('pointermove', (e) => {
       nodeDragState.moved = true;
 
     const markerEl = document.querySelector(`.canvas-marker[data-node-id="${cssEscape(nodeDragState.nodeId)}"]`);
-    if (markerEl) {
-      const newLeft = nodeDragState.startWorldX + dxScreen / view.scale;
-      const newTop = nodeDragState.startWorldY + dyScreen / view.scale;
-      markerEl.style.left = newLeft + 'px';
-      markerEl.style.top = newTop + 'px';
+    if (markerEl && nodeDragState.moved) {
+      const page = findPage(selectedPageId);
+      const grid = grids[page.id];
+      const cell = cellAtPoint(grid, nodeDragState.startWorldX + dxScreen / view.scale, nodeDragState.startWorldY + dyScreen / view.scale);
+
+      nodeDragState.cell = cell;
+      nodeDragState.cellOccupant = nodeOnCell(page, grid, cell, nodeDragState.nodeId) ?? null;
+
+      markerEl.style.left = grid.columnCenters[cell.col] + 'px';
+      markerEl.style.top = grid.rowCenters[cell.row] + 'px';
       markerEl.classList.add('dragging');
+      showCellHighlight(grid, cell, !!nodeDragState.cellOccupant);
     }
     return;
   }
@@ -1260,19 +1345,26 @@ canvasViewportEl.addEventListener('pointerup', (e) => {
   canvasViewportEl.releasePointerCapture(e.pointerId);
 
   if (nodeDragState && e.pointerId === nodeDragState.pointerId) {
-    const { nodeId, moved } = nodeDragState;
+    const { nodeId, moved, cell, cellOccupant } = nodeDragState;
     const markerEl = document.querySelector(`.canvas-marker[data-node-id="${cssEscape(nodeId)}"]`);
     markerEl?.classList.remove('dragging');
+    document.getElementById('canvas-cell-highlight').hidden = true;
 
-    if (moved) {
-      const newX = Math.round(parseFloat(markerEl.style.left));
-      const newY = Math.round(parseFloat(markerEl.style.top));
+    if (moved && cell) {
+      const grid = grids[selectedPageId];
       const node = findNode(selectedPageId, nodeId);
-      send('update-node', {
-        pageId: selectedPageId,
-        nodeId,
-        node: { ...nodeToEditPayload(node), x: newX, y: newY },
-      });
+      const current = cellOfNode(grid, node);
+
+      if (cellOccupant) {
+        setStatus(`That square already has '${cellOccupant.card.headingText}' on it.`, true);
+        renderCanvas();
+      } else if (cell.col !== current.col || cell.row !== current.row) {
+        send('update-node', {
+          pageId: selectedPageId,
+          nodeId,
+          node: { ...nodeToEditPayload(node), ...nodePositionForCell(grid, cell) },
+        });
+      }
     } else {
       selectNode(selectedPageId, nodeId);
     }
@@ -1297,10 +1389,15 @@ canvasViewportEl.addEventListener('dblclick', (e) => {
   const { x: sx, y: sy } = viewportPoint(e);
   if (findMarkerAtScreenPoint(page, view, sx, sy)) return;
 
-  const worldX = Math.round((sx - view.offsetX) / view.scale);
-  const worldY = Math.round((sy - view.offsetY) / view.scale);
+  const grid = grids[page.id];
+  const cell = cellAtPoint(grid, (sx - view.offsetX) / view.scale, (sy - view.offsetY) / view.scale);
+  const occupant = nodeOnCell(page, grid, cell);
+  if (occupant) {
+    setStatus(`That square already has '${occupant.card.headingText}' on it.`, true);
+    return;
+  }
 
-  send('add-node', { pageId: selectedPageId, x: worldX, y: worldY });
+  send('add-node', { pageId: selectedPageId, ...nodePositionForCell(grid, cell) });
 });
 
 function cssEscape(value) {
