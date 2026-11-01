@@ -5,9 +5,9 @@
 // Navigation: walk the ship one square at a time with Arrow Keys, a gamepad D-pad, or a gamepad
 // stick - hold a direction to keep going, let go to stop on the square you're heading into (see
 // sokoban.js, which owns the movement itself). Press Z (keyboard) or A (gamepad) to interact with
-// whatever location the ship is standing on - travels to its linked page. When that location has
-// extra nested locations tucked inside its card (a multi-part story), press X (keyboard) or X
-// (gamepad) to step between them without having to move.
+// whatever location the ship is standing on - travels to its linked page, or opens a track's Track
+// Focus screen. When that location has extra nested locations tucked inside its card (a multi-part
+// story), press X (keyboard) or X (gamepad) to step between them without having to move.
 //
 // This file is the canonical shared runtime owned by TheWeave.Exporter - it's
 // generated into every exported site's jsx/main.js, not hand-edited there.
@@ -27,6 +27,8 @@ let tutorialSwitch = "on";
 // onInteract()/cycleChainNode() - see bindInput/updateInput - for as long as this is non-empty.
 let modalQueue = [];
 let modalBackdrop = null;
+// The open Track Focus screen's root element, or null while it's closed - see openTrackFocus.
+let trackFocusEl = null;
 let activeNode = null;   // whichever card is currently shown (a root, or one of its chain)
 // performance.now() timestamp of the moment activeNode last changed identity (null while no
 // card is active) - see CARD_FOCUS_DELAY_MS in updateCamera: the camera only starts heading
@@ -113,6 +115,7 @@ const KEY_DIRECTIONS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', Ar
 let padDirection = null; // whichever direction the gamepad is currently holding on playerMover
 let gamepadInteractWasDown = false;
 let gamepadCycleWasDown = false;
+let gamepadBackWasDown = false;
 let lastFrameTime = null;
 
 // Order of initialization
@@ -375,6 +378,11 @@ function loadNodes() {
 
     if (curAudio && !isModal) curAudio.volume = 0; // updateLocationAudio eases this up from silence
 
+    // The card's own "[ Focus ]" action (see PageRenderer) - same thing as Z/gamepad A. :scope so a
+    // chain member's card never binds a nested member's action instead.
+    let focusAction = curInfo.querySelector(':scope > .poetry-text > .poetry-focus .focus-action');
+    if (focusAction) focusAction.addEventListener('click', openTrackFocus);
+
   });
 
   // A multi-part location's nested nodes aren't reachable by walking to them
@@ -550,22 +558,17 @@ function bindInput(){
 
     if (direction) playerMover.press(direction);
 
-    // A modal card (see modalQueue) takes over Z entirely while it's showing - closing it,
-    // never onInteract() - and blocks X too, so cycling a location chain underneath it isn't
-    // possible while it's still covering the screen.
-    if ((e.key === 'z' || e.key === 'Z') && !e.repeat) {
-      if (modalQueue.length > 0) closeCurrentModal();
-      else onInteract();
-    }
-    if ((e.key === 'x' || e.key === 'X') && !e.repeat && modalQueue.length === 0) {
-      cycleChainNode();
-    }
+    if ((e.key === 'z' || e.key === 'Z') && !e.repeat) onInteractButton();
+    if ((e.key === 'x' || e.key === 'X') && !e.repeat && !isScreenCovered()) cycleChainNode();
+    if (e.key === 'Escape' && !e.repeat) closeTrackFocus();
   });
 
   document.addEventListener('keyup', (e) => {
     let direction = KEY_DIRECTIONS[e.key];
     if (direction) playerMover.release(direction);
   });
+
+  window.addEventListener('resize', updateTrackFocusScale);
 
   // A key released while another window has focus never fires keyup here - without this, the ship
   // would keep walking until it hit the edge of the map.
@@ -614,18 +617,19 @@ function updateInput(){
       nextPadDirection = readPadDirection(pad);
       if (nextPadDirection) notifyShellOfInteraction();
 
-      // Same modal takeover as the keyboard's Z/X handling in bindInput() - see its comment.
       let aDown = !!(pad.buttons[0] && pad.buttons[0].pressed);
       if (aDown) notifyShellOfInteraction();
-      if (aDown && !gamepadInteractWasDown) {
-        if (modalQueue.length > 0) closeCurrentModal();
-        else onInteract();
-      }
+      if (aDown && !gamepadInteractWasDown) onInteractButton();
       gamepadInteractWasDown = aDown;
+
+      // Standard gamepad mapping: button 1 is B (Xbox) / Circle (PlayStation).
+      let bDown = !!(pad.buttons[1] && pad.buttons[1].pressed);
+      if (bDown && !gamepadBackWasDown) closeTrackFocus();
+      gamepadBackWasDown = bDown;
 
       // Standard gamepad mapping: button 2 is X (Xbox) / Square (PlayStation).
       let xDown = !!(pad.buttons[2] && pad.buttons[2].pressed);
-      if (xDown && !gamepadCycleWasDown && modalQueue.length === 0) cycleChainNode();
+      if (xDown && !gamepadCycleWasDown && !isScreenCovered()) cycleChainNode();
       gamepadCycleWasDown = xDown;
 
       break; // only the first connected gamepad drives the ship
@@ -656,9 +660,9 @@ function readPadDirection(pad){
 
 function updateShip(dt){
 
-  // A modal card (see modalQueue) traps input entirely while it's showing - the ship simply
-  // doesn't move, and a press made underneath it doesn't suddenly fire the moment the modal closes.
-  if (modalQueue.length > 0) {
+  // A modal card or Track Focus traps input entirely while it's showing - the ship simply doesn't
+  // move, and a press made underneath it doesn't suddenly fire the moment it closes.
+  if (isScreenCovered()) {
     playerMover.clearQueue();
     return;
   }
@@ -965,6 +969,19 @@ function cycleChainNode(){
   showChainMember(activeRoot, chainIndex);
 }
 
+// Whether something is covering the whole screen, leaving the map underneath out of reach.
+function isScreenCovered(){
+  return modalQueue.length > 0 || trackFocusEl !== null;
+}
+
+// Z (keyboard) / A (gamepad). Whatever is covering the screen takes this over entirely: a modal
+// card (see modalQueue) first, then Track Focus - closing it, never onInteract().
+function onInteractButton(){
+  if (modalQueue.length > 0) closeCurrentModal();
+  else if (trackFocusEl) closeTrackFocus();
+  else onInteract();
+}
+
 function onInteract(){
   if (!activeNode) return;
 
@@ -973,12 +990,118 @@ function onInteract(){
 
   if (travelLink) {
     window.location.href = travelLink.getAttribute('href');
-  } else if (!meta.audio) {
+  } else if (meta.audio) {
+    openTrackFocus();
+  } else {
     // Informational-only card (e.g. tutorial) - interact just toggles it
     setCardOpen(activeNode, meta, meta.info.style.display === 'none');
   }
-  // A card with location audio and no travel link has nothing left for Z to do - the music
-  // itself is proximity-driven now (see updateLocationAudio), not toggled by interact.
+}
+
+// Track Focus: a full-screen view of the active track (whichever chain member X has landed on) -
+// album art on the left, title and poetry on the right, over the dimmed map and a blown-up, blurred
+// copy of the art that gives the whole screen its palette. Its music carries on playing, since the
+// ship stays exactly where it is (see updateLocationAudio).
+//
+// Everything shown is read from the card already in the page, rather than being rendered a second
+// time per node. :scope matters here: a chain member's card contains every later member's whole
+// card (see the README's nesting section), so a plain querySelector could find the wrong track's.
+//
+// Appended to <html>, not <body>, for the same reason as #modalBackdrop - see #globeVignette's
+// comment in buildGlobeEffect.
+function openTrackFocus(){
+  if (trackFocusEl || !activeNode) return;
+
+  let info = nodeMeta.get(activeNode).info;
+  let cover = info.querySelector(':scope > .songCover');
+  let title = info.querySelector(':scope > h3');
+  let lines = info.querySelectorAll(':scope > .poetry-text > .poetry-line');
+
+  trackFocusEl = document.createElement('div');
+  trackFocusEl.id = 'trackFocus';
+
+  let content = document.createElement('div');
+  content.id = 'trackFocusContent';
+
+  if (cover) {
+    let backdrop = document.createElement('img');
+    backdrop.id = 'trackFocusBackdrop';
+    backdrop.src = cover.src;
+    trackFocusEl.appendChild(backdrop);
+
+    let frame = document.createElement('div');
+    frame.id = 'trackFocusArt';
+
+    let art = document.createElement('img');
+    art.src = cover.src;
+    frame.appendChild(art);
+
+    // Empty for now: where a 10x10 board laid over the art goes, sized to exactly match it - see
+    // updateTrackFocusScale for the tile size it gets to work with.
+    let board = document.createElement('div');
+    board.id = 'trackFocusBoard';
+    frame.appendChild(board);
+
+    content.appendChild(frame);
+  }
+
+  let text = document.createElement('div');
+  text.id = 'trackFocusText';
+
+  let heading = document.createElement('h2');
+  heading.textContent = title ? title.textContent : '';
+  text.appendChild(heading);
+
+  lines.forEach(line => text.appendChild(line.cloneNode(true)));
+
+  let close = document.createElement('div');
+  close.id = 'trackFocusClose';
+  let closeLabel = document.createElement('span');
+  closeLabel.textContent = '[ Close ]';
+  closeLabel.addEventListener('click', closeTrackFocus);
+  let closeHint = document.createElement('img');
+  closeHint.className = 'keyHint';
+  closeHint.src = 'img/ui/key_z.gif';
+  close.append(closeLabel, closeHint);
+  text.appendChild(close);
+
+  content.appendChild(text);
+  trackFocusEl.appendChild(content);
+
+  // Clicking anywhere that isn't the art or the text dismisses it, same as a modal's backdrop.
+  content.addEventListener('click', (e) => {
+    if (e.target === content) closeTrackFocus();
+  });
+
+  updateTrackFocusScale();
+  document.documentElement.appendChild(trackFocusEl);
+}
+
+// A no-op when it isn't open, so every way of closing it can just call this.
+function closeTrackFocus(){
+  if (!trackFocusEl) return;
+  trackFocusEl.remove();
+  trackFocusEl = null;
+}
+
+// Album art is 240x240, and only stays crisp - with whole-pixel tiles for a 10x10 board over it, 24
+// source pixels each - at a whole-number scale. So that's what this picks: the largest that fits.
+const TRACK_FOCUS_ART_PX = 240;
+const TRACK_FOCUS_BOARD_SQUARES = 10;
+const TRACK_FOCUS_MAX_HEIGHT_FRACTION = 0.8;
+const TRACK_FOCUS_MAX_WIDTH_FRACTION = 0.45;
+
+function updateTrackFocusScale(){
+  if (!trackFocusEl) return;
+
+  let available = Math.min(
+    window.innerHeight * TRACK_FOCUS_MAX_HEIGHT_FRACTION,
+    window.innerWidth * TRACK_FOCUS_MAX_WIDTH_FRACTION
+  );
+  let scale = Math.max(1, Math.floor(available / TRACK_FOCUS_ART_PX));
+
+  trackFocusEl.style.setProperty('--focus-scale', scale);
+  trackFocusEl.style.setProperty('--focus-cell', (TRACK_FOCUS_ART_PX / TRACK_FOCUS_BOARD_SQUARES * scale) + 'px');
 }
 
 // Generic per-page visual effects (drifting sprites, a cross-fading second

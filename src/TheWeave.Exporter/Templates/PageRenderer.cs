@@ -172,7 +172,8 @@ public sealed class PageRenderer
             //
             // Every other card's music is proximity-driven (see main.js's updateLocationAudio) -
             // no `controls` (a manually-scrubbed/paused element would just fight the per-frame
-            // volume/play control every frame) and no key hint (Z no longer does anything to it).
+            // volume/play control every frame) and no key hint of its own (Z opens Track Focus, not
+            // anything to do with this element - see RenderFocusAction).
             // preload="none" so the browser doesn't eagerly fetch every location's (often
             // externally-hosted) track on page load - main.js flips it to "auto" once the ship
             // is close enough to actually need it buffered.
@@ -200,6 +201,7 @@ public sealed class PageRenderer
         foreach (var line in card.PoetryLines)
             sb.AppendLine($"{pad}    <div class=\"poetry-line\">{RenderPoetryLine(line)}</div>");
 
+        RenderFocusAction(sb, card, pad);
         RenderAction(sb, sourcePage, card, pad);
 
         // A modal's defining interaction - Z/gamepad A closes it (see main.js's modalQueue) -
@@ -233,6 +235,21 @@ public sealed class PageRenderer
         // it's just expressed as an explicit, well-formed close instead of relying on the
         // browser's unclosed-tag recovery to get there.
         sb.AppendLine($"{pad}</div>");
+    }
+
+    // Mirrors main.js's onInteract, which is what Z/gamepad A will actually do on this card: a track
+    // opens Track Focus, unless it's a travel location, where Z travels instead. The click handler
+    // lives in main.js too, bound to this class.
+    private static void RenderFocusAction(StringBuilder sb, Card card, string pad)
+    {
+        if (card.Audio is null || card.Action.Kind == ActionKind.Travel || card.Size == CardSize.Modal)
+            return;
+
+        sb.AppendLine();
+        sb.AppendLine($"{pad}    <!-- Focus -->");
+        sb.AppendLine($"{pad}    <div class=\"poetry-focus\">");
+        sb.AppendLine($"{pad}      <img class=\"keyHint\" src=\"img/ui/key_z.gif\"><span class=\"focus-action\">[ Focus ]</span>");
+        sb.AppendLine($"{pad}    </div>");
     }
 
     private void RenderAction(StringBuilder sb, Page sourcePage, Card card, string pad)
