@@ -30,7 +30,7 @@ let modalQueue = [];
 let modalBackdrop = null;
 // The open Track Focus screen's root element, or null while it's closed - see openTrackFocus.
 let trackFocusEl = null;
-let trackFocusScale = 1; // whole-number scale the art is drawn at - see updateTrackFocusScale
+let trackFocusScale = 1; // scale the art is drawn at - see updateTrackFocusScale
 // The Sokoban board's own mover and ship while it's being played, null otherwise - see startBoardGame.
 let boardMover = null;
 let boardShipEl = null;
@@ -674,8 +674,7 @@ function screenOriginOf(cell){
 // Fits the picture to the window, normally by filling its width, and centers it, with #screenFrame's
 // surround filling whatever's left. Not a whole-number multiple of the art's own pixels: at most scales
 // that would leave a good chunk of the window unused, and the art's pixels drawing a screen pixel wider
-// or narrower than each other isn't noticeable on these maps. (Track Focus's art does stay at
-// whole-number scales, where its tiles depend on it - see updateTrackFocusScale.)
+// or narrower than each other isn't noticeable on these maps.
 function updateViewScale(){
   let fit = Math.min(
     window.innerWidth / SOURCE_SCREEN_WIDTH,
@@ -1042,13 +1041,16 @@ function closeTrackFocus(){
   chainIndex = 0;
 }
 
-// Album art is 240x240, and only stays crisp - with whole-pixel tiles for a 10x10 board over it, 24
-// source pixels each - at a whole-number scale. So that's what this picks: the largest that fits.
+// Album art is 240x240, on a 10x10 board of 24-source-pixel tiles. Picks the largest size that fits with
+// tiles a whole number of screen pixels wide, so the board's squares are always exact. The art itself is
+// only perfectly crisp at a whole-number scale, so one of those wins if it's within
+// TRACK_FOCUS_SNAP_FRACTION of the space available.
 const TRACK_FOCUS_ART_PX = 240;
 const TRACK_FOCUS_BOARD_SQUARES = 10;
 const BOARD_TILE_PX = TRACK_FOCUS_ART_PX / TRACK_FOCUS_BOARD_SQUARES;
 const TRACK_FOCUS_MAX_HEIGHT_FRACTION = 0.92;
 const TRACK_FOCUS_MAX_WIDTH_FRACTION = 0.55;
+const TRACK_FOCUS_SNAP_FRACTION = 0.95;
 
 function updateTrackFocusScale(){
   if (!trackFocusEl) return;
@@ -1057,16 +1059,20 @@ function updateTrackFocusScale(){
     window.innerHeight * TRACK_FOCUS_MAX_HEIGHT_FRACTION,
     window.innerWidth * TRACK_FOCUS_MAX_WIDTH_FRACTION
   );
-  trackFocusScale = Math.max(1, Math.floor(available / TRACK_FOCUS_ART_PX));
+  let wholeScale = Math.floor(available / TRACK_FOCUS_ART_PX);
+  let tile = wholeScale * TRACK_FOCUS_ART_PX >= available * TRACK_FOCUS_SNAP_FRACTION
+    ? wholeScale * BOARD_TILE_PX
+    : Math.floor(available / TRACK_FOCUS_BOARD_SQUARES);
+  tile = Math.max(BOARD_TILE_PX, tile);
+  trackFocusScale = tile / BOARD_TILE_PX;
 
-  trackFocusEl.style.setProperty('--focus-scale', trackFocusScale);
-  let tile = BOARD_TILE_PX * trackFocusScale;
+  trackFocusEl.style.setProperty('--focus-line', Math.max(1, Math.round(trackFocusScale)) + 'px');
   trackFocusEl.style.setProperty('--focus-cell', tile + 'px');
 
   // Worked out here rather than left to CSS centering, which could land the art on a half pixel, and
   // its tiles with it. The left margin matches the top one, up to one tile - past that, the text can
   // make better use of the space.
-  let top = Math.max(0, Math.floor((window.innerHeight - TRACK_FOCUS_ART_PX * trackFocusScale) / 2));
+  let top = Math.max(0, Math.floor((window.innerHeight - tile * TRACK_FOCUS_BOARD_SQUARES) / 2));
   trackFocusEl.style.setProperty('--focus-top', top + 'px');
   trackFocusEl.style.setProperty('--focus-left', Math.min(top, tile) + 'px');
 }
@@ -1122,10 +1128,12 @@ function updateBoardGame(dtMs){
 
 function renderBoardShip(){
   let position = boardMover.position;
-  boardShipEl.style.width = (BOARD_SHIP_WIDTH * trackFocusScale) + "px";
-  boardShipEl.style.height = (BOARD_SHIP_HEIGHT * trackFocusScale) + "px";
-  boardShipEl.style.left = ((position.x - BOARD_SHIP_WIDTH / 2) * trackFocusScale) + "px";
-  boardShipEl.style.top = ((position.y - BOARD_SHIP_HEIGHT / 2) * trackFocusScale) + "px";
+  let width = Math.round(BOARD_SHIP_WIDTH * trackFocusScale);
+  let height = Math.round(BOARD_SHIP_HEIGHT * trackFocusScale);
+  boardShipEl.style.width = width + "px";
+  boardShipEl.style.height = height + "px";
+  boardShipEl.style.left = (position.x * trackFocusScale - width / 2) + "px";
+  boardShipEl.style.top = (position.y * trackFocusScale - height / 2) + "px";
   // Sprite's forward points "up" at rest, same as the map ship - see renderShip.
   boardShipEl.style.transform = "rotate(" + (FACING_ANGLES[boardMover.facing] + Math.PI / 2) + "rad)";
 }

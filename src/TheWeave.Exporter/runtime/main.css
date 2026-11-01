@@ -293,9 +293,9 @@ h3 {
 /* Track Focus (see main.js's openTrackFocus): album art on the left, title and poetry on the right,
    over the dimmed map. Appended as a child of <html>, not <body> - see #modalBackdrop.
 
-   --focus-scale is the whole-number scale the art is drawn at, and --focus-cell one 24-source-pixel
-   tile of a 10x10 board at that scale (see updateTrackFocusScale) - everything else here is sized
-   from those. */
+   --focus-cell is one 24-source-pixel tile of a 10x10 board, a whole number of screen pixels wide, and
+   --focus-line one source pixel rounded to whole screen pixels (see updateTrackFocusScale). Everything
+   else here is sized from those. */
 #trackFocus {
   position: fixed;
   top: 0;
@@ -331,12 +331,13 @@ h3 {
   right: 0;
   bottom: 0;
   display: flex;
+  column-gap: var(--focus-left);
   padding: 0 var(--focus-left);
   overflow-y: auto;
 }
 
 /* Only the art frame's size is ever in play - flex-shrink would otherwise squash it off its
-   whole-number scale on a narrow screen. */
+   exact tile size on a narrow screen. */
 #trackFocusArt {
   position: relative;
   flex: none;
@@ -370,10 +371,9 @@ h3 {
 
 /* The board's squares, one source pixel wide, showing only once it's being played. */
 #trackFocus.boardPlaying #trackFocusBoard {
-  --board-line: calc(var(--focus-scale) * 1px);
   background:
-    linear-gradient(to right, rgba(255, 255, 255, 0.3) var(--board-line), transparent var(--board-line)) 0 0 / var(--focus-cell) var(--focus-cell),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.3) var(--board-line), transparent var(--board-line)) 0 0 / var(--focus-cell) var(--focus-cell);
+    linear-gradient(to right, rgba(255, 255, 255, 0.3) var(--focus-line), transparent var(--focus-line)) 0 0 / var(--focus-cell) var(--focus-cell),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.3) var(--focus-line), transparent var(--focus-line)) 0 0 / var(--focus-cell) var(--focus-cell);
 }
 
 /* Drawn at the art's own pixel size - see main.js's renderBoardShip, which positions it. */
@@ -391,7 +391,7 @@ h3 {
 /* Centered in the space to the art's right. A fixed width, rather than fitting whatever the poem needs,
    so the text starts in the same place from one track to the next: 20em fits the longest line on the
    site, and shrinks and wraps if a window has less than that to spare. Its size follows the window
-   rather than the art, whose scale only moves in big whole-number jumps. */
+   rather than the art, so it reads the same whatever size the art lands on. */
 #trackFocusText {
   flex: 0 1 20em;
   min-width: 0;
