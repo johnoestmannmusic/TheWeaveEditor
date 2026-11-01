@@ -40,6 +40,12 @@ public static class PageConfigScriptRenderer
                 originY = grid.OriginY,
                 gapColumns = grid.GapColumns,
             },
+            // One static screen's size - see main.js's updateView.
+            screen = new
+            {
+                width = grid.ScreenWidth,
+                height = grid.ScreenHeight,
+            },
         };
         var json = JsonSerializer.Serialize(payload, Options);
 

@@ -19,9 +19,8 @@ public sealed class Page
     public int? WorldHeightPx { get; set; }
 
     /// <summary>
-    /// True (the default) draws a cosmetic globe-curvature hint on this page - a faint edge
-    /// vignette plus nodes scaling/fading slightly as they near the screen edge, to sell a
-    /// sense of a curved horizon. Purely visual - e.g. toggled off for a building interior, where
+    /// True (the default) draws a faint vignette around the edges of this page's screens, to sell
+    /// a sense of a curved horizon. Purely visual - e.g. toggled off for a building interior, where
     /// "curved horizon" makes no sense.
     /// </summary>
     public bool GlobeEffect { get; set; } = true;

@@ -14,7 +14,7 @@ public enum CardSize
     /// <summary>
     /// A screen-centered popup with a dimmed backdrop (520x360 unless CustomWidthPx/HeightPx
     /// override it) - e.g. a tutorial/news card. Ignores its Node's X/Y and world position
-    /// entirely: it's excluded from ship proximity, map wrap, and the globe-curvature effect,
+    /// entirely: it's excluded from ship proximity,
     /// and its own map icon never renders. Shown automatically on load (via Node.Persistent,
     /// same as any other persistent card) and dismissed only by pressing Z/gamepad A - see
     /// main.js's modalQueue.

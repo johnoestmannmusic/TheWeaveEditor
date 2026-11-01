@@ -11,8 +11,7 @@ public class PageRendererTests
     private const string ExactGridJson =
         "{\"columns\":19,\"rows\":10,\"cellWidth\":150,\"cellHeight\":150,\"originX\":150,\"originY\":150,\"gapColumns\":[]}";
 
-    private const string SingleSectorGridJson =
-        "{\"columns\":19,\"rows\":10,\"cellWidth\":150.5,\"cellHeight\":150.8896797153025,\"originX\":150.5,\"originY\":150.8896797153025,\"gapColumns\":[]}";
+    private const string ExactScreenJson = "{\"width\":1500,\"height\":750}";
 
     // A minimal single-node page, checked byte-for-byte against a pinned expected output -
     // the one true "golden file" case, kept deliberately small so it's easy to eyeball.
@@ -57,7 +56,7 @@ public class PageRendererTests
               <script src="jsx/main.js?v={{RuntimeAssets.Version}}"></script>
 
               <script>
-                window.__weavePage = {"globeEffect":true,"worldWidth":3000,"worldHeight":1686,"defaultSpawnX":null,"defaultSpawnY":null,"isHomePage":false,"grid":{{ExactGridJson}}};
+                window.__weavePage = {"globeEffect":true,"worldWidth":3000,"worldHeight":1686,"defaultSpawnX":null,"defaultSpawnY":null,"isHomePage":false,"grid":{{ExactGridJson}},"screen":{{ExactScreenJson}}};
               </script>
               </head>
 
@@ -358,7 +357,7 @@ public class PageRendererTests
         project.Pages.Add(planet);
 
         var planetHtml = new PageRenderer(project).RenderPage(planet);
-        Assert.Contains("window.__weavePage = {\"globeEffect\":true,\"worldWidth\":3010,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":{\"columns\":19,\"rows\":10,\"cellWidth\":150.5,\"cellHeight\":150.8896797153025,\"originX\":150.5,\"originY\":150.8896797153025,\"gapColumns\":[]}};", planetHtml);
+        Assert.Contains("window.__weavePage = {\"globeEffect\":true,\"worldWidth\":3010,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":{\"columns\":19,\"rows\":10,\"cellWidth\":150.5,\"cellHeight\":150.8896797153025,\"originX\":150.5,\"originY\":150.8896797153025,\"gapColumns\":[]},\"screen\":{\"width\":1505,\"height\":754.4483985765124}};", planetHtml);
 
         var merged = MakePage("index", "index.html");
         merged.GlobeEffect = false;
@@ -367,7 +366,7 @@ public class PageRendererTests
         project.Pages.Add(merged);
 
         var mergedHtml = new PageRenderer(project).RenderPage(merged);
-        Assert.Contains("window.__weavePage = {\"globeEffect\":false,\"worldWidth\":6020,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":{\"columns\":38,\"rows\":10,\"cellWidth\":150.5,\"cellHeight\":150.8896797153025,\"originX\":150.5,\"originY\":150.8896797153025,\"gapColumns\":[19]}};", mergedHtml);
+        Assert.Contains("window.__weavePage = {\"globeEffect\":false,\"worldWidth\":6020,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":{\"columns\":38,\"rows\":10,\"cellWidth\":150.5,\"cellHeight\":150.8896797153025,\"originX\":150.5,\"originY\":150.8896797153025,\"gapColumns\":[19]},\"screen\":{\"width\":1505,\"height\":754.4483985765124}};", mergedHtml);
     }
 
     [Fact]

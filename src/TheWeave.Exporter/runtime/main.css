@@ -3,6 +3,12 @@
     src: url('../fnt/MedodicaRegular.otf'); /*URL to font*/
 }
 
+/* Nothing scrolls: main.js's updateView moves the world underneath a fixed screen. */
+html {
+  overflow: hidden;
+  background: rgb(17, 17, 17);
+}
+
 * {
   -webkit-box-sizing: border-box;
           box-sizing: border-box;
@@ -29,6 +35,7 @@ body {
   /* World coordinates start at the viewport's very corner, with nothing peeking out around the map
      at its hard edges. */
   margin: 0;
+  transform-origin: 0 0;
   background-color: rgb(187, 186, 186);
   /* rgb(44, 44, 44); */
 }
@@ -218,28 +225,24 @@ h3 {
   width: 120px;
 }
 
-/* Cosmetic globe-curvature hint (Page.GlobeEffect - see buildGlobeEffect/updateGlobeEffect in
-   main.js). position:fixed (not the site-wide absolute every element otherwise gets) so it
-   stays glued to the viewport, not the scrolling world, and z-index sits above every node/card
-   (1) but below the ship (1000) - the ship itself should never be darkened/blurred by its own
-   view. Appended as a child of <html>, not <body> - see the comment in buildGlobeEffect() for
-   why that matters here.
-   The blur is scoped to just the edges via mask-image (same radial shape as the darkening
-   gradient, transparent through the middle) rather than applying to the whole element - a flat
-   backdrop-filter: blur() with no mask would blur the entire screen, ship included. */
-#globeVignette {
+/* Marks out the current static screen (see main.js's buildScreenFrame/updateViewScale, which size it),
+   hiding the rest of the world behind its own outsized shadow. Above every node/card/the ship, below
+   anything covering the whole window. */
+#screenFrame {
   position: fixed;
+  z-index: 1500;
+  pointer-events: none;
+  box-shadow: 0 0 0 100vmax rgb(17, 17, 17);
+}
+
+/* The edge darkening of Page.GlobeEffect. */
+#globeVignette {
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  pointer-events: none;
-  z-index: 999;
   background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.35) 100%);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  mask-image: radial-gradient(ellipse at center, transparent 60%, black 100%);
-  -webkit-mask-image: radial-gradient(ellipse at center, transparent 60%, black 100%);
 }
 
 /* A CardSize.Modal card's icon never appears on the map - it isn't a real world location, it's
@@ -251,7 +254,7 @@ h3 {
 
 /* Dims/blurs/blocks the world behind an open modal card (see showCurrentModal/closeCurrentModal
    in main.js, which create/remove this). Appended as a child of <html>, not <body>, for the same
-   reason #globeVignette above is - see main.js's own comment on that at the point this is
+   reason #screenFrame above is - see main.js's own comment on that at the point this is
    created. backdrop-filter blurs whatever renders *behind* this element - i.e. the whole game
    world, since this already covers the full viewport - rather than the element itself. */
 #modalBackdrop {

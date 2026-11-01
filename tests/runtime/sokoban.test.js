@@ -197,6 +197,25 @@ test('releaseAll stops walking at the next square', () => {
   assert.deepEqual(m.cell, { col: 6, row: 5 });
 });
 
+test('finishStep finishes the step underway but starts nothing new, leaving presses waiting', () => {
+  let m = mover();
+  m.press('right');
+  m.update(STEP_MS / 2);
+  m.release('right');
+  m.press('down'); // a tap during the step
+  m.release('down');
+
+  m.finishStep(STEP_MS * 10);
+  assert.deepEqual(m.cell, { col: 6, row: 5 });
+  assert.equal(m.isMoving, false);
+
+  m.finishStep(STEP_MS * 10);
+  assert.deepEqual(m.cell, { col: 6, row: 5 });
+
+  m.update(STEP_MS / 2);
+  assert.deepEqual(m.cell, { col: 6, row: 6 });
+});
+
 test('the same code drives a 10x10 board over 240px album art at any whole-number scale', () => {
   for (let scale of [1, 2, 3]) {
     let cell = 24 * scale;

@@ -115,6 +115,18 @@
       return true;
     }
 
+    // Spends time on the step underway, returning however much was left over from finishing it.
+    function advanceStep(dtMs){
+      let left = duration - elapsed;
+      if (dtMs < left) {
+        elapsed += dtMs;
+        return 0;
+      }
+      current = target;
+      target = null;
+      return dtMs - left;
+    }
+
     return {
       // The square being stood on, or walked to while isMoving.
       get cell(){ return target ?? current; },
@@ -154,15 +166,15 @@
       update(dtMs){
         let remaining = dtMs;
         while (target || beginNextStep()) {
-          let left = duration - elapsed;
-          if (remaining < left) {
-            elapsed += remaining;
-            return;
-          }
-          remaining -= left;
-          current = target;
-          target = null;
+          remaining = advanceStep(remaining);
+          if (target) return;
         }
+      },
+
+      // Like update(), but only ever finishes the step already underway - nothing new starts, and
+      // presses keep waiting. For when something else needs the mover to hold still for a moment.
+      finishStep(dtMs){
+        if (target) advanceStep(dtMs);
       },
     };
   }

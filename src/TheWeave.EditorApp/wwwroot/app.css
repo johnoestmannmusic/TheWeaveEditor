@@ -299,6 +299,29 @@ main {
   pointer-events: none;
 }
 
+/* Where the map's static screens meet - see app.js's renderScreenLines. */
+#canvas-screens {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.screen-line-x, .screen-line-y {
+  position: absolute;
+  opacity: 0.8;
+}
+
+.screen-line-x {
+  height: var(--screen-lines-height);
+  border-left: 6px dashed #fff;
+}
+
+.screen-line-y {
+  width: var(--screen-lines-width);
+  border-top: 6px dashed #fff;
+}
+
 /* The square a marker would land on if dropped right now - see the canvas's pointermove handler. */
 #canvas-cell-highlight {
   position: absolute;

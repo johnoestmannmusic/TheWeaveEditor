@@ -44,4 +44,23 @@ public class GridLayoutTests
         Assert.Equal(150, grid.CellWidth);
         Assert.Equal(new[] { 19 }, grid.GapColumns);
     }
+
+    [Fact]
+    public void Screens_SplitASingleMapIntoFourAlongSquareLines()
+    {
+        var grid = GridLayout.For(new Page(), new WeaveProject());
+
+        Assert.Equal(1500, grid.ScreenWidth);
+        Assert.Equal(750, grid.ScreenHeight);
+        Assert.Equal(new double[] { 1500 }, grid.ScreenLinesX);
+        Assert.Equal(new double[] { 150, 900, 1650 }, grid.ScreenLinesY);
+    }
+
+    [Fact]
+    public void Screens_SplitTheDoubleMapIntoEight()
+    {
+        var grid = GridLayout.For(new Page { WorldWidthPx = 6000, WorldHeightPx = 1686 }, new WeaveProject());
+
+        Assert.Equal(new double[] { 1500, 3000, 4500 }, grid.ScreenLinesX);
+    }
 }

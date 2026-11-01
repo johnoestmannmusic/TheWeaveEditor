@@ -22,7 +22,8 @@ Neocities, replacing hand-authoring HTML per location.
 - Live map canvas: select a page and its real background renders with every top-level location
   as a draggable, color-coded marker, always centered in a square of the map's grid. Click to
   select (syncs with the tree/Inspector), drag to move it to another free square, double-click an
-  empty square to add a new location, scroll to zoom, click-drag to pan.
+  empty square to add a new location, scroll to zoom, click-drag to pan. Dashed lines show where
+  the exported site's static screens meet.
 - Live Effects panel: add/edit/delete a page's crossfade or drifting-sprite effects and watch
   them actually animate on the canvas while you edit, using the same rendering the exported site
   uses.
@@ -58,7 +59,10 @@ Neocities, replacing hand-authoring HTML per location.
   the left and its title and poetry on the right, over the dimmed map and a blurred, blown-up copy
   of the art. Z/gamepad A, gamepad B, Esc, or clicking the backdrop closes it; the track keeps
   playing throughout.
-- An optional cosmetic globe-curvature vignette, toggleable per page.
+- Static screens instead of a follow camera: each map splits into 10x5-square screens (4 per map, 8
+  on The Weave), and walking off one slides the view to the next. The picture is drawn at a
+  whole-number scale, with dark bars around it. Cards always fit on the screen.
+- An optional cosmetic globe-curvature vignette around each screen, toggleable per page.
 - Export cleans up after itself: files from a previous export that the current run didn't
   (re)write — a renamed/deleted page, an orphaned cover image — are removed, so exporting
   repeatedly to the same folder doesn't accumulate stale files. It only ever touches the

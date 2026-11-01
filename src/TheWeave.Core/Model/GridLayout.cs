@@ -18,6 +18,15 @@ public sealed class GridLayout
     public const int ColumnsPerSector = 19;
     public const int RowCount = 10;
 
+    /// <summary>
+    /// How many squares one static screen shows. A sector's 19 columns can't divide evenly (19 is
+    /// prime), but its label strip plus those columns make 20, which halves into 10 - so a left
+    /// screen shows the label strip and A-I, and a right screen shows J-S. Rows 0-9 halve into 5,
+    /// which leaves the top label strip and the unused bottom pixels off every screen.
+    /// </summary>
+    public const int ScreenColumns = 10;
+    public const int ScreenRows = 5;
+
     /// <summary>Matches .nodeImage's width in main.css - Node.X/Y is that icon's top-left corner.</summary>
     public const double NodeIconSizePx = 48;
 
@@ -41,6 +50,17 @@ public sealed class GridLayout
 
     /// <summary>Columns with one square's width of unwalkable label strip immediately to their left.</summary>
     public IReadOnlyList<int> GapColumns => Enumerable.Range(1, Sectors - 1).Select(s => s * ColumnsPerSector).ToArray();
+
+    public double ScreenWidth => CellWidth * ScreenColumns;
+    public double ScreenHeight => CellHeight * ScreenRows;
+
+    /// <summary>World X of every line where one screen meets the next.</summary>
+    public IReadOnlyList<double> ScreenLinesX =>
+        Enumerable.Range(1, (Columns + Sectors) / ScreenColumns - 1).Select(i => i * ScreenWidth).ToArray();
+
+    /// <summary>World Y of the top and bottom of every row of screens.</summary>
+    public IReadOnlyList<double> ScreenLinesY =>
+        Enumerable.Range(0, Rows / ScreenRows + 1).Select(i => OriginY + i * ScreenHeight).ToArray();
 
     public static GridLayout For(Page page, WeaveProject project)
     {
