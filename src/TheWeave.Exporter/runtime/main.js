@@ -53,6 +53,17 @@ const MS_PER_FRAME = 1000 / 60; // loop()'s dt is measured in 60fps frames
 // Sprite rotation for each direction sokoban.js can be facing.
 const FACING_ANGLES = { up: -Math.PI / 2, down: Math.PI / 2, left: Math.PI, right: 0 };
 
+// Contrail tuning (see updateContrails), mostly in pixels of img/ui/pilot-ship.png: its two engines
+// are 2.5 of them either side of center, and its tail is 8 behind it. Orange reads as thrusters in
+// space, while white-grey reads as vapor over a planet's map.
+const SHIP_PIXEL = SHIP_WIDTH / 12;
+const CONTRAIL_OFFSET = SHIP_PIXEL * 2.5;
+const CONTRAIL_WIDTH = SHIP_PIXEL;
+const CONTRAIL_UNDER_SHIP = SHIP_PIXEL * 7;
+const CONTRAIL_LIFE_MS = 2500;
+const CONTRAIL_SPACE = { color: 'rgb(255, 140, 40)', opacity: 0.85 };
+const CONTRAIL_PLANET = { color: 'rgb(240, 240, 245)', opacity: 0.8 };
+
 // Location audio tuning (see updateLocationAudio). PRELOAD_SQUARES controls how many steps away a
 // track starts buffering - location tracks are commonly hosted at an external URL (see
 // Card.Audio.Url), so buffering has to have a head start on the ship arriving or there'd be a silent
@@ -93,6 +104,7 @@ let rootByCell = new Map();
 let view = { position: null, slide: null, scale: 1, offsetX: 0, offsetY: 0 };
 let screenFrameEl = null; // see buildScreenFrame
 let minimap = null; // see buildMinimap
+let contrails = null; // see buildContrails
 
 // Input state
 const KEY_DIRECTIONS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
@@ -115,6 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
   indexNodesByCell();
   buildScreenFrame();
   buildMinimap();
+  buildContrails();
   updateViewScale();
   placePersistentCards();
   bindInput();
@@ -659,6 +672,8 @@ function updateView(dtMs){
   let x = Math.round(view.offsetX - view.position.x * view.scale);
   let y = Math.round(view.offsetY - view.position.y * view.scale);
   document.body.style.transform = "translate(" + x + "px, " + y + "px) scale(" + view.scale + ")";
+  view.translateX = x;
+  view.translateY = y;
 }
 
 function startSlide(to){
@@ -696,6 +711,161 @@ function updateViewScale(){
   screenFrameEl.style.height = pictureHeight + "px";
 
   layoutMinimap(pictureWidth);
+  layoutContrails(pictureWidth, pictureHeight);
+}
+
+// The ship's contrails: one from each engine, lying on the map along the exact path it took, turning
+// its corners with it, and fading out over CONTRAIL_LIFE_MS. Above the map, below every location and
+// the ship. A canvas exactly covering the picture, redrawn every frame, in screen pixels rather than
+// world ones so that they stay as crisp as the ship at any window size.
+function buildContrails(){
+  let canvas = document.createElement('canvas');
+  canvas.id = 'contrails';
+  document.body.appendChild(canvas);
+
+  contrails = {
+    canvas,
+    context: canvas.getContext('2d'),
+    look: weavePage.isHomePage ? CONTRAIL_SPACE : CONTRAIL_PLANET,
+    // side: which way this engine is from the ship's center, looking along its heading.
+    rails: [{ side: -1, points: [] }, { side: 1, points: [] }],
+    head: { x: ship.x, y: ship.y }, // the last place the ship was seen
+    heading: null,
+    clock: 0, // only runs while the page does, so a tab left in the background fades nothing
+  };
+}
+
+// Whatever part of the world the picture covers is decided by the body's transform, so the canvas is
+// placed wherever that puts it exactly over the picture - see updateContrails.
+function layoutContrails(pictureWidth, pictureHeight){
+  contrails.canvas.width = pictureWidth;
+  contrails.canvas.height = pictureHeight;
+  contrails.canvas.style.width = (pictureWidth / view.scale) + "px";
+  contrails.canvas.style.height = (pictureHeight / view.scale) + "px";
+}
+
+function updateContrails(dtMs){
+  contrails.clock += dtMs;
+
+  let head = contrails.head;
+  if (ship.x !== head.x || ship.y !== head.y) {
+    // A turn can fall in the middle of a frame, leaving the ship off to one side of where it was. The
+    // corner it went around is where its old line meets its new one.
+    if (ship.x !== head.x && ship.y !== head.y) {
+      let nowVertical = playerMover.facing === 'up' || playerMover.facing === 'down';
+      let corner = nowVertical ? { x: ship.x, y: head.y } : { x: head.x, y: ship.y };
+      extendContrails(head, corner);
+      head = corner;
+    }
+    extendContrails(head, ship);
+    contrails.head = { x: ship.x, y: ship.y };
+  }
+
+  for (const rail of contrails.rails) {
+    while (rail.points.length > 0 && contrails.clock - rail.points[0].born > CONTRAIL_LIFE_MS) {
+      rail.points.shift();
+    }
+  }
+
+  drawContrails();
+}
+
+// Extends both contrails along one straight move of the ship. Each one is the ship's own path, shifted
+// sideways by CONTRAIL_OFFSET, so at a corner the outside one has to run on to meet its new line and the
+// inside one has to stop short of it - otherwise the two lines wouldn't join up.
+function extendContrails(from, to){
+  let heading = { x: Math.sign(to.x - from.x), y: Math.sign(to.y - from.y) };
+  let previous = contrails.heading;
+  let alignment = previous ? previous.x * heading.x + previous.y * heading.y : 1;
+  let born = contrails.clock;
+
+  for (const { side, points } of contrails.rails) {
+    let shift = { x: -heading.y * side * CONTRAIL_OFFSET, y: heading.x * side * CONTRAIL_OFFSET };
+    let ahead = (point, of, along) => (point.x - of.x) * along.x + (point.y - of.y) * along.y > 0;
+
+    if (points.length === 0 || alignment < 0) {
+      // Starting fresh, or doubling back, which swaps which side each engine is on.
+      points.push({ x: from.x + shift.x, y: from.y + shift.y, born });
+    } else if (alignment === 0) {
+      let corner = {
+        x: from.x + shift.x - previous.y * side * CONTRAIL_OFFSET,
+        y: from.y + shift.y + previous.x * side * CONTRAIL_OFFSET,
+        born,
+        corner: true,
+      };
+      while (points.length > 0 && ahead(points[points.length - 1], corner, previous)) points.pop();
+      points.push(corner);
+    }
+
+    let point = { x: to.x + shift.x, y: to.y + shift.y, born };
+    if (ahead(point, points[points.length - 1], heading)) points.push(point);
+  }
+
+  contrails.heading = heading;
+}
+
+function drawContrails(){
+  let { canvas, context, look } = contrails;
+
+  // Exactly over the picture, whatever rounding the body's transform had this frame - see updateView.
+  canvas.style.left = ((view.offsetX - view.translateX) / view.scale) + "px";
+  canvas.style.top = ((view.offsetY - view.translateY) / view.scale) + "px";
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = look.color;
+  for (const rail of contrails.rails) drawContrail(rail.points, look.opacity);
+  context.globalAlpha = 1;
+}
+
+// Every move is along one axis, so a contrail is a run of plain rectangles, each with the opacity of
+// its newest end. They're worked out in whole screen pixels so neighbors meet exactly, with no seams.
+function drawContrail(points, opacity){
+  let context = contrails.context;
+  let width = Math.max(1, Math.round(CONTRAIL_WIDTH * view.scale));
+  let toScreenX = (x) => Math.round(view.translateX - view.offsetX + x * view.scale);
+  let toScreenY = (y) => Math.round(view.translateY - view.offsetY + y * view.scale);
+
+  // The newest stretch is walked back over first, because it's hidden under the ship.
+  let hidden = CONTRAIL_UNDER_SHIP;
+
+  for (let i = points.length - 1; i > 0; i--) {
+    let start = points[i - 1];
+    let end = points[i];
+    let length = Math.abs(end.x - start.x) + Math.abs(end.y - start.y);
+    if (hidden >= length) {
+      hidden -= length;
+      continue;
+    }
+    let shown = (length - hidden) / length;
+    hidden = 0;
+
+    let startX = toScreenX(start.x);
+    let startY = toScreenY(start.y);
+    let endX = toScreenX(start.x + (end.x - start.x) * shown);
+    let endY = toScreenY(start.y + (end.y - start.y) * shown);
+
+    // A corner belongs to the stretch coming into it, so the two neither leave a notch nor overlap.
+    let reach = width / 2;
+    let directionX = Math.sign(end.x - start.x);
+    let directionY = Math.sign(end.y - start.y);
+    if (start.corner) {
+      startX += directionX * reach;
+      startY += directionY * reach;
+    }
+    if (end.corner && shown === 1) {
+      endX += directionX * reach;
+      endY += directionY * reach;
+    }
+
+    let along = directionX !== 0;
+    let left = along ? Math.min(startX, endX) : Math.round(startX - reach);
+    let top = along ? Math.round(startY - reach) : Math.min(startY, endY);
+    let rectWidth = along ? Math.abs(endX - startX) : width;
+    let rectHeight = along ? width : Math.abs(endY - startY);
+
+    context.globalAlpha = opacity * Math.max(0, 1 - (contrails.clock - end.born) / CONTRAIL_LIFE_MS);
+    context.fillRect(left, top, rectWidth, rectHeight);
+  }
 }
 
 // The minimap, in the bottom-right corner of the screen: the whole map, the screen currently in view,
@@ -1344,6 +1514,7 @@ function loop(timestamp){
   updateInput();
   updateShip(dt);
   updateView(dt * MS_PER_FRAME);
+  updateContrails(dt * MS_PER_FRAME);
   updateMinimap();
   updateBoardGame(dt * MS_PER_FRAME);
   updateNodeProximity();

@@ -233,6 +233,12 @@ h3 {
   transform-origin: center center;
 }
 
+/* See main.js's buildContrails. Above the map's own layers, below every .node. */
+#contrails {
+  z-index: 0;
+  pointer-events: none;
+}
+
 /* Generic per-page effects (see applyPageEffects() in main.js) */
 .effect-drift-sprite {
   width: 120px;
