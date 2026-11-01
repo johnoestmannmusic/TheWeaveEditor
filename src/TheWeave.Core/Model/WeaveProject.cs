@@ -40,23 +40,8 @@ public sealed class WeaveProject
     /// exported.
     ///
     /// Not a constant site-wide loop: shell.js plays it at full ambient volume only while the
-    /// visitor is actually on the home page, and fades it in/out using the same proximity curve
-    /// as location audio (see ListeningRadiusPx) when they're elsewhere near a node whose travel
-    /// action leads back to the home page - see main.js's updateHubMusicSignal.
+    /// visitor is actually on the home page, or on the square of a node elsewhere whose travel
+    /// action leads back to it - see main.js's updateHubMusicSignal.
     /// </summary>
     public string? BackgroundMusicPath { get; set; }
-
-    /// <summary>
-    /// Outer radius, in world-space pixels, within which a location's own track - or, elsewhere
-    /// on the site, the shell's hub theme (see BackgroundMusicPath) as the ship nears a node
-    /// that travels back to the home page - becomes audible at all as the ship approaches it,
-    /// fading from silent at this distance up to full volume at a shorter, fixed inner radius -
-    /// see main.js's LISTEN_INNER_RADIUS and location-audio logic. The same radius applies to every location on every page, so it needs to stay small
-    /// enough that no two audio-bearing locations' audible zones overlap anywhere in the
-    /// project. 105 is a starting point picked by checking the closest real spacing between two
-    /// audio-bearing locations in the live site (~218px, on Ouros) - not auto-derived or kept in
-    /// sync with node positions, so revisit it by hand if locations move closer together than
-    /// that.
-    /// </summary>
-    public double ListeningRadiusPx { get; set; } = 105;
 }

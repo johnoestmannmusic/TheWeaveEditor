@@ -3,17 +3,15 @@
 // The persistent site shell: an <iframe> that every actual page (map, planet, shrine, ...)
 // loads into, plus whatever needs to survive travel between them without restarting - today
 // just the "hub theme" track (WeaveProject.BackgroundMusicPath), whose volume main.js drives
-// via postMessage: full ambient volume while the visitor is on the home page itself, fading in
-// via the same proximity curve as location audio as they approach a node elsewhere that travels
-// back to it (see main.js's updateHubMusicSignal).
+// via postMessage: full ambient volume while the visitor is on the home page itself, or on the square
+// of a node elsewhere that travels back to it (see main.js's updateHubMusicSignal).
 //
 // This file is the canonical shared runtime owned by TheWeave.Exporter - it's generated into
 // every exported site's jsx/shell.js, not hand-edited there. See main.js's own header for the
 // per-page runtime this loads inside its iframe.
 
 const BG_MUSIC_VOLUME = 0.5;
-// 'weave-hub-music' arrives every frame now (main.js's updateHubMusicSignal, a continuous
-// proximity value), not on discrete events the way the old ducking signal did - so this can't be
+// 'weave-hub-music' arrives every frame now (main.js's updateHubMusicSignal), not on discrete events the way the old ducking signal did - so this can't be
 // "start a fresh BG_MUSIC_FADE_MS-long animation on every message" (received every ~16ms, that
 // would restart itself before ever finishing). Converted instead into a per-millisecond ease
 // retention factor for a *persistent* loop (stepFade) that continuously nudges bgMusic.volume

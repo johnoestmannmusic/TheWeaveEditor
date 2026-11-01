@@ -26,7 +26,6 @@ public static class PageConfigScriptRenderer
             worldHeight = page.WorldHeightPx ?? project.DefaultWorldHeightPx,
             defaultSpawnX = page.DefaultSpawnX,
             defaultSpawnY = page.DefaultSpawnY,
-            listeningRadiusPx = project.ListeningRadiusPx,
             // Drives main.js's updateHubMusicSignal - the shell's hub theme (see
             // WeaveProject.BackgroundMusicPath) plays at full ambient volume while true.
             isHomePage = project.HomePageId is not null && page.Id == project.HomePageId,
