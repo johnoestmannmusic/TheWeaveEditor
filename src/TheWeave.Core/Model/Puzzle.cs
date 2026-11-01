@@ -30,6 +30,15 @@ public enum PuzzleObjectKind
 
     /// <summary>Where the ship begins. A puzzle has at most one.</summary>
     Start,
+
+    /// <summary>Like a Stream, moving what's on it in its Direction, but only while the ship is on a RotatorSwitch.</summary>
+    RotatorTile,
+
+    /// <summary>While the ship is on this, RotatorTiles move what's on them once per second.</summary>
+    RotatorSwitch,
+
+    /// <summary>Stepping on this lights it for good, revealing Invisible things within reach of it.</summary>
+    Lantern,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<PuzzleDirection>))]
@@ -41,7 +50,7 @@ public enum PuzzleDirection
     Right,
 }
 
-/// <summary>One thing on a puzzle's board. A square holds one object, plus optionally a Stream under it.</summary>
+/// <summary>One thing on a puzzle's board. A square holds one object, plus optionally a floor tile (a Stream or RotatorTile) under it.</summary>
 public sealed class PuzzleObject
 {
     public PuzzleObjectKind Kind { get; set; }
@@ -51,12 +60,19 @@ public sealed class PuzzleObject
     /// <summary>Gate, Switch and Teleporter only. Gates and Switches pair up by letter, and Teleporters do separately.</summary>
     public string? Letter { get; set; }
 
-    /// <summary>Stream only.</summary>
+    /// <summary>Stream and RotatorTile only.</summary>
     public PuzzleDirection? Direction { get; set; }
 
     /// <summary>Gate only: whether it starts the puzzle open. Left out of the project file when it doesn't.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Open { get; set; }
+
+    /// <summary>
+    /// Anything but Finish and Start: whether it starts out unseen until a Lantern reveals it. It still
+    /// behaves exactly the same. Left out of the project file when it isn't.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Invisible { get; set; }
 }
 
 /// <summary>

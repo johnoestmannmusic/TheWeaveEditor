@@ -42,6 +42,11 @@ let boardGame = null;
 let boardObjectsCanvas = null;
 let boardObjectsImage = null; // the art-sized pixels drawn onto that canvas - see drawBoardObjects
 let boardStreamMs = 0;
+// A Rotator tile's clocks: how long the ship has been on its Switch since things last moved, how long since
+// they last moved at all, for their glide, and the total it's been active, for its animation.
+let boardRotatorActiveMs = 0;
+let boardRotatorGlideMs = 0;
+let boardRotatorClockMs = 0;
 let boardSolvedMs = null; // how long ago it was solved, while pausing there before returning to Track Focus
 let activeNode = null;   // the current track: activeRoot, or the chain member Track Focus is on
 let activeRoot = null;   // the top-level node the ship is currently within range of
@@ -1539,8 +1544,10 @@ function updateTrackFocusScale(){
 // trackFocusScale to draw, so a window resize mid-game has nothing to rebuild and the ship always
 // matches the art's pixel size. A track with a puzzle adds its rules to that - see buildBoardGame.
 const BOARD_STEP_MS = 180;
-// How long something on a Stream takes to move a square, and how long a solved puzzle stays on screen.
+// How long something on a Stream or Rotator tile takes to move a square, and how long a solved puzzle stays
+// on screen.
 const BOARD_STREAM_TICK_MS = 360;
+const BOARD_ROTATOR_TICK_MS = 1000;
 const BOARD_SOLVED_PAUSE_MS = 800;
 // img/ui/pilot-ship.png's own size.
 const BOARD_SHIP_WIDTH = 12;
@@ -1560,6 +1567,9 @@ function buildBoardGame(){
   let puzzle = nodeMeta.get(activeNode).puzzle;
   boardGame = puzzle ? WeavePuzzle.createPuzzleGame(puzzle) : null;
   boardStreamMs = 0;
+  boardRotatorActiveMs = 0;
+  boardRotatorGlideMs = BOARD_ROTATOR_TICK_MS;
+  boardRotatorClockMs = 0;
   boardSolvedMs = null;
 
   boardMover = WeaveSokoban.createMover(
@@ -1683,11 +1693,32 @@ function updateBoardGame(dtMs){
       boardStreamMs -= BOARD_STREAM_TICK_MS;
       onBoardEvent(boardGame.tick(boardMover.isMoving ? boardMover.cell : null));
     }
+
+    updateBoardRotators(dtMs);
   }
 
   renderBoardShip();
   updateBoardContrails(dtMs);
   drawBoardObjects();
+}
+
+// Rotator tiles only move while the ship is stopped on their Switch, once it's been there a whole tick. A
+// move underway when it leaves still finishes.
+function updateBoardRotators(dtMs){
+  boardRotatorGlideMs = Math.min(BOARD_ROTATOR_TICK_MS, boardRotatorGlideMs + dtMs);
+
+  if (boardMover.isMoving || !boardGame.onRotatorSwitch) {
+    boardRotatorActiveMs = 0;
+    return;
+  }
+
+  boardRotatorActiveMs += dtMs;
+  boardRotatorClockMs += dtMs;
+  if (boardRotatorActiveMs >= BOARD_ROTATOR_TICK_MS && boardSolvedMs === null) {
+    boardRotatorActiveMs -= BOARD_ROTATOR_TICK_MS;
+    boardRotatorGlideMs = 0;
+    onBoardEvent(boardGame.tickRotators(null));
+  }
 }
 
 // Everything on the board, at the art's own size, for CSS to scale up exactly as it does the art, so that
@@ -1697,10 +1728,12 @@ function drawBoardObjects(){
   if (!boardGame || !boardObjectsCanvas) return;
 
   let puzzle = nodeMeta.get(activeNode).puzzle;
-  WeavePuzzle.renderBoard(boardObjectsImage, [...boardGame.streams, ...boardGame.objects], puzzle, {
+  WeavePuzzle.renderBoard(boardObjectsImage, [...boardGame.floors, ...boardGame.objects], puzzle, {
     timeMs: performance.now(),
+    rotatorTimeMs: boardRotatorClockMs,
     switchesActive: boardGame.switchesActive,
     along: boardStreamMs / BOARD_STREAM_TICK_MS,
+    rotatorAlong: boardRotatorGlideMs / BOARD_ROTATOR_TICK_MS,
   });
   boardObjectsCanvas.getContext('2d').putImageData(boardObjectsImage, 0, 0);
 }

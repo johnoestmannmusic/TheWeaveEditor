@@ -6,13 +6,16 @@
 // runtime/puzzle.js, shared with the exported site.
 
 const PUZZLE_TOOLS = [
-  { kind: 'Wall', label: 'Wall', hint: 'Blocks the way. Drag to paint.', paints: true },
+  { kind: 'Wall', label: 'Wall', hint: 'Blocks the way. Drag to paint.', paints: true, canHide: true },
   { kind: 'Finish', label: 'Finish', hint: 'Reaching this solves the puzzle.' },
-  { kind: 'Gate', label: 'Gate', hint: 'Blocks the way while closed. A Switch with its letter flips it between closed and open.', letter: true, gateState: true },
-  { kind: 'Switch', label: 'Switch', hint: 'Stepping on this opens or closes every Gate with its letter.', letter: true },
-  { kind: 'Teleporter', label: 'Teleporter', hint: 'Jumps to the other Teleporter with its letter. Place them in pairs.', letter: true },
-  { kind: 'Stream', label: 'Stream', hint: 'Carries the ship and anything on it, and holds the ship until it\'s pushed off onto a non-Stream square. Drag to paint.', paints: true, direction: true },
-  { kind: 'Key', label: 'Key', hint: 'If there are any, all must be collected before Switches do anything.' },
+  { kind: 'Gate', label: 'Gate', hint: 'Blocks the way while closed. A Switch with its letter flips it between closed and open.', letter: true, gateState: true, canHide: true },
+  { kind: 'Switch', label: 'Switch', hint: 'Stepping on this opens or closes every Gate with its letter.', letter: true, canHide: true },
+  { kind: 'Teleporter', label: 'Teleporter', hint: 'Jumps to the other Teleporter with its letter. Place them in pairs.', letter: true, canHide: true },
+  { kind: 'Stream', label: 'Stream', hint: 'Carries the ship and anything on it, and holds the ship until it\'s pushed off onto a non-Stream square. Drag to paint.', paints: true, direction: true, canHide: true },
+  { kind: 'Key', label: 'Key', hint: 'If there are any, all must be collected before Switches do anything.', canHide: true },
+  { kind: 'RotatorTile', label: 'Rotator Tile', hint: 'Moves anything on it along to the next Rotator Tile, once per second, while the ship is on a Rotator Switch. The ship can walk on it freely. Drag to paint.', paints: true, direction: true, canHide: true },
+  { kind: 'RotatorSwitch', label: 'Rotator Switch', hint: 'While the ship is on this, Rotator Tiles move.', canHide: true },
+  { kind: 'Lantern', label: 'Lantern', hint: 'Stepping on this lights it for good, revealing invisible things within 3 squares, in a circle.', canHide: true },
   { kind: 'Start', label: 'Start', hint: 'Where the ship begins. There\'s only one.' },
   { kind: 'Erase', label: 'Erase', hint: 'Removes the top thing on a square. Drag to paint.', paints: true },
 ];
@@ -29,7 +32,7 @@ const PUZZLE_TILE_PX = WeavePuzzle.TILE_PX;
 // img/ui/pilot-ship.png's own size, which is what the ship is drawn at against the art.
 const PUZZLE_SHIP_WIDTH = 12;
 const PUZZLE_SHIP_HEIGHT = 16;
-const PUZZLE_PALETTE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'outline', 'light'];
+const PUZZLE_PALETTE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'outline', 'light'];
 
 // While the screen is open: which track, what's chosen in the tools, and a working copy of the board,
 // ahead of the saved one while a drag is still painting. Null while closed.
@@ -44,6 +47,7 @@ function openPuzzleEditor(pageId, nodeId) {
     letterChosen: false, // whether the letter is the user's own choice, rather than one suggested
     direction: 'Right',
     gateOpen: false,
+    invisible: false,
     objects: [],
     palette: null,
     textures: null,
@@ -169,6 +173,19 @@ function renderPuzzleTools() {
     return button;
   }));
 
+  const visibilities = document.getElementById('pe-visibilities');
+  visibilities.replaceChildren(...[{ label: 'Visible', invisible: false }, { label: 'Invisible', invisible: true }].map(({ label, invisible }) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.invisible = invisible;
+    button.textContent = label;
+    button.addEventListener('click', () => {
+      puzzleEditor.invisible = invisible;
+      showPuzzleTool();
+    });
+    return button;
+  }));
+
   const gateStates = document.getElementById('pe-gate-states');
   gateStates.replaceChildren(...[{ label: 'Closed', open: false }, { label: 'Open', open: true }].map(({ label, open }) => {
     const button = document.createElement('button');
@@ -229,6 +246,10 @@ function showPuzzleTool() {
   for (const button of document.querySelectorAll('#pe-gate-states button'))
     button.classList.toggle('active', (button.dataset.open === 'true') === puzzleEditor.gateOpen);
 
+  for (const button of document.querySelectorAll('#pe-visibilities button'))
+    button.classList.toggle('active', (button.dataset.invisible === 'true') === puzzleEditor.invisible);
+
+  document.getElementById('pe-visibility-row').hidden = !tool.canHide;
   document.getElementById('pe-letter-row').hidden = !tool.letter;
   document.getElementById('pe-gate-state-row').hidden = !tool.gateState;
   document.getElementById('pe-direction-row').hidden = !tool.direction;
@@ -304,7 +325,9 @@ function drawPuzzleBoard(timeMs) {
     const objects = puzzleEditor.objects;
     WeavePuzzle.renderBoard(puzzleEditor.image, objects, puzzleEditor.look, {
       timeMs,
+      rotatorTimeMs: timeMs,
       switchesActive: !objects.some((object) => object.kind === 'Key'),
+      showInvisible: true,
     });
     context.putImageData(puzzleEditor.image, 0, 0);
 
@@ -341,6 +364,7 @@ function buildPuzzleObject(cell) {
     ...(tool.letter ? { letter: puzzleEditor.letter } : {}),
     ...(tool.direction ? { direction: puzzleEditor.direction } : {}),
     ...(tool.gateState && puzzleEditor.gateOpen ? { open: true } : {}),
+    ...(tool.canHide && puzzleEditor.invisible ? { invisible: true } : {}),
   };
 }
 

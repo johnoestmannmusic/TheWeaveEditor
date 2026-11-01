@@ -149,6 +149,38 @@ public class ProjectEditingTests
         Assert.True(node.Puzzle!.Objects[0].Open);
     }
 
+    [Fact]
+    public void ApplyPuzzleEdit_DropsInvisibleFromFinishAndStart_AndKeepsItElsewhere()
+    {
+        var node = new Node();
+
+        ProjectEditing.ApplyPuzzleEdit(node, MakePuzzle(
+            new PuzzleObject { Kind = PuzzleObjectKind.Finish, Invisible = true },
+            new PuzzleObject { Kind = PuzzleObjectKind.Start, Col = 1, Invisible = true },
+            new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 2, Invisible = true },
+            new PuzzleObject { Kind = PuzzleObjectKind.Stream, Col = 3, Direction = PuzzleDirection.Up, Invisible = true }));
+
+        Assert.Equal(new[] { false, false, true, true }, node.Puzzle!.Objects.Select(o => o.Invisible));
+    }
+
+    [Fact]
+    public void ApplyPuzzleEdit_AllowsARotatorTileWithAnObject_ButNotAStreamToo()
+    {
+        var tile = new PuzzleObject { Kind = PuzzleObjectKind.RotatorTile, Direction = PuzzleDirection.Up };
+
+        ProjectEditing.ApplyPuzzleEdit(new Node(), MakePuzzle(tile, new PuzzleObject { Kind = PuzzleObjectKind.Wall }));
+
+        Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyPuzzleEdit(
+            new Node(),
+            MakePuzzle(tile, new PuzzleObject { Kind = PuzzleObjectKind.Stream, Direction = PuzzleDirection.Up })));
+    }
+
+    [Fact]
+    public void ApplyPuzzleEdit_RejectsARotatorTileWithNoDirection()
+    {
+        Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyPuzzleEdit(new Node(), MakePuzzle(new PuzzleObject { Kind = PuzzleObjectKind.RotatorTile })));
+    }
+
     [Theory]
     [InlineData(0, 576)]
     [InlineData(1, 575)]

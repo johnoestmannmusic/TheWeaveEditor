@@ -137,6 +137,16 @@ public static class ProjectValidator
 
         foreach (var problem in FindStreamTraps(puzzle))
             Warn(problem);
+
+        var hasRotatorTiles = puzzle.Objects.Any(o => o.Kind == PuzzleObjectKind.RotatorTile);
+        var hasRotatorSwitch = puzzle.Objects.Any(o => o.Kind == PuzzleObjectKind.RotatorSwitch);
+        if (hasRotatorTiles && !hasRotatorSwitch)
+            Warn("it has Rotator tiles but no Rotator Switch, so they'll never move.");
+        if (hasRotatorSwitch && !hasRotatorTiles)
+            Warn("it has a Rotator Switch but no Rotator tiles, so it does nothing.");
+
+        if (puzzle.Objects.Any(o => o.Invisible) && puzzle.Objects.All(o => o.Kind != PuzzleObjectKind.Lantern))
+            Warn("it has invisible objects but no Lantern, so they can never be seen.");
     }
 
     // A Stream holds the ship until it pushes it off, so a path with no way off is somewhere a ship can only
@@ -145,8 +155,12 @@ public static class ProjectValidator
     {
         var streams = new Dictionary<(int Col, int Row), PuzzleObject>();
         var objects = new Dictionary<(int Col, int Row), PuzzleObject>();
+        var rotatorTiles = puzzle.Objects.Where(o => o.Kind == PuzzleObjectKind.RotatorTile).Select(o => (o.Col, o.Row)).ToHashSet();
         foreach (var obj in puzzle.Objects)
-            (obj.Kind == PuzzleObjectKind.Stream ? streams : objects).TryAdd((obj.Col, obj.Row), obj);
+        {
+            if (obj.Kind != PuzzleObjectKind.RotatorTile)
+                (obj.Kind == PuzzleObjectKind.Stream ? streams : objects).TryAdd((obj.Col, obj.Row), obj);
+        }
 
         var reported = new HashSet<(int Col, int Row)>();
 
@@ -188,7 +202,8 @@ public static class ProjectValidator
                     }
                     ending = "faces another Stream head-on";
                 }
-                else if (objects.TryGetValue(next, out var blocking) && blocking.Kind == PuzzleObjectKind.Wall)
+                // A Wall on a Rotator tile can be moved out of the way, so that's no dead end.
+                else if (objects.TryGetValue(next, out var blocking) && blocking.Kind == PuzzleObjectKind.Wall && !rotatorTiles.Contains(next))
                     ending = "ends at a Wall";
 
                 if (ending is not null && reported.Add(here))

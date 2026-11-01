@@ -547,3 +547,239 @@ test('a puzzle saved before textures still draws, in its plain colours', () => {
   renderBoard(image, [obj('Wall', 0, 0)], { palette });
   assert.deepEqual(pixelAt(image, 12, 12), [0x11, 0x22, 0x33, 255]);
 });
+
+// ---------- Rotator Loops ----------
+
+const rotatorLine = (...cols) => cols.map(col => obj('RotatorTile', col, 5, { direction: 'Right' }));
+
+test('an object on a Rotator tile stays put until told to move, then moves along it and stops at the end', () => {
+  let g = game(...rotatorLine(1, 2, 3), obj('Wall', 1, 5));
+  g.tick(null);
+  assert.equal(find(g, 'Wall').col, 1, 'a Stream tick does nothing to it');
+  g.tickRotators(null);
+  assert.equal(find(g, 'Wall').col, 2);
+  assert.equal(find(g, 'Wall').glide, 'rotator');
+  g.tickRotators(null);
+  g.tickRotators(null);
+  assert.equal(find(g, 'Wall').col, 3);
+});
+
+test('a Stream tick and a Rotator tick each leave the other\'s objects alone, mid-glide included', () => {
+  let h = game(obj('RotatorTile', 1, 1, { direction: 'Right' }), obj('RotatorTile', 2, 1, { direction: 'Right' }), obj('Wall', 1, 1),
+    obj('Stream', 1, 3, { direction: 'Right' }), obj('Stream', 2, 3, { direction: 'Right' }), obj('Key', 1, 3));
+  h.tickRotators(null);
+  assert.deepEqual([find(h, 'Wall').col, find(h, 'Wall').fromCol], [2, 1]);
+  h.tick(null);
+  assert.deepEqual([find(h, 'Wall').col, find(h, 'Wall').fromCol], [2, 1], 'its glide is left to finish');
+  assert.deepEqual([find(h, 'Key').col, find(h, 'Key').fromCol], [2, 1]);
+});
+
+test('a loop of Rotator tiles circulates', () => {
+  let loop = [obj('RotatorTile', 1, 1, { direction: 'Right' }), obj('RotatorTile', 2, 1, { direction: 'Down' }), obj('RotatorTile', 2, 2, { direction: 'Left' }), obj('RotatorTile', 1, 2, { direction: 'Up' })];
+  let g = game(...loop, obj('Wall', 1, 1), obj('Key', 2, 2));
+  g.tickRotators(null);
+  assert.deepEqual([find(g, 'Wall').col, find(g, 'Wall').row], [2, 1]);
+  assert.deepEqual([find(g, 'Key').col, find(g, 'Key').row], [1, 2]);
+  g.tickRotators(null); g.tickRotators(null); g.tickRotators(null);
+  assert.deepEqual([find(g, 'Wall').col, find(g, 'Wall').row], [1, 1]);
+});
+
+test('things don\'t cross from Rotator tiles onto Streams, or the other way', () => {
+  let g = game(obj('RotatorTile', 1, 1, { direction: 'Right' }), obj('Stream', 2, 1, { direction: 'Right' }), obj('Stream', 3, 1, { direction: 'Right' }), obj('Wall', 1, 1));
+  g.tickRotators(null);
+  assert.equal(find(g, 'Wall').col, 1);
+  let h = game(obj('Stream', 1, 1, { direction: 'Right' }), obj('RotatorTile', 2, 1, { direction: 'Right' }), obj('Wall', 1, 1));
+  h.tick(null);
+  assert.equal(find(h, 'Wall').col, 1);
+});
+
+test('a Wall on a Rotator tile waits for the ship, and a Key moving under it counts as collected', () => {
+  let wall = game(obj('Start', 2, 5), ...rotatorLine(1, 2), obj('Wall', 1, 5));
+  wall.tickRotators(null);
+  assert.equal(find(wall, 'Wall').col, 1);
+
+  let key = game(obj('Start', 2, 5), ...rotatorLine(1, 2), obj('Key', 1, 5));
+  key.tickRotators(null);
+  assert.equal(find(key, 'Key'), undefined);
+});
+
+test('the ship walks on and off a Rotator tile freely, even against it, and it doesn\'t carry the ship', () => {
+  let g = game(obj('RotatorTile', 3, 3, { direction: 'Right' }));
+  assert.equal(g.canEnter(at(4, 3), at(3, 3), 'left'), true);
+  assert.equal(g.canEnter(at(3, 3), at(2, 3), 'left'), true);
+  assert.equal(g.canEnter(at(3, 3), at(3, 2), 'up'), true);
+  assert.equal(g.carryDirection(at(3, 3)), null);
+});
+
+test('onRotatorSwitch is only true while the ship is on one, and Keys don\'t hold it back', () => {
+  let g = game(obj('RotatorSwitch', 3, 3), obj('Key', 7, 7));
+  assert.equal(g.onRotatorSwitch, false);
+  assert.equal(g.canEnter(at(2, 3), at(3, 3), 'right'), true);
+  g.shipArrivedAt(at(3, 3));
+  assert.equal(g.onRotatorSwitch, true);
+  g.shipArrivedAt(at(4, 3));
+  assert.equal(g.onRotatorSwitch, false);
+});
+
+test('a Rotator Switch moving away from under the ship stops the Rotators', () => {
+  let g = game(obj('Start', 1, 5), ...rotatorLine(1, 2), obj('RotatorSwitch', 1, 5));
+  g.shipArrivedAt(at(1, 5));
+  assert.equal(g.onRotatorSwitch, true);
+  g.tickRotators(null);
+  assert.equal(find(g, 'RotatorSwitch').col, 2);
+  assert.deepEqual(g.shipCell, at(1, 5));
+  assert.equal(g.onRotatorSwitch, false);
+});
+
+// ---------- Lanterns and Invisible ----------
+
+// Every square a Lantern at (5, 5) reveals, as a set of rows of how far it reaches either side.
+function revealedBy(lantern = at(5, 5)){
+  let everywhere = [];
+  for (let row = 0; row < 10; row++) for (let col = 0; col < 10; col++) {
+    if (col !== lantern.col || row !== lantern.row) everywhere.push(obj('Wall', col, row, { invisible: true }));
+  }
+  let g = game(...everywhere, obj('Lantern', lantern.col, lantern.row));
+  g.shipArrivedAt(lantern);
+  return g;
+}
+
+test('a Lantern reveals a circle: 3, 3, 2 and 1 squares to either side, row by row from its own', () => {
+  let g = revealedBy();
+  let reach = (dy) => g.objects.filter(o => o.kind === 'Wall' && o.row === 5 + dy && o.revealed).map(o => o.col - 5).sort((a, b) => a - b);
+  assert.deepEqual(reach(0), [-3, -2, -1, 1, 2, 3]);
+  assert.deepEqual(reach(1), [-3, -2, -1, 0, 1, 2, 3]);
+  assert.deepEqual(reach(-1), [-3, -2, -1, 0, 1, 2, 3]);
+  assert.deepEqual(reach(2), [-2, -1, 0, 1, 2]);
+  assert.deepEqual(reach(3), [-1, 0, 1]);
+  assert.deepEqual(reach(-3), [-1, 0, 1]);
+  assert.deepEqual(reach(4), []);
+});
+
+test('nothing is revealed until the Lantern is stepped on, and Keys don\'t hold it back', () => {
+  let g = game(obj('Wall', 1, 1, { invisible: true }), obj('Lantern', 2, 1), obj('Key', 9, 9));
+  assert.equal(find(g, 'Wall').revealed, false);
+  assert.equal(find(g, 'Lantern').lit, false);
+  g.shipArrivedAt(at(2, 1));
+  assert.equal(find(g, 'Wall').revealed, true);
+  assert.equal(find(g, 'Lantern').lit, true);
+});
+
+test('a Lantern stays lit when stepped on again', () => {
+  let g = game(obj('Lantern', 2, 1));
+  g.shipArrivedAt(at(2, 1));
+  g.shipArrivedAt(at(2, 2));
+  g.shipArrivedAt(at(2, 1));
+  assert.equal(find(g, 'Lantern').lit, true);
+});
+
+test('a Lantern reveals floor tiles too, and an invisible Lantern reveals itself', () => {
+  let g = game(obj('Stream', 1, 1, { direction: 'Up', invisible: true }), obj('RotatorTile', 3, 1, { direction: 'Up', invisible: true }), obj('Lantern', 2, 1, { invisible: true }));
+  g.shipArrivedAt(at(2, 1));
+  assert.ok(g.floors.every(f => f.revealed));
+  assert.equal(find(g, 'Lantern').revealed, true);
+});
+
+test('something moving into a lit area is revealed, and stays revealed after moving out', () => {
+  let tiles = [];
+  for (let col = 0; col < 10; col++) tiles.push(obj('Stream', col, 5, { direction: 'Right' }));
+  let g = game(...tiles, obj('Wall', 0, 5, { invisible: true }), obj('Lantern', 5, 6));
+  g.shipArrivedAt(at(5, 6));
+  assert.equal(find(g, 'Wall').revealed, false, 'too far away to start with');
+  for (let i = 0; i < 9; i++) g.tick(at(5, 7));
+  assert.equal(find(g, 'Wall').col, 9);
+  assert.equal(find(g, 'Wall').revealed, true);
+});
+
+test('a Lantern moving under the ship is lit by it', () => {
+  let g = game(obj('Start', 2, 5), ...line(1, 2), obj('Lantern', 1, 5));
+  g.tick(null);
+  assert.equal(find(g, 'Lantern').lit, true);
+});
+
+test('invisible things behave exactly the same', () => {
+  let g = game(obj('Wall', 1, 0, { invisible: true }), obj('Stream', 3, 3, { direction: 'Right', invisible: true }), obj('Gate', 5, 0, { letter: 'A', invisible: true }), obj('Switch', 6, 6, { letter: 'A', invisible: true }), obj('Finish', 8, 8));
+  assert.equal(g.canEnter(at(0, 0), at(1, 0), 'right'), false);
+  assert.equal(g.carryDirection(at(3, 3)), 'right');
+  assert.equal(g.canEnter(at(3, 3), at(3, 2), 'up'), false);
+  assert.equal(g.canEnter(at(4, 0), at(5, 0), 'right'), false);
+  g.shipArrivedAt(at(6, 6));
+  assert.equal(g.canEnter(at(4, 0), at(5, 0), 'right'), true);
+  assert.equal(find(g, 'Gate').revealed, false);
+});
+
+test('placing and erasing treat a Rotator tile as floor, like a Stream', () => {
+  let rotator = obj('RotatorTile', 1, 1, { direction: 'Up' });
+  let board = placeObject([wall(1, 1), stream(1, 1)], rotator);
+  assert.deepEqual(board.map(o => o.kind).sort(), ['RotatorTile', 'Wall']);
+  assert.deepEqual(eraseObject(board, at(1, 1)).map(o => o.kind), ['RotatorTile']);
+  assert.deepEqual(placeObject(board, obj('Key', 1, 1)).map(o => o.kind).sort(), ['Key', 'RotatorTile']);
+});
+
+test('the new objects each have their own colours and exact-pixel looks', () => {
+  let { art, look } = artLook();
+  let allowed = colorsIn(art);
+  assert.equal(look.palette.rotator, look.palette.rotatorSwitch);
+  for (const role of ['rotator', 'lantern']) assert.ok(look.textures[role].ramp.includes(look.palette[role]));
+
+  let image = blank();
+  renderBoard(image, [obj('RotatorTile', 0, 0, { direction: 'Up' }), obj('RotatorSwitch', 1, 0), obj('Lantern', 2, 0), obj('Stream', 3, 0, { direction: 'Up' })], look);
+  for (const color of colorsIn(image.data)) assert.ok(allowed.has(color), color);
+  let tiles = [0, 1, 2, 3].map(col => tile(image, col, 0));
+  assert.equal(new Set(tiles).size, 4);
+});
+
+test('a Lantern looks different once lit', () => {
+  let { look } = artLook();
+  let off = blank(), on = blank();
+  renderBoard(off, [obj('Lantern', 0, 0)], look);
+  renderBoard(on, [obj('Lantern', 0, 0, { lit: true })], look);
+  assert.notEqual(tile(off, 0, 0), tile(on, 0, 0));
+});
+
+test('a Rotator tile\'s chevrons only move with its own clock, in the direction it runs', () => {
+  let { look } = artLook();
+  let middle = (options, direction) => {
+    let image = blank();
+    renderBoard(image, [obj('RotatorTile', 0, 0, { direction })], look, options);
+    let out = [];
+    for (let i = 0; i < TILE_PX; i++) {
+      let [x, y] = direction === 'Right' || direction === 'Left' ? [i, 11] : [11, i];
+      out.push(pixelAt(image, x, y)[3] ? 1 : 0);
+    }
+    return out.join('');
+  };
+  assert.equal(middle({ timeMs: 0 }, 'Right'), middle({ timeMs: 300 }, 'Right'), 'a Stream\'s clock does nothing to it');
+  let step = 1000 / 24 + 1;
+  let rotateRight = (s) => s[s.length - 1] + s.slice(0, -1);
+  let rotateLeft = (s) => s.slice(1) + s[0];
+  assert.equal(middle({ rotatorTimeMs: step }, 'Right'), rotateRight(middle({ rotatorTimeMs: 0 }, 'Right')));
+  assert.equal(middle({ rotatorTimeMs: step }, 'Left'), rotateLeft(middle({ rotatorTimeMs: 0 }, 'Left')));
+});
+
+test('something invisible isn\'t drawn until revealed, or shows as a ghost if asked', () => {
+  let { look } = artLook();
+  let hidden = blank(), shown = blank(), ghost = blank(), revealed = blank();
+  renderBoard(hidden, [obj('Wall', 0, 0, { invisible: true })], look);
+  assert.equal(colorsIn(hidden.data).size, 0);
+
+  renderBoard(revealed, [obj('Wall', 0, 0, { invisible: true, revealed: true })], look);
+  renderBoard(shown, [obj('Wall', 0, 0)], look);
+  assert.equal(tile(revealed, 0, 0), tile(shown, 0, 0));
+
+  renderBoard(ghost, [obj('Wall', 0, 0, { invisible: true })], look, { showInvisible: true });
+  assert.equal(pixelAt(ghost, 12, 12)[3], 255);
+  assert.equal(pixelAt(ghost, 13, 12)[3], 0);
+  assert.equal(pixelAt(ghost, 12, 13)[3], 0);
+});
+
+test('an object moved by a Rotator tile glides by the Rotator\'s clock, not the Stream\'s', () => {
+  let { look } = artLook();
+  let leftmost = (options) => {
+    let image = blank();
+    renderBoard(image, [{ kind: 'Wall', col: 2, row: 0, fromCol: 1, fromRow: 0, glide: 'rotator' }], look, options);
+    for (let x = 0; x < ART_PX; x++) for (let y = 0; y < TILE_PX; y++) if (pixelAt(image, x, y)[3]) return x;
+  };
+  assert.equal(leftmost({ along: 0, rotatorAlong: 0.5 }), 36 + 1);
+  assert.equal(leftmost({ along: 0.5, rotatorAlong: 1 }), 48 + 1);
+});

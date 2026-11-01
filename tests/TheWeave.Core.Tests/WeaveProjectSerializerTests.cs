@@ -27,6 +27,8 @@ public class WeaveProjectSerializerTests
                         {
                             new PuzzleObject { Kind = PuzzleObjectKind.Gate, Col = 2, Row = 3, Letter = "A", Open = true },
                             new PuzzleObject { Kind = PuzzleObjectKind.Stream, Col = 4, Row = 5, Direction = PuzzleDirection.Left },
+                            new PuzzleObject { Kind = PuzzleObjectKind.RotatorTile, Col = 6, Row = 7, Direction = PuzzleDirection.Up, Invisible = true },
+                            new PuzzleObject { Kind = PuzzleObjectKind.Lantern, Col = 8, Row = 9 },
                         },
                         Textures = { ["wall"] = new PuzzleTexture { Ramp = { "#112233" }, Pixels = "0" } },
                     },
@@ -46,6 +48,12 @@ public class WeaveProjectSerializerTests
         Assert.Equal(PuzzleDirection.Left, puzzle.Objects[1].Direction);
         Assert.True(puzzle.Objects[0].Open);
         Assert.False(puzzle.Objects[1].Open);
+        Assert.Equal(PuzzleObjectKind.RotatorTile, puzzle.Objects[2].Kind);
+        Assert.Equal(PuzzleDirection.Up, puzzle.Objects[2].Direction);
+        Assert.True(puzzle.Objects[2].Invisible);
+        Assert.Equal(PuzzleObjectKind.Lantern, puzzle.Objects[3].Kind);
+        Assert.False(puzzle.Objects[3].Invisible);
+        Assert.Equal(1, System.Text.RegularExpressions.Regex.Count(json, "\"Invisible\""));
         Assert.Equal(1, System.Text.RegularExpressions.Regex.Count(json, "\"Open\""));
         Assert.Equal("#112233", puzzle.Textures["wall"].Ramp[0]);
         Assert.Equal("0", puzzle.Textures["wall"].Pixels);
