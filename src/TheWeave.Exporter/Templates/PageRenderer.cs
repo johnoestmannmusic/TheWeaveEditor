@@ -142,8 +142,9 @@ public sealed class PageRenderer
         var pad = new string(' ', indent);
         var card = node.Card;
         var modalAttr = card.Size == CardSize.Modal ? " data-modal=\"true\"" : "";
+        var cardClass = OpensTrackFocus(card) ? "floatInfo trackCard" : "floatInfo";
 
-        sb.AppendLine($"{pad}<div class=\"floatInfo\"{modalAttr} style=\"{BuildCardStyle(card)}\">");
+        sb.AppendLine($"{pad}<div class=\"{cardClass}\"{modalAttr} style=\"{BuildCardStyle(card)}\">");
 
         if (!string.IsNullOrEmpty(card.CoverImagePath))
             sb.AppendLine($"{pad}  <img class=\"songCover\" src=\"{EscapeAttr(ResolveAsset(card.CoverImagePath))}\">");
@@ -222,11 +223,14 @@ public sealed class PageRenderer
     }
 
     // Mirrors main.js's onInteract, which is what Z/gamepad A will actually do on this card: a track
-    // opens Track Focus, unless it's a travel location, where Z travels instead. The click handler
-    // lives in main.js too, bound to this class.
+    // opens Track Focus, unless it's a travel location, where Z travels instead.
+    private static bool OpensTrackFocus(Card card) =>
+        card.Audio is not null && card.Action.Kind != ActionKind.Travel && card.Size != CardSize.Modal;
+
+    // The click handler lives in main.js, bound to this class.
     private static void RenderFocusAction(StringBuilder sb, Card card, string pad)
     {
-        if (card.Audio is null || card.Action.Kind == ActionKind.Travel || card.Size == CardSize.Modal)
+        if (!OpensTrackFocus(card))
             return;
 
         sb.AppendLine();
@@ -435,7 +439,10 @@ public sealed class PageRenderer
                 // .floatInfo's own CSS default (505px) already covers the common no-audio case
                 // (informational/travel-only cards) - only override it down to the shorter,
                 // audio-reclaimed height (see main.css) when this specific card actually has one.
-                if (card.Audio is not null) parts.Add("height: 451px");
+                // A track's card has no poetry showing to leave room for (see .trackCard in
+                // main.css), so it just fits whatever's left.
+                if (OpensTrackFocus(card)) parts.Add("height: auto");
+                else if (card.Audio is not null) parts.Add("height: 451px");
                 parts.Add("position: relative");
                 break;
         }

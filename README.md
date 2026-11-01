@@ -58,7 +58,7 @@ Neocities, replacing hand-authoring HTML per location.
   location's nested parts, Esc/gamepad B to back out. Contextual hints show next to whichever action
   is actually available.
 - Track Focus: a full-screen view of a track, with its album art enlarged to a whole-number scale on
-  the left and its title and poetry on the right, over the dimmed map and a blurred, blown-up copy
+  the left and its title and poetry on the right (a track's card on the map skips the poetry), over the dimmed map and a blurred, blown-up copy
   of the art. Esc, gamepad B, or clicking the backdrop closes it; the track keeps playing throughout.
 - A Sokoban board over the album art, started with Z/gamepad A from Track Focus: the ship walks a
   10x10 grid using the same movement as the map. There are no boxes or goals to it yet.

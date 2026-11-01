@@ -80,7 +80,8 @@ public sealed class Card
     public Offset? HeadingOffset { get; set; }
 
     /// <summary>
-    /// Each entry is one verse line, supporting a small safe markup subset:
+    /// Each entry is one verse line, shown on the card itself for a travel or informational location,
+    /// and only in Track Focus for a track. Supports a small safe markup subset:
     /// **bold** for &lt;b&gt;, literal &amp;nbsp;, and passthrough &lt;a href="..."&gt;...&lt;/a&gt; links.
     /// </summary>
     public List<string> PoetryLines { get; set; } = new();

@@ -193,6 +193,19 @@ h3 {
   -moz-border-radius: 5px;
 }
 
+/* A track's card on the map (see PageRenderer.OpensTrackFocus). Its poetry stays in the page, because
+   that's where Track Focus reads it from, but that's the only place it shows - see main.js's
+   renderTrackFocus. */
+.trackCard{
+  /* Room for the Focus/Download row: neither is in flow (see .poetry-focus, and this file's site-wide
+     position:absolute default on the link), so the card can't size itself around them. */
+  padding-bottom: 30px;
+}
+
+.trackCard > .poetry-text > .poetry-line{
+  display: none;
+}
+
 .songCover{
   position: relative; top: 5px; left: 5px;
 }

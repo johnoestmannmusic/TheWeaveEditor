@@ -639,9 +639,9 @@ public class PageRendererTests
         var noAudioBlock = html.Substring(html.IndexOf("<!-- Informational -->"), html.IndexOf("<!-- Has Music -->") - html.IndexOf("<!-- Informational -->"));
         Assert.DoesNotContain("height:", noAudioBlock);
 
-        // Has audio - explicit shorter height (505 - 54, see main.css's own comment on the 54).
+        // Has audio - a track's card just fits what's left once its poetry is hidden.
         var withAudioBlock = html.Substring(html.IndexOf("<!-- Has Music -->"));
-        Assert.Contains("height: 451px", withAudioBlock);
+        Assert.Contains("height: auto", withAudioBlock);
     }
 
     [Fact]
@@ -758,6 +758,34 @@ public class PageRendererTests
         var html = new PageRenderer(project).RenderPage(page);
 
         Assert.Equal(expected, html.Contains("<span class=\"focus-action\">[ Focus ]</span>"));
+    }
+
+    [Theory]
+    [InlineData(ActionKind.Download, true, true)]
+    [InlineData(ActionKind.None, true, true)]
+    [InlineData(ActionKind.Travel, true, false)]
+    [InlineData(ActionKind.None, false, false)]
+    public void RenderPage_TrackCard_MarkedSoItsPoetryOnlyShowsInTrackFocus(ActionKind kind, bool hasAudio, bool expected)
+    {
+        var project = new WeaveProject();
+        var page = MakePage("ouros", "ouros.html");
+        page.Nodes.Add(new Node
+        {
+            Id = "location",
+            Card = new Card
+            {
+                Audio = hasAudio ? new AudioRef { Url = "https://example.com/track.ogg" } : null,
+                PoetryLines = { "A line of verse" },
+                Action = new CardAction { Kind = kind, TargetPageId = kind == ActionKind.Travel ? "ouros" : null },
+            },
+        });
+        project.Pages.Add(page);
+
+        var html = new PageRenderer(project).RenderPage(page);
+
+        Assert.Equal(expected, html.Contains("class=\"floatInfo trackCard\""));
+        // Always in the page, whichever way it's shown - Track Focus reads it from here.
+        Assert.Contains("A line of verse", html);
     }
 
     [Fact]
