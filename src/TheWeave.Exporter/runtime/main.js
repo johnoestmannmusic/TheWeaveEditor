@@ -732,6 +732,7 @@ function createContrails(shipPixel, start){
     rails: [{ side: -1, points: [] }, { side: 1, points: [] }],
     head: { x: start.x, y: start.y }, // the last place the ship was seen
     heading: null,
+    drawn: false, // whether the canvas has anything on it - see drawContrails
     clock: 0, // only runs while the page does, so a tab left in the background fades nothing
   };
 }
@@ -822,6 +823,12 @@ function extendContrails(trail, from, to){
 // scale takes the trail's coordinates to screen pixels, and originX/Y is where its (0, 0) lands on the canvas.
 function drawContrails(trail, scale, originX, originY){
   let { canvas, context, look } = trail;
+
+  // Touching a canvas makes the browser repaint it, and anything blurred over it, so a ship that's had
+  // nothing to show for a while leaves it alone.
+  let anything = trail.rails.some(rail => rail.points.length > 1);
+  if (!anything && !trail.drawn) return;
+  trail.drawn = anything;
 
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.fillStyle = look.color;
