@@ -117,6 +117,21 @@ h3 {
   color:rgb(102, 102, 102);
 }
 
+/* A card's "[ Focus ]" action (see main.js's openTrackFocus). Takes up no height of its own: it sits
+   on the same line as [ Download ], at the left of the row, rather than pushing that down past the
+   bottom of the card - there's no spare room under 8 lines of poetry. */
+.poetry-focus{
+  font-size: 13px;
+  position: relative; top: 0px; left: -5px;
+  height: 0;
+  color:rgb(102, 102, 102);
+}
+
+.focus-action{
+  position: relative;
+  cursor: pointer;
+}
+
 .modal-close-action{
   /* Without this, the universal `* { position: absolute }` default applies (see this file's own
      top-of-file rule) - and per the CSS spec, an absolutely positioned inline element gets
@@ -272,4 +287,127 @@ h3 {
 .floatInfo[data-modal="true"] {
   z-index: 2001;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+}
+
+/* Track Focus (see main.js's openTrackFocus): album art on the left, title and poetry on the right,
+   over the dimmed map. Appended as a child of <html>, not <body> - see #modalBackdrop.
+
+   --focus-scale is the whole-number scale the art is drawn at, and --focus-cell one 24-source-pixel
+   tile of a 10x10 board at that scale (see updateTrackFocusScale) - everything else here is sized
+   from those. */
+#trackFocus {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2100;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* The art again, blown up to fill the screen and heavily blurred, just to lend everything its
+   palette. Overshoots the screen's edges by more than the blur's radius, which would otherwise
+   fade out into a visible soft border. */
+#trackFocusBackdrop {
+  position: absolute;
+  top: -80px;
+  left: -80px;
+  width: calc(100% + 160px);
+  height: calc(100% + 160px);
+  object-fit: cover;
+  image-rendering: auto;
+  filter: blur(40px);
+  opacity: 0.25;
+}
+
+#trackFocusContent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--focus-cell) * 2);
+  padding: 24px;
+  overflow-y: auto;
+}
+
+/* Only the art frame's size is ever in play - flex-shrink would otherwise squash it off its
+   whole-number scale on a narrow screen. */
+#trackFocusArt {
+  position: relative;
+  flex: none;
+  width: calc(var(--focus-cell) * 10);
+  height: calc(var(--focus-cell) * 10);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+}
+
+#trackFocusArt img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+#trackFocusBoard {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Everything in here flows normally - see the top of this file on the site-wide position:absolute
+   default this has to opt back out of, including for inline elements inside poetry lines. */
+#trackFocusText, #trackFocusText * {
+  position: relative;
+}
+
+/* A fixed width, rather than fitting whatever the poem needs, so the art stays in exactly the same
+   whole-pixel spot from one track to the next. This always fits: updateTrackFocusScale keeps the
+   art's 10 tiles to 45% of the screen, so the screen is at least 22 tiles wide, and art + gap + this
+   comes to 21. */
+#trackFocusText {
+  flex: none;
+  width: calc(var(--focus-cell) * 9);
+  color: antiquewhite;
+  font-size: calc(14px * (var(--focus-scale) + 1) / 2);
+}
+
+#trackFocusText h2 {
+  margin: 0 0 0.6em;
+  font-size: 1.6em;
+}
+
+#trackFocusText a {
+  color: #9cc4ee;
+}
+
+#trackFocusClose {
+  margin-top: 1em;
+  font-size: 0.8em;
+  color: #c9bda9;
+}
+
+#trackFocusClose span {
+  cursor: pointer;
+}
+
+@media (max-width: 700px) {
+  #trackFocusContent {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 16px;
+  }
+
+  #trackFocusText {
+    width: 100%;
+  }
 }

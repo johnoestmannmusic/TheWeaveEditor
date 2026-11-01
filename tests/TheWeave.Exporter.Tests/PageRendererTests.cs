@@ -738,6 +738,43 @@ public class PageRendererTests
         Assert.Contains("<img class=\"keyHint\" src=\"img/ui/key_z.gif\"><a href=\"./pentura.html\">[ TRAVEL ]</a>", html);
     }
 
+    [Theory]
+    [InlineData(ActionKind.Download, CardSize.Standard, true)]
+    [InlineData(ActionKind.None, CardSize.Standard, true)]
+    [InlineData(ActionKind.Travel, CardSize.Standard, false)]
+    [InlineData(ActionKind.None, CardSize.Modal, false)]
+    public void RenderPage_FocusAction_OnlyOnCardsWhereZOpensTrackFocus(ActionKind kind, CardSize size, bool expected)
+    {
+        var project = new WeaveProject();
+        var page = MakePage("ouros", "ouros.html");
+        page.Nodes.Add(new Node
+        {
+            Id = "track",
+            Card = new Card
+            {
+                Size = size,
+                Audio = new AudioRef { Url = "https://example.com/track.ogg" },
+                Action = new CardAction { Kind = kind, TargetPageId = kind == ActionKind.Travel ? "ouros" : null },
+            },
+        });
+        project.Pages.Add(page);
+
+        var html = new PageRenderer(project).RenderPage(page);
+
+        Assert.Equal(expected, html.Contains("<span class=\"focus-action\">[ Focus ]</span>"));
+    }
+
+    [Fact]
+    public void RenderPage_NoAudio_GetsNoFocusAction()
+    {
+        var project = new WeaveProject();
+        var page = MakePage("ouros", "ouros.html");
+        page.Nodes.Add(new Node { Id = "info", Card = new Card { HeadingText = "Just Text" } });
+        project.Pages.Add(page);
+
+        Assert.DoesNotContain("focus-action", new PageRenderer(project).RenderPage(page));
+    }
+
     [Fact]
     public void RenderPage_ModalCard_GetsCloseActionWithKeyHint_ButNotOnItsOwnAudio()
     {

@@ -50,9 +50,13 @@ Neocities, replacing hand-authoring HTML per location.
   arrow key, D-pad direction, or stick direction to walk square by square, and let go to stop on
   the square you're heading into. Every map has hard edges. The movement itself lives in
   `runtime/sokoban.js`, with no knowledge of the DOM or these maps, so other boards can reuse it.
-- Keyboard and gamepad controls: Z/gamepad A to interact (travel, or close a popup), X/gamepad X to
-  step through a multi-part location's nested parts in place. Contextual hint icons show next to
-  whichever action is actually available.
+- Keyboard and gamepad controls: Z/gamepad A to interact (travel, open a track's Track Focus screen,
+  or close a popup), X/gamepad X to step through a multi-part location's nested parts in place.
+  Contextual hint icons show next to whichever action is actually available.
+- Track Focus: a full-screen view of a track, with its album art enlarged to a whole-number scale on
+  the left and its title and poetry on the right, over the dimmed map and a blurred, blown-up copy
+  of the art. Z/gamepad A, gamepad B, Esc, or clicking the backdrop closes it; the track keeps
+  playing throughout.
 - An optional cosmetic globe-curvature vignette, toggleable per page.
 - Export cleans up after itself: files from a previous export that the current run didn't
   (re)write — a renamed/deleted page, an orphaned cover image — are removed, so exporting
