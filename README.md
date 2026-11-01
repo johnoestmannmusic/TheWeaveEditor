@@ -68,8 +68,9 @@ Neocities, replacing hand-authoring HTML per location.
   window's width. Cards always fit on the screen.
 - A minimap in the bottom-right corner of each map screen, showing the whole map, the screen in view,
   and every location. It fades back when the ship, a location, or an open card is under it.
-- Contrails from both of the ship's engines, lying along the exact path it took, turns included, and
-  fading out over a couple of seconds: orange on The Weave and white-grey on planets.
+- Contrails from both of the ship's engines, on the map and on a Sokoban board, lying along the exact
+  path it took, turns included, and fading out over a couple of seconds: orange on The Weave and
+  white-grey on planets.
 - An optional cosmetic globe-curvature vignette around each screen, toggleable per page.
 - Export cleans up after itself: files from a previous export that the current run didn't
   (re)write — a renamed/deleted page, an orphaned cover image — are removed, so exporting
