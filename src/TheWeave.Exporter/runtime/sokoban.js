@@ -36,6 +36,8 @@
     return {
       columns,
       rows,
+      cellWidth,
+      cellHeight,
       inBounds,
 
       centerOf(cell){

@@ -18,6 +18,11 @@ test('centerOf returns the middle of a square, offset by the origin', () => {
   assert.deepEqual(mapGrid().centerOf({ col: 18, row: 9 }), { x: 2925, y: 1575 });
 });
 
+test('a grid reports the size of its squares', () => {
+  assert.equal(mapGrid().cellWidth, 150);
+  assert.equal(mapGrid().cellHeight, 150);
+});
+
 test('cellAt finds the containing square and clamps points off the board', () => {
   let grid = mapGrid();
   assert.deepEqual(grid.cellAt(225, 225), { col: 0, row: 0 });
