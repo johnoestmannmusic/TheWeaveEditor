@@ -34,6 +34,7 @@ let trackFocusScale = 1; // scale the art is drawn at - see updateTrackFocusScal
 // The Sokoban board's own mover and ship while it's being played, null otherwise - see startBoardGame.
 let boardMover = null;
 let boardShipEl = null;
+let boardContrails = null;
 let activeNode = null;   // the current track: activeRoot, or the chain member Track Focus is on
 let activeRoot = null;   // the top-level node the ship is currently within range of
 let chainIndex = 0;      // activeNode's position within activeRoot's chain
@@ -53,6 +54,17 @@ const STEP_MS = 240; // how long walking one square takes
 const MS_PER_FRAME = 1000 / 60; // loop()'s dt is measured in 60fps frames
 // Sprite rotation for each direction sokoban.js can be facing.
 const FACING_ANGLES = { up: -Math.PI / 2, down: Math.PI / 2, left: Math.PI, right: 0 };
+
+// Contrail tuning (see createContrails). The offset, width and hidden length are in pixels of
+// img/ui/pilot-ship.png, whatever size it's drawn at: its two engines are 2.5 of them either side of
+// center, and its tail is 8 behind it. Orange reads as thrusters in space, while white-grey reads as
+// vapor over a planet.
+const CONTRAIL_OFFSET = 2.5;
+const CONTRAIL_WIDTH = 1;
+const CONTRAIL_UNDER_SHIP = 7;
+const CONTRAIL_LIFE_MS = 2500;
+const CONTRAIL_SPACE = { color: 'rgb(255, 140, 40)', opacity: 0.85 };
+const CONTRAIL_PLANET = { color: 'rgb(240, 240, 245)', opacity: 0.8 };
 
 // Location audio tuning (see updateLocationAudio). PRELOAD_SQUARES controls how many steps away a
 // track starts buffering - location tracks are commonly hosted at an external URL (see
@@ -94,6 +106,7 @@ let rootByCell = new Map();
 let view = { position: null, slide: null, scale: 1, offsetX: 0, offsetY: 0 };
 let screenFrameEl = null; // see buildScreenFrame
 let minimap = null; // see buildMinimap
+let mapContrails = null; // the ship's on the map - see buildMapContrails
 
 // Input state
 const KEY_DIRECTIONS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
@@ -119,6 +132,7 @@ document.addEventListener('DOMContentLoaded', function() {
   noteArrivalRoot();
   buildScreenFrame();
   buildMinimap();
+  buildMapContrails();
   updateViewScale();
   placePersistentCards();
   bindInput();
@@ -673,6 +687,8 @@ function updateView(dtMs){
   let x = Math.round(view.offsetX - view.position.x * view.scale);
   let y = Math.round(view.offsetY - view.position.y * view.scale);
   document.body.style.transform = "translate(" + x + "px, " + y + "px) scale(" + view.scale + ")";
+  view.translateX = x;
+  view.translateY = y;
 }
 
 function startSlide(to){
@@ -710,6 +726,178 @@ function updateViewScale(){
   screenFrameEl.style.height = pictureHeight + "px";
 
   layoutMinimap(pictureWidth);
+  layoutMapContrails(pictureWidth, pictureHeight);
+}
+
+// The ship's contrails: one from each engine, lying along the exact path it took, turning its corners
+// with it, and fading out over CONTRAIL_LIFE_MS. A set of them works in whatever coordinates its ship
+// moves in, given how big one of the sprite's pixels is there, so the map and the Sokoban board share all
+// of this. They're drawn on a canvas in screen pixels, so that they stay as crisp as the ship.
+function createContrails(shipPixel, start){
+  let canvas = document.createElement('canvas');
+  canvas.className = 'contrails';
+
+  return {
+    canvas,
+    context: canvas.getContext('2d'),
+    look: weavePage.isHomePage ? CONTRAIL_SPACE : CONTRAIL_PLANET,
+    shipPixel,
+    // side: which way this engine is from the ship's center, looking along its heading.
+    rails: [{ side: -1, points: [] }, { side: 1, points: [] }],
+    head: { x: start.x, y: start.y }, // the last place the ship was seen
+    heading: null,
+    drawn: false, // whether the canvas has anything on it - see drawContrails
+    clock: 0, // only runs while the page does, so a tab left in the background fades nothing
+  };
+}
+
+// On the map, above its own layers and below every location and the ship.
+function buildMapContrails(){
+  mapContrails = createContrails(SHIP_WIDTH / 12, ship);
+  document.body.appendChild(mapContrails.canvas);
+}
+
+// Exactly the size of the picture on screen, once the body's transform has scaled it.
+function layoutMapContrails(pictureWidth, pictureHeight){
+  mapContrails.canvas.width = pictureWidth;
+  mapContrails.canvas.height = pictureHeight;
+  mapContrails.canvas.style.width = (pictureWidth / view.scale) + "px";
+  mapContrails.canvas.style.height = (pictureHeight / view.scale) + "px";
+}
+
+function updateMapContrails(dtMs){
+  updateContrails(mapContrails, ship, playerMover.facing, dtMs);
+
+  // Exactly over the picture, whatever rounding the body's transform had this frame - see updateView.
+  mapContrails.canvas.style.left = ((view.offsetX - view.translateX) / view.scale) + "px";
+  mapContrails.canvas.style.top = ((view.offsetY - view.translateY) / view.scale) + "px";
+
+  drawContrails(mapContrails, view.scale, view.translateX - view.offsetX, view.translateY - view.offsetY);
+}
+
+function updateContrails(trail, position, facing, dtMs){
+  trail.clock += dtMs;
+
+  let head = trail.head;
+  if (position.x !== head.x || position.y !== head.y) {
+    // A turn can fall in the middle of a frame, leaving the ship off to one side of where it was. The
+    // corner it went around is where its old line meets its new one.
+    if (position.x !== head.x && position.y !== head.y) {
+      let nowVertical = facing === 'up' || facing === 'down';
+      let corner = nowVertical ? { x: position.x, y: head.y } : { x: head.x, y: position.y };
+      extendContrails(trail, head, corner);
+      head = corner;
+    }
+    extendContrails(trail, head, position);
+    trail.head = { x: position.x, y: position.y };
+  }
+
+  for (const rail of trail.rails) {
+    while (rail.points.length > 0 && trail.clock - rail.points[0].born > CONTRAIL_LIFE_MS) {
+      rail.points.shift();
+    }
+  }
+}
+
+// Extends both contrails along one straight move of the ship. Each one is the ship's own path, shifted
+// sideways to its engine, so at a corner the outside one has to run on to meet its new line and the
+// inside one has to stop short of it - otherwise the two lines wouldn't join up.
+function extendContrails(trail, from, to){
+  let offset = CONTRAIL_OFFSET * trail.shipPixel;
+  let heading = { x: Math.sign(to.x - from.x), y: Math.sign(to.y - from.y) };
+  let previous = trail.heading;
+  let alignment = previous ? previous.x * heading.x + previous.y * heading.y : 1;
+  let born = trail.clock;
+
+  for (const { side, points } of trail.rails) {
+    let shift = { x: -heading.y * side * offset, y: heading.x * side * offset };
+    let ahead = (point, of, along) => (point.x - of.x) * along.x + (point.y - of.y) * along.y > 0;
+
+    if (points.length === 0 || alignment < 0) {
+      // Starting fresh, or doubling back, which swaps which side each engine is on.
+      points.push({ x: from.x + shift.x, y: from.y + shift.y, born });
+    } else if (alignment === 0) {
+      let corner = {
+        x: from.x + shift.x - previous.y * side * offset,
+        y: from.y + shift.y + previous.x * side * offset,
+        born,
+        corner: true,
+      };
+      while (points.length > 0 && ahead(points[points.length - 1], corner, previous)) points.pop();
+      points.push(corner);
+    }
+
+    let point = { x: to.x + shift.x, y: to.y + shift.y, born };
+    if (ahead(point, points[points.length - 1], heading)) points.push(point);
+  }
+
+  trail.heading = heading;
+}
+
+// scale takes the trail's coordinates to screen pixels, and originX/Y is where its (0, 0) lands on the canvas.
+function drawContrails(trail, scale, originX, originY){
+  let { canvas, context, look } = trail;
+
+  // Touching a canvas makes the browser repaint it, and anything blurred over it, so a ship that's had
+  // nothing to show for a while leaves it alone.
+  let anything = trail.rails.some(rail => rail.points.length > 1);
+  if (!anything && !trail.drawn) return;
+  trail.drawn = anything;
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = look.color;
+  for (const rail of trail.rails) drawContrail(trail, rail.points, scale, originX, originY);
+  context.globalAlpha = 1;
+}
+
+// Every move is along one axis, so a contrail is a run of plain rectangles, each with the opacity of
+// its newest end. They're worked out in whole screen pixels so neighbors meet exactly, with no seams.
+function drawContrail(trail, points, scale, originX, originY){
+  let width = Math.max(1, Math.round(CONTRAIL_WIDTH * trail.shipPixel * scale));
+  let toScreenX = (x) => Math.round(originX + x * scale);
+  let toScreenY = (y) => Math.round(originY + y * scale);
+
+  // The newest stretch is walked back over first, because it's hidden under the ship.
+  let hidden = CONTRAIL_UNDER_SHIP * trail.shipPixel;
+
+  for (let i = points.length - 1; i > 0; i--) {
+    let start = points[i - 1];
+    let end = points[i];
+    let length = Math.abs(end.x - start.x) + Math.abs(end.y - start.y);
+    if (hidden >= length) {
+      hidden -= length;
+      continue;
+    }
+    let shown = (length - hidden) / length;
+    hidden = 0;
+
+    let startX = toScreenX(start.x);
+    let startY = toScreenY(start.y);
+    let endX = toScreenX(start.x + (end.x - start.x) * shown);
+    let endY = toScreenY(start.y + (end.y - start.y) * shown);
+
+    // A corner belongs to the stretch coming into it, so the two neither leave a notch nor overlap.
+    let reach = width / 2;
+    let directionX = Math.sign(end.x - start.x);
+    let directionY = Math.sign(end.y - start.y);
+    if (start.corner) {
+      startX += directionX * reach;
+      startY += directionY * reach;
+    }
+    if (end.corner && shown === 1) {
+      endX += directionX * reach;
+      endY += directionY * reach;
+    }
+
+    let along = directionX !== 0;
+    let left = along ? Math.min(startX, endX) : Math.round(startX - reach);
+    let top = along ? Math.round(startY - reach) : Math.min(startY, endY);
+    let rectWidth = along ? Math.abs(endX - startX) : width;
+    let rectHeight = along ? width : Math.abs(endY - startY);
+
+    trail.context.globalAlpha = trail.look.opacity * Math.max(0, 1 - (trail.clock - end.born) / CONTRAIL_LIFE_MS);
+    trail.context.fillRect(left, top, rectWidth, rectHeight);
+  }
 }
 
 // The minimap, in the bottom-right corner of the screen: the whole map, the screen currently in view,
@@ -1098,7 +1286,10 @@ function renderTrackFocus(){
     // and updateTrackFocusScale for the tile size it gets to work with.
     let board = document.createElement('div');
     board.id = 'trackFocusBoard';
-    if (boardMover) board.appendChild(buildBoardShip());
+    if (boardMover) {
+      board.appendChild(boardContrails.canvas);
+      board.appendChild(buildBoardShip());
+    }
     frame.appendChild(board);
 
     content.appendChild(frame);
@@ -1237,6 +1428,7 @@ function startBoardGame(){
     }),
     { cell: BOARD_START_CELL, stepMs: BOARD_STEP_MS }
   );
+  boardContrails = createContrails(BOARD_SHIP_WIDTH / 12, boardMover.position);
   renderTrackFocus();
   renderBoardShip();
 }
@@ -1247,6 +1439,7 @@ function leaveBoardGame(){
   releaseDirections();
   boardMover = null;
   boardShipEl = null;
+  boardContrails = null;
   renderTrackFocus();
 }
 
@@ -1261,6 +1454,20 @@ function updateBoardGame(dtMs){
   if (!boardMover) return;
   boardMover.update(dtMs);
   renderBoardShip();
+  updateBoardContrails(dtMs);
+}
+
+function updateBoardContrails(dtMs){
+  updateContrails(boardContrails, boardMover.position, boardMover.facing, dtMs);
+
+  // Keeps up with a window resize here, since this is already measured against trackFocusScale every frame.
+  let size = Math.round(TRACK_FOCUS_ART_PX * trackFocusScale);
+  if (boardContrails.canvas.width !== size) {
+    boardContrails.canvas.width = size;
+    boardContrails.canvas.height = size;
+  }
+
+  drawContrails(boardContrails, trackFocusScale, 0, 0);
 }
 
 function renderBoardShip(){
@@ -1365,6 +1572,7 @@ function loop(timestamp){
   updateInput();
   updateShip(dt);
   updateView(dt * MS_PER_FRAME);
+  updateMapContrails(dt * MS_PER_FRAME);
   updateMinimap();
   updateBoardGame(dt * MS_PER_FRAME);
   updateNodeProximity();
