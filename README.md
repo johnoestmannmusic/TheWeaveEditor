@@ -66,6 +66,9 @@ Neocities, replacing hand-authoring HTML per location.
 - Static screens instead of a follow camera: each map splits into 10x5-square screens (4 per map, 8
   on The Weave), and walking off one slides the view to the next. The picture scales to fill the
   window's width. Cards always fit on the screen.
+- Entering a planet lands on its number column's top square, on the node back to The Weave. That node
+  stays asleep on arrival: its card only opens, and Z only travels, once the ship has stepped off it
+  and come back. Leaving a planet lands on that planet's own node on The Weave.
 - A minimap in the bottom-right corner of each map screen, showing the whole map, the screen in view,
   and every location. It fades back when the ship, a location, or an open card is under it.
 - An optional cosmetic globe-curvature vignette around each screen, toggleable per page.
