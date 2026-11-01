@@ -27,6 +27,8 @@ public class ProjectValidatorTests
                 MakePage("ouros", new Node
                 {
                     Id = "shrine-of-zadra",
+                    X = 201,
+                    Y = 201,
                     Card = new Card { HeadingText = "Shrine of Zadra", Action = new CardAction { Kind = ActionKind.None } },
                 }),
             },
@@ -157,5 +159,53 @@ public class ProjectValidatorTests
             if (Directory.Exists(Path))
                 Directory.Delete(Path, recursive: true);
         }
+    }
+
+    [Fact]
+    public void NodeNotCenteredInASquare_IsAWarning()
+    {
+        var project = new WeaveProject
+        {
+            Pages = { MakePage("ouros", new Node { Id = "off-center", X = 210, Y = 201 }) },
+        };
+
+        var issue = Assert.Single(ProjectValidator.Validate(project));
+
+        Assert.Equal(ValidationSeverity.Warning, issue.Severity);
+        Assert.Contains("off-center", issue.Message);
+    }
+
+    [Fact]
+    public void TwoNodesOnOneSquare_IsAWarning()
+    {
+        var project = new WeaveProject
+        {
+            Pages =
+            {
+                MakePage("ouros",
+                    new Node { Id = "first", X = 201, Y = 201 },
+                    new Node { Id = "second", X = 201, Y = 201 }),
+            },
+        };
+
+        var issue = Assert.Single(ProjectValidator.Validate(project));
+
+        Assert.Equal(ValidationSeverity.Warning, issue.Severity);
+        Assert.Contains("A0", issue.Message);
+        Assert.Contains("second", issue.Message);
+    }
+
+    [Fact]
+    public void ModalCard_IsNotOnTheGrid()
+    {
+        var project = new WeaveProject
+        {
+            Pages =
+            {
+                MakePage("index", new Node { Id = "tutorial", X = 50, Y = 50, Card = new Card { Size = CardSize.Modal } }),
+            },
+        };
+
+        Assert.Empty(ProjectValidator.Validate(project));
     }
 }

@@ -7,9 +7,11 @@ public enum IconStyle
 }
 
 /// <summary>
-/// A clickable location on a page's map. Recursive: a Node's Children are nested nodes placed
-/// inside its own Card (used for multi-part stories, e.g. Ouros's Salanth Town Gardens chain).
-/// A top-level node's X/Y are page-relative; a nested node's X/Y are relative to its parent's card.
+/// A location on a page's map. Recursive: a Node's Children are further parts of the same location
+/// (used for multi-part stories, e.g. Ouros's Salanth Town Gardens chain), reached with X rather than
+/// walked to. A top-level node's X/Y are page-relative, and put its icon's center in the middle of a
+/// grid square (see GridLayout). A nested node's X/Y aren't used: it has no icon of its own, and
+/// always sits exactly on its parent (see PageRenderer.RenderNode).
 /// </summary>
 public sealed class Node
 {

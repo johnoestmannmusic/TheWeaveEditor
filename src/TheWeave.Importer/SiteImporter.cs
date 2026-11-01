@@ -9,7 +9,9 @@ public sealed class SiteImporter
     public async Task<ImportResult> ImportDirectoryAsync(string sourceDir, string projectTitle = "Imported Project")
     {
         var ctx = new ImportContext();
-        var project = new WeaveProject { Title = projectTitle };
+        // Version 1: positions come straight from the hand-authored pages, not yet on the grid - see
+        // ProjectMigrations.
+        var project = new WeaveProject { Title = projectTitle, SchemaVersion = 1 };
 
         var browsingContext = BrowsingContext.New(Configuration.Default);
 

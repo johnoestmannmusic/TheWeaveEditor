@@ -14,7 +14,7 @@ public sealed class Page
     public string OutputFileName { get; set; } = "";
     public string? GroupId { get; set; }
 
-    /// <summary>Null = use the project default (today's fixed 3010x1696).</summary>
+    /// <summary>Null = use the project default (one map drawn at exactly 6x - 3000x1686).</summary>
     public int? WorldWidthPx { get; set; }
     public int? WorldHeightPx { get; set; }
 
@@ -28,8 +28,9 @@ public sealed class Page
 
     /// <summary>
     /// Where the ship spawns landing on this page with no travel/query-string position at all -
-    /// e.g. opening it directly with a bare URL, or via the shell's iframe on first load. Null
-    /// falls back to the runtime's own hardcoded default (120, 120). Doesn't affect arriving via
+    /// e.g. opening it directly with a bare URL, or via the shell's iframe on first load. The ship
+    /// lands on whichever square is nearest. Null falls back to the runtime's own hardcoded default
+    /// (120, 120), which is square A0. Doesn't affect arriving via
     /// a travel link - that's governed by CardAction.TravelSpawnX/Y (or the exporter's own
     /// reciprocal/center-of-map defaults when those aren't set - see PageRenderer.BuildTravelQuery).
     /// </summary>

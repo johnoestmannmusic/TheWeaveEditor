@@ -49,6 +49,8 @@ public static class ProjectValidator
             foreach (var node in page.Nodes)
                 CheckNode(page, node, pageIds, assetBasePath, issues);
 
+            CheckGridPlacement(project, page, issues);
+
             foreach (var effect in page.Effects)
                 CheckEffect(page, effect, assetBasePath, issues);
         }
@@ -87,6 +89,37 @@ public static class ProjectValidator
 
         foreach (var child in node.Children)
             CheckNode(page, child, pageIds, assetBasePath, issues);
+    }
+
+    private static void CheckGridPlacement(WeaveProject project, Page page, List<ValidationIssue> issues)
+    {
+        var grid = GridLayout.For(page, project);
+        var mapNodes = page.Nodes.Where(n => n.Card.Size != CardSize.Modal).ToList();
+
+        foreach (var node in mapNodes)
+        {
+            var (x, y) = grid.NodePositionFor(grid.CellOf(node));
+            if (Math.Abs(node.X - x) > 0.5 || Math.Abs(node.Y - y) > 0.5)
+            {
+                issues.Add(new ValidationIssue
+                {
+                    Severity = ValidationSeverity.Warning,
+                    Message = $"Node '{node.Id}' isn't centered in a grid square.",
+                    PageId = page.Id,
+                    NodeId = node.Id,
+                });
+            }
+        }
+
+        foreach (var group in mapNodes.GroupBy(grid.CellOf).Where(g => g.Count() > 1))
+        {
+            issues.Add(new ValidationIssue
+            {
+                Severity = ValidationSeverity.Warning,
+                Message = $"Square {grid.LabelOf(group.Key)} has {group.Count()} locations on it ({string.Join(", ", group.Select(n => n.Id))}) - only the first can be reached.",
+                PageId = page.Id,
+            });
+        }
     }
 
     private static void CheckEffect(Page page, PageEffect effect, string? assetBasePath, List<ValidationIssue> issues)
