@@ -281,12 +281,6 @@ h3 {
   position: absolute;
 }
 
-/* The one thing on here that has to stand out on any map, light or dark. */
-#minimapShip {
-  position: absolute;
-  filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff) drop-shadow(0 0 2px #000);
-}
-
 /* The edge darkening of Page.GlobeEffect. */
 #globeVignette {
   position: absolute;

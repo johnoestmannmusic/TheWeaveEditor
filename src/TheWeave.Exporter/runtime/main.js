@@ -698,7 +698,7 @@ function updateViewScale(){
 }
 
 // The minimap, in the bottom-right corner of the screen: the whole map, the screen currently in view,
-// the map's locations, and the ship, so the player can see where they are in the larger world. Lives
+// and the map's locations, so the player can see where they are in the larger world. Lives
 // inside #screenFrame, so it stays put while the world moves underneath it, and anything covering the
 // whole window covers it too. Its picture is cropped to the same top and bottom edges the screens
 // themselves show - see GridLayout.ScreenTops.
@@ -725,13 +725,8 @@ function buildMinimap(){
   screen.id = 'minimapScreen';
   el.appendChild(screen);
 
-  let shipIcon = document.createElement('img');
-  shipIcon.id = 'minimapShip';
-  shipIcon.src = shipEl.getAttribute('src');
-  el.appendChild(shipIcon);
-
   screenFrameEl.appendChild(el);
-  minimap = { el, image, nodes, screen, shipIcon, scale: 1, top: 0 };
+  minimap = { el, image, nodes, screen, scale: 1, top: 0 };
 }
 
 // A single map's minimap takes MINIMAP_WIDTH_FRACTION of the picture's width. A wider map keeps the same
@@ -739,11 +734,8 @@ function buildMinimap(){
 const MINIMAP_WIDTH_FRACTION = 0.16;
 const MINIMAP_MAX_WIDTH_FRACTION = 0.24;
 const MINIMAP_MARGIN_FRACTION = 0.008;
-// Sizes relative to one of the minimap's own squares.
+// A location's icon, relative to one of the minimap's own squares.
 const MINIMAP_NODE_SQUARES = 0.55;
-const MINIMAP_SHIP_SQUARES = 1.2;
-// img/ui/pilot-ship.png's own shape, as for SHIP_HEIGHT.
-const MINIMAP_SHIP_ASPECT = 16 / 12;
 
 function layoutMinimap(pictureWidth){
   let screen = weavePage.screen;
@@ -775,21 +767,11 @@ function layoutMinimap(pictureWidth){
     node.icon.style.left = (node.center.x * minimap.scale - nodeSize / 2) + "px";
     node.icon.style.top = ((node.center.y - minimap.top) * minimap.scale - nodeSize / 2) + "px";
   }
-
-  minimap.shipWidth = Math.max(4, Math.round(square * MINIMAP_SHIP_SQUARES));
-  minimap.shipHeight = Math.round(minimap.shipWidth * MINIMAP_SHIP_ASPECT);
-  minimap.shipIcon.style.width = minimap.shipWidth + "px";
-  minimap.shipIcon.style.height = minimap.shipHeight + "px";
 }
 
 function updateMinimap(){
   minimap.screen.style.left = (view.position.x * minimap.scale) + "px";
   minimap.screen.style.top = ((view.position.y - minimap.top) * minimap.scale) + "px";
-
-  minimap.shipIcon.style.left = (ship.x * minimap.scale - minimap.shipWidth / 2) + "px";
-  minimap.shipIcon.style.top = ((ship.y - minimap.top) * minimap.scale - minimap.shipHeight / 2) + "px";
-  // Sprite's forward points "up" at rest - see renderShip.
-  minimap.shipIcon.style.transform = "rotate(" + (ship.angle + Math.PI / 2) + "rad)";
 
   minimap.el.classList.toggle('minimapFaded', isMinimapInTheWay());
 }
