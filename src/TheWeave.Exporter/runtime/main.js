@@ -8,7 +8,8 @@
 // whatever location the ship is standing on - travels to its linked page, or opens a track's Track
 // Focus screen. When that location has extra nested locations tucked inside its card (a multi-part
 // story), press X (keyboard) or X (gamepad) in Track Focus to step between them. Z / A in Track Focus
-// starts the Sokoban board over the album art, and C (keyboard) or B (gamepad) backs out of it.
+// starts the Sokoban board over the album art, and C (keyboard) or B (gamepad) backs out of it. X / X
+// restarts the board's puzzle, and solving one unlocks stepping on to the location's next part.
 //
 // This file is the canonical shared runtime owned by TheWeave.Exporter - it's
 // generated into every exported site's jsx/main.js, not hand-edited there.
@@ -35,6 +36,12 @@ let trackFocusScale = 1; // scale the art is drawn at - see updateTrackFocusScal
 let boardMover = null;
 let boardShipEl = null;
 let boardContrails = null;
+// While a track's puzzle is being played: its rules (see puzzle.js's createPuzzleGame), the canvas its
+// objects are drawn on, and how far through the current Stream tick it is. Null for a track with no puzzle.
+let boardGame = null;
+let boardObjectsCanvas = null;
+let boardStreamMs = 0;
+let boardSolvedMs = null; // how long ago it was solved, while pausing there before returning to Track Focus
 let activeNode = null;   // the current track: activeRoot, or the chain member Track Focus is on
 let activeRoot = null;   // the top-level node the ship is currently within range of
 let chainIndex = 0;      // activeNode's position within activeRoot's chain
@@ -338,6 +345,7 @@ function loadNodes() {
       // Whether this node's Travel action leads back to the project's home page - see
       // updateHubMusicSignal, which fades the shell's hub theme in as the ship approaches one.
       travelHome: curNode.dataset.travelHome === "true",
+      puzzle: curNode.dataset.puzzle ? JSON.parse(curNode.dataset.puzzle) : null,
     });
 
     if (curAudio && !isModal) curAudio.volume = 0; // updateLocationAudio eases this up from silence
@@ -518,7 +526,7 @@ function bindInput(){
     if (direction && !e.repeat) activeMover().press(direction);
 
     if ((e.key === 'z' || e.key === 'Z') && !e.repeat) onInteractButton();
-    if ((e.key === 'x' || e.key === 'X') && !e.repeat) cycleChainNode();
+    if ((e.key === 'x' || e.key === 'X') && !e.repeat) onSwitchButton();
     if (backKey && !e.repeat) onBackButton();
   });
 
@@ -586,7 +594,7 @@ function updateInput(){
 
       // Standard gamepad mapping: button 2 is X (Xbox) / Square (PlayStation).
       let xDown = !!(pad.buttons[2] && pad.buttons[2].pressed);
-      if (xDown && !gamepadCycleWasDown) cycleChainNode();
+      if (xDown && !gamepadCycleWasDown) onSwitchButton();
       gamepadCycleWasDown = xDown;
 
       break; // only the first connected gamepad drives the ship
@@ -851,8 +859,20 @@ function addContrailSample(trail, x, y){
   trail.direction = direction;
 
   for (const rail of trail.rails) {
-    rail.points.push({ ...contrailPointAt(trail, rail, trail.average, direction), born: trail.clock });
+    rail.points.push({ ...contrailPointAt(trail, rail, trail.average, direction), born: trail.clock, afterBreak: rail.broken });
+    rail.broken = false;
   }
+}
+
+// For a ship that's jumped straight somewhere: what's been drawn fades where it is, and what comes next
+// starts afresh from the new place, with nothing streaking across the board between them.
+function breakContrails(trail, position){
+  trail.head = { x: position.x, y: position.y };
+  trail.average = { x: position.x, y: position.y };
+  trail.samples = trail.samples.map(() => ({ x: position.x, y: position.y }));
+  trail.toNextSample = trail.shipPixel;
+  trail.direction = null;
+  for (const rail of trail.rails) rail.broken = rail.points.length > 0;
 }
 
 // Where an engine's contrail is, level with a point on the path heading in a direction.
@@ -893,7 +913,7 @@ function withStretchToShip(trail, rail){
 
   let direction = { x: toShip.x / distance, y: toShip.y / distance };
   // Against the path's own direction when doubling back, where rail.side has been flipped to match that.
-  if (direction.x * trail.direction.x + direction.y * trail.direction.y < 0) return points;
+  if (!trail.direction || direction.x * trail.direction.x + direction.y * trail.direction.y < 0) return points;
 
   let end = { x: trail.average.x + direction.x * visible, y: trail.average.y + direction.y * visible };
   return [...points, { ...contrailPointAt(trail, rail, end, direction), born: points[points.length - 1].born }];
@@ -916,10 +936,12 @@ function drawContrail(trail, points, scale, originX, originY){
 
     context.beginPath();
     context.moveTo(toScreenX(points[i].x), toScreenY(points[i].y));
-    while (i < points.length - 1 && fadeStepOf(points[i + 1]) === step) {
+    while (i < points.length - 1 && fadeStepOf(points[i + 1]) === step && !points[i + 1].afterBreak) {
       i++;
       context.lineTo(toScreenX(points[i].x), toScreenY(points[i].y));
     }
+    // Nothing joins the two sides of a break - see breakContrails.
+    if (points[i + 1]?.afterBreak) i++;
 
     context.globalAlpha = trail.look.opacity * step / CONTRAIL_FADE_STEPS;
     context.stroke();
@@ -1204,10 +1226,45 @@ function showLocation(root){
   activeNode = root;
 }
 
-// Whether Track Focus may move on from this chain member. The one place a "solve this part's
-// Sokoban first" rule goes - nothing is locked yet.
+// Whether Track Focus may move on from this chain member: not until its puzzle is solved, if it has one
+// that can be. From a chain's last part, moving on only goes back to its start, so that's always allowed.
 function canAdvanceChain(member){
-  return true;
+  let chain = nodeMeta.get(activeRoot).chain;
+  if (chain.indexOf(member) === chain.length - 1) return true;
+
+  let puzzle = nodeMeta.get(member).puzzle;
+  return !WeavePuzzle.hasFinish(puzzle) || isPuzzleSolved(puzzle);
+}
+
+// localStorage (not sessionStorage, as with hasSeenModal) because what a visitor has unlocked should
+// still be unlocked when they come back. Wrapped defensively for the same reasons as hasSeenModal, which
+// degrades to having to solve it again next time rather than breaking the page. Remembered for the page's
+// lifetime as well, for when storage isn't available at all.
+const PUZZLE_SOLVED_KEY_PREFIX = "weave-puzzle-solved:";
+const solvedThisPage = new Set();
+
+function isPuzzleSolved(puzzle){
+  if (solvedThisPage.has(puzzle.id)) return true;
+  try {
+    return localStorage.getItem(PUZZLE_SOLVED_KEY_PREFIX + puzzle.id) === "true";
+  } catch (e) {
+    return false;
+  }
+}
+
+function markPuzzleSolved(puzzle){
+  solvedThisPage.add(puzzle.id);
+  try {
+    localStorage.setItem(PUZZLE_SOLVED_KEY_PREFIX + puzzle.id, "true");
+  } catch (e) {
+    // storage unavailable - see above.
+  }
+}
+
+// X (keyboard) / X (gamepad): restarts the puzzle on the board, otherwise steps through a location's parts.
+function onSwitchButton(){
+  if (boardMover) restartBoardGame();
+  else cycleChainNode();
 }
 
 // X (keyboard) / X (gamepad): in Track Focus, step to the next part of the current location, wrapping
@@ -1313,6 +1370,11 @@ function renderTrackFocus(){
     let board = document.createElement('div');
     board.id = 'trackFocusBoard';
     if (boardMover) {
+      if (boardGame) {
+        boardObjectsCanvas = document.createElement('canvas');
+        boardObjectsCanvas.id = 'trackFocusBoardObjects';
+        board.appendChild(boardObjectsCanvas);
+      }
       board.appendChild(boardContrails.canvas);
       board.appendChild(buildBoardShip());
     }
@@ -1328,16 +1390,32 @@ function renderTrackFocus(){
   heading.textContent = title ? title.textContent : '';
   text.appendChild(heading);
 
+  let puzzle = nodeMeta.get(activeNode).puzzle;
+  if (puzzle && isPuzzleSolved(puzzle) && !boardMover) {
+    let solved = document.createElement('div');
+    solved.id = 'trackFocusSolved';
+    solved.textContent = 'Solved';
+    text.appendChild(solved);
+  }
+
   lines.forEach(line => text.appendChild(line.cloneNode(true)));
 
   let actions = document.createElement('div');
   actions.id = 'trackFocusActions';
   if (boardMover) {
+    if (boardGame) actions.appendChild(buildTrackFocusAction('[ Restart ]', 'img/ui/key_x.gif', restartBoardGame));
     actions.appendChild(buildTrackFocusAction('[ Back ]', BACK_KEY_HINT, leaveBoardGame));
   } else {
     if (cover) actions.appendChild(buildTrackFocusAction('[ Enter ]', 'img/ui/key_z.gif', startBoardGame));
     if (nodeMeta.get(activeRoot).chain.length > 1) {
-      actions.appendChild(buildTrackFocusAction('[ Switch ]', 'img/ui/key_x.gif', cycleChainNode));
+      if (canAdvanceChain(activeNode)) {
+        actions.appendChild(buildTrackFocusAction('[ Switch ]', 'img/ui/key_x.gif', cycleChainNode));
+      } else {
+        let locked = document.createElement('span');
+        locked.className = 'trackFocusAction';
+        locked.textContent = 'Solve to unlock the next part';
+        actions.appendChild(locked);
+      }
     }
     actions.appendChild(buildTrackFocusAction('[ Back ]', BACK_KEY_HINT, closeTrackFocus));
     // Only reachable from here for a chain's later parts, since their cards never open on the map.
@@ -1434,9 +1512,11 @@ function updateTrackFocusScale(){
 // The Sokoban board: the ship walking a 10x10 grid over the album art, on the same reusable movement
 // as the map (see sokoban.js). Everything is measured in the art's own pixels, then multiplied up by
 // trackFocusScale to draw, so a window resize mid-game has nothing to rebuild and the ship always
-// matches the art's pixel size. There's nothing to push or solve on it yet - this is just the ship.
+// matches the art's pixel size. A track with a puzzle adds its rules to that - see buildBoardGame.
 const BOARD_STEP_MS = 180;
-const BOARD_START_CELL = { col: 5, row: 9 };
+// How long something on a Stream takes to move a square, and how long a solved puzzle stays on screen.
+const BOARD_STREAM_TICK_MS = 360;
+const BOARD_SOLVED_PAUSE_MS = 450;
 // img/ui/pilot-ship.png's own size.
 const BOARD_SHIP_WIDTH = 12;
 const BOARD_SHIP_HEIGHT = 16;
@@ -1445,6 +1525,18 @@ function startBoardGame(){
   if (!trackFocusEl || boardMover || !document.getElementById('trackFocusBoard')) return;
 
   releaseDirections();
+  buildBoardGame();
+  renderTrackFocus();
+  renderBoardShip();
+}
+
+// Everything that starts fresh, whether that's starting the board or restarting it.
+function buildBoardGame(){
+  let puzzle = nodeMeta.get(activeNode).puzzle;
+  boardGame = puzzle ? WeavePuzzle.createPuzzleGame(puzzle) : null;
+  boardStreamMs = 0;
+  boardSolvedMs = null;
+
   boardMover = WeaveSokoban.createMover(
     WeaveSokoban.createGrid({
       columns: TRACK_FOCUS_BOARD_SQUARES,
@@ -1452,11 +1544,49 @@ function startBoardGame(){
       cellWidth: BOARD_TILE_PX,
       cellHeight: BOARD_TILE_PX,
     }),
-    { cell: BOARD_START_CELL, stepMs: BOARD_STEP_MS }
+    {
+      cell: boardGame ? boardGame.start : WeavePuzzle.DEFAULT_START,
+      stepMs: BOARD_STEP_MS,
+      canEnter: boardGame ? boardGame.canEnter : undefined,
+      onArrive: boardGame ? (cell) => {
+        onBoardEvent(boardGame.shipArrivedAt(cell));
+        carryBoardShip();
+      } : undefined,
+    }
   );
   boardContrails = createContrails(BOARD_SHIP_WIDTH / 12, BOARD_TILE_PX, boardMover.position);
+}
+
+function restartBoardGame(){
+  if (!boardGame) return;
+
+  releaseDirections();
+  buildBoardGame();
   renderTrackFocus();
   renderBoardShip();
+}
+
+// A Stream carries a ship with nothing else to do, one square at a time.
+function carryBoardShip(){
+  if (!boardGame || boardSolvedMs !== null || boardMover.hasInput) return;
+
+  let carry = boardGame.carryDirection(boardMover.cell);
+  if (carry) boardMover.queue(carry);
+}
+
+// Acts on what puzzle.js says just happened to the ship.
+function onBoardEvent(event){
+  if (!event) return;
+
+  if (event.teleportTo) {
+    boardMover.teleport(event.teleportTo);
+    breakContrails(boardContrails, boardMover.position);
+  }
+  if (event.finished) {
+    markPuzzleSolved(nodeMeta.get(activeNode).puzzle);
+    boardSolvedMs = 0;
+    releaseDirections();
+  }
 }
 
 function leaveBoardGame(){
@@ -1466,6 +1596,9 @@ function leaveBoardGame(){
   boardMover = null;
   boardShipEl = null;
   boardContrails = null;
+  boardGame = null;
+  boardObjectsCanvas = null;
+  boardSolvedMs = null;
   renderTrackFocus();
 }
 
@@ -1478,9 +1611,65 @@ function buildBoardShip(){
 
 function updateBoardGame(dtMs){
   if (!boardMover) return;
+
+  // Holds still for a moment on a solved board, then returns to Track Focus to show what that unlocked.
+  if (boardSolvedMs !== null) {
+    boardSolvedMs += dtMs;
+    updateBoardContrails(dtMs);
+    drawBoardObjects();
+    if (boardSolvedMs >= BOARD_SOLVED_PAUSE_MS) leaveBoardGame();
+    return;
+  }
+
   boardMover.update(dtMs);
+
+  if (boardGame && boardSolvedMs === null) {
+    // For a ship that's come to rest on a Stream: pushing against something, say, or after a restart.
+    // Reaching one on the way is handled as it arrives, so that it never pauses - see carryBoardShip.
+    if (!boardMover.isMoving) {
+      let carry = boardGame.carryDirection(boardMover.cell);
+      if (carry) boardMover.queue(carry);
+    }
+
+    boardStreamMs += dtMs;
+    while (boardStreamMs >= BOARD_STREAM_TICK_MS && boardSolvedMs === null) {
+      boardStreamMs -= BOARD_STREAM_TICK_MS;
+      onBoardEvent(boardGame.tick(boardMover.isMoving ? boardMover.cell : null));
+    }
+  }
+
   renderBoardShip();
   updateBoardContrails(dtMs);
+  drawBoardObjects();
+}
+
+// Redrawn every frame, because Streams are always moving. Something on a Stream glides between its last
+// square and its new one over a whole tick, so it never jumps.
+function drawBoardObjects(){
+  if (!boardGame || !boardObjectsCanvas) return;
+
+  let tile = Math.round(BOARD_TILE_PX * trackFocusScale);
+  let size = tile * TRACK_FOCUS_BOARD_SQUARES;
+  if (boardObjectsCanvas.width !== size) {
+    boardObjectsCanvas.width = size;
+    boardObjectsCanvas.height = size;
+  }
+
+  let context = boardObjectsCanvas.getContext('2d');
+  context.clearRect(0, 0, size, size);
+
+  let palette = nodeMeta.get(activeNode).puzzle.palette;
+  let options = { timeMs: performance.now(), font: 'Medodica, sans-serif' };
+  let along = boardStreamMs / BOARD_STREAM_TICK_MS;
+
+  for (const stream of boardGame.streams) {
+    WeavePuzzle.drawObject(context, stream, palette, stream.col * tile, stream.row * tile, tile, options);
+  }
+  for (const object of boardGame.objects) {
+    let col = object.fromCol + (object.col - object.fromCol) * along;
+    let row = object.fromRow + (object.row - object.fromRow) * along;
+    WeavePuzzle.drawObject(context, object, palette, col * tile, row * tile, tile, options);
+  }
 }
 
 function updateBoardContrails(dtMs){

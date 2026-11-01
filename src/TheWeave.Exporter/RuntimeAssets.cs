@@ -18,6 +18,9 @@ public static class RuntimeAssets
     /// <summary>Grid movement, loaded alongside main.js - see runtime/sokoban.js.</summary>
     public static string ReadSokobanJs() => ReadEmbedded("runtime.sokoban.js");
 
+    /// <summary>Sokoban puzzles, loaded alongside main.js - see runtime/puzzle.js.</summary>
+    public static string ReadPuzzleJs() => ReadEmbedded("runtime.puzzle.js");
+
     /// <summary>The persistent shell's own script - see ShellRenderer.</summary>
     public static string ReadShellJs() => ReadEmbedded("runtime.shell.js");
 
@@ -39,7 +42,7 @@ public static class RuntimeAssets
 
     private static string ComputeVersion()
     {
-        var combined = ReadMainCss() + ReadMainJs() + ReadSokobanJs() + ReadShellJs();
+        var combined = ReadMainCss() + ReadMainJs() + ReadSokobanJs() + ReadPuzzleJs() + ReadShellJs();
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(combined));
         return Convert.ToHexString(hash)[..8].ToLowerInvariant();
     }

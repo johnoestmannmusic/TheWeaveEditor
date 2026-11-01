@@ -77,7 +77,8 @@
   //
   // canEnter(from, to, direction) is the hook for anything that can block a step (walls, or a box
   // that can only be pushed if there's room behind it). A blocked step only turns to face that way.
-  function createMover(grid, { cell, stepMs, canEnter = () => true, facing = 'up' }) {
+  // onArrive(cell) is called on finishing each step, for anything that happens on reaching a square.
+  function createMover(grid, { cell, stepMs, canEnter = () => true, onArrive = () => {}, facing = 'up' }) {
 
     let current = cell;
     let target = null;
@@ -108,6 +109,7 @@
       }
       current = target;
       target = null;
+      onArrive(current);
       return dtMs - left;
     }
 
@@ -116,6 +118,8 @@
       get cell(){ return target ?? current; },
       get facing(){ return facing; },
       get isMoving(){ return target !== null; },
+      // Whether anything's asking it to move: a direction held, or a press still waiting for its step.
+      get hasInput(){ return heldDirections.length > 0 || queuedDirection !== null; },
 
       get position(){
         let from = grid.centerOf(current);
@@ -133,6 +137,19 @@
 
       release(direction){
         heldDirections = heldDirections.filter(d => d !== direction);
+      },
+
+      // Asks for one step in a direction as if it had been tapped, for something other than the
+      // player moving this along, like a conveyor belt.
+      queue(direction){
+        queuedDirection = direction;
+      },
+
+      // Jumps straight to a square. Anything held carries on from there.
+      teleport(destination){
+        current = destination;
+        target = null;
+        elapsed = 0;
       },
 
       // Forgets everything pressed so far, e.g. when focus is lost and a release may never arrive.

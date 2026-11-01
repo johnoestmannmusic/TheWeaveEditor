@@ -67,7 +67,12 @@ Neocities, replacing hand-authoring HTML per location.
   left and its title and poetry on the right (a track's card on the map skips the poetry), over the dimmed map and a blurred, blown-up copy
   of the art. C, gamepad B, or clicking the backdrop closes it; the track keeps playing throughout.
 - A Sokoban board over the album art, started with Z/gamepad A from Track Focus: the ship walks a
-  10x10 grid using the same movement as the map. There are no boxes or goals to it yet.
+  10x10 grid using the same movement as the map.
+- Puzzles on that board, built in the Editor's Puzzle Editor. Walls block the way, Switches toggle Gates
+  with the same letter, Keys have to be collected before Switches work, Teleporters jump to their
+  partner, and Streams carry the ship and any objects on them, and can't be walked against. Reaching
+  the Finish solves it, which is remembered in the visitor's browser, and unlocks X to the location's
+  next part. X restarts the puzzle. A part with no puzzle, or one with no Finish, never locks anything.
 - Static screens instead of a follow camera: each map splits into 10x5-square screens (4 per map, 8
   on The Weave), and walking off one slides the view to the next. The picture scales to fill the
   window's width. Cards always fit on the screen.

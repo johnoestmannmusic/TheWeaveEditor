@@ -9,6 +9,9 @@ public sealed class ProjectAssets
     /// <summary>Grid movement (see runtime/sokoban.js) - every page loads it just before JsPath.</summary>
     public string SokobanJsPath { get; set; } = "jsx/sokoban.js";
 
+    /// <summary>Sokoban puzzles (see runtime/puzzle.js) - every page loads it just before JsPath.</summary>
+    public string PuzzleJsPath { get; set; } = "jsx/puzzle.js";
+
     public string ImgRoot { get; set; } = "img";
     public string FntRoot { get; set; } = "fnt";
     public string MusRoot { get; set; } = "mus";

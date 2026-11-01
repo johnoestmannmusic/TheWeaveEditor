@@ -12,6 +12,7 @@
     <EmbeddedResource Include="runtime\main.css" />
     <EmbeddedResource Include="runtime\main.js" />
     <EmbeddedResource Include="runtime\sokoban.js" />
+    <EmbeddedResource Include="runtime\puzzle.js" />
     <EmbeddedResource Include="runtime\shell.js" />
     <!-- Repo-root disclosure statement and changelog (see DisclosurePageRenderer/
          UpdateLogPageRenderer) - kept at the root, next to README.md/LICENSE, rather than copied
