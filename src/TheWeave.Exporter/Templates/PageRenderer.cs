@@ -236,7 +236,7 @@ public sealed class PageRenderer
         sb.AppendLine();
         sb.AppendLine($"{pad}    <!-- Focus -->");
         sb.AppendLine($"{pad}    <div class=\"poetry-focus\">");
-        sb.AppendLine($"{pad}      <img class=\"keyHint\" src=\"img/ui/key_z.gif\"><span class=\"focus-action\">[ Focus ]</span>");
+        sb.AppendLine($"{pad}      <img class=\"keyHint\" src=\"img/ui/key_z.gif\"><span class=\"focus-action\">[ Enter ]</span>");
         sb.AppendLine($"{pad}    </div>");
     }
 

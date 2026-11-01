@@ -318,7 +318,7 @@ function loadNodes() {
 
     if (curAudio && !isModal) curAudio.volume = 0; // updateLocationAudio eases this up from silence
 
-    // The card's own "[ Focus ]" action (see PageRenderer) - same thing as Z/gamepad A. :scope so a
+    // The card's own "[ Enter ]" action (see PageRenderer) - same thing as Z/gamepad A. :scope so a
     // chain member's card never binds a nested member's action instead.
     let focusAction = curInfo.querySelector(':scope > .poetry-text > .poetry-focus .focus-action');
     if (focusAction) focusAction.addEventListener('click', openTrackFocus);
