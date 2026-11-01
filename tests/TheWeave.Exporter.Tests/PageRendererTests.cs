@@ -57,7 +57,7 @@ public class PageRendererTests
               <script src="jsx/main.js?v={{RuntimeAssets.Version}}"></script>
 
               <script>
-                window.__weavePage = {"globeEffect":true,"worldWidth":3000,"worldHeight":1686,"defaultSpawnX":null,"defaultSpawnY":null,"listeningRadiusPx":105,"isHomePage":false,"grid":{{ExactGridJson}}};
+                window.__weavePage = {"globeEffect":true,"worldWidth":3000,"worldHeight":1686,"defaultSpawnX":null,"defaultSpawnY":null,"isHomePage":false,"grid":{{ExactGridJson}}};
               </script>
               </head>
 
@@ -361,7 +361,7 @@ public class PageRendererTests
         project.Pages.Add(planet);
 
         var planetHtml = new PageRenderer(project).RenderPage(planet);
-        Assert.Contains("window.__weavePage = {\"globeEffect\":true,\"worldWidth\":3010,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"listeningRadiusPx\":105,\"isHomePage\":false,\"grid\":{\"columns\":19,\"rows\":10,\"cellWidth\":150.5,\"cellHeight\":150.8896797153025,\"originX\":150.5,\"originY\":150.8896797153025,\"gapColumns\":[]}};", planetHtml);
+        Assert.Contains("window.__weavePage = {\"globeEffect\":true,\"worldWidth\":3010,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":{\"columns\":19,\"rows\":10,\"cellWidth\":150.5,\"cellHeight\":150.8896797153025,\"originX\":150.5,\"originY\":150.8896797153025,\"gapColumns\":[]}};", planetHtml);
 
         var merged = MakePage("index", "index.html");
         merged.GlobeEffect = false;
@@ -370,7 +370,7 @@ public class PageRendererTests
         project.Pages.Add(merged);
 
         var mergedHtml = new PageRenderer(project).RenderPage(merged);
-        Assert.Contains("window.__weavePage = {\"globeEffect\":false,\"worldWidth\":6020,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"listeningRadiusPx\":105,\"isHomePage\":false,\"grid\":{\"columns\":38,\"rows\":10,\"cellWidth\":150.5,\"cellHeight\":150.8896797153025,\"originX\":150.5,\"originY\":150.8896797153025,\"gapColumns\":[19]}};", mergedHtml);
+        Assert.Contains("window.__weavePage = {\"globeEffect\":false,\"worldWidth\":6020,\"worldHeight\":1696,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":{\"columns\":38,\"rows\":10,\"cellWidth\":150.5,\"cellHeight\":150.8896797153025,\"originX\":150.5,\"originY\":150.8896797153025,\"gapColumns\":[19]}};", mergedHtml);
     }
 
     [Fact]
@@ -731,7 +731,7 @@ public class PageRendererTests
         // RenderPage_TravelActionWithoutAudio_GetsKeyHint, which never had that space to reclaim.
         Assert.Contains("width: 512px; height: 406px; position: absolute", html);
 
-        // Location audio is proximity-driven now (see main.js's updateLocationAudio), not
+        // Location audio follows the ship's square now (see main.js's updateLocationAudio), not
         // Z-toggled, so it never competes with the travel link for the key hint - Z always
         // reaches Travel when one is present, audio or not.
         Assert.Contains("<audio class=\"songPlayer\" preload=\"none\" src=\"https://example.com/track.ogg\"></audio>", html);

@@ -227,13 +227,11 @@ function renderAll() {
 function renderProjectSettings() {
   const el = document.getElementById('project-settings');
   const input = document.getElementById('f-project-music');
-  const radiusInput = document.getElementById('f-project-listening-radius');
 
   el.hidden = !project;
   if (!project) return;
 
   input.value = project.backgroundMusicPath ?? '';
-  radiusInput.value = project.listeningRadiusPx ?? 105;
 }
 
 document.getElementById('f-project-music').addEventListener('blur', () => {
@@ -241,12 +239,6 @@ document.getElementById('f-project-music').addEventListener('blur', () => {
 });
 
 document.getElementById('btn-browse-music').addEventListener('click', () => send('pick-background-music'));
-
-document.getElementById('f-project-listening-radius').addEventListener('blur', () => {
-  const value = parseFloat(document.getElementById('f-project-listening-radius').value);
-  if (!Number.isFinite(value) || value <= 0) return;
-  send('update-project', { project: { listeningRadiusPx: value } });
-});
 
 // ---------- tree ----------
 

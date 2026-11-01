@@ -40,9 +40,10 @@ Neocities, replacing hand-authoring HTML per location.
 **Exported site**
 
 - A genuinely multi-page static site (real navigation between pages, not a single-page app).
-- A persistent, site-wide looping background track (set per-project) that plays across page
-  navigation via a thin iframe "shell", ducking automatically whenever a location's own track is
-  playing.
+- Location music: each track plays on its own square of the map. Crossing the square without
+  stopping gives a soft swell, and stopping brings it to full volume.
+- A hub theme (set per-project) that survives page navigation via a thin iframe "shell", playing on
+  the home page and on the square of any node that travels back to it.
 - Configurable ship spawn points: a page's own default landing spot, plus directional defaults
   for travel links (arriving at a planet centers on its map; returning to the starting map lands
   back near the hub icon you left, nudged just above it) — all overridable per travel link.

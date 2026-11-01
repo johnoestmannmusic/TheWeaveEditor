@@ -170,7 +170,7 @@ public sealed class PageRenderer
             // Card.cs's own doc on CardSize.Modal) - Z closes them (main.js's modalQueue), never
             // toggles their audio, so they keep a manual <audio controls> player.
             //
-            // Every other card's music is proximity-driven (see main.js's updateLocationAudio) -
+            // Every other card's music is driven by where the ship is (see main.js's updateLocationAudio) -
             // no `controls` (a manually-scrubbed/paused element would just fight the per-frame
             // volume/play control every frame) and no key hint of its own (Z opens Track Focus, not
             // anything to do with this element - see RenderFocusAction).
@@ -275,7 +275,7 @@ public sealed class PageRenderer
                 sb.AppendLine($"{pad}    <!-- Travel -->");
                 sb.AppendLine($"{pad}    <div class=\"poetry-travel\">");
                 sb.Append($"{pad}      ");
-                // Z always reaches Travel now - location audio is proximity-driven, not
+                // Z always reaches Travel now - location audio follows the ship's square, not
                 // Z-toggled anymore (see onInteract), so it never competes for this hint.
                 sb.Append($"<img class=\"keyHint\" src=\"img/ui/key_z.gif\">");
                 sb.Append($"<a href=\"./{EscapeAttr(targetFileName)}{BuildTravelQuery(sourcePage, card.Action)}\">[ TRAVEL ]</a>");

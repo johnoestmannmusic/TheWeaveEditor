@@ -42,7 +42,7 @@ let chainIndex = 0;      // activeNode's position within activeRoot's chain
 // The page's own config (see window.__weavePage, emitted per-page by PageConfigScriptRenderer) -
 // worldWidth/worldHeight are the page's authoritative world size, and grid is the board of squares
 // the ship walks (see loadPageConfig).
-let weavePage = { globeEffect: false, worldWidth: 0, worldHeight: 0, defaultSpawnX: null, defaultSpawnY: null, listeningRadiusPx: null, isHomePage: false, grid: null };
+let weavePage = { globeEffect: false, worldWidth: 0, worldHeight: 0, defaultSpawnX: null, defaultSpawnY: null, isHomePage: false, grid: null };
 
 // Cosmetic globe-curvature hint (Page.GlobeEffect - see updateGlobeEffect). A purely screen-space
 // effect. Every top-level node icon that should get the effect - built once at load rather than
@@ -57,19 +57,14 @@ const MS_PER_FRAME = 1000 / 60; // loop()'s dt is measured in 60fps frames
 // Sprite rotation for each direction sokoban.js can be facing.
 const FACING_ANGLES = { up: -Math.PI / 2, down: Math.PI / 2, left: Math.PI, right: 0 };
 
-// Location-zoned audio tuning (see updateLocationAudio). LISTEN_RADIUS_FALLBACK mirrors
-// WeaveProject's own schema default (105px) - used only if a page somehow loads without
-// window.__weavePage.listeningRadiusPx (e.g. an export from before this existed).
-// PRELOAD_RADIUS_MULTIPLIER controls how much earlier (as a multiple of the audible radius) a
-// track starts buffering than it needs to actually be heard - location tracks are commonly
-// hosted at an external URL (see Card.Audio.Url), so buffering has to have a head start on
-// becoming audible or there'd be a silent gap right as a location should start fading in.
-const LISTEN_INNER_RADIUS = 100; // full volume within this distance
-const LISTEN_RADIUS_FALLBACK = 105;
-const PRELOAD_RADIUS_MULTIPLIER = 3;
-let listenRadius = LISTEN_RADIUS_FALLBACK;
-let preloadRadius = LISTEN_RADIUS_FALLBACK * PRELOAD_RADIUS_MULTIPLIER;
-const AUDIO_VOLUME_EASE = 0.85; // per-second retention factor, applied as Math.pow(x, dt)
+// Location audio tuning (see updateLocationAudio). PRELOAD_SQUARES controls how many steps away a
+// track starts buffering - location tracks are commonly hosted at an external URL (see
+// Card.Audio.Url), so buffering has to have a head start on the ship arriving or there'd be a silent
+// gap right as a location should start fading in. AUDIO_VOLUME_EASE is a per-frame retention factor,
+// applied as Math.pow(x, dt): at this value, crossing a square without stopping (one STEP_MS) swells
+// to about half volume, and stopping on one reaches full volume in about a second.
+const PRELOAD_SQUARES = 3;
+const AUDIO_VOLUME_EASE = 0.95;
 // Well above a typical stick's resting drift: pushing it now picks one of four whole directions
 // (see readPadDirection) rather than a proportional amount of anything, so a light, accidental lean
 // shouldn't walk the ship anywhere.
@@ -183,13 +178,6 @@ function loadPageConfig(){
   // back to its own hardcoded default in that case.
   weavePage.defaultSpawnX = cfg.defaultSpawnX ?? null;
   weavePage.defaultSpawnY = cfg.defaultSpawnY ?? null;
-
-  // WeaveProject.ListeningRadiusPx - project-wide, not per-page (see updateLocationAudio).
-  // Floored well above LISTEN_INNER_RADIUS so the fade math there never divides by ~0, even if
-  // the project value is missing, zero, or set below the inner radius by mistake.
-  weavePage.listeningRadiusPx = cfg.listeningRadiusPx ?? null;
-  listenRadius = Math.max(weavePage.listeningRadiusPx || LISTEN_RADIUS_FALLBACK, LISTEN_INNER_RADIUS + 1);
-  preloadRadius = listenRadius * PRELOAD_RADIUS_MULTIPLIER;
 
   // Whether this is WeaveProject.HomePageId's own page - see updateHubMusicSignal.
   weavePage.isHomePage = !!cfg.isHomePage;
@@ -386,7 +374,7 @@ function loadNodes() {
   });
 
   // A multi-part location's nested nodes aren't reachable by walking to them
-  // directly (see getNodeCenter) - the X button instead steps through each
+  // directly - the X button instead steps through each
   // top-level node's own chain (itself, then every descendant, depth-first)
   // without the ship needing to move. Branching Children would flatten into
   // one cycle order here too, though in practice these are linear chains.
@@ -409,17 +397,18 @@ function loadNodes() {
 
 };
 
-// Maps every top-level node to the square it sits on, for updateNodeProximity. Reads the authored
-// position rather than getNodeCenter()'s live measurement, since this runs before images have
-// loaded and an unloaded icon doesn't have its real height yet. A nested node never gets an entry:
-// it's reached by X from its root, not by being walked to.
+// Maps every top-level node to the square it sits on, for updateNodeProximity and
+// updateLocationAudio. Reads the authored position rather than a live measurement, since this runs
+// before images have loaded and an unloaded icon doesn't have its real height yet. A nested node
+// never gets an entry: it's reached by X from its root, not by being walked to.
 function indexNodesByCell(){
   nodeMeta.forEach((meta, node) => {
     if (!meta.isTopLevel || meta.isModal) return;
 
     let x = (parseFloat(node.style.left) || 0) + NODE_ICON_SIZE / 2;
     let y = (parseFloat(node.style.top) || 0) + NODE_ICON_SIZE / 2;
-    let key = cellKey(weavePage.grid.cellAt(x, y));
+    meta.cell = weavePage.grid.cellAt(x, y);
+    let key = cellKey(meta.cell);
     if (!rootByCell.has(key)) rootByCell.set(key, node);
   });
 }
@@ -503,22 +492,6 @@ function notifyShellOfInteraction(){
   if (shellInteractionNotified || window.parent === window) return;
   shellInteractionNotified = true;
   window.parent.postMessage({ source: 'weave-interaction' }, '*');
-}
-
-// World-space center of a node's icon. Measured from the .nodeImage itself
-// (not the wrapping .node div, which - like everything on this site - is
-// position:absolute with no in-flow children, so it has no intrinsic size
-// of its own to measure). Computed live rather than cached because some
-// nodes are nested inside another node's card (e.g. a "next page" story
-// node placed a little further into Salanth Town Gardens' info panel on
-// Ouros) - their real position only resolves once that ancestor card is
-// open, and is relative to it rather than to the map.
-function getNodeCenter(meta){
-  let rect = meta.img.getBoundingClientRect();
-  return {
-    x: rect.left + window.scrollX + rect.width / 2,
-    y: rect.top + window.scrollY + rect.height / 2,
-  };
 }
 
 // When this page is embedded in the persistent shell's iframe (see shell.js), arrow-key movement
@@ -787,7 +760,7 @@ function updateCamera(dt = 1){
 }
 
 // Which top-level location the ship is standing on drives the open card - a multi-part location's
-// nested nodes aren't out on the map to walk to (see getNodeCenter), so they never compete here.
+// nested nodes aren't out on the map to walk to, so they never compete here.
 // Once a root is active, X steps through its chain (see cycleChainNode); this only decides *which
 // root*, resetting back to the start of its chain whenever the root itself changes. Only counts
 // once the ship has actually stopped, so holding a direction straight across a node doesn't flash
@@ -804,34 +777,27 @@ function updateNodeProximity(){
   }
 }
 
-// Location-zoned music: every top-level root's own track (or whichever chain member the player
-// has X-cycled to - see cycleChainNode) fades in as the ship approaches that root's center, up
-// to full volume within LISTEN_INNER_RADIUS, and fades to silent by listenRadius. listenRadius is
-// one shared, project-configured value (see loadPageConfig) rather than something computed from node
-// spacing here - the editor is responsible for keeping it small enough that no two locations'
-// audible zones overlap.
-//
-// Distance is measured to the *root* even when a deeper chain member is the one actually
-// sounding, since only top-level nodes have a real map position (see getNodeCenter) - a nested
-// chain member's music is "the root's location, a different track," not a different place.
+// Location music: a root's own track (or whichever chain member the player has X-cycled to - see
+// cycleChainNode) plays while the ship is on that root's square, and only then. "On" means the
+// square nearest the ship right now, so it changes halfway through a step rather than at either end
+// of it. Walking straight across a square gets a soft swell rather than the whole track - see
+// AUDIO_VOLUME_EASE.
 //
 // Every other (non-active) member of the same chain is eased toward 0 right alongside the active
 // one, rather than snapped to pause immediately - that's what makes X-cycling from a root to a
 // child (or back) read as a crossfade instead of a hard cut.
 function updateLocationAudio(dt){
   let ease = 1 - Math.pow(AUDIO_VOLUME_EASE, dt);
+  let shipCell = weavePage.grid.cellAt(ship.x, ship.y);
 
   nodeMeta.forEach((meta, node) => {
     if (!meta.isTopLevel || meta.isModal) return;
 
-    let center = getNodeCenter(meta);
-    let d = Math.hypot(ship.x - center.x, ship.y - center.y);
-
-    // Start buffering well before the track needs to be audible - see PRELOAD_RADIUS_MULTIPLIER's
-    // own comment on why (external-URL tracks need a head start). The whole chain preloads
-    // together (not just whichever member happens to be active right now) so stepping into a
-    // child with X once close doesn't hit a cold, unbuffered element.
-    if (d <= preloadRadius) {
+    // Start buffering before the track needs to be audible - see PRELOAD_SQUARES's own comment on
+    // why. The whole chain preloads together (not just whichever member happens to be active right
+    // now) so stepping into a child with X once close doesn't hit a cold, unbuffered element.
+    let squaresAway = Math.abs(meta.cell.col - shipCell.col) + Math.abs(meta.cell.row - shipCell.row);
+    if (squaresAway <= PRELOAD_SQUARES) {
       for (const member of meta.chain) {
         let memberMeta = nodeMeta.get(member);
         if (memberMeta.audio && !memberMeta.audioPreloaded) {
@@ -842,7 +808,6 @@ function updateLocationAudio(dt){
       }
     }
 
-    let audibility = clamp((listenRadius - d) / (listenRadius - LISTEN_INNER_RADIUS), 0, 1);
     let activeMember = (node === activeRoot && activeNode) ? activeNode : node;
 
     for (const member of meta.chain) {
@@ -850,7 +815,7 @@ function updateLocationAudio(dt){
       let audio = memberMeta.audio;
       if (!audio) continue;
 
-      let target = (member === activeMember) ? audibility : 0;
+      let target = (squaresAway === 0 && member === activeMember) ? 1 : 0;
       audio.volume += (target - audio.volume) * ease;
       if (audio.volume < 0.004) audio.volume = 0;
 
@@ -865,11 +830,11 @@ function updateLocationAudio(dt){
 
 // Tells the persistent shell (see shell.js) how audible its "hub theme" track
 // (WeaveProject.BackgroundMusicPath) should be right now: full ambient volume while this is the
-// home page itself, otherwise the same distance-based fade curve updateLocationAudio uses,
-// applied to the closest node whose Travel action leads back to the home page (see
-// PageRenderer's data-travel-home marker) - so approaching one of those "return to the hub"
-// nodes previews the hub theme before you actually arrive. A no-op when this page isn't embedded
-// in the shell's iframe at all (e.g. opened directly), same guard as notifyShellOfInteraction.
+// home page itself, or on the square of a node whose Travel action leads back to the home page (see
+// PageRenderer's data-travel-home marker) - so stepping onto one of those "return to the hub" nodes
+// previews the hub theme before you actually leave. Silent anywhere else; shell.js eases between the
+// two. A no-op when this page isn't embedded in the shell's iframe at all (e.g. opened directly),
+// same guard as notifyShellOfInteraction.
 function updateHubMusicSignal(){
   if (window.parent === window) return;
 
@@ -878,14 +843,8 @@ function updateHubMusicSignal(){
   if (weavePage.isHomePage) {
     audibility = 1;
   } else {
-    nodeMeta.forEach((meta, node) => {
-      if (!meta.isTopLevel || meta.isModal || !meta.travelHome) return;
-
-      let center = getNodeCenter(meta);
-      let d = Math.hypot(ship.x - center.x, ship.y - center.y);
-      let a = clamp((listenRadius - d) / (listenRadius - LISTEN_INNER_RADIUS), 0, 1);
-      if (a > audibility) audibility = a;
-    });
+    let root = rootByCell.get(cellKey(weavePage.grid.cellAt(ship.x, ship.y)));
+    if (root && nodeMeta.get(root).travelHome) audibility = 1;
   }
 
   window.parent.postMessage({ source: 'weave-hub-music', audibility }, '*');
