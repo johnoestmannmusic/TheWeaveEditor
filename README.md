@@ -56,11 +56,11 @@ Neocities, replacing hand-authoring HTML per location.
   `runtime/sokoban.js`, with no knowledge of the DOM or these maps, so other boards can reuse it.
 - Keyboard and gamepad controls: Z/gamepad A to interact (travel, open a track's Track Focus screen,
   start its Sokoban board, or close a popup), X/gamepad X in Track Focus to step through a multi-part
-  location's nested parts, Esc/gamepad B to back out. Contextual hints show next to whichever action
+  location's nested parts, C/gamepad B to back out. Contextual hints show next to whichever action
   is actually available.
 - Track Focus: a full-screen view of a track, with its album art enlarged to use the space on the
   left and its title and poetry on the right (a track's card on the map skips the poetry), over the dimmed map and a blurred, blown-up copy
-  of the art. Esc, gamepad B, or clicking the backdrop closes it; the track keeps playing throughout.
+  of the art. C, gamepad B, or clicking the backdrop closes it; the track keeps playing throughout.
 - A Sokoban board over the album art, started with Z/gamepad A from Track Focus: the ship walks a
   10x10 grid using the same movement as the map. There are no boxes or goals to it yet.
 - Static screens instead of a follow camera: each map splits into 10x5-square screens (4 per map, 8

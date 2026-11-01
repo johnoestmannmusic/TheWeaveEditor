@@ -8,7 +8,7 @@
 // whatever location the ship is standing on - travels to its linked page, or opens a track's Track
 // Focus screen. When that location has extra nested locations tucked inside its card (a multi-part
 // story), press X (keyboard) or X (gamepad) in Track Focus to step between them. Z / A in Track Focus
-// starts the Sokoban board over the album art, and Esc (keyboard) or B (gamepad) backs out of it.
+// starts the Sokoban board over the album art, and C (keyboard) or B (gamepad) backs out of it.
 //
 // This file is the canonical shared runtime owned by TheWeave.Exporter - it's
 // generated into every exported site's jsx/main.js, not hand-edited there.
@@ -479,7 +479,9 @@ function bindInput(){
     // arrows, in particular) from ever competing with the game's own movement - see
     // claimOwnFocus's header for the failure mode this guards against.
     let direction = KEY_DIRECTIONS[e.key];
-    if (direction || e.key === 'z' || e.key === 'Z' || e.key === 'x' || e.key === 'X') {
+    // Not with Ctrl/Cmd held, which is still the browser's own copy (of a poem in Track Focus, say).
+    let backKey = (e.key === 'c' || e.key === 'C') && !e.ctrlKey && !e.metaKey;
+    if (direction || backKey || e.key === 'z' || e.key === 'Z' || e.key === 'x' || e.key === 'X') {
       e.preventDefault();
     }
 
@@ -488,7 +490,7 @@ function bindInput(){
 
     if ((e.key === 'z' || e.key === 'Z') && !e.repeat) onInteractButton();
     if ((e.key === 'x' || e.key === 'X') && !e.repeat) cycleChainNode();
-    if (e.key === 'Escape' && !e.repeat) onBackButton();
+    if (backKey && !e.repeat) onBackButton();
   });
 
   document.addEventListener('keyup', (e) => {
@@ -1007,7 +1009,7 @@ function onInteractButton(){
   else onInteract();
 }
 
-// Esc (keyboard) / B (gamepad): back out one level, from the board to Track Focus to the map.
+// C (keyboard) / B (gamepad): back out one level, from the board to Track Focus to the map.
 function onBackButton(){
   if (boardMover) leaveBoardGame();
   else closeTrackFocus();
@@ -1099,13 +1101,13 @@ function renderTrackFocus(){
   let actions = document.createElement('div');
   actions.id = 'trackFocusActions';
   if (boardMover) {
-    actions.appendChild(buildTrackFocusAction('[ Leave ]', ESC_HINT, leaveBoardGame));
+    actions.appendChild(buildTrackFocusAction('[ Back ]', BACK_KEY_HINT, leaveBoardGame));
   } else {
-    if (cover) actions.appendChild(buildTrackFocusAction('[ Start ]', 'img/ui/key_z.gif', startBoardGame));
+    if (cover) actions.appendChild(buildTrackFocusAction('[ Enter ]', 'img/ui/key_z.gif', startBoardGame));
     if (nodeMeta.get(activeRoot).chain.length > 1) {
-      actions.appendChild(buildTrackFocusAction('[ Next ]', 'img/ui/key_x.gif', cycleChainNode));
+      actions.appendChild(buildTrackFocusAction('[ Switch ]', 'img/ui/key_x.gif', cycleChainNode));
     }
-    actions.appendChild(buildTrackFocusAction('[ Close ]', ESC_HINT, closeTrackFocus));
+    actions.appendChild(buildTrackFocusAction('[ Back ]', BACK_KEY_HINT, closeTrackFocus));
     // Only reachable from here for a chain's later parts, since their cards never open on the map.
     if (download) actions.appendChild(download.cloneNode(true));
   }
@@ -1123,8 +1125,9 @@ function renderTrackFocus(){
   trackFocusEl.classList.toggle('boardPlaying', boardMover !== null);
 }
 
-// The key hint for an action with no drawn key to show.
-const ESC_HINT = 'Esc';
+// The key hint for an action with no drawn key to show: there's no img/ui/key_c.gif, so main.css's
+// .drawnKeyHint draws this one to match the others.
+const BACK_KEY_HINT = 'C';
 
 function buildTrackFocusAction(label, hint, onClick){
   let action = document.createElement('span');
@@ -1135,8 +1138,11 @@ function buildTrackFocusAction(label, hint, onClick){
   text.addEventListener('click', onClick);
   action.appendChild(text);
 
-  if (hint === ESC_HINT) {
-    action.append(' ' + hint);
+  if (hint === BACK_KEY_HINT) {
+    let hintKey = document.createElement('span');
+    hintKey.className = 'keyHint drawnKeyHint';
+    hintKey.textContent = hint;
+    action.appendChild(hintKey);
   } else {
     let hintImg = document.createElement('img');
     hintImg.className = 'keyHint';
