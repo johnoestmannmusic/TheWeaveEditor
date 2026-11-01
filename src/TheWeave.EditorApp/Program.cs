@@ -87,6 +87,11 @@ public static class Program
         Converters = { new JsonStringEnumConverter() },
     };
 
+    // Always the build output's copy, wherever the app was started from. A path relative to the current
+    // folder would find the source wwwroot after a plain "dotnet run", and that doesn't have everything
+    // the page needs: puzzle.js is linked in from the exporter's runtime at build time - see the csproj.
+    internal static string IndexPagePath => Path.Combine(AppContext.BaseDirectory, "wwwroot", "index.html");
+
     [STAThread]
     public static void Main(string[] args)
     {
@@ -103,7 +108,7 @@ public static class Program
             .SetSize(1200, 800)
             .Center()
             .RegisterWebMessageReceivedHandler(OnMessage)
-            .Load("wwwroot/index.html");
+            .Load(IndexPagePath);
 
         // Belt-and-suspenders: on this dev environment's WebKitGTK setup, WaitForClose() has
         // been observed to not reliably unblock when the window is closed, leaving the host
