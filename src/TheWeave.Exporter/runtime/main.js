@@ -1047,8 +1047,8 @@ function closeTrackFocus(){
 const TRACK_FOCUS_ART_PX = 240;
 const TRACK_FOCUS_BOARD_SQUARES = 10;
 const BOARD_TILE_PX = TRACK_FOCUS_ART_PX / TRACK_FOCUS_BOARD_SQUARES;
-const TRACK_FOCUS_MAX_HEIGHT_FRACTION = 0.8;
-const TRACK_FOCUS_MAX_WIDTH_FRACTION = 0.45;
+const TRACK_FOCUS_MAX_HEIGHT_FRACTION = 0.92;
+const TRACK_FOCUS_MAX_WIDTH_FRACTION = 0.55;
 
 function updateTrackFocusScale(){
   if (!trackFocusEl) return;
@@ -1060,7 +1060,15 @@ function updateTrackFocusScale(){
   trackFocusScale = Math.max(1, Math.floor(available / TRACK_FOCUS_ART_PX));
 
   trackFocusEl.style.setProperty('--focus-scale', trackFocusScale);
-  trackFocusEl.style.setProperty('--focus-cell', (BOARD_TILE_PX * trackFocusScale) + 'px');
+  let tile = BOARD_TILE_PX * trackFocusScale;
+  trackFocusEl.style.setProperty('--focus-cell', tile + 'px');
+
+  // Worked out here rather than left to CSS centering, which could land the art on a half pixel, and
+  // its tiles with it. The left margin matches the top one, up to one tile - past that, the text can
+  // make better use of the space.
+  let top = Math.max(0, Math.floor((window.innerHeight - TRACK_FOCUS_ART_PX * trackFocusScale) / 2));
+  trackFocusEl.style.setProperty('--focus-top', top + 'px');
+  trackFocusEl.style.setProperty('--focus-left', Math.min(top, tile) + 'px');
 }
 
 // The Sokoban board: the ship walking a 10x10 grid over the album art, on the same reusable movement
