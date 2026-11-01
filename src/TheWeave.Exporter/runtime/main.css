@@ -352,6 +352,11 @@ h3 {
   height: 100%;
 }
 
+/* Dulled while the board is being played, so the ship and anything else on it stands out. */
+#trackFocus.boardPlaying #trackFocusArt > img {
+  filter: brightness(0.65) saturate(0.7);
+}
+
 /* The board's squares, one source pixel wide, showing only once it's being played. */
 #trackFocus.boardPlaying #trackFocusBoard {
   --board-line: calc(var(--focus-scale) * 1px);
