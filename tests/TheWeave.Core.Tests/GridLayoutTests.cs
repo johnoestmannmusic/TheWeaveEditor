@@ -50,20 +50,24 @@ public class GridLayoutTests
         var grid = GridLayout.For(new Page(), new WeaveProject());
 
         Assert.Equal(1500, grid.ScreenWidth);
-        Assert.Equal(786, grid.ScreenHeight);
-        Assert.Equal(new double[] { 114, 900 }, grid.ScreenTops);
+        Assert.Equal(798, grid.ScreenHeight);
+        Assert.Equal(new double[] { 126, 876 }, grid.ScreenTops);
         Assert.Equal(new double[] { 1500 }, grid.ScreenLinesX);
-        Assert.Equal(new double[] { 114, 900, 1686 }, grid.ScreenLinesY);
+        Assert.Equal(new double[] { 126, 900, 1674 }, grid.ScreenLinesY);
     }
 
     [Fact]
-    public void Screens_ReachTheVeryBottomOfTheMap()
+    public void Screens_FrameTheirRowsIdentically_WithEqualMarginsAboveAndBelow()
     {
-        var project = new WeaveProject { DefaultWorldWidthPx = 3010, DefaultWorldHeightPx = 1696 };
+        var grid = GridLayout.For(new Page(), new WeaveProject());
 
-        var grid = GridLayout.For(new Page(), project);
+        var aboveRow0 = grid.RowCenter(0) - grid.CellHeight / 2 - grid.ScreenTops[0];
+        var aboveRow5 = grid.RowCenter(5) - grid.CellHeight / 2 - grid.ScreenTops[1];
+        var belowRow9 = grid.ScreenTops[1] + grid.ScreenHeight - (grid.RowCenter(9) + grid.CellHeight / 2);
 
-        Assert.Equal(1696, grid.ScreenTops[^1] + grid.ScreenHeight, 6);
+        Assert.Equal(24, aboveRow0); // 4 source pixels: the A-S letters end just above this
+        Assert.Equal(aboveRow0, aboveRow5);
+        Assert.Equal(aboveRow0, belowRow9);
     }
 
     [Fact]

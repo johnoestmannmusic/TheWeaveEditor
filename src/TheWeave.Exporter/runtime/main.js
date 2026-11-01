@@ -70,7 +70,7 @@ const GAMEPAD_DEADZONE = 0.5;
 // one screen's size in the map art's own pixels, which only its shape matters for - see
 // updateViewScale. CARD_SCREEN_MARGIN keeps an open card from touching the screen's edge - see placeCard.
 const SOURCE_SCREEN_WIDTH = 250;
-const SOURCE_SCREEN_HEIGHT = 131;
+const SOURCE_SCREEN_HEIGHT = 133;
 const SCREEN_SLIDE_MS = 300;
 const CARD_SCREEN_MARGIN = 8;
 

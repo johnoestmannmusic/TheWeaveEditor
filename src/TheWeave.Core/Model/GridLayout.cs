@@ -22,9 +22,9 @@ public sealed class GridLayout
     /// How many squares one static screen shows: a sector's columns halve into 10, so a left screen
     /// shows the number column and A-I, and a right screen shows J-S. Rows 0-9 halve into 5.
     ///
-    /// Screens are also a little taller than their rows, by the 6 source pixels left over along the
-    /// bottom of the map, so the art down there (a planet's name, usually) isn't lost. A bottom screen
-    /// ends at the map's bottom edge, and a top screen shows the same amount of its top label strip.
+    /// Every screen also shows a small margin above and below its rows, so the art along the bottom of
+    /// the map (a planet's name, usually) isn't cut off at the last grid line. It's the same margin on
+    /// every edge of every screen, which keeps the grid in the same place from one screen to the next.
     /// </summary>
     public const int ScreenColumns = 10;
     public const int ScreenRows = 5;
@@ -39,7 +39,11 @@ public sealed class GridLayout
     private const double SourceCellPx = 25;
     private const double SourceSectorWidthPx = 500;
     private const double SourceHeightPx = 281;
-    private const double SourceBottomStripPx = 6;
+
+    // As much as there's room for above row 0 without showing the A-S letters, which end 4 source
+    // pixels above it. The tails of letters like the g in Sigmir reach one source pixel further than
+    // this at the bottom of the map.
+    private const double SourceScreenMarginPx = 4;
 
     public int Sectors { get; private init; }
     public int Columns => ColumnsPerSector * Sectors;
@@ -52,21 +56,23 @@ public sealed class GridLayout
     public double OriginY => CellHeight;
 
     public double ScreenWidth => CellWidth * ScreenColumns;
-    public double ScreenHeight => CellHeight * ScreenRows + BottomStripHeight;
+    public double ScreenHeight => CellHeight * ScreenRows + ScreenMargin * 2;
 
-    private double BottomStripHeight => CellHeight * SourceBottomStripPx / SourceCellPx;
+    private double ScreenMargin => CellHeight * SourceScreenMarginPx / SourceCellPx;
 
     /// <summary>World Y of the top of each row of screens, from the top of the map.</summary>
     public IReadOnlyList<double> ScreenTops =>
-        new[] { OriginY - BottomStripHeight, OriginY + CellHeight * ScreenRows };
+        new[] { RowsTop(0) - ScreenMargin, RowsTop(1) - ScreenMargin };
+
+    private double RowsTop(int screenRow) => OriginY + CellHeight * ScreenRows * screenRow;
 
     /// <summary>World X of every line where one screen meets the next.</summary>
     public IReadOnlyList<double> ScreenLinesX =>
         Enumerable.Range(1, Columns / ScreenColumns - 1).Select(i => i * ScreenWidth).ToArray();
 
-    /// <summary>World Y of the top and bottom of every row of screens.</summary>
+    /// <summary>World Y of the top of the top screens, where they split from the bottom ones, and the bottom of those.</summary>
     public IReadOnlyList<double> ScreenLinesY =>
-        ScreenTops.Append(ScreenTops[^1] + ScreenHeight).ToArray();
+        new[] { ScreenTops[0], RowsTop(1), ScreenTops[1] + ScreenHeight };
 
     public static GridLayout For(Page page, WeaveProject project)
     {

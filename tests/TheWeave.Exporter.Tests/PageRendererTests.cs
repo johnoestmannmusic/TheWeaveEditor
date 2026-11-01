@@ -11,7 +11,7 @@ public class PageRendererTests
     private const string ExactGridJson =
         "{\"columns\":20,\"rows\":10,\"cellWidth\":150,\"cellHeight\":150,\"originX\":0,\"originY\":150}";
 
-    private const string ExactScreenJson = "{\"width\":1500,\"height\":786,\"tops\":[114,900]}";
+    private const string ExactScreenJson = "{\"width\":1500,\"height\":798,\"tops\":[126,876]}";
 
     // A minimal single-node page, checked byte-for-byte against a pinned expected output -
     // the one true "golden file" case, kept deliberately small so it's easy to eyeball.
