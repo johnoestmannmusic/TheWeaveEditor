@@ -78,7 +78,7 @@ public sealed class PageRenderer
         sb.AppendLine();
 
         foreach (var node in page.Nodes)
-            RenderNode(sb, page, node, parent: null, indent: 4, partOfChain: false);
+            RenderNode(sb, page, node, isNested: false, indent: 4);
 
         var effectsScript = EffectsScriptRenderer.Render(page.Effects, _assets);
         if (effectsScript is not null)
@@ -94,19 +94,14 @@ public sealed class PageRenderer
         return sb.ToString();
     }
 
-    // .floatInfo's border-width in main.css. A nested node is positioned inside its parent's card -
-    // from just inside that border, not its outer edge.
-    private const double CardBorderPx = 1;
-
-    private void RenderNode(StringBuilder sb, Page sourcePage, Node node, Node? parent, int indent, bool partOfChain)
+    private void RenderNode(StringBuilder sb, Page sourcePage, Node node, bool isNested, int indent)
     {
         var pad = new string(' ', indent);
 
-        // A nested node shares its parent's square: this cancels out the parent card's own offset,
-        // landing back on the parent's icon. Its card then gets offset the same way the parent's
-        // did, so it lands exactly on top of the parent's card, and X-cycling swaps cards in place.
-        var left = parent is null ? node.X : -parent.Card.Offset.Left - CardBorderPx;
-        var top = parent is null ? node.Y : -parent.Card.Offset.Top - CardBorderPx;
+        // A nested node isn't a place on the map: nothing of it is visible, and its stored X/Y mean
+        // nothing. It's only here for main.js to read when Track Focus reaches it.
+        var left = isNested ? 0 : node.X;
+        var top = isNested ? 0 : node.Y;
 
         var iconSrc = node.IconStyle == IconStyle.Race ? "img/node-race.png" : "img/node.png";
         var persistentAttr = node.Persistent ? " data-persistent=\"true\"" : "";
@@ -128,32 +123,21 @@ public sealed class PageRenderer
                 ? " data-travel-home=\"true\""
                 : "";
 
-        // Once any ancestor (or this node itself) has a child, every node from there down is a
-        // member of that chain - even a childless leaf, since it's still a possible "next" stop.
-        var isPartOfChain = partOfChain || node.Children.Count > 0;
-
         sb.AppendLine($"{pad}<!-- {SafeComment(node.Card.HeadingText)} -->");
         sb.AppendLine($"{pad}<div class=\"node\"{persistentAttr}{modalAttr}{travelHomeAttr} style=\"left: {Px(left)}px; top: {Px(top)}px;\">");
         sb.AppendLine($"{pad}  <img class=\"nodeImage\" src=\"{iconSrc}\">");
 
-        // A hint that X/gamepad X cycles to the *next* chain member - see updateChainHint() in
-        // main.js, which is the only thing that ever makes this visible (default display:none -
-        // see main.css). One placeholder per chain member so JS can reveal exactly the one node
-        // that's actually next from wherever the player currently is in the chain.
-        if (isPartOfChain)
-            sb.AppendLine($"{pad}  <img class=\"chainHint\" src=\"img/ui/key_x.gif\">");
-
         sb.AppendLine();
         sb.AppendLine($"{pad}  <!-- Info -->");
 
-        RenderCard(sb, sourcePage, node, indent + 2, isPartOfChain);
+        RenderCard(sb, sourcePage, node, indent + 2);
 
         sb.AppendLine($"{pad}</div>");
         sb.AppendLine($"{pad}<!-------------------->");
         sb.AppendLine();
     }
 
-    private void RenderCard(StringBuilder sb, Page sourcePage, Node node, int indent, bool partOfChain)
+    private void RenderCard(StringBuilder sb, Page sourcePage, Node node, int indent)
     {
         var pad = new string(' ', indent);
         var card = node.Card;
@@ -223,7 +207,7 @@ public sealed class PageRenderer
             RenderStaticPanel(sb, panel, indent);
 
         foreach (var child in node.Children)
-            RenderNode(sb, sourcePage, child, node, indent, partOfChain);
+            RenderNode(sb, sourcePage, child, isNested: true, indent);
 
         // Closes the .floatInfo opened above. Deliberately emitted after any nested children
         // (rather than right after the poetry-text div) so a childless node's card - the common

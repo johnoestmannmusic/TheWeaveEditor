@@ -151,10 +151,8 @@ public class PageRendererTests
         Assert.True(parentCardOpen < childNode);
         Assert.True(childNode < grandchildNode);
 
-        // Every member of the chain - root, mid-chain, and the childless leaf alike - gets a
-        // hidden placeholder (main.js's updateChainHint() reveals exactly one at runtime,
-        // whichever is actually next from wherever the player currently is in the chain).
-        Assert.Equal(3, CountOccurrences(html, "class=\"chainHint\" src=\"img/ui/key_x.gif\""));
+        // Their cards are only read by Track Focus now, so nothing on the map hints at them.
+        Assert.DoesNotContain("chainHint", html);
     }
 
     [Fact]
@@ -323,7 +321,7 @@ public class PageRendererTests
     }
 
     [Fact]
-    public void RenderPage_NestedNode_SitsExactlyOnItsParentWhateverItsStoredPosition()
+    public void RenderPage_NestedNode_IgnoresItsStoredPosition()
     {
         var project = new WeaveProject();
         var page = MakePage("ouros", "ouros.html");
@@ -349,8 +347,7 @@ public class PageRendererTests
         var html = new PageRenderer(project).RenderPage(page);
 
         Assert.Contains("<div class=\"node\" style=\"left: 201px; top: 351px;\">", html);
-        // -(card offset) - (card border) from inside the parent's card, which is back at the parent.
-        Assert.Contains("<div class=\"node\" style=\"left: -81px; top: 129px;\">", html);
+        Assert.Contains("<div class=\"node\" style=\"left: 0px; top: 0px;\">", html);
     }
 
     [Fact]

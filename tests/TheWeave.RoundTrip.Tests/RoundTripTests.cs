@@ -112,20 +112,6 @@ public class RoundTripTests
     }
 
     [Fact]
-    public async Task ImportedChildNodes_RenderOnTopOfTheirParent()
-    {
-        var result = await new SiteImporter().ImportDirectoryAsync(SnapshotDir, "The Weave");
-        ProjectMigrations.Upgrade(result.Project);
-
-        using var outputDir = new TempDirectory();
-        new SiteExporter().Export(result.Project, outputDir.Path, SnapshotDir);
-
-        var html = await File.ReadAllTextAsync(Path.Combine(outputDir.Path, "ouros.html"));
-        Assert.Contains("left: -81px; top: 129px;", html);
-        Assert.DoesNotContain("top: 193px;", html);
-    }
-
-    [Fact]
     public async Task ImportThenExport_PreservesEveryPageAndEveryNode()
     {
         var result = await new SiteImporter().ImportDirectoryAsync(SnapshotDir, "The Weave");

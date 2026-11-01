@@ -52,7 +52,7 @@ Neocities, replacing hand-authoring HTML per location.
   the square you're heading into. Every map has hard edges. The movement itself lives in
   `runtime/sokoban.js`, with no knowledge of the DOM or these maps, so other boards can reuse it.
 - Keyboard and gamepad controls: Z/gamepad A to interact (travel, open a track's Track Focus screen,
-  or close a popup), X/gamepad X to step through a multi-part location's nested parts in place.
+  or close a popup), X/gamepad X in Track Focus to step through a multi-part location's nested parts.
   Contextual hint icons show next to whichever action is actually available.
 - Track Focus: a full-screen view of a track, with its album art enlarged to a whole-number scale on
   the left and its title and poetry on the right, over the dimmed map and a blurred, blown-up copy
@@ -140,11 +140,11 @@ Ouros' Salanth Town Gardens → Jherop Phantom → The Gardener's Funeral) is no
 reflects this directly — `foreach (var child in node.Children) RenderNode(...)` runs *inside* the
 method that also opens/closes that same `.floatInfo`.
 
-**A nested node shares its parent's square.** Its containing block is the parent's card, so
-`PageRenderer.RenderNode` positions it by cancelling out that card's own offset and border, which
-lands it back on the parent's icon. Its stored `Node.X`/`Node.Y` aren't used. Its icon is hidden
-(see `main.css`), and its card gets offset the same way the parent's did, so it lands exactly on
-top of the parent's card and X swaps cards in place.
+**A nested node isn't a place on the map.** Its stored `Node.X`/`Node.Y`
+aren't used, its icon is hidden (see `main.css`), and its card never opens. It stays in the DOM
+because that's where Track Focus reads its content from: X there steps through the chain (`main.js`'s
+`cycleChainNode`), and `renderTrackFocus` reads that member's card directly, whether or not it's
+displayed.
 
 **Closing tags matter more than they look like they should.** A childless node's `.floatInfo`
 must be explicitly closed before the *next sibling* `.node` starts. Miss that and the browser's
@@ -152,12 +152,6 @@ own tag-recovery makes the next sibling a descendant of the unclosed card instea
 doesn't just misplace one node, it compounds: node 3 becomes a fourth-generation descendant of
 node 1, etc. `PageRenderer` closes `.floatInfo` *after* rendering `node.Children`, not before, so
 a childless node closes cleanly but a parent's card still structurally contains its child.
-
-**Visibility inherits down, and nothing about a child's own `display` overrides that.** A nested
-card's `display: ''` does nothing while its ancestor card is `display: none` — the whole subtree
-just isn't rendered, full stop. So making chain member N visible (`main.js`'s `showChainMember`)
-means setting `display: ''` on *every* ancestor from the root down to N, not just N itself — and
-closing anything past N, in case the player is stepping backward.
 
 **Testing gotcha worth remembering:** `getComputedStyle(el).display !== 'none'` (or checking an
 element's own inline `style.display`) only tells you about that one element — it says nothing

@@ -7,7 +7,7 @@
 // sokoban.js, which owns the movement itself). Press Z (keyboard) or A (gamepad) to interact with
 // whatever location the ship is standing on - travels to its linked page, or opens a track's Track
 // Focus screen. When that location has extra nested locations tucked inside its card (a multi-part
-// story), press X (keyboard) or X (gamepad) to step between them without having to move.
+// story), press X (keyboard) or X (gamepad) in Track Focus to step between them.
 //
 // This file is the canonical shared runtime owned by TheWeave.Exporter - it's
 // generated into every exported site's jsx/main.js, not hand-edited there.
@@ -29,7 +29,7 @@ let modalQueue = [];
 let modalBackdrop = null;
 // The open Track Focus screen's root element, or null while it's closed - see openTrackFocus.
 let trackFocusEl = null;
-let activeNode = null;   // whichever card is currently shown (a root, or one of its chain)
+let activeNode = null;   // the current track: activeRoot, or the chain member Track Focus is on
 // performance.now() timestamp of the moment activeNode last changed identity (null while no
 // card is active) - see CARD_FOCUS_DELAY_MS in updateCamera: the camera only starts heading
 // toward a card once it's stayed the *same* activeNode this long, so passing near a location (or
@@ -100,10 +100,6 @@ let rootByCell = new Map();
 let camera = { x: 0, y: 0, initialized: false };
 // The separately-eased look-ahead bias added on top of camera.x/y - see updateCamera.
 let lookAhead = { x: 0, y: 0, initialized: false };
-// Whether updateCamera is currently tracking a focused card (set at the end of every call) -
-// consulted by showChainMember so X-cycling while already settled on a card doesn't re-arm
-// CARD_FOCUS_DELAY_MS and revert to ship-tracking before panning to the next member.
-let cameraFocused = false;
 
 // Input state
 const KEY_DIRECTIONS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
@@ -349,10 +345,6 @@ function loadNodes() {
       // node whose parent is <body>.
       isTopLevel: !curNode.parentElement.closest(".node"),
       chain: null, // filled in below, top-level nodes only
-      // The X-cycle hint PageRenderer renders as a direct child of this node, if this node is
-      // part of a chain at all (:scope so a nested chain member's own .chainHint isn't picked up
-      // instead - see updateChainHint()). null for a node that's never part of any chain.
-      chainHint: curNode.querySelector(':scope > .chainHint') ?? null,
       // This node's .songPlayer (null if it has none) - see updateLocationAudio, which is the
       // only thing driving a non-modal node's audio now (a modal's own <audio controls> is left
       // to the visitor, untouched by that system). audioPreloaded latches true the first time
@@ -373,11 +365,10 @@ function loadNodes() {
 
   });
 
-  // A multi-part location's nested nodes aren't reachable by walking to them
-  // directly - the X button instead steps through each
-  // top-level node's own chain (itself, then every descendant, depth-first)
-  // without the ship needing to move. Branching Children would flatten into
-  // one cycle order here too, though in practice these are linear chains.
+  // A multi-part location's nested nodes aren't reachable by walking to them - X in Track Focus
+  // instead steps through each top-level node's own chain (itself, then every descendant,
+  // depth-first). Branching Children would flatten into one cycle order here too, though in practice
+  // these are linear chains.
   nodeMeta.forEach((meta, node) => {
     if (meta.isTopLevel)
       meta.chain = [node, ...node.querySelectorAll(".node")];
@@ -532,7 +523,7 @@ function bindInput(){
     if (direction) playerMover.press(direction);
 
     if ((e.key === 'z' || e.key === 'Z') && !e.repeat) onInteractButton();
-    if ((e.key === 'x' || e.key === 'X') && !e.repeat && !isScreenCovered()) cycleChainNode();
+    if ((e.key === 'x' || e.key === 'X') && !e.repeat) cycleChainNode();
     if (e.key === 'Escape' && !e.repeat) closeTrackFocus();
   });
 
@@ -602,7 +593,7 @@ function updateInput(){
 
       // Standard gamepad mapping: button 2 is X (Xbox) / Square (PlayStation).
       let xDown = !!(pad.buttons[2] && pad.buttons[2].pressed);
-      if (xDown && !gamepadCycleWasDown && !isScreenCovered()) cycleChainNode();
+      if (xDown && !gamepadCycleWasDown) cycleChainNode();
       gamepadCycleWasDown = xDown;
 
       break; // only the first connected gamepad drives the ship
@@ -674,7 +665,7 @@ function renderShip(){
 function updateCamera(dt = 1){
   // What the camera tracks: the ship's own position, unless a card is open *and the player has
   // actually settled on it* (the same activeNode for CARD_FOCUS_DELAY_MS - see setter sites in
-  // showChainMember/hideChain), in which case it tracks that card's actual rendered center instead.
+  // showLocation/hideLocation), in which case it tracks that card's actual rendered center instead.
   // The delay is deliberate: without it, quickly X-cycling through a chain would drag the camera
   // around before the player had any intention of reading that particular card. Reads
   // getBoundingClientRect() rather than re-deriving the offset math, so it's automatically correct
@@ -699,7 +690,6 @@ function updateCamera(dt = 1){
       easeFactor = CARD_FOCUS_EASE;
     }
   }
-  cameraFocused = focused;
 
   if (!camera.initialized) {
     camera.x = trackX;
@@ -761,8 +751,8 @@ function updateCamera(dt = 1){
 
 // Which top-level location the ship is standing on drives the open card - a multi-part location's
 // nested nodes aren't out on the map to walk to, so they never compete here.
-// Once a root is active, X steps through its chain (see cycleChainNode); this only decides *which
-// root*, resetting back to the start of its chain whenever the root itself changes. Only counts
+// This only decides *which root*, resetting back to the start of its chain whenever the root itself
+// changes. Only counts
 // once the ship has actually stopped, so holding a direction straight across a node doesn't flash
 // its card open and shut on the way past.
 function updateNodeProximity(){
@@ -770,10 +760,10 @@ function updateNodeProximity(){
   let root = playerMover.isMoving ? null : (rootByCell.get(cellKey(playerMover.cell)) ?? null);
 
   if (root !== activeRoot) {
-    if (activeRoot) hideChain(activeRoot);
+    if (activeRoot) hideLocation(activeRoot);
     activeRoot = root;
     chainIndex = 0;
-    if (activeRoot) showChainMember(activeRoot, 0);
+    if (activeRoot) showLocation(activeRoot);
   }
 }
 
@@ -860,72 +850,46 @@ function setCardOpen(node, meta, open){
   node.classList.toggle('cardOpen', open);
 }
 
-// Closes every card in a root's chain - used when the ship leaves it entirely. (Cycling
-// within the same root doesn't call this - see showChainMember.)
-function hideChain(root){
-  for (const node of nodeMeta.get(root).chain) {
-    let meta = nodeMeta.get(node);
-    if (meta.chainHint) meta.chainHint.style.display = 'none';
-    if (!meta.persistent) {
-      setCardOpen(node, meta, false);
-      meta.img.src = 'img/node.png';
-    }
+// Closes a location's card when the ship leaves it.
+function hideLocation(root){
+  let meta = nodeMeta.get(root);
+  if (!meta.persistent) {
+    setCardOpen(root, meta, false);
+    meta.img.src = 'img/node.png';
   }
   activeNode = null;
   activeNodeSince = null;
 }
 
-// Shows chain[index] and clears activeNode/img back to every OTHER member. Nested cards
-// live inside their parent's own .floatInfo (that's how "parent-card-relative" positioning
-// works), so a nested card's own display:'' does nothing while an ancestor card containing
-// it is display:none - every ancestor from the root down to the target has to stay open too
-// (chain[0..index] here), not just the target itself. Anything past the target closes, in
-// case this is stepping backward from a deeper member.
-function showChainMember(root, index){
-  let chain = nodeMeta.get(root).chain;
-  for (let i = 0; i < chain.length; i++) {
-    let meta = nodeMeta.get(chain[i]);
-    // Cleared unconditionally (even for a persistent member, and regardless of index) - reset
-    // below to the one actual "next" member, the only case that should ever show it.
-    if (meta.chainHint) meta.chainHint.style.display = 'none';
-    if (meta.persistent) continue;
-    setCardOpen(chain[i], meta, i <= index);
-    meta.img.src = (i === index) ? 'img/node-active.png' : 'img/node.png';
+// Opens a location's card once the ship stops on it. Always the root's own: a chain's later parts
+// are only ever reached in Track Focus (see cycleChainNode), so their cards never open on the map.
+function showLocation(root){
+  let meta = nodeMeta.get(root);
+  if (!meta.persistent) {
+    setCardOpen(root, meta, true);
+    meta.img.src = 'img/node-active.png';
   }
-  // The X-cycle hint belongs on whichever member is next, never the active one itself - wraps
-  // back to chain[0] past the last member, since cycleChainNode's own %chain.length does too.
-  if (chain.length > 1) {
-    let nextHint = nodeMeta.get(chain[(index + 1) % chain.length]).chainHint;
-    if (nextHint) nextHint.style.display = 'block';
-  }
-  // Only re-arm the settle delay when the camera isn't already focused on a card - otherwise
-  // X-cycling to the next chain member while already settled would revert to ship-tracking and
-  // force another CARD_FOCUS_DELAY_MS wait before panning to it. When cameraFocused is true,
-  // activeNodeSince is left exactly as it is (already well past the delay threshold), so
-  // updateCamera's focus condition stays true on the very next frame and its continuous
-  // re-targeting (see updateCamera) picks up the new activeNode's card and eases straight there.
-  //
-  // The `activeNodeSince === null` half matters for a genuine root change: hideChain() always
-  // nulls activeNodeSince unconditionally right before this runs (called from
-  // updateNodeProximity when switching roots), so if the *previous* root happened to be focused,
-  // cameraFocused would still read true here even though it no longer describes anything - without
-  // this check the reset gets skipped, activeNodeSince stays permanently null, and the new root
-  // can never focus at all.
-  if (activeNode !== chain[index] && (activeNodeSince === null || !cameraFocused)) activeNodeSince = performance.now();
-  activeNode = chain[index];
+  activeNodeSince = performance.now();
+  activeNode = root;
 }
 
-// X (keyboard) / X (gamepad): step to the next location in the current
-// root's chain - the way to reach a multi-part location's later parts,
-// since they aren't out on the map to walk to.
+// Whether Track Focus may move on from this chain member. The one place a "solve this part's
+// Sokoban first" rule goes - nothing is locked yet.
+function canAdvanceChain(member){
+  return true;
+}
+
+// X (keyboard) / X (gamepad): in Track Focus, step to the next part of the current location, wrapping
+// back to the first. Its music crossfades on its own, since updateLocationAudio follows activeNode.
 function cycleChainNode(){
-  if (!activeRoot) return;
+  if (!trackFocusEl) return;
 
   let chain = nodeMeta.get(activeRoot).chain;
-  if (chain.length <= 1) return;
+  if (chain.length <= 1 || !canAdvanceChain(activeNode)) return;
 
   chainIndex = (chainIndex + 1) % chain.length;
-  showChainMember(activeRoot, chainIndex);
+  activeNode = chain[chainIndex];
+  renderTrackFocus();
 }
 
 // Whether something is covering the whole screen, leaving the map underneath out of reach.
@@ -957,27 +921,37 @@ function onInteract(){
   }
 }
 
-// Track Focus: a full-screen view of the active track (whichever chain member X has landed on) -
-// album art on the left, title and poetry on the right, over the dimmed map and a blown-up, blurred
-// copy of the art that gives the whole screen its palette. Its music carries on playing, since the
-// ship stays exactly where it is (see updateLocationAudio).
-//
-// Everything shown is read from the card already in the page, rather than being rendered a second
-// time per node. :scope matters here: a chain member's card contains every later member's whole
-// card (see the README's nesting section), so a plain querySelector could find the wrong track's.
+// Track Focus: a full-screen view of the current track - album art on the left, title and poetry on
+// the right, over the dimmed map and a blown-up, blurred copy of the art that gives the whole screen
+// its palette. Its music carries on playing, since the ship stays exactly where it is (see
+// updateLocationAudio). A multi-part location's later parts are only reachable here - see
+// cycleChainNode.
 //
 // Appended to <html>, not <body>, for the same reason as #modalBackdrop - see #globeVignette's
 // comment in buildGlobeEffect.
 function openTrackFocus(){
   if (trackFocusEl || !activeNode) return;
 
+  trackFocusEl = document.createElement('div');
+  trackFocusEl.id = 'trackFocus';
+
+  renderTrackFocus();
+  updateTrackFocusScale();
+  document.documentElement.appendChild(trackFocusEl);
+}
+
+// (Re)builds the screen for activeNode. Everything shown is read from that node's card already in the
+// page, rather than being rendered a second time per node. :scope matters here: a chain member's card
+// contains every later member's whole card (see the README's nesting section), so a plain
+// querySelector could find the wrong track's.
+function renderTrackFocus(){
   let info = nodeMeta.get(activeNode).info;
   let cover = info.querySelector(':scope > .songCover');
   let title = info.querySelector(':scope > h3');
   let lines = info.querySelectorAll(':scope > .poetry-text > .poetry-line');
+  let download = info.querySelector(':scope > .poetry-text > .poetry-download a');
 
-  trackFocusEl = document.createElement('div');
-  trackFocusEl.id = 'trackFocus';
+  trackFocusEl.replaceChildren();
 
   let content = document.createElement('div');
   content.id = 'trackFocusContent';
@@ -1013,16 +987,15 @@ function openTrackFocus(){
 
   lines.forEach(line => text.appendChild(line.cloneNode(true)));
 
-  let close = document.createElement('div');
-  close.id = 'trackFocusClose';
-  let closeLabel = document.createElement('span');
-  closeLabel.textContent = '[ Close ]';
-  closeLabel.addEventListener('click', closeTrackFocus);
-  let closeHint = document.createElement('img');
-  closeHint.className = 'keyHint';
-  closeHint.src = 'img/ui/key_z.gif';
-  close.append(closeLabel, closeHint);
-  text.appendChild(close);
+  let actions = document.createElement('div');
+  actions.id = 'trackFocusActions';
+  if (nodeMeta.get(activeRoot).chain.length > 1) {
+    actions.appendChild(buildTrackFocusAction('[ Next ]', 'img/ui/key_x.gif', cycleChainNode));
+  }
+  actions.appendChild(buildTrackFocusAction('[ Close ]', 'img/ui/key_z.gif', closeTrackFocus));
+  // Only reachable from here for a chain's later parts, since their cards never open on the map.
+  if (download) actions.appendChild(download.cloneNode(true));
+  text.appendChild(actions);
 
   content.appendChild(text);
   trackFocusEl.appendChild(content);
@@ -1031,16 +1004,33 @@ function openTrackFocus(){
   content.addEventListener('click', (e) => {
     if (e.target === content) closeTrackFocus();
   });
-
-  updateTrackFocusScale();
-  document.documentElement.appendChild(trackFocusEl);
 }
 
-// A no-op when it isn't open, so every way of closing it can just call this.
+function buildTrackFocusAction(label, hintSrc, onClick){
+  let action = document.createElement('span');
+  action.className = 'trackFocusAction';
+
+  let text = document.createElement('span');
+  text.textContent = label;
+  text.addEventListener('click', onClick);
+  action.appendChild(text);
+
+  let hint = document.createElement('img');
+  hint.className = 'keyHint';
+  hint.src = hintSrc;
+  action.appendChild(hint);
+
+  return action;
+}
+
+// A no-op when it isn't open, so every way of closing it can just call this. Always comes back to the
+// location's first part: that's the only card the map ever shows, and the music should match it.
 function closeTrackFocus(){
   if (!trackFocusEl) return;
   trackFocusEl.remove();
   trackFocusEl = null;
+  activeNode = activeRoot;
+  chainIndex = 0;
 }
 
 // Album art is 240x240, and only stays crisp - with whole-pixel tiles for a 10x10 board over it, 24

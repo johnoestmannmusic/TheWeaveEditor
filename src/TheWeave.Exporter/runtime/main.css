@@ -200,25 +200,10 @@ h3 {
   width: 48px;
 }
 
-/* A nested node is one more part of its root's location, reached with X, not a separate place on
-   the map - so it has no icon of its own. visibility rather than display, so the element keeps its
-   place in the layout. */
+/* A nested node is one more part of its root's location, reached with X in Track Focus, not a
+   separate place on the map - so it has no icon of its own. */
 .node .node > .nodeImage {
   visibility: hidden;
-}
-
-/* Hint that X/gamepad X cycles to *this* node next (see updateChainHint() in main.js) - one
-   placeholder per chain member (see PageRenderer.RenderNode), hidden by default and shown on
-   exactly the one that's actually next from wherever the player currently is in the chain, never
-   the active member itself. Sits 20px to the left of the node's own icon, vertically centered
-   against its 48px height. */
-.chainHint {
-  display: none;
-  position: absolute;
-  left: -20px;
-  top: 14px;
-  width: 20px;
-  height: 20px;
 }
 
 .playerShip {
@@ -390,13 +375,17 @@ h3 {
   color: #9cc4ee;
 }
 
-#trackFocusClose {
+#trackFocusActions {
   margin-top: 1em;
   font-size: 0.8em;
   color: #c9bda9;
 }
 
-#trackFocusClose span {
+.trackFocusAction {
+  margin-right: 1.5em;
+}
+
+.trackFocusAction > span {
   cursor: pointer;
 }
 

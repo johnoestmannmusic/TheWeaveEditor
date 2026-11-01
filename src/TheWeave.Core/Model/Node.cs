@@ -8,10 +8,10 @@ public enum IconStyle
 
 /// <summary>
 /// A location on a page's map. Recursive: a Node's Children are further parts of the same location
-/// (used for multi-part stories, e.g. Ouros's Salanth Town Gardens chain), reached with X rather than
-/// walked to. A top-level node's X/Y are page-relative, and put its icon's center in the middle of a
-/// grid square (see GridLayout). A nested node's X/Y aren't used: it has no icon of its own, and
-/// always sits exactly on its parent (see PageRenderer.RenderNode).
+/// (used for multi-part stories, e.g. Ouros's Salanth Town Gardens chain), reached with X in Track
+/// Focus rather than walked to. A top-level node's X/Y are page-relative, and put its icon's center in the middle of a
+/// grid square (see GridLayout). A nested node's X/Y aren't used: nothing of it appears on the map,
+/// and it's only reached in Track Focus.
 /// </summary>
 public sealed class Node
 {

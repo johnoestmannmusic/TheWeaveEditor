@@ -842,7 +842,7 @@ function renderNodeInspector(container, pageId, node) {
 
     ${onMap
       ? cellPickerHtml('f-square', 'Map', grid, node.x + grid.nodeIconSize / 2, node.y + grid.nodeIconSize / 2)
-      : isModalNode(node) ? '' : '<div class="field-hint">Shares its parent\'s square on the map - press X there to reach it.</div>'}
+      : isModalNode(node) ? '' : '<div class="field-hint">Shares its parent\'s square on the map - press X in Track Focus to reach it.</div>'}
 
     <div class="field-row">
       <div class="field">
