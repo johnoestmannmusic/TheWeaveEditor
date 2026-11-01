@@ -214,20 +214,24 @@ internal static class ProjectEditing
             if (!usesLetter)
                 obj.Letter = null;
 
-            if (obj.Kind == PuzzleObjectKind.Stream && obj.Direction is null)
-                throw new InvalidOperationException("A Stream needs a direction.");
-            if (obj.Kind != PuzzleObjectKind.Stream)
+            var isFloor = IsFloorTile(obj);
+            if (isFloor && obj.Direction is null)
+                throw new InvalidOperationException($"A {obj.Kind} needs a direction.");
+            if (!isFloor)
                 obj.Direction = null;
+
+            if (obj.Kind is PuzzleObjectKind.Finish or PuzzleObjectKind.Start)
+                obj.Invisible = false;
 
             if (obj.Kind != PuzzleObjectKind.Gate)
                 obj.Open = false;
         }
 
         var crowded = puzzle.Objects
-            .GroupBy(o => (o.Col, o.Row, IsStream: o.Kind == PuzzleObjectKind.Stream))
+            .GroupBy(o => (o.Col, o.Row, IsFloor: IsFloorTile(o)))
             .FirstOrDefault(g => g.Count() > 1);
         if (crowded is not null)
-            throw new InvalidOperationException($"Column {crowded.Key.Col}, row {crowded.Key.Row} holds more than one {(crowded.Key.IsStream ? "Stream" : "object")}.");
+            throw new InvalidOperationException($"Column {crowded.Key.Col}, row {crowded.Key.Row} holds more than one {(crowded.Key.IsFloor ? "floor tile" : "object")}.");
 
         if (puzzle.Objects.Count(o => o.Kind == PuzzleObjectKind.Start) > 1)
             throw new InvalidOperationException("A puzzle can only have one Start.");
@@ -239,6 +243,9 @@ internal static class ProjectEditing
                 throw new InvalidOperationException($"The {role} texture isn't complete.");
         }
     }
+
+    private static bool IsFloorTile(PuzzleObject obj) =>
+        obj.Kind is PuzzleObjectKind.Stream or PuzzleObjectKind.RotatorTile;
 
     public static void ApplyPageEdit(WeaveProject project, Page page, PageEditRequest edit)
     {

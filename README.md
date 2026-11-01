@@ -73,6 +73,10 @@ Neocities, replacing hand-authoring HTML per location.
   the same letter (which can start open or closed), Keys have to be collected before Switches work, and
   Teleporters jump to their partner. Streams carry the ship and any objects on them, and hold the ship
   until they push it onto a non-Stream square. X restarts the puzzle.
+- Rotator Tiles work like Streams, but only move what's on them, once per second, while the ship is on a
+  Rotator Switch, and the ship can walk over them freely. Any object but Finish can start out Invisible,
+  behaving exactly the same but unseen until the ship lights a Lantern within reach of it. A lit Lantern
+  stays lit, and reveals a circle reaching 3 squares in every direction.
 - A location's parts play like game levels. Each part stays locked until the puzzle of every part before
   it is solved: X can still step to it, but Track Focus only shows its dimmed art and the word Locked, and
   it can't be played or heard. Reaching a Finish remembers that in the visitor's browser and moves straight

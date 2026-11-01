@@ -28,29 +28,34 @@
     return object.col === cell.col && object.row === cell.row;
   }
 
+  // A tile things sit on, rather than a thing itself. A square holds one of these plus one object.
+  function isFloor(object){
+    return object.kind === 'Stream' || object.kind === 'RotatorTile';
+  }
+
   // ---------- placing objects ----------
 
   // A board with one more object on it, leaving the original alone. A square holds one object plus
-  // optionally a Stream under it, so anything new replaces only what it would otherwise share the
+  // optionally a floor tile under it, so anything new replaces only what it would otherwise share the
   // square with, and there's only ever one Start. The ship always needs somewhere to begin, so nothing
   // else can replace Start - it has to be moved out of the way first.
   function placeObject(objects, object){
-    let isStream = object.kind === 'Stream';
-    if (!isStream && object.kind !== 'Start' && objects.some(other => other.kind === 'Start' && isAt(other, object))) return objects;
+    let floor = isFloor(object);
+    if (!floor && object.kind !== 'Start' && objects.some(other => other.kind === 'Start' && isAt(other, object))) return objects;
     return [
       ...objects.filter(other => {
         if (object.kind === 'Start' && other.kind === 'Start') return false;
-        return !(isAt(other, object) && (other.kind === 'Stream') === isStream);
+        return !(isAt(other, object) && isFloor(other) === floor);
       }),
       object,
     ];
   }
 
-  // A board with the top thing on a square removed: an object first, then the Stream it was on. Start
+  // A board with the top thing on a square removed: an object first, then the floor tile it was on. Start
   // stays, for the same reason it can't be replaced.
   function eraseObject(objects, cell){
     let here = objects.filter(other => isAt(other, cell) && other.kind !== 'Start');
-    let top = here.find(other => other.kind !== 'Stream') ?? here[0];
+    let top = here.find(other => !isFloor(other)) ?? here[0];
     return objects.filter(other => other !== top);
   }
 
@@ -74,6 +79,9 @@
   // ---------- playing ----------
 
   const OPPOSITES = { Up: 'Down', Down: 'Up', Left: 'Right', Right: 'Left' };
+  // How far a lit Lantern reaches, in squares from its own. A little past 3 makes it read as a circle on a
+  // grid of squares: each row outward from it reaches 3, 3, 2 and 1 squares to either side.
+  const LANTERN_REACH = 3.5;
   // sokoban.js's directions are lower case, and a puzzle's are capitalized as they are in the project file.
   const MOVER_DIRECTIONS = { Up: 'up', Down: 'down', Left: 'left', Right: 'right' };
   const PUZZLE_DIRECTIONS = { up: 'Up', down: 'Down', left: 'Left', right: 'Right' };
@@ -87,13 +95,20 @@
   // owns the ship's actual movement, through sokoban.js's canEnter and onArrive hooks.
   function createPuzzleGame(puzzle) {
     let streams = new Map();
+    let rotators = new Map();
+    let floors = [];
     let objects = [];
     let start = { col: DEFAULT_START.col, row: DEFAULT_START.row };
 
     for (const object of puzzle.objects) {
-      if (object.kind === 'Stream') streams.set(cellKey(object), object.direction);
-      else if (object.kind === 'Start') start = { col: object.col, row: object.row };
-      else objects.push({ ...object, fromCol: object.col, fromRow: object.row, open: !!object.open });
+      if (object.kind === 'Start') {
+        start = { col: object.col, row: object.row };
+      } else if (isFloor(object)) {
+        (object.kind === 'Stream' ? streams : rotators).set(cellKey(object), object.direction);
+        floors.push({ ...object, revealed: false });
+      } else {
+        objects.push({ ...object, fromCol: object.col, fromRow: object.row, open: !!object.open, revealed: false, lit: false });
+      }
     }
 
     let shipCell = start;
@@ -118,6 +133,17 @@
     function nextCell(cell, direction){
       let delta = DIRECTION_DELTAS[direction];
       return { col: cell.col + delta.x, row: cell.row + delta.y };
+    }
+
+    // Everything within reach of a lit Lantern comes into view, and stays there.
+    function revealLitAreas(){
+      for (const lantern of objects) {
+        if (!lantern.lit) continue;
+        for (const thing of [...floors, ...objects]) {
+          let dx = thing.col - lantern.col, dy = thing.row - lantern.row;
+          if (dx * dx + dy * dy <= LANTERN_REACH * LANTERN_REACH) thing.revealed = true;
+        }
+      }
     }
 
     // What standing on a square does to the board, and where that leaves the ship: null, or
@@ -151,21 +177,26 @@
         case 'Finish':
           solved = true;
           return { finished: true };
+
+        case 'Lantern':
+          object.lit = true;
+          revealLitAreas();
+          return null;
       }
 
       return null;
     }
 
-    // Which objects on Streams can move this tick, all at once, so a full loop keeps circulating.
-    // Starts from everything that might, then takes out whatever turns out to be blocked, until
-    // what's left can all really go.
-    function resolveStreamMoves(occupiedByShip){
+    // Which objects on a set of floor tiles can move this tick, all at once, so a full loop keeps
+    // circulating. Starts from everything that might, then takes out whatever turns out to be blocked,
+    // until what's left can all really go.
+    function resolveMoves(track, occupiedByShip){
       let moves = new Map();
       for (const object of objects) {
-        let direction = streams.get(cellKey(object));
+        let direction = track.get(cellKey(object));
         if (!direction) continue;
         let to = nextCell(object, direction);
-        if (streams.has(cellKey(to))) moves.set(object, to);
+        if (track.has(cellKey(to))) moves.set(object, to);
       }
 
       let changed = true;
@@ -188,13 +219,38 @@
       return moves;
     }
 
+    // Moves everything on one set of floor tiles along by a square. shipHeadingTo is the square the ship
+    // is stepping onto, if it's moving. Returns what something moving under a stationary ship did, in the
+    // same form as shipArrivedAt.
+    function moveAlong(track, glide, shipHeadingTo){
+      for (const object of objects) {
+        if (!track.has(cellKey(object))) continue;
+        object.fromCol = object.col;
+        object.fromRow = object.row;
+        object.glide = glide;
+      }
+
+      let occupied = shipHeadingTo ? [shipCell, shipHeadingTo] : [shipCell];
+      let moves = resolveMoves(track, occupied);
+      for (const [object, to] of moves) {
+        object.col = to.col;
+        object.row = to.row;
+      }
+      if (moves.size > 0) revealLitAreas();
+
+      let cameUnder = !shipHeadingTo && [...moves.keys()].some(object => isAt(object, shipCell));
+      return cameUnder ? arriveAt(shipCell) : null;
+    }
+
     return {
       start,
       get objects(){ return objects; },
       get shipCell(){ return shipCell; },
       get isSolved(){ return solved; },
       get switchesActive(){ return switchesActive(); },
-      streams: puzzle.objects.filter(object => object.kind === 'Stream'),
+      // Whether the ship is on a Rotator Loop Switch, which is what makes Rotator tiles move.
+      get onRotatorSwitch(){ return objectAt(shipCell)?.kind === 'RotatorSwitch'; },
+      floors,
 
       // For sokoban.js's canEnter. A Stream holds a ship until it pushes it off: the only way to leave
       // one is the way it's going. It can't be stepped onto head-on either.
@@ -215,25 +271,8 @@
         return direction ? MOVER_DIRECTIONS[direction] : null;
       },
 
-      // Moves everything on a Stream along by a square. shipHeadingTo is the square the ship is
-      // stepping onto, if it's moving. Returns what something moving under a stationary ship did, in
-      // the same form as shipArrivedAt.
-      tick(shipHeadingTo){
-        for (const object of objects) {
-          object.fromCol = object.col;
-          object.fromRow = object.row;
-        }
-
-        let occupied = shipHeadingTo ? [shipCell, shipHeadingTo] : [shipCell];
-        let moves = resolveStreamMoves(occupied);
-        for (const [object, to] of moves) {
-          object.col = to.col;
-          object.row = to.row;
-        }
-
-        let cameUnder = !shipHeadingTo && [...moves.keys()].some(object => isAt(object, shipCell));
-        return cameUnder ? arriveAt(shipCell) : null;
-      },
+      tick: (shipHeadingTo) => moveAlong(streams, 'stream', shipHeadingTo),
+      tickRotators: (shipHeadingTo) => moveAlong(rotators, 'rotator', shipHeadingTo),
     };
   }
 
@@ -353,6 +392,9 @@
     let stream = choose(different);
     // The most common object, so the one thing here that shouldn't be shouting: the plainest of what's left.
     let wall = choose((group) => lightnessOf(group) * 0.5 - vividnessOf(group) + (chosen.length ? Math.min(...chosen.map(other => colorDistance(group, other))) * 0.25 : 0));
+    // Added after the others, so that they keep the colours they've always had.
+    let rotator = choose(different); // a Rotator tile and its Switch are one idea, like a Gate and its Switch
+    let lantern = choose(different);
 
     return {
       wall: toHex(wall),
@@ -362,6 +404,9 @@
       teleporter: toHex(teleporter),
       stream: toHex(stream),
       key: toHex(key),
+      rotator: toHex(rotator),
+      rotatorSwitch: toHex(rotator),
+      lantern: toHex(lantern),
       outline: toHex(outline),
       light: toHex(light),
     };
@@ -374,7 +419,7 @@
   const ART_PX = TILE_PX * BOARD_SIZE;
 
   // Every role that has a texture of its own. A Switch shares its Gate's, as it does its colour.
-  const TEXTURE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key'];
+  const TEXTURE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern'];
   // The shades a texture is made of, by how far they're aimed from its main colour in lightness, and how
   // much of the texture each covers. A shade only exists if the art really has a colour like it.
   const TEXTURE_SHADES = [
@@ -494,9 +539,11 @@
 
   // ---------- drawing ----------
 
-  // How long a Stream's cross-lines take to move one whole square, and how far apart they are.
+  // How long a Stream's cross-lines take to move one whole square, and how far apart they are. A Rotator
+  // tile's chevrons are as far apart, and move as fast as things on it do.
   const STREAM_CYCLE_MS = 900;
   const STREAM_LINE_SPACING = 8;
+  const ROTATOR_CYCLE_MS = 1000;
 
   // Each letter as 7 rows of 5 pixels.
   const PIXEL_LETTERS = {
@@ -526,10 +573,17 @@
     circle: (dx, dy) => dx * dx + dy * dy <= 10.8 * 10.8,
     diamond: (dx, dy) => Math.abs(dx) + Math.abs(dy) <= 12,
     triangle: (dx, dy) => dy >= -9.5 && dy <= 9.5 && Math.abs(dx) <= (dy + 10.5) * 0.55,
+    // A ring with eight teeth.
+    gear: (dx, dy) => {
+      let radius = Math.hypot(dx, dy);
+      let tooth = Math.cos(Math.atan2(dy, dx) * 8) > 0;
+      return radius >= 3.5 && radius <= (tooth ? 11.5 : 8.5);
+    },
+    star: (dx, dy) => Math.abs(dx) <= 11.5 && Math.abs(dy) <= 11.5 && Math.sqrt(Math.abs(dx)) + Math.sqrt(Math.abs(dy)) <= 4.1,
   };
 
-  const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle' };
-  const SPRITE_ROLES = { Wall: 'wall', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream' };
+  const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
+  const SPRITE_ROLES = { Wall: 'wall', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern' };
 
   // What colour a role's pixel at x, y of a square is: its texture's shade there, or its plain colour for a
   // puzzle saved before it had textures.
@@ -579,7 +633,7 @@
     let light = hexToColor(look.palette.light);
 
     let isOpenGate = object.kind === 'Gate' && object.open;
-    let isDim = object.kind === 'Switch' && !switchesActive;
+    let isDim = (object.kind === 'Switch' && !switchesActive) || (object.kind === 'Lantern' && !object.lit);
 
     let body = SHAPES[SPRITE_SHAPES[object.kind]];
     let test = isOpenGate ? (dx, dy) => body(dx, dy) && !SHAPES.octagonHole(dx, dy) : body;
@@ -636,23 +690,62 @@
     return sprite;
   }
 
+  // A Rotator tile's two rails, with chevrons between them pointing along them, and moving that way.
+  function buildRotatorSprite(direction, look, phase){
+    let sprite = new Array(TILE_PX * TILE_PX).fill(null);
+    let delta = DIRECTION_DELTAS[direction];
+    let horizontal = delta.x !== 0;
+    let forward = delta.x + delta.y > 0;
+    let outline = hexToColor(look.palette.outline);
+
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        let along = horizontal ? x : y;
+        let across = horizontal ? y : x;
+        let travelled = forward ? along : TILE_PX - 1 - along;
+        let color = null;
+
+        if ((across >= 1 && across <= 3) || (across >= 20 && across <= 22)) {
+          color = across === 1 || across === 3 || across === 20 || across === 22 ? outline : roleColorAt(look, 'rotator', x, y);
+        } else if (across > 3 && across < 20) {
+          let fromMiddle = Math.floor(Math.abs(across - (TILE_PX - 1) / 2));
+          let moved = ((travelled + fromMiddle - phase) % STREAM_LINE_SPACING + STREAM_LINE_SPACING) % STREAM_LINE_SPACING;
+          if (moved <= 3) color = moved === 0 || moved === 3 ? outline : roleColorAt(look, 'rotator', x, y);
+        }
+
+        sprite[y * TILE_PX + x] = color;
+      }
+    }
+    return sprite;
+  }
+
   // Sprites are only worth working out once per look, since there are only so many things to be drawn.
   const spriteCaches = new WeakMap();
 
-  function spriteFor(object, look, switchesActive, streamPhase){
+  function spriteKey(object, switchesActive, streamPhase, rotatorPhase){
+    if (object.kind === 'Stream') return `Stream|${object.direction}|${streamPhase}`;
+    if (object.kind === 'RotatorTile') return `RotatorTile|${object.direction}|${rotatorPhase}`;
+    return `${object.kind}|${object.letter ?? ''}|${object.kind === 'Gate' && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}`;
+  }
+
+  function spriteFor(object, look, switchesActive, streamPhase, rotatorPhase){
     let cache = spriteCaches.get(look);
     if (!cache) spriteCaches.set(look, cache = new Map());
 
-    let key = object.kind === 'Stream'
-      ? `Stream|${object.direction}|${streamPhase}`
-      : `${object.kind}|${object.letter ?? ''}|${object.kind === 'Gate' && !!object.open}|${object.kind === 'Switch' && !switchesActive}`;
-
+    let key = spriteKey(object, switchesActive, streamPhase, rotatorPhase);
     let sprite = cache.get(key);
     if (!sprite) {
-      sprite = object.kind === 'Stream' ? buildStreamSprite(object.direction, look, streamPhase) : buildSprite(object, look, switchesActive);
+      if (object.kind === 'Stream') sprite = buildStreamSprite(object.direction, look, streamPhase);
+      else if (object.kind === 'RotatorTile') sprite = buildRotatorSprite(object.direction, look, rotatorPhase);
+      else sprite = buildSprite(object, look, switchesActive);
       cache.set(key, sprite);
     }
     return sprite;
+  }
+
+  // For the Editor, where something invisible still has to be seen: every other pixel of it, see-through.
+  function ghostOf(sprite){
+    return sprite.map((color, i) => (Math.floor(i / TILE_PX) + i % TILE_PX) % 2 === 0 ? color : null);
   }
 
   function blit(image, sprite, left, top){
@@ -672,27 +765,36 @@
   }
 
   // Draws a whole board into RGBA pixel data the size of the album art, to be scaled up exactly as the art
-  // is, so that every pixel of every object lands on one of the art's. Streams go first, so that whatever's
+  // is, so that every pixel of every object lands on one of the art's. Floor tiles go first, so that whatever's
   // on one sits on top of it. Start isn't drawn, since that's where the ship itself goes.
   //
-  // look is { palette, textures }. options.timeMs drives a Stream's animation, options.switchesActive says
-  // whether Switches work yet, and options.along is how far objects are through moving from their fromCol
-  // and fromRow, for ones in play. They move in whole pixels, like everything else here.
+  // look is { palette, textures }. Options:
+  // - timeMs drives a Stream's animation, and rotatorTimeMs a Rotator tile's, which only moves when it's told to.
+  // - switchesActive says whether Switches work yet.
+  // - along and rotatorAlong are how far objects are through moving from their fromCol and fromRow, for
+  //   ones in play, depending on which kind of tile moved them. They move in whole pixels, like everything else.
+  // - showInvisible draws anything invisible and unrevealed as a ghost, rather than leaving it out.
   function renderBoard(image, objects, look, options = {}){
     image.data.fill(0);
 
-    let phase = Math.floor(((options.timeMs ?? 0) % STREAM_CYCLE_MS) / STREAM_CYCLE_MS * TILE_PX) % STREAM_LINE_SPACING;
+    let phaseOf = (timeMs, cycle) => Math.floor(((timeMs ?? 0) % cycle) / cycle * TILE_PX) % STREAM_LINE_SPACING;
+    let streamPhase = phaseOf(options.timeMs, STREAM_CYCLE_MS);
+    let rotatorPhase = phaseOf(options.rotatorTimeMs, ROTATOR_CYCLE_MS);
     let switchesActive = options.switchesActive ?? true;
-    let along = options.along ?? 1;
 
-    let streamsFirst = objects
+    let floorsFirst = objects
       .filter(object => object.kind !== 'Start')
-      .sort((a, b) => (b.kind === 'Stream') - (a.kind === 'Stream'));
+      .sort((a, b) => isFloor(b) - isFloor(a));
 
-    for (const object of streamsFirst) {
+    for (const object of floorsFirst) {
+      let hidden = object.invisible && !object.revealed;
+      if (hidden && !options.showInvisible) continue;
+
+      let along = (object.glide === 'rotator' ? options.rotatorAlong : options.along) ?? 1;
       let col = object.fromCol === undefined ? object.col : object.fromCol + (object.col - object.fromCol) * along;
       let row = object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * along;
-      blit(image, spriteFor(object, look, switchesActive, phase), Math.round(col * TILE_PX), Math.round(row * TILE_PX));
+      let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase);
+      blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX), Math.round(row * TILE_PX));
     }
   }
 

@@ -154,6 +154,37 @@ public class ProjectValidatorTests
     }
 
     [Fact]
+    public void RotatorTiles_WithNoSwitch_AreReported_AndTheReverse()
+    {
+        var tile = new PuzzleObject { Kind = PuzzleObjectKind.RotatorTile, Direction = PuzzleDirection.Up, Col = 1 };
+        var rotatorSwitch = new PuzzleObject { Kind = PuzzleObjectKind.RotatorSwitch, Col = 2 };
+
+        Assert.Contains("no Rotator Switch", Assert.Single(PuzzleProblems(Finish, tile)));
+        Assert.Contains("no Rotator tiles", Assert.Single(PuzzleProblems(Finish, rotatorSwitch)));
+        Assert.Empty(PuzzleProblems(Finish, tile, rotatorSwitch));
+    }
+
+    [Fact]
+    public void Invisible_WithNoLantern_IsReported()
+    {
+        var wall = new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 1, Invisible = true };
+
+        Assert.Contains("no Lantern", Assert.Single(PuzzleProblems(Finish, wall)));
+        Assert.Empty(PuzzleProblems(Finish, wall, new PuzzleObject { Kind = PuzzleObjectKind.Lantern, Col = 2 }));
+    }
+
+    [Fact]
+    public void Stream_EndingAtAWallOnARotatorTile_IsFine_BecauseItCanMove()
+    {
+        Assert.Empty(PuzzleProblems(
+            Finish,
+            Stream(1, 1, PuzzleDirection.Right),
+            new PuzzleObject { Kind = PuzzleObjectKind.RotatorTile, Direction = PuzzleDirection.Up, Col = 2, Row = 1 },
+            new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 2, Row = 1 },
+            new PuzzleObject { Kind = PuzzleObjectKind.RotatorSwitch, Col = 5, Row = 5 }));
+    }
+
+    [Fact]
     public void Puzzle_WithNoTextures_IsReported()
     {
         var node = new Node

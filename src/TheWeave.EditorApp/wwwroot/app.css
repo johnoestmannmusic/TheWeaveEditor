@@ -657,13 +657,13 @@ main.behind-puzzle-editor {
   background: #4a4338;
 }
 
-#pe-directions, #pe-gate-states, #pe-letters {
+#pe-directions, #pe-gate-states, #pe-visibilities, #pe-letters {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
 }
 
-#pe-gate-states {
+#pe-gate-states, #pe-visibilities {
   grid-template-columns: repeat(2, 1fr);
 }
 
@@ -672,7 +672,7 @@ main.behind-puzzle-editor {
   gap: 2px;
 }
 
-#pe-directions button, #pe-gate-states button, #pe-letters button {
+#pe-directions button, #pe-gate-states button, #pe-visibilities button, #pe-letters button {
   padding: 6px 0;
 }
 
