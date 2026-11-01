@@ -13,6 +13,31 @@ public class ProjectEditingTests
         return new Node { Id = "track", Puzzle = MakePuzzle(new PuzzleObject { Kind = PuzzleObjectKind.Finish, Col = 1, Row = 1 }) };
     }
 
+    [Fact]
+    public void IndexPage_IsFoundWhereverTheAppIsStartedFrom_AndHasEveryLocalFileItLoads()
+    {
+        var original = Environment.CurrentDirectory;
+        Environment.CurrentDirectory = Path.GetTempPath();
+        try
+        {
+            Assert.True(File.Exists(Program.IndexPagePath), Program.IndexPagePath);
+        }
+        finally
+        {
+            Environment.CurrentDirectory = original;
+        }
+
+        var page = File.ReadAllText(Program.IndexPagePath);
+        var references = System.Text.RegularExpressions.Regex.Matches(page, "(?:src|href)=\"([^\":]+)\"")
+            .Select(m => m.Groups[1].Value)
+            .ToList();
+
+        Assert.Contains("puzzle.js", references);
+        Assert.Contains("puzzleEditor.js", references);
+        foreach (var reference in references)
+            Assert.True(File.Exists(Path.Combine(Path.GetDirectoryName(Program.IndexPagePath)!, reference)), reference);
+    }
+
     // Exactly what puzzleEditor.js's savePuzzle sends.
     [Fact]
     public void UpdatePuzzleMessage_ReadsWhatTheEditorSends()
