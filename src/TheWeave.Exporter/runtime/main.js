@@ -37,6 +37,7 @@ let boardShipEl = null;
 let activeNode = null;   // the current track: activeRoot, or the chain member Track Focus is on
 let activeRoot = null;   // the top-level node the ship is currently within range of
 let chainIndex = 0;      // activeNode's position within activeRoot's chain
+let arrivalRoot = null;  // the node back to The Weave the ship arrived on and hasn't left yet - see noteArrivalRoot
 
 // The page's own config (see window.__weavePage, emitted per-page by PageConfigScriptRenderer) -
 // worldWidth/worldHeight are the page's authoritative world size, and grid is the board of squares
@@ -97,9 +98,11 @@ let minimap = null; // see buildMinimap
 // Input state
 const KEY_DIRECTIONS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
 let padDirection = null; // whichever direction the gamepad is currently holding on playerMover
-let gamepadInteractWasDown = false;
-let gamepadCycleWasDown = false;
-let gamepadBackWasDown = false;
+// Start out as held: each page is a fresh load, so a button held through a Travel has to be let go
+// before it counts again, or holding A would bounce between two pages for as long as it's held.
+let gamepadInteractWasDown = true;
+let gamepadCycleWasDown = true;
+let gamepadBackWasDown = true;
 let lastFrameTime = null;
 
 // Order of initialization
@@ -113,6 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
   initShip();
   loadNodes();
   indexNodesByCell();
+  noteArrivalRoot();
   buildScreenFrame();
   buildMinimap();
   updateViewScale();
@@ -369,6 +373,14 @@ function indexNodesByCell(){
 
 function cellKey(cell){
   return cell.col + "," + cell.row;
+}
+
+// A planet is entered standing right on its node back to The Weave. That node stays asleep until the
+// ship has stepped off it - see updateNodeProximity - so arriving doesn't open its card, or leave Z
+// one press away from going straight back.
+function noteArrivalRoot(){
+  let root = rootByCell.get(cellKey(playerMover.cell));
+  if (root && nodeMeta.get(root).travelHome) arrivalRoot = root;
 }
 
 // sessionStorage (not localStorage) so a modal comes back on a genuinely new visit - opening the
@@ -817,7 +829,10 @@ function isMinimapInTheWay(){
 // its card open and shut on the way past.
 function updateNodeProximity(){
 
-  let root = playerMover.isMoving ? null : (rootByCell.get(cellKey(playerMover.cell)) ?? null);
+  let standingOn = rootByCell.get(cellKey(playerMover.cell)) ?? null;
+  if (standingOn !== arrivalRoot) arrivalRoot = null;
+
+  let root = (playerMover.isMoving || standingOn === arrivalRoot) ? null : standingOn;
 
   if (root !== activeRoot) {
     if (activeRoot) hideLocation(activeRoot);
