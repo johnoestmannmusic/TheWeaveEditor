@@ -1,3 +1,5 @@
+using TheWeave.Core.Model;
+
 namespace TheWeave.EditorApp;
 
 /// <summary>
@@ -23,6 +25,9 @@ public sealed class EditorMessage
 
     /// <summary>Used only by "rename-node-id": the requested new id for NodeId.</summary>
     public string? NewId { get; set; }
+
+    /// <summary>Used only by "update-puzzle": NodeId's whole puzzle, or null to remove it.</summary>
+    public Puzzle? Puzzle { get; set; }
 }
 
 public sealed class PageEditRequest

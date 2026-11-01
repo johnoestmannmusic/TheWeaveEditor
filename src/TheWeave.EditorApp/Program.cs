@@ -71,7 +71,7 @@ public static class Program
         ("All Files", new[] { "*" }),
     };
 
-    private static readonly JsonSerializerOptions InboundOptions = new()
+    internal static readonly JsonSerializerOptions InboundOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         Converters = { new JsonStringEnumConverter() },
@@ -225,6 +225,20 @@ public static class Program
                     // change that isn't going to happen.
                     ProjectEditing.ResolveNodePosition(_project!, pageForEdit, nodeToEdit, nodeEdit.X, nodeEdit.Y);
                     ApplyMutation(window, () => ProjectEditing.ApplyNodeEdit(_project!, pageForEdit, nodeToEdit, nodeEdit));
+                    break;
+
+                case "update-puzzle":
+                    RequireProject();
+                    var nodeForPuzzle = RequireNode(RequirePage(message.PageId), message.NodeId);
+                    // Same order as update-node: a rejected puzzle shouldn't record an undo step.
+                    if (message.Puzzle is not null)
+                        ProjectEditing.ValidatePuzzle(message.Puzzle);
+                    ApplyMutation(window, () => ProjectEditing.ApplyPuzzleEdit(nodeForPuzzle, message.Puzzle));
+                    break;
+
+                case "load-puzzle-art":
+                    RequireProject();
+                    SendPuzzleArt(window, RequireNode(RequirePage(message.PageId), message.NodeId));
                     break;
 
                 case "delete-node":
@@ -494,6 +508,34 @@ public static class Program
         }
 
         window.SendWebMessage(JsonSerializer.Serialize(new { type = "image-picked", path = destRelative }, OutboundOptions));
+    }
+
+    // As a data URL, because a canvas isn't allowed to read the pixels of a file:// image, and that's
+    // where the puzzle's colours come from.
+    private static void SendPuzzleArt(PhotinoWindow window, Node node)
+    {
+        var coverPath = node.Card.CoverImagePath;
+        if (_contentRoot is null || string.IsNullOrEmpty(coverPath))
+            throw new InvalidOperationException("This location has no album art to build a puzzle on.");
+
+        var absolute = Path.GetFullPath(Path.Combine(_contentRoot, coverPath.Replace('/', Path.DirectorySeparatorChar)));
+        if (!File.Exists(absolute))
+            throw new InvalidOperationException($"Album art '{coverPath}' wasn't found.");
+
+        var mime = Path.GetExtension(absolute).ToLowerInvariant() switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            _ => "image/png",
+        };
+
+        window.SendWebMessage(JsonSerializer.Serialize(new
+        {
+            type = "puzzle-art",
+            nodeId = node.Id,
+            dataUrl = $"data:{mime};base64,{Convert.ToBase64String(File.ReadAllBytes(absolute))}",
+        }, OutboundOptions));
     }
 
     private static void PickBackgroundMusic(PhotinoWindow window)

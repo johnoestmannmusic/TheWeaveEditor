@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace TheWeave.Core.Model;
 
 public enum IconStyle
@@ -25,4 +27,8 @@ public sealed class Node
 
     public Card Card { get; set; } = new();
     public List<Node> Children { get; set; } = new();
+
+    /// <summary>This track's Sokoban puzzle, if it has one. Left out of the project file when it doesn't.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Puzzle? Puzzle { get; set; }
 }

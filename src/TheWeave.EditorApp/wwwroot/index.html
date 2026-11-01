@@ -81,9 +81,48 @@
     <span id="status-text">Ready.</span>
   </footer>
 
+  <div id="puzzle-editor" hidden>
+    <header id="pe-header">
+      <strong id="pe-title"></strong>
+      <div class="spacer"></div>
+      <button id="pe-clear" class="danger">Clear puzzle</button>
+      <button id="pe-close">Close (Esc)</button>
+    </header>
+    <div id="pe-main">
+      <aside id="pe-tools">
+        <div id="pe-tool-buttons"></div>
+        <div id="pe-letter-row" class="field" hidden>
+          <label for="pe-letter">Letter</label>
+          <select id="pe-letter"></select>
+        </div>
+        <div id="pe-direction-row" class="field" hidden>
+          <label>Direction</label>
+          <div id="pe-directions"></div>
+        </div>
+        <div id="pe-tool-hint" class="field-hint"></div>
+      </aside>
+      <div id="pe-stage">
+        <div id="pe-board">
+          <img id="pe-art" draggable="false" alt="">
+          <div id="pe-grid"></div>
+          <canvas id="pe-canvas"></canvas>
+        </div>
+      </div>
+      <aside id="pe-side">
+        <h3>Colours</h3>
+        <div class="field-hint">Picked from this track's album art.</div>
+        <div id="pe-palette"></div>
+        <h3>Problems</h3>
+        <ul id="pe-problems"></ul>
+      </aside>
+    </div>
+  </div>
+
   <div id="toast" hidden></div>
 
   <script src="app://dynamic.js"></script>
+  <script src="puzzle.js"></script>
   <script src="app.js"></script>
+  <script src="puzzleEditor.js"></script>
 </body>
 </html>

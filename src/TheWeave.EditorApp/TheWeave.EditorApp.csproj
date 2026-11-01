@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\TheWeave.Core\TheWeave.Core.csproj" />
@@ -12,6 +12,8 @@
 
   <ItemGroup>
     <Content Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Shared with the exported site, so that a puzzle looks the same in both. -->
+    <Content Include="..\TheWeave.Exporter\runtime\puzzle.js" Link="wwwroot\puzzle.js" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <PropertyGroup>
