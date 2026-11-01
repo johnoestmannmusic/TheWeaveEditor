@@ -36,28 +36,6 @@ test('neighbor returns null off every edge of the board', () => {
   assert.deepEqual(grid.neighbor({ col: 3, row: 3 }, 'right'), { col: 4, row: 3 });
 });
 
-test('a gap column pushes later columns over by one square and doubles that one step', () => {
-  let grid = createGrid({ columns: 38, rows: 10, cellWidth: 150, cellHeight: 150, originX: 150, originY: 150, gapColumns: [19] });
-  assert.equal(grid.centerOf({ col: 18, row: 0 }).x, 2925);
-  assert.equal(grid.centerOf({ col: 19, row: 0 }).x, 3225);
-  assert.equal(grid.stepLength({ col: 18, row: 0 }, { col: 19, row: 0 }), 2);
-  assert.equal(grid.stepLength({ col: 19, row: 0 }, { col: 20, row: 0 }), 1);
-  assert.deepEqual(grid.cellAt(3225, 225), { col: 19, row: 0 });
-});
-
-test('crossing a gap column takes twice as long at the same speed', () => {
-  let grid = createGrid({ columns: 4, rows: 1, cellWidth: 10, cellHeight: 10, gapColumns: [2] });
-  let m = createMover(grid, { cell: { col: 1, row: 0 }, stepMs: STEP_MS });
-  m.press('right');
-  m.release('right');
-  m.update(STEP_MS);
-  assert.equal(m.isMoving, true);
-  assert.equal(m.position.x, 25);
-  m.update(STEP_MS);
-  assert.equal(m.isMoving, false);
-  assert.deepEqual(m.cell, { col: 2, row: 0 });
-});
-
 test('a tap too quick to span an update still moves exactly one square', () => {
   let m = mover();
   m.press('right');

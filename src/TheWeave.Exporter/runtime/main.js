@@ -46,6 +46,7 @@ let weavePage = { globeEffect: false, worldWidth: 0, worldHeight: 0, defaultSpaw
 
 // Ship tuning
 const SHIP_WIDTH = 40;
+const SHIP_HEIGHT = SHIP_WIDTH * 16 / 12; // keeps img/ui/pilot-ship.png's 12x16 shape
 const NODE_ICON_SIZE = 48; // matches .nodeImage's width in main.css
 const STEP_MS = 240; // how long walking one square takes
 const MS_PER_FRAME = 1000 / 60; // loop()'s dt is measured in 60fps frames
@@ -216,8 +217,9 @@ function initShip() {
   let destY  = parseInt(params.get("destY"));
   tutorialSwitch = params.get("tutorial");
 
-  let spawnX = 120;
-  let spawnY = 120;
+  // Square A0.
+  let spawnX = 225;
+  let spawnY = 225;
 
   if (!isNaN(destX) && !isNaN(destY)) {
     spawnX = destX;
@@ -621,7 +623,7 @@ function renderShip(){
   // neighboring whole pixel steps, which is its own kind of shake - a single small sprite sitting at
   // a sub-pixel offset is far less noticeable than that.
   shipEl.style.left = (ship.x - SHIP_WIDTH / 2) + "px";
-  shipEl.style.top = (ship.y - SHIP_WIDTH / 2) + "px";
+  shipEl.style.top = (ship.y - SHIP_HEIGHT / 2) + "px";
   // Sprite's forward points "up" (angle -90deg) at rest, so offset by +90deg
   shipEl.style.transform = "rotate(" + (ship.angle + Math.PI / 2) + "rad)";
 }

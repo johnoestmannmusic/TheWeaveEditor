@@ -23,20 +23,10 @@
 
   // A board of columns x rows squares, cells being plain { col, row } objects. originX/originY are
   // the top-left corner of square (0, 0), in whatever pixel space the caller draws in.
-  //
-  // gapColumns lists columns that have one square's width of unplayable space immediately to their
-  // left - e.g. the second sector of a double map, whose own label column sits between the two
-  // grids. Walking across a gap is a single step, just proportionally longer (see stepLength).
-  function createGrid({ columns, rows, cellWidth, cellHeight, originX = 0, originY = 0, gapColumns = [] }) {
+  function createGrid({ columns, rows, cellWidth, cellHeight, originX = 0, originY = 0 }) {
 
-    let columnCenters = [];
-    for (let col = 0, gapsPassed = 0; col < columns; col++) {
-      if (gapColumns.includes(col)) gapsPassed++;
-      columnCenters.push(originX + (col + gapsPassed + 0.5) * cellWidth);
-    }
-
-    function rowCenter(row){
-      return originY + (row + 0.5) * cellHeight;
+    function clamp(value, max){
+      return Math.max(0, Math.min(max, value));
     }
 
     function inBounds(cell){
@@ -49,18 +39,19 @@
       inBounds,
 
       centerOf(cell){
-        return { x: columnCenters[cell.col], y: rowCenter(cell.row) };
+        return {
+          x: originX + (cell.col + 0.5) * cellWidth,
+          y: originY + (cell.row + 0.5) * cellHeight,
+        };
       },
 
       // The square nearest to a pixel position - clamped onto the board, so this always returns a
       // real square even for a point outside it.
       cellAt(x, y){
-        let col = 0;
-        for (let i = 1; i < columns; i++) {
-          if (Math.abs(columnCenters[i] - x) < Math.abs(columnCenters[col] - x)) col = i;
-        }
-        let row = Math.floor((y - originY) / cellHeight);
-        return { col, row: Math.max(0, Math.min(rows - 1, row)) };
+        return {
+          col: clamp(Math.floor((x - originX) / cellWidth), columns - 1),
+          row: clamp(Math.floor((y - originY) / cellHeight), rows - 1),
+        };
       },
 
       // The square one step away in a direction ('up'/'down'/'left'/'right'), or null off the board.
@@ -68,13 +59,6 @@
         let delta = DIRECTION_DELTAS[direction];
         let next = { col: cell.col + delta.col, row: cell.row + delta.row };
         return inBounds(next) ? next : null;
-      },
-
-      // How long a step between two neighboring squares is, in squares: 1, or 2 across a gap column.
-      stepLength(from, to){
-        return from.col === to.col
-          ? Math.abs(rowCenter(to.row) - rowCenter(from.row)) / cellHeight
-          : Math.abs(columnCenters[to.col] - columnCenters[from.col]) / cellWidth;
       },
     };
   }
@@ -96,7 +80,6 @@
     let current = cell;
     let target = null;
     let elapsed = 0;
-    let duration = 0;
     let heldDirections = [];
     let queuedDirection = null;
 
@@ -111,13 +94,12 @@
 
       target = next;
       elapsed = 0;
-      duration = stepMs * grid.stepLength(current, next);
       return true;
     }
 
     // Spends time on the step underway, returning however much was left over from finishing it.
     function advanceStep(dtMs){
-      let left = duration - elapsed;
+      let left = stepMs - elapsed;
       if (dtMs < left) {
         elapsed += dtMs;
         return 0;
@@ -137,7 +119,7 @@
         let from = grid.centerOf(current);
         if (!target) return from;
         let to = grid.centerOf(target);
-        let t = elapsed / duration;
+        let t = elapsed / stepMs;
         return { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t };
       },
 

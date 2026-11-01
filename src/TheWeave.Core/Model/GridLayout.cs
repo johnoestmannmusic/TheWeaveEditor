@@ -8,20 +8,19 @@ public readonly record struct GridCell(int Col, int Row);
 /// project file: every map image has the same grid drawn into it, so this is worked out from the
 /// page's world size and that drawing's fixed geometry.
 ///
-/// One 500x281 source map has lines every 25 source pixels: a one-square label strip along the top
-/// and left, then columns A-S and rows 0-9, then 6 unused pixels along the bottom. A wider map (The
-/// Weave's own page) is several of those side by side, each repeating its own left label strip -
-/// which isn't a walkable column, so it's reported in GapColumns instead.
+/// One 500x281 source map has lines every 25 source pixels: a one-square label strip along the top,
+/// then rows 0-9, then 6 unused pixels along the bottom. Across, it's a column holding the row numbers,
+/// then columns A-S, all of them walkable. A wider map (The Weave's own page) is several of those side
+/// by side, with Col counting straight across all of them.
 /// </summary>
 public sealed class GridLayout
 {
-    public const int ColumnsPerSector = 19;
+    public const int ColumnsPerSector = 20;
     public const int RowCount = 10;
 
     /// <summary>
-    /// How many squares one static screen shows. A sector's 19 columns can't divide evenly (19 is
-    /// prime), but its label strip plus those columns make 20, which halves into 10 - so a left
-    /// screen shows the label strip and A-I, and a right screen shows J-S. Rows 0-9 halve into 5.
+    /// How many squares one static screen shows: a sector's columns halve into 10, so a left screen
+    /// shows the number column and A-I, and a right screen shows J-S. Rows 0-9 halve into 5.
     ///
     /// Screens are also a little taller than their rows, by the 6 source pixels left over along the
     /// bottom of the map, so the art down there (a planet's name, usually) isn't lost. A bottom screen
@@ -48,12 +47,9 @@ public sealed class GridLayout
     public double CellWidth { get; private init; }
     public double CellHeight { get; private init; }
 
-    /// <summary>Top-left corner of the first square - just past both label strips.</summary>
-    public double OriginX => CellWidth;
+    /// <summary>Top-left corner of the first square - just below the top label strip.</summary>
+    public double OriginX => 0;
     public double OriginY => CellHeight;
-
-    /// <summary>Columns with one square's width of unwalkable label strip immediately to their left.</summary>
-    public IReadOnlyList<int> GapColumns => Enumerable.Range(1, Sectors - 1).Select(s => s * ColumnsPerSector).ToArray();
 
     public double ScreenWidth => CellWidth * ScreenColumns;
     public double ScreenHeight => CellHeight * ScreenRows + BottomStripHeight;
@@ -66,7 +62,7 @@ public sealed class GridLayout
 
     /// <summary>World X of every line where one screen meets the next.</summary>
     public IReadOnlyList<double> ScreenLinesX =>
-        Enumerable.Range(1, (Columns + Sectors) / ScreenColumns - 1).Select(i => i * ScreenWidth).ToArray();
+        Enumerable.Range(1, Columns / ScreenColumns - 1).Select(i => i * ScreenWidth).ToArray();
 
     /// <summary>World Y of the top and bottom of every row of screens.</summary>
     public IReadOnlyList<double> ScreenLinesY =>
@@ -78,17 +74,15 @@ public sealed class GridLayout
         var worldHeight = (double)(page.WorldHeightPx ?? project.DefaultWorldHeightPx);
 
         var sectors = Math.Max(1, (int)Math.Round(worldWidth / worldHeight * SourceHeightPx / SourceSectorWidthPx));
-        var squaresPerSector = SourceSectorWidthPx / SourceCellPx;
-
         return new GridLayout
         {
             Sectors = sectors,
-            CellWidth = worldWidth / (squaresPerSector * sectors),
+            CellWidth = worldWidth / (ColumnsPerSector * sectors),
             CellHeight = worldHeight * SourceCellPx / SourceHeightPx,
         };
     }
 
-    public double ColumnCenter(int col) => OriginX + (col + col / ColumnsPerSector + 0.5) * CellWidth;
+    public double ColumnCenter(int col) => OriginX + (col + 0.5) * CellWidth;
 
     public double RowCenter(int row) => OriginY + (row + 0.5) * CellHeight;
 
@@ -100,7 +94,7 @@ public sealed class GridLayout
         return new GridCell(col, Math.Clamp(row, 0, Rows - 1));
     }
 
-    /// <summary>Whether a world position is actually inside a square, rather than on a label strip or off the map.</summary>
+    /// <summary>Whether a world position is actually inside a square, rather than on the top label strip or off the map.</summary>
     public bool IsOnSquare(double x, double y)
     {
         var cell = CellAt(x, y);
@@ -117,9 +111,12 @@ public sealed class GridLayout
 
     public string ColumnLabel(int col)
     {
-        var letter = (char)('A' + col % ColumnsPerSector);
-        return Sectors > 1 ? $"Sector {col / ColumnsPerSector + 1}: {letter}" : letter.ToString();
+        var inSector = col % ColumnsPerSector;
+        var name = inSector == 0 ? NumberColumnLabel : ((char)('A' + inSector - 1)).ToString();
+        return Sectors > 1 ? $"Sector {col / ColumnsPerSector + 1}: {name}" : name;
     }
+
+    private const string NumberColumnLabel = "#";
 
     public string LabelOf(GridCell cell) => $"{ColumnLabel(cell.Col)}{cell.Row}";
 

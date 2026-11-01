@@ -38,7 +38,6 @@ public static class PageConfigScriptRenderer
                 cellHeight = grid.CellHeight,
                 originX = grid.OriginX,
                 originY = grid.OriginY,
-                gapColumns = grid.GapColumns,
             },
             // One static screen's size - see main.js's updateView.
             screen = new

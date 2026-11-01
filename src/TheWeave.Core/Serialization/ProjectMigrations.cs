@@ -70,7 +70,7 @@ public static class ProjectMigrations
         var mapNodes = page.Nodes.Where(n => n.Card.Size != CardSize.Modal).ToList();
 
         // Anything already over a real square claims it before anything that has to be pulled in
-        // from a label strip does, so a node that was placed deliberately never gets displaced by
+        // from the top label strip does, so a node that was placed deliberately never gets displaced by
         // one that just happens to clamp onto the same square.
         bool IsOverSquare(Node n) => oldGrid.IsOnSquare(n.X + GridLayout.NodeIconSizePx / 2, n.Y + GridLayout.NodeIconSizePx / 2);
 

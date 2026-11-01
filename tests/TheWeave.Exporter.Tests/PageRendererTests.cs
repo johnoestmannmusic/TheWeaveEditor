@@ -9,7 +9,7 @@ namespace TheWeave.Exporter.Tests;
 public class PageRendererTests
 {
     private const string ExactGridJson =
-        "{\"columns\":19,\"rows\":10,\"cellWidth\":150,\"cellHeight\":150,\"originX\":150,\"originY\":150,\"gapColumns\":[]}";
+        "{\"columns\":20,\"rows\":10,\"cellWidth\":150,\"cellHeight\":150,\"originX\":0,\"originY\":150}";
 
     private const string ExactScreenJson = "{\"width\":1500,\"height\":786,\"tops\":[114,900]}";
 
@@ -366,7 +366,7 @@ public class PageRendererTests
         project.Pages.Add(merged);
 
         var mergedHtml = new PageRenderer(project).RenderPage(merged);
-        Assert.Contains("window.__weavePage = {\"globeEffect\":false,\"worldWidth\":6000,\"worldHeight\":1686,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":{\"columns\":38,\"rows\":10,\"cellWidth\":150,\"cellHeight\":150,\"originX\":150,\"originY\":150,\"gapColumns\":[19]},\"screen\":" + ExactScreenJson + "};", mergedHtml);
+        Assert.Contains("window.__weavePage = {\"globeEffect\":false,\"worldWidth\":6000,\"worldHeight\":1686,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":{\"columns\":40,\"rows\":10,\"cellWidth\":150,\"cellHeight\":150,\"originX\":0,\"originY\":150},\"screen\":" + ExactScreenJson + "};", mergedHtml);
     }
 
     [Fact]

@@ -48,7 +48,8 @@ Neocities, replacing hand-authoring HTML per location.
 - Configurable ship spawn points: a page's own default landing spot, plus directional defaults
   for travel links (arriving at a planet centers on its map; returning to the starting map lands
   back near the hub icon you left, nudged just above it) — all overridable per travel link.
-- Sokoban-style grid movement along the grid drawn on every map (columns A-S, rows 0-9): hold an
+- Sokoban-style grid movement along the grid drawn on every map (the number column and columns A-S,
+  rows 0-9): hold an
   arrow key, D-pad direction, or stick direction to walk square by square, and let go to stop on
   the square you're heading into. Every map has hard edges. The movement itself lives in
   `runtime/sokoban.js`, with no knowledge of the DOM or these maps, so other boards can reuse it.

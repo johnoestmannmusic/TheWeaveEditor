@@ -142,7 +142,8 @@ internal static class ProjectEditing
     {
         var grid = GridLayout.For(page, project);
         var taken = page.Nodes.Where(n => n.Card.Size != CardSize.Modal).Select(grid.CellOf).ToHashSet();
-        var cell = grid.NearestFreeCell(new GridCell(0, 0), taken)
+        // A0, rather than the number column to its left - that's a place to choose, not a default.
+        var cell = grid.NearestFreeCell(new GridCell(1, 0), taken)
             ?? throw new InvalidOperationException("Every square on this map already has a location on it.");
         return grid.NodePositionFor(cell);
     }
