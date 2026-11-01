@@ -9,7 +9,7 @@
 // Focus screen. When that location has extra nested locations tucked inside its card (a multi-part
 // story), press X (keyboard) or X (gamepad) in Track Focus to step between them. Z / A in Track Focus
 // starts the Sokoban board over the album art, and C (keyboard) or B (gamepad) backs out of it. X / X
-// restarts the board's puzzle, and solving one unlocks stepping on to the location's next part.
+// restarts the board's puzzle, and solving one unlocks the location's next part and moves on to it.
 //
 // This file is the canonical shared runtime owned by TheWeave.Exporter - it's
 // generated into every exported site's jsx/main.js, not hand-edited there.
@@ -1112,7 +1112,7 @@ function updateLocationAudio(dt){
       }
     }
 
-    let activeMember = (node === activeRoot && activeNode) ? activeNode : node;
+    let activeMember = (node === activeRoot && activeNode) ? playableMember(activeNode) : node;
 
     for (const member of meta.chain) {
       let memberMeta = nodeMeta.get(member);
@@ -1130,6 +1130,12 @@ function updateLocationAudio(dt){
       }
     }
   });
+}
+
+// The part whose music should be playing while Track Focus is on this one. A locked part keeps its music to
+// itself until it's unlocked, so the last part that's open carries on instead.
+function playableMember(member){
+  return partLockedBy(member) ?? member;
 }
 
 // Tells the persistent shell (see shell.js) how audible its "hub theme" track
@@ -1227,14 +1233,16 @@ function showLocation(root){
   activeNode = root;
 }
 
-// Whether Track Focus may move on from this chain member: not until its puzzle is solved, if it has one
-// that can be. From a chain's last part, moving on only goes back to its start, so that's always allowed.
-function canAdvanceChain(member){
+// A location's parts are levels: each is locked until the puzzle of every part before it is solved. Returns
+// the earliest part still holding this one back, or null if it's unlocked. A part with no puzzle, or one with
+// no Finish, can't be solved, so it holds nothing back - otherwise what's after it could never be reached.
+function partLockedBy(member){
   let chain = nodeMeta.get(activeRoot).chain;
-  if (chain.indexOf(member) === chain.length - 1) return true;
-
-  let puzzle = nodeMeta.get(member).puzzle;
-  return !WeavePuzzle.hasFinish(puzzle) || isPuzzleSolved(puzzle);
+  for (const earlier of chain.slice(0, chain.indexOf(member))) {
+    let puzzle = nodeMeta.get(earlier).puzzle;
+    if (WeavePuzzle.hasFinish(puzzle) && !isPuzzleSolved(puzzle)) return earlier;
+  }
+  return null;
 }
 
 // localStorage (not sessionStorage, as with hasSeenModal) because what a visitor has unlocked should
@@ -1269,12 +1277,13 @@ function onSwitchButton(){
 }
 
 // X (keyboard) / X (gamepad): in Track Focus, step to the next part of the current location, wrapping
-// back to the first. Its music crossfades on its own, since updateLocationAudio follows activeNode.
+// back to the first. A locked part can be stepped to, but only shows that it's locked - see
+// renderTrackFocus. Music crossfades on its own, since updateLocationAudio follows activeNode.
 function cycleChainNode(){
   if (!trackFocusEl || boardMover) return;
 
   let chain = nodeMeta.get(activeRoot).chain;
-  if (chain.length <= 1 || !canAdvanceChain(activeNode)) return;
+  if (chain.length <= 1) return;
 
   chainIndex = (chainIndex + 1) % chain.length;
   activeNode = chain[chainIndex];
@@ -1347,6 +1356,7 @@ function renderTrackFocus(){
   let title = info.querySelector(':scope > h3');
   let lines = info.querySelectorAll(':scope > .poetry-text > .poetry-line');
   let download = info.querySelector(':scope > .poetry-text > .poetry-download a');
+  let lockedBy = partLockedBy(activeNode);
 
   trackFocusEl.replaceChildren();
 
@@ -1383,6 +1393,7 @@ function renderTrackFocus(){
       board.appendChild(buildBoardShip());
     }
     frame.appendChild(board);
+    if (lockedBy) frame.appendChild(buildArtLabel('Locked'));
 
     content.appendChild(frame);
   }
@@ -1390,9 +1401,17 @@ function renderTrackFocus(){
   let text = document.createElement('div');
   text.id = 'trackFocusText';
 
+  // Nothing of a locked part gives itself away: not its name, its poem, or its download.
   let heading = document.createElement('h2');
-  heading.textContent = title ? title.textContent : '';
+  heading.textContent = lockedBy ? 'Locked' : (title ? title.textContent : '');
   text.appendChild(heading);
+
+  if (lockedBy) {
+    let hint = document.createElement('div');
+    hint.id = 'trackFocusLockedHint';
+    hint.textContent = 'Solve ' + nodeMeta.get(lockedBy).info.querySelector(':scope > h3').textContent + ' to unlock this.';
+    text.appendChild(hint);
+  }
 
   let puzzle = nodeMeta.get(activeNode).puzzle;
   if (puzzle && isPuzzleSolved(puzzle) && !boardMover) {
@@ -1402,7 +1421,7 @@ function renderTrackFocus(){
     text.appendChild(solved);
   }
 
-  lines.forEach(line => text.appendChild(line.cloneNode(true)));
+  if (!lockedBy) lines.forEach(line => text.appendChild(line.cloneNode(true)));
 
   let actions = document.createElement('div');
   actions.id = 'trackFocusActions';
@@ -1410,20 +1429,13 @@ function renderTrackFocus(){
     if (boardGame) actions.appendChild(buildTrackFocusAction('[ Restart ]', 'img/ui/key_x.gif', restartBoardGame));
     actions.appendChild(buildTrackFocusAction('[ Back ]', BACK_KEY_HINT, leaveBoardGame));
   } else {
-    if (cover) actions.appendChild(buildTrackFocusAction('[ Enter ]', 'img/ui/key_z.gif', startBoardGame));
+    if (cover && !lockedBy) actions.appendChild(buildTrackFocusAction('[ Enter ]', 'img/ui/key_z.gif', startBoardGame));
     if (nodeMeta.get(activeRoot).chain.length > 1) {
-      if (canAdvanceChain(activeNode)) {
-        actions.appendChild(buildTrackFocusAction('[ Switch ]', 'img/ui/key_x.gif', cycleChainNode));
-      } else {
-        let locked = document.createElement('span');
-        locked.className = 'trackFocusAction';
-        locked.textContent = 'Solve to unlock the next part';
-        actions.appendChild(locked);
-      }
+      actions.appendChild(buildTrackFocusAction('[ Switch ]', 'img/ui/key_x.gif', cycleChainNode));
     }
     actions.appendChild(buildTrackFocusAction('[ Back ]', BACK_KEY_HINT, closeTrackFocus));
     // Only reachable from here for a chain's later parts, since their cards never open on the map.
-    if (download) actions.appendChild(download.cloneNode(true));
+    if (download && !lockedBy) actions.appendChild(download.cloneNode(true));
   }
   text.appendChild(actions);
 
@@ -1437,6 +1449,15 @@ function renderTrackFocus(){
   });
 
   trackFocusEl.classList.toggle('boardPlaying', boardMover !== null);
+  trackFocusEl.classList.toggle('partLocked', lockedBy !== null);
+}
+
+// A word across the middle of the album art.
+function buildArtLabel(text){
+  let label = document.createElement('div');
+  label.className = 'trackFocusArtLabel';
+  label.textContent = text;
+  return label;
 }
 
 // The key hint for an action with no drawn key to show: there's no img/ui/key_c.gif, so main.css's
@@ -1520,13 +1541,13 @@ function updateTrackFocusScale(){
 const BOARD_STEP_MS = 180;
 // How long something on a Stream takes to move a square, and how long a solved puzzle stays on screen.
 const BOARD_STREAM_TICK_MS = 360;
-const BOARD_SOLVED_PAUSE_MS = 450;
+const BOARD_SOLVED_PAUSE_MS = 800;
 // img/ui/pilot-ship.png's own size.
 const BOARD_SHIP_WIDTH = 12;
 const BOARD_SHIP_HEIGHT = 16;
 
 function startBoardGame(){
-  if (!trackFocusEl || boardMover || !document.getElementById('trackFocusBoard')) return;
+  if (!trackFocusEl || boardMover || !document.getElementById('trackFocusBoard') || partLockedBy(activeNode)) return;
 
   releaseDirections();
   buildBoardGame();
@@ -1590,6 +1611,27 @@ function onBoardEvent(event){
     markPuzzleSolved(nodeMeta.get(activeNode).puzzle);
     boardSolvedMs = 0;
     releaseDirections();
+    document.getElementById('trackFocusArt').appendChild(buildArtLabel('Solved'));
+  }
+}
+
+// Moves on from a solved board, like the next level of a game: straight into the next part's puzzle if it
+// has one, or back to Track Focus to show what was unlocked if it doesn't. The last part just stays put.
+function finishBoardLevel(){
+  let chain = nodeMeta.get(activeRoot).chain;
+  let next = chain[chainIndex + 1];
+  if (next) {
+    chainIndex++;
+    activeNode = next;
+  }
+
+  if (next && nodeMeta.get(next).puzzle) {
+    releaseDirections();
+    buildBoardGame();
+    renderTrackFocus();
+    renderBoardShip();
+  } else {
+    leaveBoardGame();
   }
 }
 
@@ -1617,12 +1659,12 @@ function buildBoardShip(){
 function updateBoardGame(dtMs){
   if (!boardMover) return;
 
-  // Holds still for a moment on a solved board, then returns to Track Focus to show what that unlocked.
+  // Holds still for a moment on a solved board, then moves on - see finishBoardLevel.
   if (boardSolvedMs !== null) {
     boardSolvedMs += dtMs;
     updateBoardContrails(dtMs);
     drawBoardObjects();
-    if (boardSolvedMs >= BOARD_SOLVED_PAUSE_MS) leaveBoardGame();
+    if (boardSolvedMs >= BOARD_SOLVED_PAUSE_MS) finishBoardLevel();
     return;
   }
 

@@ -395,6 +395,30 @@ h3 {
   image-rendering: pixelated;
 }
 
+/* A part that's still locked, with only a hint of its art showing - see main.js's partLockedBy. */
+#trackFocus.partLocked #trackFocusArt > img {
+  filter: brightness(0.2) saturate(0.25);
+}
+
+#trackFocus.partLocked #trackFocusBackdrop {
+  opacity: 0.08;
+}
+
+.trackFocusArtLabel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: antiquewhite;
+  font-size: var(--focus-cell);
+  text-shadow: 0 0 0.15em rgb(17, 17, 17), 0 0.05em 0.1em rgb(17, 17, 17);
+}
+
 #trackFocusBoard {
   position: absolute;
   top: 0;
@@ -475,7 +499,7 @@ h3 {
   font-size: 1.6em;
 }
 
-#trackFocusSolved {
+#trackFocusSolved, #trackFocusLockedHint {
   margin: -0.4em 0 0.6em;
   color: #d4bc93;
 }

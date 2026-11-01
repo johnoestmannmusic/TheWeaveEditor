@@ -72,8 +72,12 @@ Neocities, replacing hand-authoring HTML per location.
   with the album art's own pixels, and textured from it. Walls block the way, Switches toggle Gates with
   the same letter (which can start open or closed), Keys have to be collected before Switches work, and
   Teleporters jump to their partner. Streams carry the ship and any objects on them, and hold the ship
-  until they push it onto a non-Stream square. Reaching the Finish solves it, which is remembered in the visitor's browser, and unlocks X to the location's
-  next part. X restarts the puzzle. A part with no puzzle, or one with no Finish, never locks anything.
+  until they push it onto a non-Stream square. X restarts the puzzle.
+- A location's parts play like game levels. Each part stays locked until the puzzle of every part before
+  it is solved: X can still step to it, but Track Focus only shows its dimmed art and the word Locked, and
+  it can't be played or heard. Reaching a Finish remembers that in the visitor's browser and moves straight
+  on to the next part's puzzle, or back to Track Focus if it doesn't have one. A part with no puzzle, or
+  one with no Finish, never locks anything.
 - Static screens instead of a follow camera: each map splits into 10x5-square screens (4 per map, 8
   on The Weave), and walking off one slides the view to the next. The picture scales to fill the
   window's width. Cards always fit on the screen.
