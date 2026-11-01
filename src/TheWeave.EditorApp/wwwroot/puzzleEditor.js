@@ -8,13 +8,13 @@
 const PUZZLE_TOOLS = [
   { kind: 'Wall', label: 'Wall', hint: 'Blocks the way. Drag to paint.', paints: true },
   { kind: 'Finish', label: 'Finish', hint: 'Reaching this solves the puzzle.' },
-  { kind: 'Gate', label: 'Gate', hint: 'Blocks the way until a Switch with its letter opens it.', letter: true },
+  { kind: 'Gate', label: 'Gate', hint: 'Blocks the way while closed. A Switch with its letter flips it between closed and open.', letter: true, gateState: true },
   { kind: 'Switch', label: 'Switch', hint: 'Stepping on this opens or closes every Gate with its letter.', letter: true },
   { kind: 'Teleporter', label: 'Teleporter', hint: 'Jumps to the other Teleporter with its letter. Place them in pairs.', letter: true },
-  { kind: 'Stream', label: 'Stream', hint: 'Carries the ship and anything on it, and can\'t be walked against. Drag to paint.', paints: true, direction: true },
+  { kind: 'Stream', label: 'Stream', hint: 'Carries the ship and anything on it, and holds the ship until it\'s pushed off onto a non-Stream square. Drag to paint.', paints: true, direction: true },
   { kind: 'Key', label: 'Key', hint: 'If there are any, all must be collected before Switches do anything.' },
   { kind: 'Start', label: 'Start', hint: 'Where the ship begins. There\'s only one.' },
-  { kind: 'Erase', label: 'Erase', hint: 'Removes the top thing on a square. Drag to paint, or right-click with any tool.', paints: true },
+  { kind: 'Erase', label: 'Erase', hint: 'Removes the top thing on a square. Drag to paint.', paints: true },
 ];
 
 const PUZZLE_DIRECTIONS = [
@@ -24,8 +24,11 @@ const PUZZLE_DIRECTIONS = [
   { name: 'Right', label: '→' },
 ];
 
-const PUZZLE_ART_PX = 240;
-const PUZZLE_TILE_PX = PUZZLE_ART_PX / WeavePuzzle.BOARD_SIZE;
+const PUZZLE_ART_PX = WeavePuzzle.ART_PX;
+const PUZZLE_TILE_PX = WeavePuzzle.TILE_PX;
+// img/ui/pilot-ship.png's own size, which is what the ship is drawn at against the art.
+const PUZZLE_SHIP_WIDTH = 12;
+const PUZZLE_SHIP_HEIGHT = 16;
 const PUZZLE_PALETTE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'outline', 'light'];
 
 // While the screen is open: which track, what's chosen in the tools, and a working copy of the board,
@@ -40,8 +43,12 @@ function openPuzzleEditor(pageId, nodeId) {
     letter: 'A',
     letterChosen: false, // whether the letter is the user's own choice, rather than one suggested
     direction: 'Right',
+    gateOpen: false,
     objects: [],
     palette: null,
+    textures: null,
+    look: null, // both of those, as puzzle.js's renderBoard wants them
+    image: null, // the art-sized pixels drawn onto the board's canvas - see drawPuzzleBoard
     painting: null, // { erasing, last } during a drag
     tile: PUZZLE_TILE_PX,
     shipImage: null,
@@ -82,11 +89,16 @@ function syncPuzzleEditor() {
   // A new puzzle shows its ship in the default place, and that's saved along with the first edit to it.
   puzzleEditor.objects = node.puzzle?.objects
     ?? [{ kind: 'Start', col: WeavePuzzle.DEFAULT_START.col, row: WeavePuzzle.DEFAULT_START.row }];
-  if (node.puzzle?.palette && Object.keys(node.puzzle.palette).length > 0 && !puzzleEditor.palette)
+  if (node.puzzle?.palette && Object.keys(node.puzzle.palette).length > 0 && !puzzleEditor.palette) {
     puzzleEditor.palette = node.puzzle.palette;
+    puzzleEditor.textures = node.puzzle.textures ?? null;
+    puzzleEditor.look = { palette: puzzleEditor.palette, textures: puzzleEditor.textures };
+  }
 
   renderPuzzleProblems();
-  updateSuggestedLetter();
+
+  // A Gate keeps its letter, since several sharing one is common. The others look for what they need next.
+  if (puzzleEditor.tool !== 'Gate') updateSuggestedLetter();
 }
 
 // The art comes as a data URL, which unlike a file:// image lets a canvas read its pixels for the colours.
@@ -102,26 +114,31 @@ function receivePuzzleArt(message) {
     reader.height = art.naturalHeight;
     const context = reader.getContext('2d', { willReadFrequently: true });
     context.drawImage(art, 0, 0);
-    puzzleEditor.palette = WeavePuzzle.pickPalette(context.getImageData(0, 0, reader.width, reader.height).data);
+    const pixels = context.getImageData(0, 0, reader.width, reader.height).data;
+    puzzleEditor.palette = WeavePuzzle.pickPalette(pixels);
+    puzzleEditor.textures = WeavePuzzle.pickTextures(pixels, reader.width, reader.height, puzzleEditor.palette);
+    puzzleEditor.look = { palette: puzzleEditor.palette, textures: puzzleEditor.textures };
     renderPuzzlePalette();
 
-    // Keeps a saved puzzle's colours up to date with its art. This does nothing to the project if they
-    // already were, so opening a puzzle doesn't count as an edit.
+    // Keeps a saved puzzle's colours and textures up to date with its art. This does nothing to the project
+    // if they already were, so opening a puzzle doesn't count as an edit.
     const node = findNode(puzzleEditor.pageId, puzzleEditor.nodeId);
     const saved = node?.puzzle;
-    if (saved && (saved.paletteSource !== node.card.coverImagePath || JSON.stringify(saved.palette) !== JSON.stringify(puzzleEditor.palette)))
+    if (saved && (saved.paletteSource !== node.card.coverImagePath
+        || JSON.stringify(saved.palette) !== JSON.stringify(puzzleEditor.palette)
+        || JSON.stringify(saved.textures) !== JSON.stringify(puzzleEditor.textures)))
       savePuzzle(puzzleEditor.objects);
   };
   art.src = message.dataUrl;
 }
 
 function savePuzzle(objects) {
-  const { pageId, nodeId, palette } = puzzleEditor;
+  const { pageId, nodeId, palette, textures } = puzzleEditor;
   puzzleEditor.objects = objects;
   send('update-puzzle', {
     pageId,
     nodeId,
-    puzzle: { objects, palette: palette ?? {}, paletteSource: findNode(pageId, nodeId).card.coverImagePath },
+    puzzle: { objects, palette: palette ?? {}, textures: textures ?? {}, paletteSource: findNode(pageId, nodeId).card.coverImagePath },
   });
 }
 
@@ -138,12 +155,31 @@ function renderPuzzleTools() {
     return button;
   }));
 
-  const letter = document.getElementById('pe-letter');
-  letter.replaceChildren(...WeavePuzzle.LETTERS.map((value) => {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = value;
-    return option;
+  const letters = document.getElementById('pe-letters');
+  letters.replaceChildren(...WeavePuzzle.LETTERS.map((value) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.letter = value;
+    button.textContent = value;
+    button.addEventListener('click', () => {
+      puzzleEditor.letter = value;
+      puzzleEditor.letterChosen = true;
+      showPuzzleTool();
+    });
+    return button;
+  }));
+
+  const gateStates = document.getElementById('pe-gate-states');
+  gateStates.replaceChildren(...[{ label: 'Closed', open: false }, { label: 'Open', open: true }].map(({ label, open }) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.open = open;
+    button.textContent = label;
+    button.addEventListener('click', () => {
+      puzzleEditor.gateOpen = open;
+      showPuzzleTool();
+    });
+    return button;
   }));
 
   const directions = document.getElementById('pe-directions');
@@ -177,7 +213,7 @@ function currentPuzzleTool() {
 function updateSuggestedLetter() {
   if (!currentPuzzleTool().letter || puzzleEditor.letterChosen) return;
   puzzleEditor.letter = WeavePuzzle.suggestLetter(puzzleEditor.objects, puzzleEditor.tool);
-  document.getElementById('pe-letter').value = puzzleEditor.letter;
+  showPuzzleTool();
 }
 
 function showPuzzleTool() {
@@ -188,9 +224,14 @@ function showPuzzleTool() {
   for (const button of document.querySelectorAll('#pe-directions button'))
     button.classList.toggle('active', button.dataset.direction === puzzleEditor.direction);
 
+  for (const button of document.querySelectorAll('#pe-letters button'))
+    button.classList.toggle('active', button.dataset.letter === puzzleEditor.letter);
+  for (const button of document.querySelectorAll('#pe-gate-states button'))
+    button.classList.toggle('active', (button.dataset.open === 'true') === puzzleEditor.gateOpen);
+
   document.getElementById('pe-letter-row').hidden = !tool.letter;
+  document.getElementById('pe-gate-state-row').hidden = !tool.gateState;
   document.getElementById('pe-direction-row').hidden = !tool.direction;
-  document.getElementById('pe-letter').value = puzzleEditor.letter;
   document.getElementById('pe-tool-hint').textContent = tool.hint;
 }
 
@@ -247,12 +288,10 @@ function layoutPuzzleBoard() {
   board.style.setProperty('--pe-tile', `${tile}px`);
   board.style.setProperty('--pe-line', `${scale}px`);
 
-  const canvas = document.getElementById('pe-canvas');
-  canvas.width = tile * WeavePuzzle.BOARD_SIZE;
-  canvas.height = tile * WeavePuzzle.BOARD_SIZE;
 }
 
-// Redrawn every frame while open, because Streams are always moving.
+// Drawn at the art's own size, for CSS to scale up exactly as it does the art, so that their pixels line
+// up, the same as in the game. Redrawn every frame while open, because Streams are always moving.
 function drawPuzzleBoard(timeMs) {
   if (!puzzleEditor) return;
 
@@ -260,11 +299,26 @@ function drawPuzzleBoard(timeMs) {
   const context = canvas.getContext('2d');
   context.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (puzzleEditor.palette) {
-    WeavePuzzle.drawObjects(context, puzzleEditor.objects, puzzleEditor.palette, puzzleEditor.tile, {
+  if (puzzleEditor.look) {
+    puzzleEditor.image ??= context.createImageData(PUZZLE_ART_PX, PUZZLE_ART_PX);
+    const objects = puzzleEditor.objects;
+    WeavePuzzle.renderBoard(puzzleEditor.image, objects, puzzleEditor.look, {
       timeMs,
-      shipImage: puzzleEditor.shipImage,
+      switchesActive: !objects.some((object) => object.kind === 'Key'),
     });
+    context.putImageData(puzzleEditor.image, 0, 0);
+
+    const start = objects.find((object) => object.kind === 'Start');
+    if (start && puzzleEditor.shipImage) {
+      context.imageSmoothingEnabled = false;
+      context.drawImage(
+        puzzleEditor.shipImage,
+        start.col * PUZZLE_TILE_PX + (PUZZLE_TILE_PX - PUZZLE_SHIP_WIDTH) / 2,
+        start.row * PUZZLE_TILE_PX + (PUZZLE_TILE_PX - PUZZLE_SHIP_HEIGHT) / 2,
+        PUZZLE_SHIP_WIDTH,
+        PUZZLE_SHIP_HEIGHT
+      );
+    }
   }
 
   requestAnimationFrame(drawPuzzleBoard);
@@ -286,6 +340,7 @@ function buildPuzzleObject(cell) {
     row: cell.row,
     ...(tool.letter ? { letter: puzzleEditor.letter } : {}),
     ...(tool.direction ? { direction: puzzleEditor.direction } : {}),
+    ...(tool.gateState && puzzleEditor.gateOpen ? { open: true } : {}),
   };
 }
 
@@ -332,11 +387,6 @@ function finishPuzzlePainting() {
 
 puzzleCanvas.addEventListener('pointerup', finishPuzzlePainting);
 puzzleCanvas.addEventListener('pointercancel', finishPuzzlePainting);
-
-document.getElementById('pe-letter').addEventListener('change', (e) => {
-  puzzleEditor.letter = e.target.value;
-  puzzleEditor.letterChosen = true;
-});
 
 document.getElementById('pe-close').addEventListener('click', closePuzzleEditor);
 

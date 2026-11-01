@@ -242,7 +242,7 @@ public sealed class PageRenderer
         if (puzzle is null || !OpensTrackFocus(node.Card) || string.IsNullOrEmpty(node.Card.CoverImagePath))
             return "";
 
-        var json = JsonSerializer.Serialize(new { id = node.Id, objects = puzzle.Objects, palette = puzzle.Palette }, PuzzleJsonOptions);
+        var json = JsonSerializer.Serialize(new { id = node.Id, objects = puzzle.Objects, palette = puzzle.Palette, textures = puzzle.Textures }, PuzzleJsonOptions);
         return $" data-puzzle=\"{EscapeAttr(json)}\"";
     }
 

@@ -40,6 +40,7 @@ let boardContrails = null;
 // objects are drawn on, and how far through the current Stream tick it is. Null for a track with no puzzle.
 let boardGame = null;
 let boardObjectsCanvas = null;
+let boardObjectsImage = null; // the art-sized pixels drawn onto that canvas - see drawBoardObjects
 let boardStreamMs = 0;
 let boardSolvedMs = null; // how long ago it was solved, while pausing there before returning to Track Focus
 let activeNode = null;   // the current track: activeRoot, or the chain member Track Focus is on
@@ -1373,6 +1374,9 @@ function renderTrackFocus(){
       if (boardGame) {
         boardObjectsCanvas = document.createElement('canvas');
         boardObjectsCanvas.id = 'trackFocusBoardObjects';
+        boardObjectsCanvas.width = WeavePuzzle.ART_PX;
+        boardObjectsCanvas.height = WeavePuzzle.ART_PX;
+        boardObjectsImage = boardObjectsCanvas.getContext('2d').createImageData(WeavePuzzle.ART_PX, WeavePuzzle.ART_PX);
         board.appendChild(boardObjectsCanvas);
       }
       board.appendChild(boardContrails.canvas);
@@ -1566,9 +1570,9 @@ function restartBoardGame(){
   renderBoardShip();
 }
 
-// A Stream carries a ship with nothing else to do, one square at a time.
+// A Stream carries a ship on it, one square at a time, whatever's being pressed - see puzzle.js's canEnter.
 function carryBoardShip(){
-  if (!boardGame || boardSolvedMs !== null || boardMover.hasInput) return;
+  if (!boardGame || boardSolvedMs !== null) return;
 
   let carry = boardGame.carryDirection(boardMover.cell);
   if (carry) boardMover.queue(carry);
@@ -1598,6 +1602,7 @@ function leaveBoardGame(){
   boardContrails = null;
   boardGame = null;
   boardObjectsCanvas = null;
+  boardObjectsImage = null;
   boardSolvedMs = null;
   renderTrackFocus();
 }
@@ -1643,33 +1648,19 @@ function updateBoardGame(dtMs){
   drawBoardObjects();
 }
 
-// Redrawn every frame, because Streams are always moving. Something on a Stream glides between its last
-// square and its new one over a whole tick, so it never jumps.
+// Everything on the board, at the art's own size, for CSS to scale up exactly as it does the art, so that
+// their pixels line up. Redrawn every frame, because Streams are always moving, and something on one glides
+// between its last square and its new one over a whole tick.
 function drawBoardObjects(){
   if (!boardGame || !boardObjectsCanvas) return;
 
-  let tile = Math.round(BOARD_TILE_PX * trackFocusScale);
-  let size = tile * TRACK_FOCUS_BOARD_SQUARES;
-  if (boardObjectsCanvas.width !== size) {
-    boardObjectsCanvas.width = size;
-    boardObjectsCanvas.height = size;
-  }
-
-  let context = boardObjectsCanvas.getContext('2d');
-  context.clearRect(0, 0, size, size);
-
-  let palette = nodeMeta.get(activeNode).puzzle.palette;
-  let options = { timeMs: performance.now(), font: 'Medodica, sans-serif' };
-  let along = boardStreamMs / BOARD_STREAM_TICK_MS;
-
-  for (const stream of boardGame.streams) {
-    WeavePuzzle.drawObject(context, stream, palette, stream.col * tile, stream.row * tile, tile, options);
-  }
-  for (const object of boardGame.objects) {
-    let col = object.fromCol + (object.col - object.fromCol) * along;
-    let row = object.fromRow + (object.row - object.fromRow) * along;
-    WeavePuzzle.drawObject(context, object, palette, col * tile, row * tile, tile, options);
-  }
+  let puzzle = nodeMeta.get(activeNode).puzzle;
+  WeavePuzzle.renderBoard(boardObjectsImage, [...boardGame.streams, ...boardGame.objects], puzzle, {
+    timeMs: performance.now(),
+    switchesActive: boardGame.switchesActive,
+    along: boardStreamMs / BOARD_STREAM_TICK_MS,
+  });
+  boardObjectsCanvas.getContext('2d').putImageData(boardObjectsImage, 0, 0);
 }
 
 function updateBoardContrails(dtMs){

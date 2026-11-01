@@ -92,20 +92,25 @@
       <aside id="pe-tools">
         <div id="pe-tool-buttons"></div>
         <div id="pe-letter-row" class="field" hidden>
-          <label for="pe-letter">Letter</label>
-          <select id="pe-letter"></select>
+          <label>Letter</label>
+          <div id="pe-letters"></div>
+        </div>
+        <div id="pe-gate-state-row" class="field" hidden>
+          <label>Starts</label>
+          <div id="pe-gate-states"></div>
         </div>
         <div id="pe-direction-row" class="field" hidden>
           <label>Direction</label>
           <div id="pe-directions"></div>
         </div>
         <div id="pe-tool-hint" class="field-hint"></div>
+        <div class="field-hint">Right-click anything to remove it. Start can only be moved.</div>
       </aside>
       <div id="pe-stage">
         <div id="pe-board">
           <img id="pe-art" draggable="false" alt="">
           <div id="pe-grid"></div>
-          <canvas id="pe-canvas"></canvas>
+          <canvas id="pe-canvas" width="240" height="240"></canvas>
         </div>
       </div>
       <aside id="pe-side">

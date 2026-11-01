@@ -422,6 +422,11 @@ h3 {
   height: 100%;
 }
 
+/* Scaled up exactly as the art is - see #trackFocusArt > img. */
+#trackFocusBoardObjects {
+  image-rendering: pixelated;
+}
+
 /* Drawn at the art's own pixel size - see main.js's renderBoardShip, which positions it. */
 #trackFocusBoardShip {
   image-rendering: pixelated;

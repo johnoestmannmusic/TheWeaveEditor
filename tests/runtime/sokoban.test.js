@@ -224,17 +224,6 @@ test('onArrive is told about each square as it is reached', () => {
   assert.deepEqual(reached[2], { col: 8, row: 5 });
 });
 
-test('hasInput is true for a held direction or a waiting press, and false otherwise', () => {
-  let m = mover();
-  assert.equal(m.hasInput, false);
-  m.press('right');
-  assert.equal(m.hasInput, true);
-  m.release('right');
-  assert.equal(m.hasInput, true); // the tap is still waiting for its step
-  m.update(STEP_MS);
-  assert.equal(m.hasInput, false);
-});
-
 test('queueing from onArrive continues straight on, with no time lost', () => {
   let m;
   m = mover(mapGrid(), { onArrive: (cell) => { if (cell.col < 8) m.queue('right'); } });

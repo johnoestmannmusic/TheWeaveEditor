@@ -68,10 +68,11 @@ Neocities, replacing hand-authoring HTML per location.
   of the art. C, gamepad B, or clicking the backdrop closes it; the track keeps playing throughout.
 - A Sokoban board over the album art, started with Z/gamepad A from Track Focus: the ship walks a
   10x10 grid using the same movement as the map.
-- Puzzles on that board, built in the Editor's Puzzle Editor. Walls block the way, Switches toggle Gates
-  with the same letter, Keys have to be collected before Switches work, Teleporters jump to their
-  partner, and Streams carry the ship and any objects on them, and can't be walked against. Reaching
-  the Finish solves it, which is remembered in the visitor's browser, and unlocks X to the location's
+- Puzzles on that board, built in the Editor's Puzzle Editor, with objects drawn as pixel art lined up
+  with the album art's own pixels, and textured from it. Walls block the way, Switches toggle Gates with
+  the same letter (which can start open or closed), Keys have to be collected before Switches work, and
+  Teleporters jump to their partner. Streams carry the ship and any objects on them, and hold the ship
+  until they push it onto a non-Stream square. Reaching the Finish solves it, which is remembered in the visitor's browser, and unlocks X to the location's
   next part. X restarts the puzzle. A part with no puzzle, or one with no Finish, never locks anything.
 - Static screens instead of a follow camera: each map splits into 10x5-square screens (4 per map, 8
   on The Weave), and walking off one slides the view to the next. The picture scales to fill the

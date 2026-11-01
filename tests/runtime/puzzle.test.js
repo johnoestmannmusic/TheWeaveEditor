@@ -135,14 +135,35 @@ test('a Wall blocks the ship, and an empty square does not', () => {
   assert.equal(g.canEnter(at(2, 4), at(3, 4), 'right'), true);
 });
 
-test('a Stream can\'t be walked against, on it or onto it head-on, but can be walked along or across', () => {
+test('a Stream holds the ship: the only way off is the way it\'s going', () => {
   let g = game(obj('Stream', 3, 3, { direction: 'Right' }));
-  assert.equal(g.canEnter(at(3, 3), at(2, 3), 'left'), false);
-  assert.equal(g.canEnter(at(4, 3), at(3, 3), 'left'), false);
-  assert.equal(g.canEnter(at(2, 3), at(3, 3), 'right'), true);
   assert.equal(g.canEnter(at(3, 3), at(4, 3), 'right'), true);
+  assert.equal(g.canEnter(at(3, 3), at(2, 3), 'left'), false);
+  assert.equal(g.canEnter(at(3, 3), at(3, 2), 'up'), false);
+  assert.equal(g.canEnter(at(3, 3), at(3, 4), 'down'), false);
+});
+
+test('a Stream can be stepped onto from behind or the side, but not head-on', () => {
+  let g = game(obj('Stream', 3, 3, { direction: 'Right' }));
+  assert.equal(g.canEnter(at(2, 3), at(3, 3), 'right'), true);
   assert.equal(g.canEnter(at(3, 2), at(3, 3), 'down'), true);
-  assert.equal(g.canEnter(at(3, 3), at(3, 4), 'down'), true);
+  assert.equal(g.canEnter(at(3, 4), at(3, 3), 'up'), true);
+  assert.equal(g.canEnter(at(4, 3), at(3, 3), 'left'), false);
+});
+
+test('a Stream hands the ship on around a corner, but two facing each other hold it', () => {
+  let corner = game(obj('Stream', 3, 3, { direction: 'Right' }), obj('Stream', 4, 3, { direction: 'Down' }));
+  assert.equal(corner.canEnter(at(3, 3), at(4, 3), 'right'), true);
+  assert.equal(corner.canEnter(at(4, 3), at(4, 4), 'down'), true);
+
+  let facing = game(obj('Stream', 3, 3, { direction: 'Right' }), obj('Stream', 4, 3, { direction: 'Left' }));
+  assert.equal(facing.canEnter(at(3, 3), at(4, 3), 'right'), false);
+});
+
+test('something solid at the end of a Stream holds the ship on it', () => {
+  let g = game(obj('Stream', 3, 3, { direction: 'Right' }), obj('Wall', 4, 3));
+  assert.equal(g.canEnter(at(3, 3), at(4, 3), 'right'), false);
+  assert.equal(g.canEnter(at(3, 3), at(3, 2), 'up'), false);
 });
 
 test('a Stream reports which way it carries, in the mover\'s terms', () => {
@@ -165,6 +186,25 @@ test('stepping on a Switch again closes its Gates again', () => {
   assert.equal(find(g, 'Gate').open, true);
   g.shipArrivedAt(at(5, 5));
   assert.equal(find(g, 'Gate').open, false);
+});
+
+test('a Gate can start open, and a Switch flips each Gate from whatever state it\'s in', () => {
+  let g = game(obj('Gate', 1, 0, { letter: 'A', open: true }), obj('Gate', 2, 0, { letter: 'A' }), obj('Switch', 5, 5, { letter: 'A' }));
+  assert.equal(g.canEnter(at(1, 1), at(1, 0), 'up'), true);
+  assert.equal(g.canEnter(at(2, 1), at(2, 0), 'up'), false);
+  g.shipArrivedAt(at(5, 5));
+  assert.equal(g.canEnter(at(1, 1), at(1, 0), 'up'), false);
+  assert.equal(g.canEnter(at(2, 1), at(2, 0), 'up'), true);
+});
+
+test('switchesActive is false until the last Key is collected, and true with no Keys at all', () => {
+  assert.equal(game().switchesActive, true);
+  let g = game(obj('Key', 6, 6), obj('Key', 7, 7));
+  assert.equal(g.switchesActive, false);
+  g.shipArrivedAt(at(6, 6));
+  assert.equal(g.switchesActive, false);
+  g.shipArrivedAt(at(7, 7));
+  assert.equal(g.switchesActive, true);
 });
 
 test('a Switch works every Gate with its letter', () => {
@@ -347,4 +387,163 @@ test('playing never changes the puzzle it was built from', () => {
   g.shipArrivedAt(at(1, 1));
   g.tick(null);
   assert.equal(JSON.stringify(puzzle), before);
+});
+
+// ---------- pixel art ----------
+
+const { pickTextures, renderBoard, TILE_PX, ART_PX } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+
+// A 240x240 art of two dithered colour families, plus dark and light, so everything has shades to find.
+function makeArt(){
+  let data = new Uint8ClampedArray(ART_PX * ART_PX * 4);
+  for (let y = 0; y < ART_PX; y++) {
+    for (let x = 0; x < ART_PX; x++) {
+      let i = (y * ART_PX + x) * 4;
+      let dither = (x + y) % 2 === 0 ? 0 : 1;
+      let color = x < 120
+        ? (y < 120 ? [200 + dither * 20, 90 + dither * 15, 40 + dither * 10] : [60 + dither * 15, 150 + dither * 20, 140 + dither * 20])
+        : (y < 120 ? [15, 12, 10] : [235 - dither * 15, 230 - dither * 15, 215 - dither * 15]);
+      data.set([...color, 255], i);
+    }
+  }
+  return data;
+}
+
+const artLook = () => {
+  let art = makeArt();
+  let palette = pickPalette(art);
+  return { art, look: { palette, textures: pickTextures(art, ART_PX, ART_PX, palette) } };
+};
+
+const blank = () => ({ data: new Uint8ClampedArray(ART_PX * ART_PX * 4), width: ART_PX, height: ART_PX });
+const pixelAt = (image, x, y) => { let i = (y * ART_PX + x) * 4; return [...image.data.slice(i, i + 4)]; };
+const colorsIn = (bytes) => { let set = new Set(); for (let i = 0; i < bytes.length; i += 4) if (bytes[i + 3]) set.add(`${bytes[i]},${bytes[i + 1]},${bytes[i + 2]}`); return set; };
+const tile = (image, col, row) => { let out = []; for (let y = row * TILE_PX; y < (row + 1) * TILE_PX; y++) for (let x = col * TILE_PX; x < (col + 1) * TILE_PX; x++) out.push(...pixelAt(image, x, y)); return out.join(); };
+
+test('a texture has a shade per pixel, and every shade is an exact colour from the art', () => {
+  let { art, look } = artLook();
+  let inArt = colorsIn(art);
+  for (const [role, texture] of Object.entries(look.textures)) {
+    assert.equal(texture.pixels.length, TILE_PX * TILE_PX, role);
+    assert.match(texture.pixels, /^[0-9]+$/);
+    for (const shade of texture.ramp) assert.ok(inArt.has(toRgb(shade).join(',')), `${role}: ${shade}`);
+    assert.ok(Math.max(...[...texture.pixels].map(Number)) < texture.ramp.length, role);
+    assert.ok(texture.ramp.includes(look.palette[role]), `${role} keeps its own colour`);
+  }
+});
+
+test('art with shades gives a texture that really varies', () => {
+  let { look } = artLook();
+  assert.ok(Object.values(look.textures).some(t => new Set(t.pixels).size > 1));
+});
+
+test('art with one colour gives a flat texture, without failing', () => {
+  let art = new Uint8ClampedArray(ART_PX * ART_PX * 4);
+  for (let i = 0; i < art.length; i += 4) art.set([50, 60, 70, 255], i);
+  let palette = pickPalette(art);
+  let textures = pickTextures(art, ART_PX, ART_PX, palette);
+  assert.deepEqual(textures.wall.ramp, ['#323c46']);
+  assert.equal(new Set(textures.wall.pixels).size, 1);
+});
+
+test('the board has only exact colours and no see-through blends, so it stays pixel art', () => {
+  let { art, look } = artLook();
+  let allowed = colorsIn(art);
+  let image = blank();
+  let objects = [
+    obj('Wall', 0, 0), obj('Finish', 1, 0), obj('Gate', 2, 0, { letter: 'A' }), obj('Gate', 3, 0, { letter: 'B', open: true }),
+    obj('Switch', 4, 0, { letter: 'A' }), obj('Teleporter', 5, 0, { letter: 'W' }), obj('Key', 6, 0), obj('Stream', 7, 0, { direction: 'Up' }),
+  ];
+  renderBoard(image, objects, look, { timeMs: 300 });
+  for (let i = 0; i < image.data.length; i += 4) {
+    assert.ok(image.data[i + 3] === 0 || image.data[i + 3] === 255);
+  }
+  for (const color of colorsIn(image.data)) assert.ok(allowed.has(color), color);
+});
+
+test('every object gets its own shape, and letters change what\'s drawn', () => {
+  let { look } = artLook();
+  let image = blank();
+  renderBoard(image, [obj('Wall', 0, 0), obj('Finish', 1, 0), obj('Switch', 2, 0, { letter: 'A' }), obj('Teleporter', 3, 0, { letter: 'A' }), obj('Key', 4, 0), obj('Gate', 5, 0, { letter: 'A' }), obj('Gate', 6, 0, { letter: 'B' })], look);
+  let tiles = [0, 1, 2, 3, 4, 5, 6].map(col => tile(image, col, 0));
+  assert.equal(new Set(tiles).size, tiles.length);
+});
+
+test('every letter of the alphabet draws something different', () => {
+  let { look } = artLook();
+  let seen = new Set();
+  for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+    let image = blank();
+    renderBoard(image, [obj('Gate', 0, 0, { letter })], look);
+    seen.add(tile(image, 0, 0));
+  }
+  assert.equal(seen.size, 26);
+});
+
+test('an open Gate is see-through in the middle, and a closed one isn\'t', () => {
+  let { look } = artLook();
+  let closed = blank(), open = blank();
+  renderBoard(closed, [obj('Gate', 0, 0, { letter: 'I' })], look);
+  renderBoard(open, [obj('Gate', 0, 0, { letter: 'I', open: true })], look);
+  assert.equal(pixelAt(closed, 8, 11)[3], 255);
+  assert.equal(pixelAt(open, 8, 11)[3], 0);
+});
+
+test('a Switch looks different while it\'s de-activated', () => {
+  let { look } = artLook();
+  let on = blank(), off = blank();
+  renderBoard(on, [obj('Switch', 0, 0, { letter: 'A' })], look, { switchesActive: true });
+  renderBoard(off, [obj('Switch', 0, 0, { letter: 'A' })], look, { switchesActive: false });
+  assert.notEqual(tile(on, 0, 0), tile(off, 0, 0));
+});
+
+test('whatever\'s on a Stream is drawn on top of it, and Start isn\'t drawn at all', () => {
+  let { look } = artLook();
+  let withWall = blank(), wallOnly = blank(), start = blank();
+  renderBoard(withWall, [obj('Wall', 0, 0), obj('Stream', 0, 0, { direction: 'Up' })], look);
+  renderBoard(wallOnly, [obj('Wall', 0, 0)], look);
+  assert.deepEqual(pixelAt(withWall, 12, 12), pixelAt(wallOnly, 12, 12));
+  renderBoard(start, [obj('Start', 0, 0)], look);
+  assert.equal(colorsIn(start.data).size, 0);
+});
+
+test('a Stream\'s lines move in the direction it runs', () => {
+  let { look } = artLook();
+  let lineAt = (timeMs, direction) => {
+    let image = blank();
+    renderBoard(image, [obj('Stream', 0, 0, { direction })], look, { timeMs });
+    let out = [];
+    for (let i = 0; i < TILE_PX; i++) {
+      let [x, y] = direction === 'Right' || direction === 'Left' ? [i, 12] : [12, i];
+      out.push(pixelAt(image, x, y)[3] ? 1 : 0);
+    }
+    return out.join('');
+  };
+  let step = 900 / 24;
+  let rotateRight = (s) => s[s.length - 1] + s.slice(0, -1);
+  let rotateLeft = (s) => s.slice(1) + s[0];
+  assert.equal(lineAt(step, 'Right'), rotateRight(lineAt(0, 'Right')));
+  assert.equal(lineAt(step, 'Down'), rotateRight(lineAt(0, 'Down')));
+  assert.equal(lineAt(step, 'Left'), rotateLeft(lineAt(0, 'Left')));
+  assert.equal(lineAt(step, 'Up'), rotateLeft(lineAt(0, 'Up')));
+});
+
+test('something gliding on a Stream moves in whole pixels of the art', () => {
+  let { look } = artLook();
+  let image = blank();
+  renderBoard(image, [{ kind: 'Wall', col: 2, row: 0, fromCol: 1, fromRow: 0 }], look, { along: 0.5 });
+  let leftmost = ART_PX;
+  for (let x = 0; x < ART_PX; x++) {
+    for (let y = 0; y < TILE_PX; y++) {
+      if (pixelAt(image, x, y)[3]) { leftmost = Math.min(leftmost, x); }
+    }
+  }
+  assert.equal(leftmost, 36 + 1); // 1.5 squares across, plus the octagon's one-pixel margin in its square
+});
+
+test('a puzzle saved before textures still draws, in its plain colours', () => {
+  let palette = { wall: '#112233', finish: '#223344', gate: '#334455', switch: '#334455', teleporter: '#445566', stream: '#556677', key: '#667788', outline: '#000000', light: '#ffffff' };
+  let image = blank();
+  renderBoard(image, [obj('Wall', 0, 0)], { palette });
+  assert.deepEqual(pixelAt(image, 12, 12), [0x11, 0x22, 0x33, 255]);
 });

@@ -218,6 +218,9 @@ internal static class ProjectEditing
                 throw new InvalidOperationException("A Stream needs a direction.");
             if (obj.Kind != PuzzleObjectKind.Stream)
                 obj.Direction = null;
+
+            if (obj.Kind != PuzzleObjectKind.Gate)
+                obj.Open = false;
         }
 
         var crowded = puzzle.Objects
@@ -228,6 +231,13 @@ internal static class ProjectEditing
 
         if (puzzle.Objects.Count(o => o.Kind == PuzzleObjectKind.Start) > 1)
             throw new InvalidOperationException("A puzzle can only have one Start.");
+
+        var tilePixels = 24 * 24;
+        foreach (var (role, texture) in puzzle.Textures)
+        {
+            if (texture.Ramp.Count == 0 || texture.Pixels.Length != tilePixels)
+                throw new InvalidOperationException($"The {role} texture isn't complete.");
+        }
     }
 
     public static void ApplyPageEdit(WeaveProject project, Page page, PageEditRequest edit)

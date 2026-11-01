@@ -22,7 +22,12 @@ public class ProjectValidatorTests
         {
             Id = "track",
             Card = new Card { CoverImagePath = "img/track.png", Audio = new AudioRef { Url = "track.ogg" } },
-            Puzzle = new Puzzle { PaletteSource = "img/track.png", Objects = objects.ToList() },
+            Puzzle = new Puzzle
+            {
+                PaletteSource = "img/track.png",
+                Objects = objects.ToList(),
+                Textures = { ["wall"] = new PuzzleTexture() },
+            },
         };
         var project = new WeaveProject { Pages = { MakePage("ouros", node) } };
 
@@ -71,6 +76,95 @@ public class ProjectValidatorTests
         var objects = Enumerable.Range(0, count).Select(_ => Lettered(PuzzleObjectKind.Teleporter, "A")).Append(Finish).ToArray();
 
         Assert.Contains(expected, Assert.Single(PuzzleProblems(objects)));
+    }
+
+    [Fact]
+    public void Gate_PlacedOpen_WithNoSwitch_IsFine()
+    {
+        Assert.Empty(PuzzleProblems(Finish, new PuzzleObject { Kind = PuzzleObjectKind.Gate, Letter = "A", Open = true }));
+    }
+
+    [Fact]
+    public void Letter_WithAClosedGateAndNoSwitch_IsStillReported()
+    {
+        var problems = PuzzleProblems(
+            Finish,
+            new PuzzleObject { Kind = PuzzleObjectKind.Gate, Letter = "A", Open = true, Col = 1 },
+            new PuzzleObject { Kind = PuzzleObjectKind.Gate, Letter = "A", Col = 2 });
+
+        Assert.StartsWith("Gate A has no Switch A", Assert.Single(problems));
+    }
+
+    private static PuzzleObject Stream(int col, int row, PuzzleDirection direction) =>
+        new() { Kind = PuzzleObjectKind.Stream, Col = col, Row = row, Direction = direction };
+
+    [Fact]
+    public void Stream_EndingOnAnOpenSquare_IsFine()
+    {
+        Assert.Empty(PuzzleProblems(Finish, Stream(1, 1, PuzzleDirection.Right), Stream(2, 1, PuzzleDirection.Down)));
+    }
+
+    [Fact]
+    public void Stream_RunningOffTheBoard_IsReportedOnce()
+    {
+        var problem = Assert.Single(PuzzleProblems(Finish, Stream(8, 1, PuzzleDirection.Right), Stream(9, 1, PuzzleDirection.Right)));
+
+        Assert.Contains("column 10, row 2 runs off the board", problem);
+    }
+
+    [Fact]
+    public void Stream_EndingAtAWall_IsReported()
+    {
+        var problem = Assert.Single(PuzzleProblems(Finish, Stream(1, 1, PuzzleDirection.Right), new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 2, Row = 1 }));
+
+        Assert.Contains("ends at a Wall", problem);
+    }
+
+    [Fact]
+    public void Streams_FacingEachOther_AreReported()
+    {
+        var problems = PuzzleProblems(Finish, Stream(1, 1, PuzzleDirection.Right), Stream(2, 1, PuzzleDirection.Left));
+
+        Assert.All(problems, p => Assert.Contains("head-on", p));
+        Assert.NotEmpty(problems);
+    }
+
+    [Fact]
+    public void Stream_Loop_IsReportedOnce()
+    {
+        var problem = Assert.Single(PuzzleProblems(
+            Finish,
+            Stream(1, 1, PuzzleDirection.Right),
+            Stream(2, 1, PuzzleDirection.Down),
+            Stream(2, 2, PuzzleDirection.Left),
+            Stream(1, 2, PuzzleDirection.Up)));
+
+        Assert.Contains("loop", problem);
+    }
+
+    [Fact]
+    public void Stream_LeadingOntoATeleporter_IsFine()
+    {
+        Assert.Empty(PuzzleProblems(
+            Finish,
+            Stream(1, 1, PuzzleDirection.Right),
+            Stream(2, 1, PuzzleDirection.Right),
+            Lettered(PuzzleObjectKind.Teleporter, "A"),
+            new PuzzleObject { Kind = PuzzleObjectKind.Teleporter, Letter = "A", Col = 2, Row = 1 }));
+    }
+
+    [Fact]
+    public void Puzzle_WithNoTextures_IsReported()
+    {
+        var node = new Node
+        {
+            Id = "track",
+            Card = new Card { CoverImagePath = "img/track.png", Audio = new AudioRef { Url = "track.ogg" } },
+            Puzzle = new Puzzle { PaletteSource = "img/track.png", Objects = { Finish } },
+        };
+        var project = new WeaveProject { Pages = { MakePage("ouros", node) } };
+
+        Assert.Contains(ProjectValidator.Validate(project), i => i.Message.Contains("before objects had textures"));
     }
 
     [Fact]
