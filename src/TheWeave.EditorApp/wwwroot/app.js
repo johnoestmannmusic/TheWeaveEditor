@@ -60,6 +60,33 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// Leaving a text field saves it (see this file's header), and that comes back as a project-state that
+// rebuilds the panels. Pressing a button is what takes focus out of the field, so left alone that rebuild
+// lands between the mouse press and release, and replaces the button. The browser then never fires a
+// click, since the release wasn't on the same element as the press. So a rebuild waits for the release,
+// and for the click that follows it.
+let pointerIsDown = false;
+let renderWaiting = false;
+
+function renderAllWhenSafe() {
+  if (pointerIsDown) {
+    renderWaiting = true;
+    return;
+  }
+  renderWaiting = false;
+  renderAll();
+}
+
+function pointerFinished() {
+  pointerIsDown = false;
+  if (renderWaiting) setTimeout(renderAllWhenSafe, 0);
+}
+
+window.addEventListener('pointerdown', () => { pointerIsDown = true; }, true);
+window.addEventListener('pointerup', pointerFinished, true);
+window.addEventListener('pointercancel', pointerFinished, true);
+window.addEventListener('blur', pointerFinished); // a release outside the window never arrives
+
 send('ready');
 
 window.external.receiveMessage((raw) => {
@@ -72,7 +99,7 @@ window.external.receiveMessage((raw) => {
     projectPath = message.path;
     contentRoot = message.contentRoot;
     reconcileSelection();
-    renderAll();
+    renderAllWhenSafe();
     renderList('issues', 'issues-list', message.validationIssues);
     renderList('warnings', 'warnings-list', message.warnings);
     updateProblemsButton((message.validationIssues ?? []).length, (message.warnings ?? []).length);
@@ -92,7 +119,7 @@ window.external.receiveMessage((raw) => {
   } else if (message.type === 'error') {
     // A rejected edit (e.g. a square that's already taken) changes nothing on the C# side, so this
     // puts the form back in step with what's actually saved.
-    if (project) renderAll();
+    if (project) renderAllWhenSafe();
     syncPuzzleEditor();
     setStatus(message.message, true);
     showToast(message.message, true);

@@ -48,6 +48,7 @@ function openPuzzleEditor(pageId, nodeId) {
   };
 
   document.getElementById('puzzle-editor').hidden = false;
+  document.querySelector('main').classList.add('behind-puzzle-editor');
   document.getElementById('pe-title').textContent = `Puzzle: ${findNode(pageId, nodeId).card.headingText || nodeId}`;
 
   const shipImage = new Image();
@@ -64,6 +65,7 @@ function openPuzzleEditor(pageId, nodeId) {
 function closePuzzleEditor() {
   puzzleEditor = null;
   document.getElementById('puzzle-editor').hidden = true;
+  document.querySelector('main').classList.remove('behind-puzzle-editor');
   document.getElementById('pe-art').removeAttribute('src');
 }
 

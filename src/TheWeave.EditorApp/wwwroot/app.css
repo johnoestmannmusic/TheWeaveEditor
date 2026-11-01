@@ -599,6 +599,11 @@ legend {
   display: none;
 }
 
+/* Scrollbars in the panels underneath can otherwise show through the screen. */
+main.behind-puzzle-editor {
+  visibility: hidden;
+}
+
 #pe-header {
   display: flex;
   align-items: center;
