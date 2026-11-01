@@ -757,7 +757,7 @@ public class PageRendererTests
 
         var html = new PageRenderer(project).RenderPage(page);
 
-        Assert.Equal(expected, html.Contains("<span class=\"focus-action\">[ Focus ]</span>"));
+        Assert.Equal(expected, html.Contains("<span class=\"focus-action\">[ Enter ]</span>"));
     }
 
     [Theory]

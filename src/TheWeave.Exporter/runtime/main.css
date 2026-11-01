@@ -124,7 +124,7 @@ h3 {
   color:rgb(102, 102, 102);
 }
 
-/* A card's "[ Focus ]" action (see main.js's openTrackFocus). Takes up no height of its own: it sits
+/* A card's "[ Enter ]" action (see main.js's openTrackFocus). Takes up no height of its own: it sits
    on the same line as [ Download ], at the left of the row, rather than pushing that down past the
    bottom of the card - there's no spare room under 8 lines of poetry. */
 .poetry-focus{
