@@ -4,7 +4,7 @@ namespace TheWeave.Core.Model;
 public sealed class WeaveProject
 {
     /// <summary>Which shape this project is in - see ProjectMigrations.</summary>
-    public int SchemaVersion { get; set; } = 2;
+    public int SchemaVersion { get; set; } = 3;
     public string Title { get; set; } = "";
 
     public int DefaultWorldWidthPx { get; set; } = GridLayout.SectorWorldWidthPx;

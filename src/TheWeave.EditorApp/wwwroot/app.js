@@ -452,7 +452,7 @@ function renderPageInspector(container, page) {
       <input type="checkbox" id="f-page-is-home" ${project.homePageId === page.id ? 'checked' : ''}>
       <label for="f-page-is-home">Starting map (the persistent shell loads this page by default - see Hub theme)</label>
     </div>
-    ${cellPickerHtml('f-page-spawn', 'Default spawn', grids[page.id], page.defaultSpawnX, page.defaultSpawnY, 'A0')}
+    ${cellPickerHtml('f-page-spawn', 'Default spawn', grids[page.id], page.defaultSpawnX, page.defaultSpawnY, '#0')}
     <div class="field-hint">Where the ship starts when this page is opened with no travel link or query string at all (e.g. a bare URL, or the shell's iframe on first load). Doesn't affect arriving via a travel link - that's each link's own Arrival square on the destination location's Action, further down.</div>
 
     <fieldset>

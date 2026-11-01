@@ -9,21 +9,68 @@ namespace TheWeave.Core.Serialization;
 /// </summary>
 public static class ProjectMigrations
 {
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 
     /// <returns>
-    /// Null if the project was already current. Otherwise a note for every location that couldn't
-    /// just move to the square it was already over - empty if none needed one.
+    /// Null if the project was already current. Otherwise a note about anything that moved in a way
+    /// worth pointing out - empty if nothing did.
     /// </returns>
     public static List<string>? Upgrade(WeaveProject project)
     {
         if (project.SchemaVersion >= CurrentSchemaVersion)
             return null;
 
-        var notes = UpgradeToGrid(project);
+        var notes = new List<string>();
+        if (project.SchemaVersion < 2) notes.AddRange(UpgradeToGrid(project));
+        if (project.SchemaVersion < 3) notes.AddRange(MoveReturnNodesToEntrySquare(project));
+
         project.SchemaVersion = CurrentSchemaVersion;
         return notes;
     }
+
+    // Version 3: planets are entered and left from GridLayout.EntrySquare, so the node leading back to
+    // the home page moves there, along with anything already there getting out of its way.
+    private static List<string> MoveReturnNodesToEntrySquare(WeaveProject project)
+    {
+        var notes = new List<string>();
+        if (project.HomePageId is null)
+            return notes;
+
+        var moved = 0;
+
+        foreach (var page in project.Pages.Where(p => p.Id != project.HomePageId))
+        {
+            var mapNodes = page.Nodes.Where(n => n.Card.Size != CardSize.Modal).ToList();
+            var returnNode = mapNodes.FirstOrDefault(n =>
+                n.Card.Action.Kind == ActionKind.Travel && n.Card.Action.TargetPageId == project.HomePageId);
+            if (returnNode is null)
+                continue;
+
+            var grid = GridLayout.For(page, project);
+            var entry = GridLayout.EntrySquare;
+            if (grid.CellOf(returnNode) == entry)
+                continue;
+
+            var occupant = mapNodes.FirstOrDefault(n => n != returnNode && grid.CellOf(n) == entry);
+            if (occupant is not null)
+            {
+                var taken = mapNodes.Where(n => n != returnNode).Select(grid.CellOf).ToHashSet();
+                var cell = grid.NearestFreeCell(entry, taken)
+                    ?? throw new InvalidDataException($"Page '{page.Id}' has more locations than squares.");
+                (occupant.X, occupant.Y) = grid.NodePositionFor(cell);
+                notes.Add($"{page.Title}: '{occupant.Card.HeadingText}' moved to {grid.LabelOf(cell)}, to make room for the node back to the home page.");
+            }
+
+            (returnNode.X, returnNode.Y) = grid.NodePositionFor(entry);
+            moved++;
+        }
+
+        if (moved > 0)
+            notes.Add($"The node back to the home page moved to {GridLayout.For(new Page(), project).LabelOf(GridLayout.EntrySquare)} on {moved} page(s), which is now where planets are entered and left from.");
+
+        return notes;
+    }
+
 
     // Version 2: exact 6x worlds, so the drawn grid lands on whole 150px squares, and every location
     // centered in a square. Every old position is resolved against its page's *old* grid, since

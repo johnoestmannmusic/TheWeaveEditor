@@ -219,9 +219,10 @@ function initShip() {
   let destY  = parseInt(params.get("destY"));
   tutorialSwitch = params.get("tutorial");
 
-  // Square A0.
-  let spawnX = 225;
-  let spawnY = 225;
+  // The same square a planet is entered from - see GridLayout.EntrySquare.
+  let entry = weavePage.grid.centerOf({ col: 0, row: 0 });
+  let spawnX = entry.x;
+  let spawnY = entry.y;
 
   if (!isNaN(destX) && !isNaN(destY)) {
     spawnX = destX;
