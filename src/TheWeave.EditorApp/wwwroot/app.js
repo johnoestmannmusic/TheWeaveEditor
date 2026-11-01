@@ -113,6 +113,8 @@ window.external.receiveMessage((raw) => {
     syncPuzzleEditor();
   } else if (message.type === 'puzzle-art') {
     receivePuzzleArt(message);
+  } else if (message.type === 'puzzle-imported') {
+    receiveImportedPuzzle(message);
   } else if (message.type === 'status') {
     setStatus(message.message, false);
     showToast(message.message, false);
