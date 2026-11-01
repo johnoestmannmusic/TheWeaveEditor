@@ -21,8 +21,11 @@ public sealed class GridLayout
     /// <summary>
     /// How many squares one static screen shows. A sector's 19 columns can't divide evenly (19 is
     /// prime), but its label strip plus those columns make 20, which halves into 10 - so a left
-    /// screen shows the label strip and A-I, and a right screen shows J-S. Rows 0-9 halve into 5,
-    /// which leaves the top label strip and the unused bottom pixels off every screen.
+    /// screen shows the label strip and A-I, and a right screen shows J-S. Rows 0-9 halve into 5.
+    ///
+    /// Screens are also a little taller than their rows, by the 6 source pixels left over along the
+    /// bottom of the map, so the art down there (a planet's name, usually) isn't lost. A bottom screen
+    /// ends at the map's bottom edge, and a top screen shows the same amount of its top label strip.
     /// </summary>
     public const int ScreenColumns = 10;
     public const int ScreenRows = 5;
@@ -37,6 +40,7 @@ public sealed class GridLayout
     private const double SourceCellPx = 25;
     private const double SourceSectorWidthPx = 500;
     private const double SourceHeightPx = 281;
+    private const double SourceBottomStripPx = 6;
 
     public int Sectors { get; private init; }
     public int Columns => ColumnsPerSector * Sectors;
@@ -52,7 +56,13 @@ public sealed class GridLayout
     public IReadOnlyList<int> GapColumns => Enumerable.Range(1, Sectors - 1).Select(s => s * ColumnsPerSector).ToArray();
 
     public double ScreenWidth => CellWidth * ScreenColumns;
-    public double ScreenHeight => CellHeight * ScreenRows;
+    public double ScreenHeight => CellHeight * ScreenRows + BottomStripHeight;
+
+    private double BottomStripHeight => CellHeight * SourceBottomStripPx / SourceCellPx;
+
+    /// <summary>World Y of the top of each row of screens, from the top of the map.</summary>
+    public IReadOnlyList<double> ScreenTops =>
+        new[] { OriginY - BottomStripHeight, OriginY + CellHeight * ScreenRows };
 
     /// <summary>World X of every line where one screen meets the next.</summary>
     public IReadOnlyList<double> ScreenLinesX =>
@@ -60,7 +70,7 @@ public sealed class GridLayout
 
     /// <summary>World Y of the top and bottom of every row of screens.</summary>
     public IReadOnlyList<double> ScreenLinesY =>
-        Enumerable.Range(0, Rows / ScreenRows + 1).Select(i => OriginY + i * ScreenHeight).ToArray();
+        ScreenTops.Append(ScreenTops[^1] + ScreenHeight).ToArray();
 
     public static GridLayout For(Page page, WeaveProject project)
     {

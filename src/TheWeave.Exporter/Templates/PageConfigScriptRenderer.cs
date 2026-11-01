@@ -45,6 +45,7 @@ public static class PageConfigScriptRenderer
             {
                 width = grid.ScreenWidth,
                 height = grid.ScreenHeight,
+                tops = grid.ScreenTops,
             },
         };
         var json = JsonSerializer.Serialize(payload, Options);

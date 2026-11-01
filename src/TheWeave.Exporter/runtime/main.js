@@ -66,10 +66,10 @@ const AUDIO_VOLUME_EASE = 0.95;
 const GAMEPAD_DEADZONE = 0.5;
 
 // The view: one static screen of the map at a time (see updateView). SOURCE_SCREEN_WIDTH/HEIGHT are
-// one screen's size in the map art's own pixels, which is what the picture is drawn at a whole-number
-// multiple of. CARD_SCREEN_MARGIN keeps an open card from touching the screen's edge - see placeCard.
+// one screen's size in the map art's own pixels, which only its shape matters for - see
+// updateViewScale. CARD_SCREEN_MARGIN keeps an open card from touching the screen's edge - see placeCard.
 const SOURCE_SCREEN_WIDTH = 250;
-const SOURCE_SCREEN_HEIGHT = 125;
+const SOURCE_SCREEN_HEIGHT = 131;
 const SCREEN_SLIDE_MS = 300;
 const CARD_SCREEN_MARGIN = 8;
 
@@ -161,8 +161,7 @@ function loadPageConfig(){
   weavePage.worldWidth = cfg.worldWidth;
   weavePage.worldHeight = cfg.worldHeight;
   weavePage.grid = WeaveSokoban.createGrid(cfg.grid);
-  // Screens start at the left edge of the map, label strip included, but below its top label strip.
-  weavePage.screen = { width: cfg.screen.width, height: cfg.screen.height, originY: cfg.grid.originY };
+  weavePage.screen = cfg.screen;
   // Page.DefaultSpawnX/Y - where initShip() puts the ship when this page is opened with no
   // travel/query-string position at all (e.g. a bare URL, or the shell's iframe on first load).
   // Null/undefined (no Page override configured) leaves these null - initShip() itself falls
@@ -663,23 +662,25 @@ function startSlide(to){
 
 // The top-left corner, in world coordinates, of the screen a square is on.
 function screenOriginOf(cell){
-  let center = weavePage.grid.centerOf(cell);
   let screen = weavePage.screen;
   return {
-    x: Math.floor(center.x / screen.width) * screen.width,
-    y: screen.originY + Math.floor((center.y - screen.originY) / screen.height) * screen.height,
+    x: Math.floor(weavePage.grid.centerOf(cell).x / screen.width) * screen.width,
+    y: screen.tops[Math.floor(cell.row * screen.tops.length / weavePage.grid.rows)],
   };
 }
 
-// Picks the largest whole multiple of the art's own pixels that fits the window, so the map stays
-// crisp, and centers the picture, with #screenFrame's surround filling whatever's left.
+// Fits the picture to the window, normally by filling its width, and centers it, with #screenFrame's
+// surround filling whatever's left. Not a whole-number multiple of the art's own pixels: at most scales
+// that would leave a good chunk of the window unused, and the art's pixels drawing a screen pixel wider
+// or narrower than each other isn't noticeable on these maps. (Track Focus's art does stay at
+// whole-number scales, where its tiles depend on it - see updateTrackFocusScale.)
 function updateViewScale(){
-  let multiple = Math.max(1, Math.floor(Math.min(
+  let fit = Math.min(
     window.innerWidth / SOURCE_SCREEN_WIDTH,
     window.innerHeight / SOURCE_SCREEN_HEIGHT
-  )));
-  let pictureWidth = SOURCE_SCREEN_WIDTH * multiple;
-  let pictureHeight = SOURCE_SCREEN_HEIGHT * multiple;
+  );
+  let pictureWidth = Math.round(SOURCE_SCREEN_WIDTH * fit);
+  let pictureHeight = Math.round(SOURCE_SCREEN_HEIGHT * fit);
 
   view.scale = pictureWidth / weavePage.screen.width;
   view.offsetX = Math.floor((window.innerWidth - pictureWidth) / 2);

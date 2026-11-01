@@ -51,9 +51,20 @@ public class GridLayoutTests
         var grid = GridLayout.For(new Page(), new WeaveProject());
 
         Assert.Equal(1500, grid.ScreenWidth);
-        Assert.Equal(750, grid.ScreenHeight);
+        Assert.Equal(786, grid.ScreenHeight);
+        Assert.Equal(new double[] { 114, 900 }, grid.ScreenTops);
         Assert.Equal(new double[] { 1500 }, grid.ScreenLinesX);
-        Assert.Equal(new double[] { 150, 900, 1650 }, grid.ScreenLinesY);
+        Assert.Equal(new double[] { 114, 900, 1686 }, grid.ScreenLinesY);
+    }
+
+    [Fact]
+    public void Screens_ReachTheVeryBottomOfTheMap()
+    {
+        var project = new WeaveProject { DefaultWorldWidthPx = 3010, DefaultWorldHeightPx = 1696 };
+
+        var grid = GridLayout.For(new Page(), project);
+
+        Assert.Equal(1696, grid.ScreenTops[^1] + grid.ScreenHeight, 6);
     }
 
     [Fact]

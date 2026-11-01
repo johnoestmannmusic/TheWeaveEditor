@@ -62,8 +62,8 @@ Neocities, replacing hand-authoring HTML per location.
 - A Sokoban board over the album art, started with Z/gamepad A from Track Focus: the ship walks a
   10x10 grid using the same movement as the map. There are no boxes or goals to it yet.
 - Static screens instead of a follow camera: each map splits into 10x5-square screens (4 per map, 8
-  on The Weave), and walking off one slides the view to the next. The picture is drawn at a
-  whole-number scale, with dark bars around it. Cards always fit on the screen.
+  on The Weave), and walking off one slides the view to the next. The picture scales to fill the
+  window's width. Cards always fit on the screen.
 - An optional cosmetic globe-curvature vignette around each screen, toggleable per page.
 - Export cleans up after itself: files from a previous export that the current run didn't
   (re)write — a renamed/deleted page, an orphaned cover image — are removed, so exporting
