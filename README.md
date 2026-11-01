@@ -65,6 +65,8 @@ Neocities, replacing hand-authoring HTML per location.
 - Static screens instead of a follow camera: each map splits into 10x5-square screens (4 per map, 8
   on The Weave), and walking off one slides the view to the next. The picture scales to fill the
   window's width. Cards always fit on the screen.
+- A minimap in the bottom-right corner of each map screen, showing the whole map, the screen in view,
+  every location, and the ship. It fades back when the ship, a location, or an open card is under it.
 - An optional cosmetic globe-curvature vignette around each screen, toggleable per page.
 - Export cleans up after itself: files from a previous export that the current run didn't
   (re)write — a renamed/deleted page, an orphaned cover image — are removed, so exporting

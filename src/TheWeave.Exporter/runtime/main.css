@@ -248,6 +248,45 @@ h3 {
   box-shadow: 0 0 0 100vmax rgb(17, 17, 17);
 }
 
+/* The minimap in the corner of the screen - see main.js's buildMinimap, which sizes and fills it. Its
+   edge is a shadow rather than a border, so its contents line up exactly with its box. */
+#minimap {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px #d4bc93, 0 4px 14px rgba(0, 0, 0, 0.55);
+  opacity: 0.95;
+  transition: opacity 150ms;
+}
+
+#minimap.minimapFaded {
+  opacity: 0.3;
+}
+
+/* Smoothed, unlike everything else here: it's the one image drawn smaller than its own pixels. */
+#minimapImage {
+  position: absolute;
+  left: 0;
+  image-rendering: auto;
+}
+
+/* The screen currently in view. */
+#minimapScreen {
+  position: absolute;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+.minimapNode {
+  position: absolute;
+}
+
+/* The one thing on here that has to stand out on any map, light or dark. */
+#minimapShip {
+  position: absolute;
+  filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff) drop-shadow(0 0 2px #000);
+}
+
 /* The edge darkening of Page.GlobeEffect. */
 #globeVignette {
   position: absolute;

@@ -92,6 +92,7 @@ let rootByCell = new Map();
 // the slide underway to a new screen, if any.
 let view = { position: null, slide: null, scale: 1, offsetX: 0, offsetY: 0 };
 let screenFrameEl = null; // see buildScreenFrame
+let minimap = null; // see buildMinimap
 
 // Input state
 const KEY_DIRECTIONS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
@@ -113,6 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
   loadNodes();
   indexNodesByCell();
   buildScreenFrame();
+  buildMinimap();
   updateViewScale();
   placePersistentCards();
   bindInput();
@@ -691,6 +693,137 @@ function updateViewScale(){
   screenFrameEl.style.top = view.offsetY + "px";
   screenFrameEl.style.width = pictureWidth + "px";
   screenFrameEl.style.height = pictureHeight + "px";
+
+  layoutMinimap(pictureWidth);
+}
+
+// The minimap, in the bottom-right corner of the screen: the whole map, the screen currently in view,
+// the map's locations, and the ship, so the player can see where they are in the larger world. Lives
+// inside #screenFrame, so it stays put while the world moves underneath it, and anything covering the
+// whole window covers it too. Its picture is cropped to the same top and bottom edges the screens
+// themselves show - see GridLayout.ScreenTops.
+function buildMinimap(){
+  let el = document.createElement('div');
+  el.id = 'minimap';
+
+  let image = document.createElement('img');
+  image.id = 'minimapImage';
+  image.src = document.getElementById('bgmap').src;
+  el.appendChild(image);
+
+  let nodes = [];
+  nodeMeta.forEach((meta) => {
+    if (!meta.isTopLevel || meta.isModal) return;
+    let icon = document.createElement('img');
+    icon.className = 'minimapNode';
+    icon.src = meta.img.getAttribute('src');
+    el.appendChild(icon);
+    nodes.push({ icon, center: weavePage.grid.centerOf(meta.cell) });
+  });
+
+  let screen = document.createElement('div');
+  screen.id = 'minimapScreen';
+  el.appendChild(screen);
+
+  let shipIcon = document.createElement('img');
+  shipIcon.id = 'minimapShip';
+  shipIcon.src = shipEl.getAttribute('src');
+  el.appendChild(shipIcon);
+
+  screenFrameEl.appendChild(el);
+  minimap = { el, image, nodes, screen, shipIcon, scale: 1, top: 0 };
+}
+
+// A single map's minimap takes MINIMAP_WIDTH_FRACTION of the picture's width. A wider map keeps the same
+// scale, so its squares match, until it reaches MINIMAP_MAX_WIDTH_FRACTION, then shrinks to fit that.
+const MINIMAP_WIDTH_FRACTION = 0.16;
+const MINIMAP_MAX_WIDTH_FRACTION = 0.24;
+const MINIMAP_MARGIN_FRACTION = 0.008;
+// Sizes relative to one of the minimap's own squares.
+const MINIMAP_NODE_SQUARES = 0.55;
+const MINIMAP_SHIP_SQUARES = 1.2;
+// img/ui/pilot-ship.png's own shape, as for SHIP_HEIGHT.
+const MINIMAP_SHIP_ASPECT = 16 / 12;
+
+function layoutMinimap(pictureWidth){
+  let screen = weavePage.screen;
+  let screensAcross = weavePage.worldWidth / screen.width;
+  let width = Math.round(pictureWidth * Math.min(MINIMAP_WIDTH_FRACTION * screensAcross / 2, MINIMAP_MAX_WIDTH_FRACTION));
+
+  minimap.scale = width / weavePage.worldWidth;
+  minimap.top = screen.tops[0];
+  let height = (screen.tops[screen.tops.length - 1] + screen.height - minimap.top) * minimap.scale;
+  let margin = Math.round(pictureWidth * MINIMAP_MARGIN_FRACTION);
+
+  minimap.el.style.width = width + "px";
+  minimap.el.style.height = Math.round(height) + "px";
+  minimap.el.style.right = margin + "px";
+  minimap.el.style.bottom = margin + "px";
+
+  minimap.image.style.width = width + "px";
+  minimap.image.style.height = (weavePage.worldHeight * minimap.scale) + "px";
+  minimap.image.style.top = (-minimap.top * minimap.scale) + "px";
+
+  minimap.screen.style.width = (screen.width * minimap.scale) + "px";
+  minimap.screen.style.height = (screen.height * minimap.scale) + "px";
+
+  let square = width / weavePage.grid.columns;
+  let nodeSize = Math.max(3, Math.round(square * MINIMAP_NODE_SQUARES));
+  for (const node of minimap.nodes) {
+    node.icon.style.width = nodeSize + "px";
+    node.icon.style.height = nodeSize + "px";
+    node.icon.style.left = (node.center.x * minimap.scale - nodeSize / 2) + "px";
+    node.icon.style.top = ((node.center.y - minimap.top) * minimap.scale - nodeSize / 2) + "px";
+  }
+
+  minimap.shipWidth = Math.max(4, Math.round(square * MINIMAP_SHIP_SQUARES));
+  minimap.shipHeight = Math.round(minimap.shipWidth * MINIMAP_SHIP_ASPECT);
+  minimap.shipIcon.style.width = minimap.shipWidth + "px";
+  minimap.shipIcon.style.height = minimap.shipHeight + "px";
+}
+
+function updateMinimap(){
+  minimap.screen.style.left = (view.position.x * minimap.scale) + "px";
+  minimap.screen.style.top = ((view.position.y - minimap.top) * minimap.scale) + "px";
+
+  minimap.shipIcon.style.left = (ship.x * minimap.scale - minimap.shipWidth / 2) + "px";
+  minimap.shipIcon.style.top = ((ship.y - minimap.top) * minimap.scale - minimap.shipHeight / 2) + "px";
+  // Sprite's forward points "up" at rest - see renderShip.
+  minimap.shipIcon.style.transform = "rotate(" + (ship.angle + Math.PI / 2) + "rad)";
+
+  minimap.el.classList.toggle('minimapFaded', isMinimapInTheWay());
+}
+
+// The corner it sits in is still part of the map. Whenever the ship, a location, or an open card is
+// underneath it, it fades back rather than hiding them.
+function isMinimapInTheWay(){
+  let box = minimap.el.getBoundingClientRect();
+
+  let overlaps = (left, top, right, bottom) =>
+    right > box.left && left < box.right && bottom > box.top && top < box.bottom;
+
+  // A world-space box, on the screen.
+  let overlapsWorld = (x, y, halfWidth, halfHeight) => {
+    let centerX = view.offsetX + (x - view.position.x) * view.scale;
+    let centerY = view.offsetY + (y - view.position.y) * view.scale;
+    return overlaps(
+      centerX - halfWidth * view.scale, centerY - halfHeight * view.scale,
+      centerX + halfWidth * view.scale, centerY + halfHeight * view.scale
+    );
+  };
+
+  if (overlapsWorld(ship.x, ship.y, SHIP_WIDTH / 2, SHIP_HEIGHT / 2)) return true;
+
+  for (const node of minimap.nodes) {
+    if (overlapsWorld(node.center.x, node.center.y, NODE_ICON_SIZE / 2, NODE_ICON_SIZE / 2)) return true;
+  }
+
+  if (activeRoot) {
+    let card = nodeMeta.get(activeRoot).info.getBoundingClientRect();
+    if (overlaps(card.left, card.top, card.right, card.bottom)) return true;
+  }
+
+  return false;
 }
 
 // Which top-level location the ship is standing on drives the open card - a multi-part location's
@@ -1228,6 +1361,7 @@ function loop(timestamp){
   updateInput();
   updateShip(dt);
   updateView(dt * MS_PER_FRAME);
+  updateMinimap();
   updateBoardGame(dt * MS_PER_FRAME);
   updateNodeProximity();
   updateLocationAudio(dt);
