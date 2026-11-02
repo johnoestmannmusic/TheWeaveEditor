@@ -119,6 +119,7 @@ function syncPuzzleEditor() {
   const startAt = puzzleEditor.neighbours.entrance ?? WeavePuzzle.DEFAULT_START;
   puzzleEditor.objects = node.puzzle?.objects ?? [{ kind: 'Start', col: startAt.col, row: startAt.row }];
   if (puzzleEditor.neighbours.entrance && puzzleEditor.tool === 'Start') puzzleEditor.tool = 'Wall';
+  showPuzzleTool();
   if (node.puzzle?.palette && Object.keys(node.puzzle.palette).length > 0 && !puzzleEditor.palette) {
     puzzleEditor.palette = node.puzzle.palette;
     puzzleEditor.textures = node.puzzle.textures ?? null;
@@ -126,7 +127,6 @@ function syncPuzzleEditor() {
   }
 
   renderPuzzleProblems();
-  showPuzzleTool();
 
   // A Gate keeps its letter, since several sharing one is common. The others look for what they need next.
   if (puzzleEditor.tool !== 'Gate') updateSuggestedLetter();
