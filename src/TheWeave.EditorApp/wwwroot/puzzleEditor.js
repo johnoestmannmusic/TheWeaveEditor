@@ -164,6 +164,16 @@ function receivePuzzleArt(message) {
   art.src = message.dataUrl;
 }
 
+function savePuzzle(objects) {
+  const { pageId, nodeId, palette, textures } = puzzleEditor;
+  puzzleEditor.objects = objects;
+  send('update-puzzle', {
+    pageId,
+    nodeId,
+    puzzle: { objects, palette: palette ?? {}, textures: textures ?? {}, paletteSource: findNode(pageId, nodeId).card.coverImagePath },
+  });
+}
+
 // Whether a following part's Start isn't where the ship comes in from the part before, and could be.
 function startOutOfStep(objects) {
   const entrance = puzzleEditor.neighbours?.entrance;
@@ -176,16 +186,6 @@ function lineUpStart(objects) {
   if (!startOutOfStep(objects)) return objects;
   const entrance = puzzleEditor.neighbours.entrance;
   return WeavePuzzle.placeObject(objects, { kind: 'Start', col: entrance.col, row: entrance.row });
-}
-
-function savePuzzle(objects) {
-  const { pageId, nodeId, palette, textures } = puzzleEditor;
-  puzzleEditor.objects = objects;
-  send('update-puzzle', {
-    pageId,
-    nodeId,
-    puzzle: { objects, palette: palette ?? {}, textures: textures ?? {}, paletteSource: findNode(pageId, nodeId).card.coverImagePath },
-  });
 }
 
 // ---------- tools ----------
