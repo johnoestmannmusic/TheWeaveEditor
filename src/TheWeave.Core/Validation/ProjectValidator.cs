@@ -47,7 +47,7 @@ public static class ProjectValidator
                 CheckAsset(page.SecondaryBackground.ImagePath, assetBasePath, "Secondary background image", page.Id, null, issues);
 
             foreach (var node in page.Nodes)
-                CheckNode(page, node, pageIds, assetBasePath, issues);
+                CheckNode(page, node, null, pageIds, assetBasePath, issues);
 
             CheckGridPlacement(project, page, issues);
 
@@ -67,7 +67,8 @@ public static class ProjectValidator
         }
     }
 
-    private static void CheckNode(Page page, Node node, HashSet<string> pageIds, string? assetBasePath, List<ValidationIssue> issues)
+    // previous is the part played just before this one, if any - see CheckPuzzle.
+    private static void CheckNode(Page page, Node node, Node? previous, HashSet<string> pageIds, string? assetBasePath, List<ValidationIssue> issues)
     {
         if (node.Card.Action.Kind == ActionKind.Travel)
         {
@@ -88,13 +89,13 @@ public static class ProjectValidator
             CheckAsset(node.Card.CoverImagePath, assetBasePath, "Cover image", page.Id, node.Id, issues);
 
         if (node.Puzzle is not null)
-            CheckPuzzle(page, node, issues);
+            CheckPuzzle(page, node, previous, issues);
 
-        foreach (var child in node.Children)
-            CheckNode(page, child, pageIds, assetBasePath, issues);
+        for (var i = 0; i < node.Children.Count; i++)
+            CheckNode(page, node.Children[i], i == 0 ? node : null, pageIds, assetBasePath, issues);
     }
 
-    private static void CheckPuzzle(Page page, Node node, List<ValidationIssue> issues)
+    private static void CheckPuzzle(Page page, Node node, Node? previous, List<ValidationIssue> issues)
     {
         var puzzle = node.Puzzle!;
 
@@ -137,6 +138,27 @@ public static class ProjectValidator
 
         foreach (var problem in FindStreamTraps(puzzle))
             Warn(problem);
+
+        // A location's parts connect edge to edge - see PuzzleConnection.
+        var next = node.Children.FirstOrDefault();
+        if (next?.Puzzle is not null)
+        {
+            var finishes = puzzle.Objects.Where(o => o.Kind == PuzzleObjectKind.Finish).ToList();
+            if (finishes.Count > 1)
+                Warn($"it leads on to '{next.Card.HeadingText}', so it should have only one Finish.");
+            else if (finishes.Count == 1 && PuzzleConnection.ExitDirectionOf(finishes[0].Col, finishes[0].Row) is null)
+                Warn($"it leads on to '{next.Card.HeadingText}', so its Finish has to be on an edge of the board, not a corner.");
+        }
+
+        if (PuzzleConnection.EntranceAfter(previous?.Puzzle) is { } entrance)
+        {
+            var here = $"column {entrance.Col + 1}, row {entrance.Row + 1}";
+            var start = puzzle.Objects.FirstOrDefault(o => o.Kind == PuzzleObjectKind.Start);
+            if (PuzzleConnection.BlockingEntrance(puzzle, entrance) is { } blocking)
+                Warn($"the ship comes in from '{previous!.Card.HeadingText}' at {here}, but a {blocking.Kind} is there. Clear that square to connect the boards.");
+            else if (start is null || (start.Col, start.Row) != entrance)
+                Warn($"its Start isn't where the ship comes in from '{previous!.Card.HeadingText}', at {here}. Open the Puzzle Editor to line it up.");
+        }
 
         var hasRotatorTiles = puzzle.Objects.Any(o => o.Kind == PuzzleObjectKind.RotatorTile);
         var hasRotatorSwitch = puzzle.Objects.Any(o => o.Kind == PuzzleObjectKind.RotatorSwitch);

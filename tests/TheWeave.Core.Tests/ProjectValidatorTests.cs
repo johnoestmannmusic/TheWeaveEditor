@@ -184,6 +184,78 @@ public class ProjectValidatorTests
             new PuzzleObject { Kind = PuzzleObjectKind.RotatorSwitch, Col = 5, Row = 5 }));
     }
 
+    private static List<string> ChainProblems(Puzzle first, Puzzle second)
+    {
+        Node Part(string id, Puzzle puzzle) => new()
+        {
+            Id = id,
+            Card = new Card { HeadingText = id, CoverImagePath = "img/track.png", Audio = new AudioRef { Url = "track.ogg" } },
+            Puzzle = puzzle,
+        };
+        var root = Part("first", first);
+        root.Children.Add(Part("second", second));
+        foreach (var puzzle in new[] { first, second })
+        {
+            puzzle.PaletteSource = "img/track.png";
+            puzzle.Textures["wall"] = new PuzzleTexture();
+        }
+
+        return ProjectValidator.Validate(new WeaveProject { Pages = { MakePage("ouros", root) } })
+            .Where(i => i.Message.StartsWith("Puzzle on "))
+            .Select(i => i.Message)
+            .ToList();
+    }
+
+    private static PuzzleObject Placed(PuzzleObjectKind kind, int col, int row) => new() { Kind = kind, Col = col, Row = row };
+
+    [Fact]
+    public void ConnectedParts_ThatLineUp_HaveNoProblems()
+    {
+        Assert.Empty(ChainProblems(
+            new Puzzle { Objects = { Placed(PuzzleObjectKind.Finish, 0, 4) } },
+            new Puzzle { Objects = { Placed(PuzzleObjectKind.Start, 9, 4), Placed(PuzzleObjectKind.Finish, 5, 5) } }));
+    }
+
+    [Fact]
+    public void PartThatLeadsOn_WithItsFinishOffAnEdge_IsReported()
+    {
+        var problem = Assert.Single(ChainProblems(
+            new Puzzle { Objects = { Placed(PuzzleObjectKind.Finish, 0, 0) } },
+            new Puzzle { Objects = { Placed(PuzzleObjectKind.Finish, 5, 5) } }));
+
+        Assert.Contains("'first': it leads on to 'second', so its Finish has to be on an edge", problem);
+    }
+
+    [Fact]
+    public void PartThatLeadsOn_WithTwoFinishes_IsReported()
+    {
+        var problem = Assert.Single(ChainProblems(
+            new Puzzle { Objects = { Placed(PuzzleObjectKind.Finish, 0, 4), Placed(PuzzleObjectKind.Finish, 9, 4) } },
+            new Puzzle { Objects = { Placed(PuzzleObjectKind.Finish, 5, 5) } }));
+
+        Assert.Contains("only one Finish", problem);
+    }
+
+    [Fact]
+    public void FollowingPart_WithSomethingOnItsEntrance_IsReported()
+    {
+        var problem = Assert.Single(ChainProblems(
+            new Puzzle { Objects = { Placed(PuzzleObjectKind.Finish, 4, 9) } },
+            new Puzzle { Objects = { Placed(PuzzleObjectKind.Start, 5, 5), Placed(PuzzleObjectKind.Wall, 4, 0), Placed(PuzzleObjectKind.Finish, 5, 6) } }));
+
+        Assert.Contains("'second': the ship comes in from 'first' at column 5, row 1, but a Wall is there", problem);
+    }
+
+    [Fact]
+    public void FollowingPart_WithItsStartOutOfStep_IsReported()
+    {
+        var problem = Assert.Single(ChainProblems(
+            new Puzzle { Objects = { Placed(PuzzleObjectKind.Finish, 4, 9) } },
+            new Puzzle { Objects = { Placed(PuzzleObjectKind.Start, 5, 5), Placed(PuzzleObjectKind.Finish, 5, 6) } }));
+
+        Assert.Contains("Start isn't where the ship comes in", problem);
+    }
+
     [Fact]
     public void Puzzle_WithNoTextures_IsReported()
     {

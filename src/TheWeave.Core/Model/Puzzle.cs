@@ -108,3 +108,58 @@ public sealed class Puzzle
     /// <summary>The Card.CoverImagePath that Palette and Textures were made from, to tell when they've gone out of date.</summary>
     public string? PaletteSource { get; set; }
 }
+
+/// <summary>
+/// How one part's board leads on to the next part's, edge to edge like screens of a map: a Finish on an edge
+/// leads off it, and the ship comes in on the opposite edge of the next board, directly across. Shared with
+/// runtime/puzzle.js's exitDirectionOf and entranceFrom.
+/// </summary>
+public static class PuzzleConnection
+{
+    /// <summary>Which way a square leads off the board, or null in the middle or in a corner, which would point two ways.</summary>
+    public static PuzzleDirection? ExitDirectionOf(int col, int row)
+    {
+        var last = Puzzle.BoardSize - 1;
+        var onSide = col == 0 || col == last;
+        var onTopOrBottom = row == 0 || row == last;
+        if (onSide == onTopOrBottom)
+            return null;
+
+        if (onSide)
+            return col == 0 ? PuzzleDirection.Left : PuzzleDirection.Right;
+        return row == 0 ? PuzzleDirection.Up : PuzzleDirection.Down;
+    }
+
+    /// <summary>Where the ship comes in on the next board after leaving through an edge square.</summary>
+    public static (int Col, int Row) EntranceFrom(int col, int row, PuzzleDirection exit)
+    {
+        var last = Puzzle.BoardSize - 1;
+        return exit switch
+        {
+            PuzzleDirection.Left => (last, row),
+            PuzzleDirection.Right => (0, row),
+            PuzzleDirection.Up => (col, last),
+            _ => (col, 0),
+        };
+    }
+
+    /// <summary>
+    /// Where the ship comes in on the board after this one, or null if this one doesn't lead on: it needs
+    /// exactly one Finish, on an edge.
+    /// </summary>
+    public static (int Col, int Row)? EntranceAfter(Puzzle? puzzle)
+    {
+        var finishes = puzzle?.Objects.Where(o => o.Kind == PuzzleObjectKind.Finish).ToList();
+        if (finishes is not { Count: 1 })
+            return null;
+
+        var finish = finishes[0];
+        var exit = ExitDirectionOf(finish.Col, finish.Row);
+        return exit is null ? null : EntranceFrom(finish.Col, finish.Row, exit.Value);
+    }
+
+    /// <summary>Whatever on the board is in the way of the ship coming in at a square - anything but a floor tile or Start.</summary>
+    public static PuzzleObject? BlockingEntrance(Puzzle puzzle, (int Col, int Row) entrance) =>
+        puzzle.Objects.FirstOrDefault(o => o.Col == entrance.Col && o.Row == entrance.Row
+            && o.Kind is not (PuzzleObjectKind.Start or PuzzleObjectKind.Stream or PuzzleObjectKind.RotatorTile));
+}

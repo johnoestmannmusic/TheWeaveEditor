@@ -234,11 +234,13 @@ public static class Program
 
                 case "update-puzzle":
                     RequireProject();
-                    var nodeForPuzzle = RequireNode(RequirePage(message.PageId), message.NodeId);
-                    // Same order as update-node: a rejected puzzle shouldn't record an undo step.
+                    var pageForPuzzle = RequirePage(message.PageId);
+                    var nodeForPuzzle = RequireNode(pageForPuzzle, message.NodeId);
+                    // Same order as update-node: a rejected puzzle shouldn't record an undo step. Tried on a copy,
+                    // since applying it also lines up the next part's Start.
                     if (message.Puzzle is not null)
-                        ProjectEditing.ValidatePuzzle(message.Puzzle);
-                    ApplyMutation(window, () => ProjectEditing.ApplyPuzzleEdit(nodeForPuzzle, message.Puzzle));
+                        ProjectEditing.ApplyPuzzleEdit(CopyForCheck(nodeForPuzzle), CopyForCheck(message.Puzzle));
+                    ApplyMutation(window, () => ProjectEditing.ApplyPuzzleEdit(nodeForPuzzle, message.Puzzle, pageForPuzzle));
                     break;
 
                 case "load-puzzle-art":
@@ -288,6 +290,10 @@ public static class Program
             SendError(window, ex.Message);
         }
     }
+
+    // A deep copy, for trying an edit out on without touching the real thing.
+    private static T CopyForCheck<T>(T value) =>
+        JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value, InboundOptions), InboundOptions)!;
 
     private static void RequireProject()
     {

@@ -34,6 +34,30 @@ const PUZZLE_SHIP_WIDTH = 12;
 const PUZZLE_SHIP_HEIGHT = 16;
 const PUZZLE_PALETTE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'outline', 'light'];
 
+// How this part connects to the parts either side of it: the part played just before, if it's this one's
+// parent and this is its first child, and the part played just after - see puzzle.js's connected boards.
+function puzzleNeighbours(pageId, nodeId) {
+  const node = findNode(pageId, nodeId);
+  const findPrevious = (nodes) => {
+    for (const candidate of nodes) {
+      if (candidate.children?.[0]?.id === nodeId) return candidate;
+      const found = findPrevious(candidate.children ?? []);
+      if (found) return found;
+    }
+    return null;
+  };
+  const previous = findPrevious(findPage(pageId).nodes);
+  const next = node?.children?.[0] ?? null;
+  return {
+    previous,
+    next,
+    // This part's Finish has to lead on to the next part's board.
+    leadsOn: !!next?.puzzle,
+    // Where this part's ship comes in, if the part before leads on to it.
+    entrance: WeavePuzzle.entranceAfter(previous?.puzzle),
+  };
+}
+
 // While the screen is open: which track, what's chosen in the tools, and a working copy of the board,
 // ahead of the saved one while a drag is still painting. Null while closed.
 let puzzleEditor = null;
@@ -90,9 +114,12 @@ function syncPuzzleEditor() {
     return;
   }
 
-  // A new puzzle shows its ship in the default place, and that's saved along with the first edit to it.
-  puzzleEditor.objects = node.puzzle?.objects
-    ?? [{ kind: 'Start', col: WeavePuzzle.DEFAULT_START.col, row: WeavePuzzle.DEFAULT_START.row }];
+  // A new puzzle shows its ship where it'll begin, which is saved along with the first edit to it.
+  puzzleEditor.neighbours = puzzleNeighbours(puzzleEditor.pageId, puzzleEditor.nodeId);
+  const startAt = puzzleEditor.neighbours.entrance ?? WeavePuzzle.DEFAULT_START;
+  puzzleEditor.objects = node.puzzle?.objects ?? [{ kind: 'Start', col: startAt.col, row: startAt.row }];
+  if (puzzleEditor.neighbours.entrance && puzzleEditor.tool === 'Start') puzzleEditor.tool = 'Wall';
+  showPuzzleTool();
   if (node.puzzle?.palette && Object.keys(node.puzzle.palette).length > 0 && !puzzleEditor.palette) {
     puzzleEditor.palette = node.puzzle.palette;
     puzzleEditor.textures = node.puzzle.textures ?? null;
@@ -130,8 +157,9 @@ function receivePuzzleArt(message) {
     const saved = node?.puzzle;
     if (saved && (saved.paletteSource !== node.card.coverImagePath
         || JSON.stringify(saved.palette) !== JSON.stringify(puzzleEditor.palette)
-        || JSON.stringify(saved.textures) !== JSON.stringify(puzzleEditor.textures)))
-      savePuzzle(puzzleEditor.objects);
+        || JSON.stringify(saved.textures) !== JSON.stringify(puzzleEditor.textures)
+        || startOutOfStep(saved.objects)))
+      savePuzzle(lineUpStart(puzzleEditor.objects));
   };
   art.src = message.dataUrl;
 }
@@ -144,6 +172,20 @@ function savePuzzle(objects) {
     nodeId,
     puzzle: { objects, palette: palette ?? {}, textures: textures ?? {}, paletteSource: findNode(pageId, nodeId).card.coverImagePath },
   });
+}
+
+// Whether a following part's Start isn't where the ship comes in from the part before, and could be.
+function startOutOfStep(objects) {
+  const entrance = puzzleEditor.neighbours?.entrance;
+  if (!entrance || WeavePuzzle.blockingEntrance(objects, entrance)) return false;
+  const start = objects.find((object) => object.kind === 'Start');
+  return !start || start.col !== entrance.col || start.row !== entrance.row;
+}
+
+function lineUpStart(objects) {
+  if (!startOutOfStep(objects)) return objects;
+  const entrance = puzzleEditor.neighbours.entrance;
+  return WeavePuzzle.placeObject(objects, { kind: 'Start', col: entrance.col, row: entrance.row });
 }
 
 // ---------- tools ----------
@@ -217,6 +259,7 @@ function renderPuzzleTools() {
 }
 
 function choosePuzzleTool(kind) {
+  if (kind === 'Start' && puzzleEditor.neighbours?.entrance) return;
   puzzleEditor.tool = kind;
   puzzleEditor.letterChosen = false;
   updateSuggestedLetter();
@@ -236,8 +279,13 @@ function updateSuggestedLetter() {
 function showPuzzleTool() {
   const tool = currentPuzzleTool();
 
-  for (const button of document.querySelectorAll('#pe-tool-buttons button'))
+  const { previous, next, leadsOn, entrance } = puzzleEditor.neighbours ?? {};
+  for (const button of document.querySelectorAll('#pe-tool-buttons button')) {
     button.classList.toggle('active', button.dataset.tool === tool.kind);
+    const fixed = button.dataset.tool === 'Start' && !!entrance;
+    button.disabled = fixed;
+    button.title = fixed ? `The ship comes in here from '${previous.card.headingText}'.` : '';
+  }
   for (const button of document.querySelectorAll('#pe-directions button'))
     button.classList.toggle('active', button.dataset.direction === puzzleEditor.direction);
 
@@ -253,7 +301,11 @@ function showPuzzleTool() {
   document.getElementById('pe-letter-row').hidden = !tool.letter;
   document.getElementById('pe-gate-state-row').hidden = !tool.gateState;
   document.getElementById('pe-direction-row').hidden = !tool.direction;
-  document.getElementById('pe-tool-hint').textContent = tool.hint;
+  let hint = tool.hint;
+  if (tool.kind === 'Finish' && leadsOn)
+    hint = `This part leads on to '${next.card.headingText}', so it has one Finish, on an edge but not a corner. The ship comes in across from it on the next board.`;
+  document.getElementById('pe-tool-hint').textContent = hint;
+  document.getElementById('pe-edge-ring').hidden = !(tool.kind === 'Finish' && leadsOn);
 }
 
 function renderPuzzlePalette() {
@@ -369,9 +421,20 @@ function buildPuzzleObject(cell) {
 }
 
 function applyPuzzleTool(cell, erasing) {
+  let objects = puzzleEditor.objects;
+
+  // A part that leads on has one way through it, on an edge, so placing its Finish moves it, like Start.
+  if (!erasing && puzzleEditor.tool === 'Finish' && puzzleEditor.neighbours?.leadsOn) {
+    if (!WeavePuzzle.exitDirectionOf(cell)) {
+      showToast(`This part leads on to '${puzzleEditor.neighbours.next.card.headingText}', so its Finish goes on an edge of the board, not a corner.`, true);
+      return;
+    }
+    objects = objects.filter((object) => object.kind !== 'Finish');
+  }
+
   puzzleEditor.objects = erasing
-    ? WeavePuzzle.eraseObject(puzzleEditor.objects, cell)
-    : WeavePuzzle.placeObject(puzzleEditor.objects, buildPuzzleObject(cell));
+    ? WeavePuzzle.eraseObject(objects, cell)
+    : WeavePuzzle.placeObject(objects, buildPuzzleObject(cell));
 }
 
 const puzzleCanvas = document.getElementById('pe-canvas');

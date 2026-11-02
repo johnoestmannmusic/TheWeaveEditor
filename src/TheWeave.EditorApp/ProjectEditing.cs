@@ -192,13 +192,75 @@ internal static class ProjectEditing
         };
     }
 
-    /// <summary>Replaces a node's puzzle, or removes it if null. A rejected puzzle leaves the node's as it was.</summary>
-    public static void ApplyPuzzleEdit(Node node, Puzzle? puzzle)
+    /// <summary>
+    /// Replaces a node's puzzle, or removes it if null. A rejected puzzle leaves the node's as it was. Given the
+    /// node's page, it also keeps the location's parts connected: a part whose next part has a puzzle can only
+    /// gain a Finish on an edge, and only the one, and each part's Start follows the Finish of the part before.
+    /// </summary>
+    public static void ApplyPuzzleEdit(Node node, Puzzle? puzzle, Page? page = null)
     {
+        var previous = page is null ? null : PreviousPart(page.Nodes, node);
+        var next = node.Children.FirstOrDefault();
+
         if (puzzle is not null)
+        {
             ValidatePuzzle(puzzle);
+            if (next?.Puzzle is not null)
+                CheckNewFinishesLeadOn(node.Puzzle, puzzle, next);
+        }
 
         node.Puzzle = puzzle;
+
+        if (previous is not null)
+            LineUpStart(previous.Puzzle, node.Puzzle);
+        if (next is not null)
+            LineUpStart(node.Puzzle, next.Puzzle);
+    }
+
+    // Only a Finish the edit adds is held to this, so that a puzzle made before the rule can still be edited.
+    private static void CheckNewFinishesLeadOn(Puzzle? before, Puzzle after, Node next)
+    {
+        var finishes = after.Objects.Where(o => o.Kind == PuzzleObjectKind.Finish).ToList();
+        var added = finishes
+            .Where(f => before is null || !before.Objects.Any(o => o.Kind == PuzzleObjectKind.Finish && o.Col == f.Col && o.Row == f.Row))
+            .ToList();
+        if (added.Count == 0)
+            return;
+
+        if (added.Any(f => PuzzleConnection.ExitDirectionOf(f.Col, f.Row) is null))
+            throw new InvalidOperationException($"This part leads on to '{next.Card.HeadingText}', so its Finish has to be on an edge of the board, not a corner.");
+        if (finishes.Count > 1)
+            throw new InvalidOperationException($"This part leads on to '{next.Card.HeadingText}', so it can only have one Finish.");
+    }
+
+    // Moves a part's Start to where the ship comes in from the part before, unless something's in the way of it.
+    private static void LineUpStart(Puzzle? before, Puzzle? after)
+    {
+        if (after is null || PuzzleConnection.EntranceAfter(before) is not { } entrance)
+            return;
+        if (PuzzleConnection.BlockingEntrance(after, entrance) is not null)
+            return;
+
+        var start = after.Objects.FirstOrDefault(o => o.Kind == PuzzleObjectKind.Start);
+        if (start is null)
+            after.Objects.Add(start = new PuzzleObject { Kind = PuzzleObjectKind.Start });
+        (start.Col, start.Row) = entrance;
+    }
+
+    /// <summary>
+    /// The part played just before this one: its parent, if it's that parent's first child. A location's parts
+    /// are played in order down the tree, so a later sibling has no single part before it to connect to.
+    /// </summary>
+    public static Node? PreviousPart(IEnumerable<Node> nodes, Node node)
+    {
+        foreach (var candidate in nodes)
+        {
+            if (candidate.Children.FirstOrDefault() == node)
+                return candidate;
+            if (PreviousPart(candidate.Children, node) is { } found)
+                return found;
+        }
+        return null;
     }
 
     public static void ValidatePuzzle(Puzzle puzzle)

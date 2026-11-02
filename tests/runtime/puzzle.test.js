@@ -783,3 +783,37 @@ test('an object moved by a Rotator tile glides by the Rotator\'s clock, not the 
   assert.equal(leftmost({ along: 0, rotatorAlong: 0.5 }), 36 + 1);
   assert.equal(leftmost({ along: 0.5, rotatorAlong: 1 }), 48 + 1);
 });
+
+// ---------- connected boards ----------
+
+const { exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+
+test('a square leads off the board only on an edge, not a corner or the middle', () => {
+  assert.equal(exitDirectionOf(at(0, 4)), 'Left');
+  assert.equal(exitDirectionOf(at(9, 4)), 'Right');
+  assert.equal(exitDirectionOf(at(4, 0)), 'Up');
+  assert.equal(exitDirectionOf(at(4, 9)), 'Down');
+  for (const corner of [at(0, 0), at(9, 0), at(0, 9), at(9, 9)]) assert.equal(exitDirectionOf(corner), null);
+  assert.equal(exitDirectionOf(at(4, 4)), null);
+});
+
+test('the next board is entered directly across, on the opposite edge', () => {
+  assert.deepEqual(entranceFrom(at(0, 4)), at(9, 4));
+  assert.deepEqual(entranceFrom(at(9, 2)), at(0, 2));
+  assert.deepEqual(entranceFrom(at(3, 0)), at(3, 9));
+  assert.deepEqual(entranceFrom(at(6, 9)), at(6, 0));
+  assert.equal(entranceFrom(at(0, 0)), null);
+});
+
+test('a puzzle leads on only with exactly one Finish, on an edge', () => {
+  assert.deepEqual(entranceAfter({ objects: [obj('Finish', 6, 9)] }), at(6, 0));
+  assert.equal(entranceAfter({ objects: [obj('Finish', 6, 9), obj('Finish', 0, 3)] }), null);
+  assert.equal(entranceAfter({ objects: [obj('Finish', 6, 6)] }), null);
+  assert.equal(entranceAfter(null), null);
+});
+
+test('only an object blocks an entrance, not a floor tile or Start', () => {
+  assert.equal(blockingEntrance([obj('Stream', 1, 1, { direction: 'Up' }), obj('Start', 1, 1)], at(1, 1)), null);
+  assert.equal(blockingEntrance([obj('Wall', 1, 1)], at(1, 1)).kind, 'Wall');
+  assert.equal(blockingEntrance([obj('Wall', 2, 1)], at(1, 1)), null);
+});
