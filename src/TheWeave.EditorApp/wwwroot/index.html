@@ -114,6 +114,12 @@
         <div id="pe-board">
           <img id="pe-art" draggable="false" alt="">
           <div id="pe-grid"></div>
+          <div id="pe-edge-ring" hidden>
+            <div class="pe-edge" style="left: var(--pe-tile); top: 0; right: var(--pe-tile); height: var(--pe-tile);"></div>
+            <div class="pe-edge" style="left: var(--pe-tile); bottom: 0; right: var(--pe-tile); height: var(--pe-tile);"></div>
+            <div class="pe-edge" style="left: 0; top: var(--pe-tile); bottom: var(--pe-tile); width: var(--pe-tile);"></div>
+            <div class="pe-edge" style="right: 0; top: var(--pe-tile); bottom: var(--pe-tile); width: var(--pe-tile);"></div>
+          </div>
           <canvas id="pe-canvas" width="240" height="240"></canvas>
         </div>
       </div>

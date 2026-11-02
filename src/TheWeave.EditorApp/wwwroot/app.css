@@ -719,6 +719,23 @@ main.behind-puzzle-editor {
 }
 
 /* Scaled up exactly as the art is, so that their pixels line up. */
+/* Where a Finish can go, in a part that leads on to the next - see puzzleEditor.js's applyPuzzleTool. */
+#pe-edge-ring {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#pe-edge-ring[hidden] {
+  display: none;
+}
+
+.pe-edge {
+  position: absolute;
+  background: rgba(212, 188, 147, 0.22);
+  box-shadow: inset 0 0 0 2px rgba(212, 188, 147, 0.6);
+}
+
 #pe-canvas {
   cursor: crosshair;
   touch-action: none;

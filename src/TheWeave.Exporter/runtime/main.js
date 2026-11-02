@@ -48,6 +48,9 @@ let boardRotatorActiveMs = 0;
 let boardRotatorGlideMs = 0;
 let boardRotatorClockMs = 0;
 let boardSolvedMs = null; // how long ago it was solved, while pausing there before returning to Track Focus
+// While one part's board scrolls across to the next's: the two slide layers, the edge it's crossing, and how
+// far through - see startBoardScroll.
+let boardScroll = null;
 let activeNode = null;   // the current track: activeRoot, or the chain member Track Focus is on
 let activeRoot = null;   // the top-level node the ship is currently within range of
 let chainIndex = 0;      // activeNode's position within activeRoot's chain
@@ -1374,21 +1377,31 @@ function renderTrackFocus(){
     backdrop.src = cover.src;
     trackFocusEl.appendChild(backdrop);
 
+    // The art and its board go together in one layer, which slides out of the frame when moving on to the
+    // next part's board - see startBoardScroll. Styled by class rather than id, because the layer sliding
+    // out keeps its look but gives up its ids to the one sliding in.
     let frame = document.createElement('div');
     frame.id = 'trackFocusArt';
 
+    let slide = document.createElement('div');
+    slide.id = 'trackFocusArtSlide';
+    slide.className = 'trackFocusArtSlide';
+    frame.appendChild(slide);
+
     let art = document.createElement('img');
     art.src = cover.src;
-    frame.appendChild(art);
+    slide.appendChild(art);
 
     // Where the 10x10 board laid over the art goes, sized to exactly match it - see startBoardGame,
     // and updateTrackFocusScale for the tile size it gets to work with.
     let board = document.createElement('div');
     board.id = 'trackFocusBoard';
+    board.className = 'trackFocusBoard';
     if (boardMover) {
       if (boardGame) {
         boardObjectsCanvas = document.createElement('canvas');
         boardObjectsCanvas.id = 'trackFocusBoardObjects';
+        boardObjectsCanvas.className = 'trackFocusBoardObjects';
         boardObjectsCanvas.width = WeavePuzzle.ART_PX;
         boardObjectsCanvas.height = WeavePuzzle.ART_PX;
         boardObjectsImage = boardObjectsCanvas.getContext('2d').createImageData(WeavePuzzle.ART_PX, WeavePuzzle.ART_PX);
@@ -1397,7 +1410,7 @@ function renderTrackFocus(){
       board.appendChild(boardContrails.canvas);
       board.appendChild(buildBoardShip());
     }
-    frame.appendChild(board);
+    slide.appendChild(board);
     if (lockedBy) frame.appendChild(buildArtLabel('Locked'));
 
     content.appendChild(frame);
@@ -1545,8 +1558,11 @@ function updateTrackFocusScale(){
 // matches the art's pixel size. A track with a puzzle adds its rules to that - see buildBoardGame.
 const BOARD_STEP_MS = 180;
 // How long something on a Stream or Rotator tile takes to move a square, and how long a solved puzzle stays
-// on screen.
+// on screen. One that leads on to the next part's board only rests a moment before scrolling across to it.
 const BOARD_STREAM_TICK_MS = 360;
+const BOARD_SCROLL_DELAY_MS = 150;
+const BOARD_SCROLL_MS = 600;
+const BOARD_SCROLL_DELTAS = { Up: { x: 0, y: -1 }, Down: { x: 0, y: 1 }, Left: { x: -1, y: 0 }, Right: { x: 1, y: 0 } };
 const BOARD_ROTATOR_TICK_MS = 1000;
 const BOARD_SOLVED_PAUSE_MS = 800;
 // img/ui/pilot-ship.png's own size.
@@ -1562,8 +1578,9 @@ function startBoardGame(){
   renderBoardShip();
 }
 
-// Everything that starts fresh, whether that's starting the board or restarting it.
-function buildBoardGame(){
+// Everything that starts fresh, whether that's starting the board or restarting it. facing is the way the ship
+// starts out facing, if not up.
+function buildBoardGame(facing){
   let puzzle = nodeMeta.get(activeNode).puzzle;
   boardGame = puzzle ? WeavePuzzle.createPuzzleGame(puzzle) : null;
   boardStreamMs = 0;
@@ -1571,6 +1588,7 @@ function buildBoardGame(){
   boardRotatorGlideMs = BOARD_ROTATOR_TICK_MS;
   boardRotatorClockMs = 0;
   boardSolvedMs = null;
+  boardScroll = null;
 
   boardMover = WeaveSokoban.createMover(
     WeaveSokoban.createGrid({
@@ -1582,6 +1600,7 @@ function buildBoardGame(){
     {
       cell: boardGame ? boardGame.start : WeavePuzzle.DEFAULT_START,
       stepMs: BOARD_STEP_MS,
+      facing: facing ?? 'up',
       canEnter: boardGame ? boardGame.canEnter : undefined,
       onArrive: boardGame ? (cell) => {
         onBoardEvent(boardGame.shipArrivedAt(cell));
@@ -1619,35 +1638,96 @@ function onBoardEvent(event){
   }
   if (event.finished) {
     markPuzzleSolved(nodeMeta.get(activeNode).puzzle);
-    boardSolvedMs = 0;
     releaseDirections();
-    document.getElementById('trackFocusArt').appendChild(buildArtLabel('Solved'));
+    if (connectedExit()) {
+      boardSolvedMs = BOARD_SOLVED_PAUSE_MS - BOARD_SCROLL_DELAY_MS;
+    } else {
+      boardSolvedMs = 0;
+      document.getElementById('trackFocusArt').appendChild(buildArtLabel('Solved'));
+    }
   }
 }
 
 // Moves on from a solved board, like the next level of a game: straight into the next part's puzzle if it
-// has one, or back to Track Focus to show what was unlocked if it doesn't. The last part just stays put.
+// has one, or back to Track Focus to show what was unlocked if it doesn't. The last part just stays put. A
+// board that's connected to the next scrolls across to it, as if they were side by side.
 function finishBoardLevel(){
   let chain = nodeMeta.get(activeRoot).chain;
   let next = chain[chainIndex + 1];
+  let exit = connectedExit();
   if (next) {
     chainIndex++;
     activeNode = next;
   }
 
   if (next && nodeMeta.get(next).puzzle) {
+    let leaving = exit ? document.getElementById('trackFocusArtSlide') : null;
     releaseDirections();
-    buildBoardGame();
+    buildBoardGame(exit?.toLowerCase());
     renderTrackFocus();
+    if (leaving) startBoardScroll(leaving, exit);
     renderBoardShip();
   } else {
     leaveBoardGame();
   }
 }
 
+// The edge this part's board leads off to the next part's, if they're connected: its one Finish is on an edge,
+// and the next part's Start is directly across from it. Otherwise null, and moving on is a plain jump.
+function connectedExit(){
+  let next = nodeMeta.get(activeRoot).chain[chainIndex + 1];
+  let here = nodeMeta.get(activeNode).puzzle;
+  let there = next ? nodeMeta.get(next).puzzle : null;
+  let entrance = WeavePuzzle.entranceAfter(here);
+  let start = there?.objects.find(object => object.kind === 'Start');
+  if (!entrance || !start || start.col !== entrance.col || start.row !== entrance.row) return null;
+  return WeavePuzzle.exitDirectionOf(here.objects.find(object => object.kind === 'Finish'));
+}
+
+// Slides the board just left out of the frame, and the next part's in behind it from the far side, like
+// walking between map screens. The ship crosses the gap onto the entrance as they go. The leaving layer is
+// left as it was, a still picture of the moment it was finished, but without its ship, which is now the one
+// crossing over.
+function startBoardScroll(leaving, exit){
+  leaving.querySelector('.trackFocusBoardShip')?.remove();
+  for (const element of [leaving, ...leaving.querySelectorAll('[id]')]) element.removeAttribute('id');
+  document.getElementById('trackFocusArt').prepend(leaving);
+  boardScroll = { leaving, entering: document.getElementById('trackFocusArtSlide'), exit, ms: 0 };
+  positionBoardScroll();
+}
+
+function boardScrollProgress(){
+  let t = Math.min(1, boardScroll.ms / BOARD_SCROLL_MS);
+  return t * t * (3 - 2 * t);
+}
+
+function positionBoardScroll(){
+  let eased = boardScrollProgress();
+  let delta = BOARD_SCROLL_DELTAS[boardScroll.exit];
+  boardScroll.leaving.style.transform = `translate(${-delta.x * eased * 100}%, ${-delta.y * eased * 100}%)`;
+  boardScroll.entering.style.transform = `translate(${delta.x * (1 - eased) * 100}%, ${delta.y * (1 - eased) * 100}%)`;
+}
+
+// Nothing else moves while the boards scroll, and whatever's pressed during it is let go of at the end.
+function updateBoardScroll(dtMs){
+  boardScroll.ms += dtMs;
+  positionBoardScroll();
+  renderBoardShip();
+  drawBoardObjects();
+
+  if (boardScroll.ms >= BOARD_SCROLL_MS) {
+    boardScroll.leaving.remove();
+    boardScroll.entering.style.transform = '';
+    boardScroll = null;
+    releaseDirections();
+    renderBoardShip();
+  }
+}
+
 function leaveBoardGame(){
   if (!boardMover) return;
 
+  boardScroll = null;
   releaseDirections();
   boardMover = null;
   boardShipEl = null;
@@ -1662,12 +1742,18 @@ function leaveBoardGame(){
 function buildBoardShip(){
   boardShipEl = document.createElement('img');
   boardShipEl.id = 'trackFocusBoardShip';
+  boardShipEl.className = 'trackFocusBoardShip';
   boardShipEl.src = 'img/ui/pilot-ship.png';
   return boardShipEl;
 }
 
 function updateBoardGame(dtMs){
   if (!boardMover) return;
+
+  if (boardScroll) {
+    updateBoardScroll(dtMs);
+    return;
+  }
 
   // Holds still for a moment on a solved board, then moves on - see finishBoardLevel.
   if (boardSolvedMs !== null) {
@@ -1753,6 +1839,12 @@ function updateBoardContrails(dtMs){
 
 function renderBoardShip(){
   let position = boardMover.position;
+  // Crossing the gap from the last board's Finish onto this one's entrance, while the boards scroll.
+  if (boardScroll) {
+    let delta = BOARD_SCROLL_DELTAS[boardScroll.exit];
+    let behind = (1 - boardScrollProgress()) * BOARD_TILE_PX;
+    position = { x: position.x - delta.x * behind, y: position.y - delta.y * behind };
+  }
   let width = Math.round(BOARD_SHIP_WIDTH * trackFocusScale);
   let height = Math.round(BOARD_SHIP_HEIGHT * trackFocusScale);
   boardShipEl.style.width = width + "px";

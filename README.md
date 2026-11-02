@@ -77,6 +77,9 @@ Neocities, replacing hand-authoring HTML per location.
   Rotator Switch, and the ship can walk over them freely. Any object but Finish can start out Invisible,
   behaving exactly the same but unseen until the ship lights a Lantern within reach of it. A lit Lantern
   stays lit, and reveals a circle reaching 3 squares in every direction.
+- A location's puzzle boards connect edge to edge, like the map's screens: a part that leads on to another
+  puzzle has one Finish, on an edge, and the next part's ship comes in directly across from it, its Start set
+  to match automatically. Finishing scrolls the album art and board across to the next.
 - A location's parts play like game levels. Each part stays locked until the puzzle of every part before
   it is solved: X can still step to it, but Track Focus only shows its dimmed art and the word Locked, and
   it can't be played or heard. Reaching a Finish remembers that in the visitor's browser and moves straight

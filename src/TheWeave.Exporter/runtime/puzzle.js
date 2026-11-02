@@ -59,6 +59,46 @@
     return objects.filter(other => other !== top);
   }
 
+  // ---------- connected boards ----------
+
+  // A location's parts connect edge to edge, like screens of a map: a Finish on an edge leads off it, and the
+  // ship comes in on the opposite edge of the next part's board, directly across. Shared with
+  // TheWeave.Core's PuzzleConnection.
+
+  // Which way a square leads off the board, or null in the middle, or in a corner, which would point two ways.
+  function exitDirectionOf(cell){
+    let last = BOARD_SIZE - 1;
+    let onSide = cell.col === 0 || cell.col === last;
+    let onTopOrBottom = cell.row === 0 || cell.row === last;
+    if (onSide === onTopOrBottom) return null;
+    if (onSide) return cell.col === 0 ? 'Left' : 'Right';
+    return cell.row === 0 ? 'Up' : 'Down';
+  }
+
+  // Where the ship comes in on the next board after leaving through an edge square.
+  function entranceFrom(cell){
+    let last = BOARD_SIZE - 1;
+    switch (exitDirectionOf(cell)) {
+      case 'Left': return { col: last, row: cell.row };
+      case 'Right': return { col: 0, row: cell.row };
+      case 'Up': return { col: cell.col, row: last };
+      case 'Down': return { col: cell.col, row: 0 };
+    }
+    return null;
+  }
+
+  // Where the ship comes in on the board after this puzzle's, or null if it doesn't lead on: it needs exactly
+  // one Finish, on an edge.
+  function entranceAfter(puzzle){
+    let finishes = (puzzle?.objects ?? []).filter(object => object.kind === 'Finish');
+    return finishes.length === 1 ? entranceFrom(finishes[0]) : null;
+  }
+
+  // Whatever is in the way of the ship coming in at a square: anything but a floor tile or Start.
+  function blockingEntrance(objects, entrance){
+    return objects.find(object => isAt(object, entrance) && !isFloor(object) && object.kind !== 'Start') ?? null;
+  }
+
   // The letter a new object most likely wants: a Teleporter's unfinished pair, a Gate's missing Switch,
   // or otherwise the first letter that kind hasn't used.
   function suggestLetter(objects, kind){
@@ -798,5 +838,5 @@
     }
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, TILE_PX, ART_PX, placeObject, eraseObject, suggestLetter, pickPalette, pickTextures, renderBoard, hasFinish, createPuzzleGame };
+  return { BOARD_SIZE, DEFAULT_START, LETTERS, TILE_PX, ART_PX, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, pickPalette, pickTextures, renderBoard, hasFinish, createPuzzleGame };
 });

@@ -378,6 +378,7 @@ h3 {
 /* Only the art frame's size is ever in play - flex-shrink would otherwise squash it off its
    exact tile size on a narrow screen. */
 #trackFocusArt {
+  overflow: hidden;
   position: relative;
   flex: none;
   margin-top: var(--focus-top);
@@ -386,7 +387,16 @@ h3 {
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
 }
 
-#trackFocusArt > img {
+/* The art and its board, together - see main.js's renderTrackFocus and startBoardScroll. */
+.trackFocusArtSlide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.trackFocusArtSlide > img {
   position: absolute;
   top: 0;
   left: 0;
@@ -396,7 +406,7 @@ h3 {
 }
 
 /* A part that's still locked, with only a hint of its art showing - see main.js's partLockedBy. */
-#trackFocus.partLocked #trackFocusArt > img {
+#trackFocus.partLocked .trackFocusArtSlide > img {
   filter: brightness(0.2) saturate(0.25);
 }
 
@@ -419,7 +429,7 @@ h3 {
   text-shadow: 0 0 0.15em rgb(17, 17, 17), 0 0.05em 0.1em rgb(17, 17, 17);
 }
 
-#trackFocusBoard {
+.trackFocusBoard {
   position: absolute;
   top: 0;
   left: 0;
@@ -428,31 +438,31 @@ h3 {
 }
 
 /* Dulled while the board is being played, so the ship and anything else on it stands out. */
-#trackFocus.boardPlaying #trackFocusArt > img {
+#trackFocus.boardPlaying .trackFocusArtSlide > img {
   filter: brightness(0.65) saturate(0.7);
 }
 
 /* The board's squares, one source pixel wide, showing only once it's being played. */
-#trackFocus.boardPlaying #trackFocusBoard {
+#trackFocus.boardPlaying .trackFocusBoard {
   background:
     linear-gradient(to right, rgba(255, 255, 255, 0.3) var(--focus-line), transparent var(--focus-line)) 0 0 / var(--focus-cell) var(--focus-cell),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.3) var(--focus-line), transparent var(--focus-line)) 0 0 / var(--focus-cell) var(--focus-cell);
 }
 
-#trackFocusBoard .contrails, #trackFocusBoardObjects {
+.trackFocusBoard .contrails, .trackFocusBoardObjects {
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
 }
 
-/* Scaled up exactly as the art is - see #trackFocusArt > img. */
-#trackFocusBoardObjects {
+/* Scaled up exactly as the art is - see .trackFocusArtSlide > img. */
+.trackFocusBoardObjects {
   image-rendering: pixelated;
 }
 
 /* Drawn at the art's own pixel size - see main.js's renderBoardShip, which positions it. */
-#trackFocusBoardShip {
+.trackFocusBoardShip {
   image-rendering: pixelated;
   transform-origin: center center;
 }

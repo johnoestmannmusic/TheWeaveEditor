@@ -192,6 +192,151 @@ public class ProjectEditingTests
         Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyPuzzleEdit(new Node(), puzzle));
     }
 
+    private static PuzzleObject At(PuzzleObjectKind kind, int col, int row) => new() { Kind = kind, Col = col, Row = row };
+
+    // A location of three parts, each with a puzzle, and the page it's on.
+    private static (Page Page, Node First, Node Second, Node Third) MakeConnectedParts()
+    {
+        var third = new Node { Id = "third", Card = new Card { HeadingText = "Third" }, Puzzle = MakePuzzle(At(PuzzleObjectKind.Start, 5, 5), At(PuzzleObjectKind.Finish, 3, 3)) };
+        var second = new Node { Id = "second", Card = new Card { HeadingText = "Second" }, Puzzle = MakePuzzle(At(PuzzleObjectKind.Start, 5, 5), At(PuzzleObjectKind.Finish, 9, 4)), Children = { third } };
+        var first = new Node { Id = "first", Card = new Card { HeadingText = "First" }, Puzzle = MakePuzzle(At(PuzzleObjectKind.Start, 5, 9), At(PuzzleObjectKind.Finish, 3, 0)), Children = { second } };
+        return (new Page { Id = "ouros", Nodes = { first } }, first, second, third);
+    }
+
+    private static (int, int) StartOf(Node node)
+    {
+        var start = node.Puzzle!.Objects.Single(o => o.Kind == PuzzleObjectKind.Start);
+        return (start.Col, start.Row);
+    }
+
+    [Theory]
+    [InlineData(0, 4, PuzzleDirection.Left)]
+    [InlineData(9, 4, PuzzleDirection.Right)]
+    [InlineData(4, 0, PuzzleDirection.Up)]
+    [InlineData(4, 9, PuzzleDirection.Down)]
+    [InlineData(0, 0, null)]
+    [InlineData(9, 9, null)]
+    [InlineData(0, 9, null)]
+    [InlineData(4, 4, null)]
+    public void ExitDirectionOf_IsAnEdgeOnly_NotACornerOrTheMiddle(int col, int row, PuzzleDirection? expected)
+    {
+        Assert.Equal(expected, PuzzleConnection.ExitDirectionOf(col, row));
+    }
+
+    [Theory]
+    [InlineData(0, 4, 9, 4)]
+    [InlineData(9, 4, 0, 4)]
+    [InlineData(4, 0, 4, 9)]
+    [InlineData(4, 9, 4, 0)]
+    public void EntranceFrom_IsDirectlyAcrossOnTheOppositeEdge(int col, int row, int toCol, int toRow)
+    {
+        Assert.Equal((toCol, toRow), PuzzleConnection.EntranceFrom(col, row, PuzzleConnection.ExitDirectionOf(col, row)!.Value));
+    }
+
+    [Fact]
+    public void ApplyPuzzleEdit_MovingTheFinish_MovesTheNextPartsStartToMatch()
+    {
+        var (page, first, second, _) = MakeConnectedParts();
+
+        ProjectEditing.ApplyPuzzleEdit(first, MakePuzzle(At(PuzzleObjectKind.Start, 5, 9), At(PuzzleObjectKind.Finish, 0, 6)), page);
+
+        Assert.Equal((9, 6), StartOf(second));
+    }
+
+    [Fact]
+    public void ApplyPuzzleEdit_EditingAFollowingPart_KeepsItsStartWhereTheShipComesIn()
+    {
+        var (page, first, second, _) = MakeConnectedParts();
+        ProjectEditing.ApplyPuzzleEdit(first, first.Puzzle, page);
+        Assert.Equal((3, 9), StartOf(second));
+
+        ProjectEditing.ApplyPuzzleEdit(second, MakePuzzle(At(PuzzleObjectKind.Start, 1, 1), At(PuzzleObjectKind.Finish, 9, 4), At(PuzzleObjectKind.Wall, 2, 2)), page);
+
+        Assert.Equal((3, 9), StartOf(second));
+        Assert.Equal((0, 4), StartOf(second.Children[0]));
+    }
+
+    [Fact]
+    public void ApplyPuzzleEdit_ABlockedEntrance_LeavesTheStartAndTheBlockAlone()
+    {
+        var (page, first, second, _) = MakeConnectedParts();
+        second.Puzzle!.Objects.Add(At(PuzzleObjectKind.Wall, 3, 9));
+
+        ProjectEditing.ApplyPuzzleEdit(first, first.Puzzle, page);
+
+        Assert.Equal((5, 5), StartOf(second));
+        Assert.Contains(second.Puzzle.Objects, o => o.Kind == PuzzleObjectKind.Wall && o.Col == 3 && o.Row == 9);
+    }
+
+    [Fact]
+    public void ApplyPuzzleEdit_AFloorTileOnTheEntrance_IsNoBlock()
+    {
+        var (page, first, second, _) = MakeConnectedParts();
+        second.Puzzle!.Objects.Add(new PuzzleObject { Kind = PuzzleObjectKind.Stream, Col = 3, Row = 9, Direction = PuzzleDirection.Up });
+
+        ProjectEditing.ApplyPuzzleEdit(first, first.Puzzle, page);
+
+        Assert.Equal((3, 9), StartOf(second));
+    }
+
+    [Theory]
+    [InlineData(4, 4)]
+    [InlineData(0, 0)]
+    public void ApplyPuzzleEdit_PartThatLeadsOn_RejectsANewFinishOffAnEdge(int col, int row)
+    {
+        var (page, first, _, _) = MakeConnectedParts();
+        var before = first.Puzzle;
+
+        var e = Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyPuzzleEdit(first, MakePuzzle(At(PuzzleObjectKind.Start, 5, 9), At(PuzzleObjectKind.Finish, col, row)), page));
+
+        Assert.Contains("on an edge", e.Message);
+        Assert.Same(before, first.Puzzle);
+    }
+
+    [Fact]
+    public void ApplyPuzzleEdit_PartThatLeadsOn_RejectsASecondFinish()
+    {
+        var (page, first, _, _) = MakeConnectedParts();
+
+        var e = Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyPuzzleEdit(first, MakePuzzle(At(PuzzleObjectKind.Finish, 3, 0), At(PuzzleObjectKind.Finish, 9, 3)), page));
+
+        Assert.Contains("only have one Finish", e.Message);
+    }
+
+    [Fact]
+    public void ApplyPuzzleEdit_TheLastPart_CanPutItsFinishAnywhere()
+    {
+        var (page, _, _, third) = MakeConnectedParts();
+
+        ProjectEditing.ApplyPuzzleEdit(third, MakePuzzle(At(PuzzleObjectKind.Finish, 4, 4), At(PuzzleObjectKind.Finish, 6, 6)), page);
+
+        Assert.Equal(2, third.Puzzle!.Objects.Count(o => o.Kind == PuzzleObjectKind.Finish));
+    }
+
+    [Fact]
+    public void ApplyPuzzleEdit_AnOldFinishOffAnEdge_StillLetsTheRestBeEdited()
+    {
+        var (page, first, _, _) = MakeConnectedParts();
+        first.Puzzle = MakePuzzle(At(PuzzleObjectKind.Finish, 4, 4));
+
+        ProjectEditing.ApplyPuzzleEdit(first, MakePuzzle(At(PuzzleObjectKind.Finish, 4, 4), At(PuzzleObjectKind.Wall, 1, 1)), page);
+
+        Assert.Equal(2, first.Puzzle!.Objects.Count);
+    }
+
+    [Fact]
+    public void PreviousPart_IsTheParent_OnlyForItsFirstChild()
+    {
+        var (page, first, second, third) = MakeConnectedParts();
+        var sibling = new Node { Id = "sibling" };
+        first.Children.Add(sibling);
+
+        Assert.Null(ProjectEditing.PreviousPart(page.Nodes, first));
+        Assert.Same(first, ProjectEditing.PreviousPart(page.Nodes, second));
+        Assert.Same(second, ProjectEditing.PreviousPart(page.Nodes, third));
+        Assert.Null(ProjectEditing.PreviousPart(page.Nodes, sibling));
+    }
+
     [Fact]
     public void ApplyNodeEdit_LeavesThePuzzleAlone()
     {
