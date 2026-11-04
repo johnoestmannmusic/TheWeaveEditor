@@ -420,21 +420,35 @@ const pixelAt = (image, x, y) => { let i = (y * ART_PX + x) * 4; return [...imag
 const colorsIn = (bytes) => { let set = new Set(); for (let i = 0; i < bytes.length; i += 4) if (bytes[i + 3]) set.add(`${bytes[i]},${bytes[i + 1]},${bytes[i + 2]}`); return set; };
 const tile = (image, col, row) => { let out = []; for (let y = row * TILE_PX; y < (row + 1) * TILE_PX; y++) for (let x = col * TILE_PX; x < (col + 1) * TILE_PX; x++) out.push(...pixelAt(image, x, y)); return out.join(); };
 
-test('a texture has a shade per pixel, and every shade is an exact colour from the art', () => {
+test('a texture has 4 shades and a grain, and every shade is an exact colour from the art', () => {
   let { art, look } = artLook();
   let inArt = colorsIn(art);
   for (const [role, texture] of Object.entries(look.textures)) {
-    assert.equal(texture.pixels.length, TILE_PX * TILE_PX, role);
-    assert.match(texture.pixels, /^[0-9]+$/);
+    assert.equal(texture.grain.length, TILE_PX * TILE_PX, role);
+    assert.match(texture.grain, /^[0-9a-z]+$/);
+    assert.equal(texture.ramp.length, 4, role);
     for (const shade of texture.ramp) assert.ok(inArt.has(toRgb(shade).join(',')), `${role}: ${shade}`);
-    assert.ok(Math.max(...[...texture.pixels].map(Number)) < texture.ramp.length, role);
-    assert.ok(texture.ramp.includes(look.palette[role]), `${role} keeps its own colour`);
+    assert.equal(texture.ramp[2], look.palette[role], `${role} keeps its own colour as its main shade`);
+    let lightness = texture.ramp.map(hex => { let [r, g, b] = toRgb(hex); return 0.2126 * r + 0.7152 * g + 0.0722 * b; });
+    assert.ok(lightness.every((value, i) => i === 0 || value >= lightness[i - 1]), `${role} is darkest first`);
+    assert.match(texture.pixels, /^[0-3]{576}$/, `${role} keeps its Standard look's pattern`);
   }
 });
 
-test('art with shades gives a texture that really varies', () => {
+test('a colour\'s standard mix draws exactly its Standard look\'s pattern', () => {
   let { look } = artLook();
-  assert.ok(Object.values(look.textures).some(t => new Set(t.pixels).size > 1));
+  let { colors, pixels } = mixTexture(look, standardMix('wall'));
+  let hexOf = (c) => '#' + [c.r, c.g, c.b].map(v => v.toString(16).padStart(2, '0')).join('');
+  assert.deepEqual(pixels.map(index => hexOf(colors[index])), [...look.textures.wall.pixels].map(digit => look.textures.wall.ramp[digit]));
+});
+
+test('art with shades gives a grain that really varies', () => {
+  let { look } = artLook();
+  assert.ok(Object.values(look.textures).some(t => new Set(t.grain).size > 1));
+});
+
+test('the same art always gives the same textures', () => {
+  assert.deepEqual(artLook().look.textures, artLook().look.textures);
 });
 
 test('art with one colour gives a flat texture, without failing', () => {
@@ -442,8 +456,8 @@ test('art with one colour gives a flat texture, without failing', () => {
   for (let i = 0; i < art.length; i += 4) art.set([50, 60, 70, 255], i);
   let palette = pickPalette(art);
   let textures = pickTextures(art, ART_PX, ART_PX, palette);
-  assert.deepEqual(textures.wall.ramp, ['#323c46']);
-  assert.equal(new Set(textures.wall.pixels).size, 1);
+  assert.deepEqual(textures.wall.ramp, ['#323c46', '#323c46', '#323c46', '#323c46']);
+  assert.equal(new Set(textures.wall.grain).size, 1);
 });
 
 test('the board has only exact colours and no see-through blends, so it stays pixel art', () => {
@@ -546,6 +560,126 @@ test('a puzzle saved before textures still draws, in its plain colours', () => {
   let image = blank();
   renderBoard(image, [obj('Wall', 0, 0)], { palette });
   assert.deepEqual(pixelAt(image, 12, 12), [0x11, 0x22, 0x33, 255]);
+});
+
+// ---------- drawings and mixes ----------
+
+const { standardDrawing, standardMix, mixTexture } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+
+const filled = (paint) => paint.repeat(TILE_PX * TILE_PX);
+const drawing = (id, kind, pixels, mix, extra = {}) => ({ id, kind, name: id, pixels, mix, ...extra });
+const hexAt = (image, x, y) => '#' + pixelAt(image, x, y).slice(0, 3).map(v => v.toString(16).padStart(2, '0')).join('');
+
+test('a mix covers each colour\'s percentage of the square, to within a pixel', () => {
+  let { look } = artLook();
+  let mix = [{ role: 'wall', shade: 2, percent: 60 }, { role: 'teleporter', shade: 2, percent: 25 }, { role: 'outline', shade: 0, percent: 15 }];
+  let { colors, pixels } = mixTexture(look, mix);
+  assert.equal(colors.length, 3);
+  let counts = colors.map((color, index) => pixels.filter(p => p === index).length);
+  let wanted = { wall: 0.6, teleporter: 0.25, outline: 0.15 };
+  let hexOf = (c) => '#' + [c.r, c.g, c.b].map(v => v.toString(16).padStart(2, '0')).join('');
+  let colorOf = { wall: look.textures.wall.ramp[2], teleporter: look.textures.teleporter.ramp[2], outline: look.palette.outline };
+  for (const [role, share] of Object.entries(wanted)) {
+    let index = colors.findIndex(c => hexOf(c) === colorOf[role]);
+    assert.ok(Math.abs(counts[index] - share * TILE_PX * TILE_PX) <= 1, `${role}: ${counts[index]}`);
+  }
+});
+
+test('a mix\'s colours come darkest first, laid out in the grain: darker grain, darker colour', () => {
+  let { look } = artLook();
+  let { colors, pixels } = mixTexture(look, [{ role: 'teleporter', shade: 2, percent: 70 }, { role: 'outline', shade: 0, percent: 30 }]);
+  assert.deepEqual([colors[0].r, colors[0].g, colors[0].b], toRgb(look.palette.outline));
+  let grain = [...look.textures.teleporter.grain].map(d => parseInt(d, 36));
+  for (let a = 0; a < grain.length; a++) {
+    for (let b = 0; b < grain.length; b++) if (grain[a] < grain[b]) assert.ok(pixels[a] <= pixels[b]);
+  }
+});
+
+test('a mix of only the outline and light colours, which have no grain, is flat in its main colour', () => {
+  let { look } = artLook();
+  let { colors, pixels, main } = mixTexture(look, [{ role: 'light', shade: 0, percent: 70 }, { role: 'outline', shade: 0, percent: 30 }]);
+  assert.deepEqual([colors[main].r, colors[main].g, colors[main].b], toRgb(look.palette.light));
+  assert.equal(new Set(pixels).size, 1);
+});
+
+test('percentages that don\'t add up to 100 are taken in proportion, and an empty mix still draws', () => {
+  let { look } = artLook();
+  let a = mixTexture(look, [{ role: 'wall', shade: 0, percent: 1 }, { role: 'wall', shade: 3, percent: 3 }]);
+  let b = mixTexture(look, [{ role: 'wall', shade: 0, percent: 25 }, { role: 'wall', shade: 3, percent: 75 }]);
+  assert.deepEqual(a.pixels, b.pixels);
+  assert.equal(mixTexture(look, []).colors.length, 1);
+});
+
+test('a Standard drawing is its kind\'s shape, outlined, in its standard mix, and a Gate has an open frame', () => {
+  for (const kind of ['Wall', 'Finish', 'Gate', 'Switch', 'Teleporter', 'Key', 'RotatorSwitch', 'Lantern']) {
+    let standard = standardDrawing(kind);
+    assert.equal(standard.id, kind);
+    assert.equal(standard.pixels.length, TILE_PX * TILE_PX);
+    assert.match(standard.pixels, /^[.OG]+$/);
+    assert.ok(standard.pixels.includes('G') && standard.pixels.includes('O'), kind);
+  }
+  assert.deepEqual(standardDrawing('Switch').mix, standardMix('gate'));
+  let gate = standardDrawing('Gate');
+  let middle = 12 * TILE_PX + 12;
+  assert.equal(gate.pixels[middle], 'G');
+  assert.equal(gate.openPixels[middle], '.');
+});
+
+test('a variant draws its own pixels and mix, and only for its own kind', () => {
+  let { look } = artLook();
+  let drawings = [drawing('w-solid', 'Wall', filled('1'), [{ role: 'key', shade: 2, percent: 100 }])];
+  let image = blank();
+  renderBoard(image, [obj('Wall', 0, 0, { variant: 'w-solid' }), obj('Wall', 1, 0), obj('Key', 2, 0, { variant: 'w-solid' })], { ...look, drawings });
+  assert.equal(hexAt(image, 0, 0), look.palette.key, 'the variant fills its whole square');
+  assert.equal(pixelAt(image, 24, 0)[3], 0, 'a Wall with no variant is still the Standard octagon');
+  let standardKey = blank();
+  renderBoard(standardKey, [obj('Key', 2, 0)], look);
+  assert.equal(tile(image, 2, 0), tile(standardKey, 2, 0), 'a Key can\'t use a Wall\'s drawing');
+});
+
+test('an unknown variant falls back to Standard', () => {
+  let { look } = artLook();
+  let a = blank(), b = blank();
+  renderBoard(a, [obj('Wall', 0, 0, { variant: 'gone' })], { ...look, drawings: [] });
+  renderBoard(b, [obj('Wall', 0, 0)], look);
+  assert.equal(tile(a, 0, 0), tile(b, 0, 0));
+});
+
+test('a redrawn Standard drawing is used by everything of its kind without a variant', () => {
+  let { look } = artLook();
+  let drawings = [drawing('Wall', 'Wall', filled('H'), standardMix('wall'))];
+  let image = blank();
+  renderBoard(image, [obj('Wall', 0, 0), obj('Wall', 1, 0)], { ...look, drawings });
+  assert.equal(hexAt(image, 0, 0), look.palette.light);
+  assert.equal(hexAt(image, 47, 23), look.palette.light);
+});
+
+test('an open Gate draws its drawing\'s open frame, and a de-activated Switch is still checkered over a drawing', () => {
+  let { look } = artLook();
+  let drawings = [
+    drawing('g', 'Gate', filled('3'), standardMix('gate'), { openPixels: filled('.').slice(0, -1) + 'O' }),
+    drawing('s', 'Switch', filled('3'), standardMix('gate')),
+  ];
+  let image = blank();
+  renderBoard(image, [obj('Gate', 0, 0, { letter: 'A', variant: 'g', open: true }), obj('Switch', 1, 0, { letter: 'A', variant: 's' })], { ...look, drawings }, { switchesActive: false });
+  assert.equal(pixelAt(image, 0, 0)[3], 0);
+  assert.equal(hexAt(image, 23, 23), look.palette.outline);
+  assert.equal(hexAt(image, 24, 0), look.palette.outline, 'a dimmed pixel');
+  assert.notEqual(hexAt(image, 25, 0), look.palette.outline, 'and the one beside it shows the drawing');
+});
+
+test('a texture saved before grains still draws, and in exactly its old pattern in its standard mix', () => {
+  let palette = { wall: '#808080', outline: '#000000', light: '#ffffff', key: '#ff0000' };
+  let pattern = Array.from({ length: TILE_PX * TILE_PX }, (_, i) => (i % 3 === 0 ? '0' : '1')).join('');
+  let look = { palette, textures: { wall: { ramp: ['#404040', '#808080'], pixels: pattern } } };
+  let image = blank();
+  renderBoard(image, [obj('Wall', 0, 0)], look);
+  // The octagon's middle, where both shades of the old pattern show.
+  assert.equal(hexAt(image, 12, 12), (12 * TILE_PX + 12) % 3 === 0 ? '#404040' : '#808080');
+  assert.equal(hexAt(image, 13, 12), (12 * TILE_PX + 13) % 3 === 0 ? '#404040' : '#808080');
+  let mixed = mixTexture(look, [{ role: 'wall', shade: 2, percent: 50 }, { role: 'key', shade: 2, percent: 50 }]);
+  assert.equal(mixed.colors.length, 2, 'and can still be mixed, its old pattern used as a coarse grain');
+  assert.equal(new Set(mixed.pixels).size, 2);
 });
 
 // ---------- Rotator Loops ----------

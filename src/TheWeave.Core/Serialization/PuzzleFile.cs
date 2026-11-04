@@ -5,9 +5,10 @@ using TheWeave.Core.Model;
 namespace TheWeave.Core.Serialization;
 
 /// <summary>
-/// A Sokoban puzzle's layout as a file of its own, for moving it from one track to another. Only what's on
-/// the board goes in: a puzzle's colours and textures come from its track's album art, so they're worked out
-/// again for whichever track it ends up on.
+/// A Sokoban puzzle's layout as a file of its own, for moving it from one track to another. What's on the
+/// board goes in, along with any drawings from the project's library its objects use, so it can go to another
+/// project too. A puzzle's colours and textures come from its track's album art, so they're worked out again
+/// for whichever track it ends up on.
 /// </summary>
 public static class PuzzleFile
 {
@@ -19,7 +20,10 @@ public static class PuzzleFile
         public string? Format { get; set; }
         public int Version { get; set; }
         public List<PuzzleObject>? Objects { get; set; }
+        public List<PuzzleDrawing>? Drawings { get; set; }
     }
+
+    public sealed record Layout(List<PuzzleObject> Objects, List<PuzzleDrawing> Drawings);
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -28,12 +32,22 @@ public static class PuzzleFile
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    public static string Serialize(Puzzle puzzle) =>
-        JsonSerializer.Serialize(new Contents { Format = FormatName, Version = CurrentVersion, Objects = puzzle.Objects }, Options);
+    /// <param name="library">The project's drawings, for the ones the puzzle's objects use.</param>
+    public static string Serialize(Puzzle puzzle, IEnumerable<PuzzleDrawing>? library = null)
+    {
+        var drawings = PuzzleDrawings.UsedBy(puzzle, library, includeStandard: false);
+        return JsonSerializer.Serialize(new Contents
+        {
+            Format = FormatName,
+            Version = CurrentVersion,
+            Objects = puzzle.Objects,
+            Drawings = drawings.Count > 0 ? drawings : null,
+        }, Options);
+    }
 
-    /// <returns>The objects in the file. They still need checking against the rules for a board.</returns>
+    /// <returns>The objects and drawings in the file. They still need checking against the rules for a board.</returns>
     /// <exception cref="InvalidDataException">The text isn't a puzzle file this version can read.</exception>
-    public static List<PuzzleObject> Parse(string json)
+    public static Layout Parse(string json)
     {
         Contents? contents;
         try
@@ -50,6 +64,6 @@ public static class PuzzleFile
         if (contents.Version > CurrentVersion)
             throw new InvalidDataException("This puzzle file was made by a newer version of the Editor.");
 
-        return contents.Objects ?? new List<PuzzleObject>();
+        return new Layout(contents.Objects ?? new List<PuzzleObject>(), contents.Drawings ?? new List<PuzzleDrawing>());
     }
 }

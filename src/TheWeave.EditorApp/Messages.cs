@@ -28,6 +28,12 @@ public sealed class EditorMessage
 
     /// <summary>Used only by "update-puzzle": NodeId's whole puzzle, or null to remove it.</summary>
     public Puzzle? Puzzle { get; set; }
+
+    /// <summary>
+    /// "update-puzzle-drawings": the project's whole new library of drawings. "update-puzzle": drawings a
+    /// puzzle file brought with it, to add to the library along with the puzzle.
+    /// </summary>
+    public List<PuzzleDrawing>? Drawings { get; set; }
 }
 
 public sealed class PageEditRequest

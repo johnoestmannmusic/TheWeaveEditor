@@ -47,12 +47,25 @@ public static class ProjectValidator
                 CheckAsset(page.SecondaryBackground.ImagePath, assetBasePath, "Secondary background image", page.Id, null, issues);
 
             foreach (var node in page.Nodes)
-                CheckNode(page, node, null, pageIds, assetBasePath, issues);
+                CheckNode(page, node, null, pageIds, assetBasePath, project.PuzzleDrawings, issues);
 
             CheckGridPlacement(project, page, issues);
 
             foreach (var effect in page.Effects)
                 CheckEffect(page, effect, assetBasePath, issues);
+        }
+
+        foreach (var drawing in project.PuzzleDrawings ?? [])
+        {
+            // An open Gate drawn as nothing is fine: it's simply out of the way.
+            if (drawing.Pixels.All(p => p == '.'))
+            {
+                issues.Add(new ValidationIssue
+                {
+                    Severity = ValidationSeverity.Warning,
+                    Message = $"Drawing '{drawing.Name}' ({drawing.Kind}) has nothing drawn, so anything using it is invisible.",
+                });
+            }
         }
 
         return issues;
@@ -68,7 +81,7 @@ public static class ProjectValidator
     }
 
     // previous is the part played just before this one, if any - see CheckPuzzle.
-    private static void CheckNode(Page page, Node node, Node? previous, HashSet<string> pageIds, string? assetBasePath, List<ValidationIssue> issues)
+    private static void CheckNode(Page page, Node node, Node? previous, HashSet<string> pageIds, string? assetBasePath, List<PuzzleDrawing>? drawings, List<ValidationIssue> issues)
     {
         if (node.Card.Action.Kind == ActionKind.Travel)
         {
@@ -89,13 +102,13 @@ public static class ProjectValidator
             CheckAsset(node.Card.CoverImagePath, assetBasePath, "Cover image", page.Id, node.Id, issues);
 
         if (node.Puzzle is not null)
-            CheckPuzzle(page, node, previous, issues);
+            CheckPuzzle(page, node, previous, drawings, issues);
 
         for (var i = 0; i < node.Children.Count; i++)
-            CheckNode(page, node.Children[i], i == 0 ? node : null, pageIds, assetBasePath, issues);
+            CheckNode(page, node.Children[i], i == 0 ? node : null, pageIds, assetBasePath, drawings, issues);
     }
 
-    private static void CheckPuzzle(Page page, Node node, Node? previous, List<ValidationIssue> issues)
+    private static void CheckPuzzle(Page page, Node node, Node? previous, List<PuzzleDrawing>? drawings, List<ValidationIssue> issues)
     {
         var puzzle = node.Puzzle!;
 
@@ -169,6 +182,13 @@ public static class ProjectValidator
 
         if (puzzle.Objects.Any(o => o.Invisible) && puzzle.Objects.All(o => o.Kind != PuzzleObjectKind.Lantern))
             Warn("it has invisible objects but no Lantern, so they can never be seen.");
+
+        var missingDrawings = puzzle.Objects
+            .Where(o => o.Variant is not null && drawings?.Any(d => d.Id == o.Variant && d.Kind == o.Kind) != true)
+            .GroupBy(o => (o.Kind, o.Variant))
+            .OrderBy(g => g.Key.Kind.ToString()).ThenBy(g => g.Key.Variant);
+        foreach (var group in missingDrawings)
+            Warn($"{(group.Count() == 1 ? $"a {group.Key.Kind} uses" : $"{group.Count()} {group.Key.Kind}s use")} drawing '{group.Key.Variant}', which isn't in the library, so {(group.Count() == 1 ? "it's" : "they're")} drawn as Standard.");
     }
 
     // A Stream holds the ship until it pushes it off, so a path with no way off is somewhere a ship can only

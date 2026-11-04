@@ -85,6 +85,7 @@
     <header id="pe-header">
       <strong id="pe-title"></strong>
       <div class="spacer"></div>
+      <button id="pe-drawings-toggle" title="Pixel art for the objects, shared by every puzzle">Drawings</button>
       <button id="pe-import" title="Replaces this track's puzzle with one from a file">Import…</button>
       <button id="pe-export" title="Saves this puzzle's layout to a file">Export…</button>
       <button id="pe-clear" class="danger">Clear puzzle</button>
@@ -109,6 +110,10 @@
           <label>Starts</label>
           <div id="pe-visibilities"></div>
         </div>
+        <div id="pe-variant-row" class="field" hidden>
+          <label>Drawing</label>
+          <div id="pe-variants"></div>
+        </div>
         <div id="pe-tool-hint" class="field-hint"></div>
         <div class="field-hint">Right-click anything to remove it. Start can only be moved.</div>
       </aside>
@@ -132,6 +137,62 @@
         <h3>Problems</h3>
         <ul id="pe-problems"></ul>
       </aside>
+      <div id="pe-drawings" hidden>
+        <aside id="pd-list">
+          <div class="field">
+            <label for="pd-kind">Object</label>
+            <select id="pd-kind"></select>
+          </div>
+          <div id="pd-variants"></div>
+          <div id="pd-list-buttons">
+            <button type="button" id="pd-new" title="A new drawing, starting from the Standard shape">New</button>
+            <button type="button" id="pd-duplicate">Duplicate</button>
+            <button type="button" id="pd-delete" class="danger"></button>
+          </div>
+          <div id="pd-confirm" hidden>
+            <div id="pd-confirm-text"></div>
+            <div class="pd-confirm-buttons">
+              <button type="button" id="pd-confirm-yes" class="danger">Delete</button>
+              <button type="button" id="pd-confirm-no">Cancel</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="pd-name">Name</label>
+            <input type="text" id="pd-name" maxlength="40">
+          </div>
+          <div class="field-hint">Drawings belong to the whole project, so every puzzle can use them, each in its own album's colours.</div>
+        </aside>
+        <div id="pd-stage">
+          <div id="pd-frames" hidden>
+            <button type="button" data-frame="closed">Closed</button>
+            <button type="button" data-frame="open">Open</button>
+          </div>
+          <div id="pd-board">
+            <canvas id="pd-canvas" width="24" height="24"></canvas>
+          </div>
+          <div id="pd-stage-tools">
+            <button type="button" data-drawing-tool="pencil">Pencil</button>
+            <button type="button" data-drawing-tool="fill">Fill</button>
+            <button type="button" id="pd-mirror" title="Paints both halves at once, mirrored left to right">Mirror</button>
+            <button type="button" id="pd-letter" hidden title="Shows the letter drawn over this object, as on the board">Letter</button>
+          </div>
+          <div class="field-hint">Left-click paints, right-click clears. Every stroke is saved, and Ctrl+Z undoes it.</div>
+        </div>
+        <aside id="pd-side">
+          <h3>Paints</h3>
+          <div id="pd-paints"></div>
+          <h3>Mix</h3>
+          <div class="field-hint">The colours Grain is made of, and how much of it each covers, in the album art's own pattern. They're shades of this album's palette, so every album recolours them.</div>
+          <div id="pd-mix"></div>
+          <div id="pd-mix-footer">
+            <button type="button" id="pd-mix-add" class="small">Add colour</button>
+            <span id="pd-mix-total"></span>
+          </div>
+          <h3>Preview</h3>
+          <canvas id="pd-preview" width="72" height="72"></canvas>
+          <div class="field-hint">On this track's album art, as on the board.</div>
+        </aside>
+      </div>
     </div>
   </div>
 
@@ -141,5 +202,6 @@
   <script src="puzzle.js"></script>
   <script src="app.js"></script>
   <script src="puzzleEditor.js"></script>
+  <script src="puzzleDrawings.js"></script>
 </body>
 </html>

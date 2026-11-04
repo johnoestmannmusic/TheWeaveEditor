@@ -8,9 +8,9 @@ namespace TheWeave.Exporter.Tests;
 
 public class PageRendererTests
 {
-    private static string RenderTrackWithPuzzle(Card card)
+    private static string RenderTrackWithPuzzle(Card card, List<PuzzleDrawing>? drawings = null, string? gateVariant = null)
     {
-        var project = new WeaveProject();
+        var project = new WeaveProject { PuzzleDrawings = drawings };
         var page = new Page
         {
             Id = "ouros",
@@ -28,7 +28,7 @@ public class PageRendererTests
                         Textures = { ["wall"] = new PuzzleTexture { Ramp = { "#112233" }, Pixels = "0" } },
                         Objects =
                         {
-                            new PuzzleObject { Kind = PuzzleObjectKind.Gate, Col = 2, Row = 3, Letter = "A", Open = true },
+                            new PuzzleObject { Kind = PuzzleObjectKind.Gate, Col = 2, Row = 3, Letter = "A", Open = true, Variant = gateVariant },
                             new PuzzleObject { Kind = PuzzleObjectKind.Stream, Col = 4, Row = 5, Direction = PuzzleDirection.Left },
                         },
                     },
@@ -51,6 +51,37 @@ public class PageRendererTests
         Assert.Equal(
             "{\"id\":\"track\",\"objects\":[{\"kind\":\"Gate\",\"col\":2,\"row\":3,\"letter\":\"A\",\"open\":true},{\"kind\":\"Stream\",\"col\":4,\"row\":5,\"direction\":\"Left\"}],\"palette\":{\"wall\":\"#112233\"},\"textures\":{\"wall\":{\"ramp\":[\"#112233\"],\"pixels\":\"0\"}}}",
             json);
+    }
+
+    private static string PuzzleJsonOf(string html) =>
+        System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Match(html, "data-puzzle=\"([^\"]*)\"").Groups[1].Value);
+
+    [Fact]
+    public void RenderPage_APuzzleCarriesOnlyTheDrawingsItUses()
+    {
+        PuzzleDrawing Drawing(string id, PuzzleObjectKind kind) => new()
+        {
+            Id = id,
+            Kind = kind,
+            Name = id,
+            Pixels = new string('G', PuzzleDrawings.TilePixels),
+            Mix = { new PuzzleMixColour { Role = "gate", Shade = 1, Percent = 100 } },
+        };
+        var library = new List<PuzzleDrawing>
+        {
+            Drawing("iron", PuzzleObjectKind.Gate), Drawing("Gate", PuzzleObjectKind.Gate), Drawing("Wall", PuzzleObjectKind.Wall), Drawing("wood", PuzzleObjectKind.Gate),
+        };
+
+        var json = PuzzleJsonOf(RenderTrackWithPuzzle(PlayableCard(), library, gateVariant: "iron"));
+
+        using var parsed = System.Text.Json.JsonDocument.Parse(json);
+        var drawings = parsed.RootElement.GetProperty("drawings").EnumerateArray().ToList();
+        Assert.Equal(["iron", "Gate"], drawings.Select(d => d.GetProperty("id").GetString()));
+        Assert.Equal("Gate", drawings[0].GetProperty("kind").GetString());
+        Assert.Equal("gate", drawings[0].GetProperty("mix")[0].GetProperty("role").GetString());
+        Assert.Equal("iron", parsed.RootElement.GetProperty("objects")[0].GetProperty("variant").GetString());
+
+        Assert.DoesNotContain("drawings", PuzzleJsonOf(RenderTrackWithPuzzle(PlayableCard(), [Drawing("Wall", PuzzleObjectKind.Wall)])));
     }
 
     [Fact]

@@ -23,8 +23,9 @@ public class WeaveProjectSerializerTests
     [Fact]
     public void PuzzleFile_RoundTripsTheLayout()
     {
-        var objects = PuzzleFile.Parse(PuzzleFile.Serialize(MakeFilePuzzle()));
+        var (objects, drawings) = PuzzleFile.Parse(PuzzleFile.Serialize(MakeFilePuzzle()));
 
+        Assert.Empty(drawings);
         Assert.Equal(3, objects.Count);
         Assert.Equal(PuzzleObjectKind.Gate, objects[0].Kind);
         Assert.Equal((2, 3), (objects[0].Col, objects[0].Row));
@@ -65,7 +66,76 @@ public class WeaveProjectSerializerTests
     [Fact]
     public void PuzzleFile_WithNoObjects_IsAnEmptyBoard()
     {
-        Assert.Empty(PuzzleFile.Parse("{ \"format\": \"weave-sokoban-puzzle\", \"version\": 1 }"));
+        Assert.Empty(PuzzleFile.Parse("{ \"format\": \"weave-sokoban-puzzle\", \"version\": 1 }").Objects);
+    }
+
+    private static PuzzleDrawing MakeDrawing(string id, PuzzleObjectKind kind = PuzzleObjectKind.Wall, char paint = 'G') => new()
+    {
+        Id = id,
+        Kind = kind,
+        Name = id,
+        Pixels = new string(paint, PuzzleDrawings.TilePixels),
+        Mix = { new PuzzleMixColour { Role = "wall", Shade = 2, Percent = 100 } },
+    };
+
+    [Fact]
+    public void PuzzleFile_CarriesOnlyTheDrawingsItsObjectsUse()
+    {
+        var puzzle = MakeFilePuzzle();
+        puzzle.Objects[2].Variant = "mossy";
+        var library = new List<PuzzleDrawing> { MakeDrawing("mossy"), MakeDrawing("unused"), MakeDrawing("Wall"), MakeDrawing("mossy-key", PuzzleObjectKind.Key) };
+
+        var (objects, drawings) = PuzzleFile.Parse(PuzzleFile.Serialize(puzzle, library));
+
+        Assert.Equal("mossy", objects[2].Variant);
+        Assert.Equal(["mossy"], drawings.Select(d => d.Id));
+        Assert.Equal(PuzzleObjectKind.Wall, drawings[0].Kind);
+        Assert.Equal(PuzzleDrawings.TilePixels, drawings[0].Pixels.Length);
+    }
+
+    [Fact]
+    public void PuzzleDrawings_Merge_AddsWhatsMissing_SkipsWhatsThere_AndCopiesAClash()
+    {
+        var library = new List<PuzzleDrawing> { MakeDrawing("same"), MakeDrawing("clash", paint: 'O') };
+        var objects = new List<PuzzleObject>
+        {
+            new() { Kind = PuzzleObjectKind.Wall, Variant = "same" },
+            new() { Kind = PuzzleObjectKind.Wall, Variant = "clash" },
+            new() { Kind = PuzzleObjectKind.Wall, Variant = "new" },
+        };
+
+        var added = PuzzleDrawings.Merge(library, [MakeDrawing("same"), MakeDrawing("clash"), MakeDrawing("new"), MakeDrawing("Wall")], objects);
+
+        Assert.Equal(["clash-2", "new"], added.Select(d => d.Id));
+        Assert.Equal(["same", "clash-2", "new"], objects.Select(o => o.Variant));
+        Assert.Equal('G', added[0].Pixels[0]);
+    }
+
+    [Fact]
+    public void PuzzleDrawings_UsedBy_IncludesARedrawnStandard_OnlyForKindsOnTheBoard()
+    {
+        var puzzle = MakeFilePuzzle();
+        var library = new List<PuzzleDrawing> { MakeDrawing("Wall"), MakeDrawing("Key", PuzzleObjectKind.Key) };
+
+        Assert.Equal(["Wall"], PuzzleDrawings.UsedBy(puzzle, library).Select(d => d.Id));
+        Assert.Empty(PuzzleDrawings.UsedBy(puzzle, library, includeStandard: false));
+    }
+
+    [Fact]
+    public void Drawings_RoundTrip_AndAreLeftOutOfAProjectWithoutAny()
+    {
+        var project = new WeaveProject();
+        Assert.DoesNotContain("PuzzleDrawings", WeaveProjectSerializer.Serialize(project));
+
+        project.PuzzleDrawings = [MakeDrawing("gate-a", PuzzleObjectKind.Gate)];
+        project.PuzzleDrawings[0].OpenPixels = new string('.', PuzzleDrawings.TilePixels);
+        var back = WeaveProjectSerializer.Deserialize(WeaveProjectSerializer.Serialize(project));
+
+        var drawing = Assert.Single(back.PuzzleDrawings!);
+        Assert.Equal(PuzzleObjectKind.Gate, drawing.Kind);
+        Assert.Equal(PuzzleDrawings.TilePixels, drawing.OpenPixels!.Length);
+        Assert.Equal("wall", drawing.Mix[0].Role);
+        Assert.Contains("\"Kind\": \"Gate\"", WeaveProjectSerializer.Serialize(project));
     }
 
     [Fact]

@@ -245,7 +245,22 @@ public static class Program
                     // since applying it also lines up the next part's Start.
                     if (message.Puzzle is not null)
                         ProjectEditing.ApplyPuzzleEdit(CopyForCheck(nodeForPuzzle), CopyForCheck(message.Puzzle));
-                    ApplyMutation(window, () => ProjectEditing.ApplyPuzzleEdit(nodeForPuzzle, message.Puzzle, pageForPuzzle));
+                    var addedDrawings = message.Drawings ?? [];
+                    if (addedDrawings.Count > 0)
+                        ProjectEditing.AddPuzzleDrawings(CopyForCheck(_project!), CopyForCheck(addedDrawings));
+                    ApplyMutation(window, () =>
+                    {
+                        if (addedDrawings.Count > 0)
+                            ProjectEditing.AddPuzzleDrawings(_project!, addedDrawings);
+                        ProjectEditing.ApplyPuzzleEdit(nodeForPuzzle, message.Puzzle, pageForPuzzle);
+                    });
+                    break;
+
+                case "update-puzzle-drawings":
+                    RequireProject();
+                    var drawings = message.Drawings ?? [];
+                    ProjectEditing.ValidatePuzzleDrawings(CopyForCheck(drawings));
+                    ApplyMutation(window, () => ProjectEditing.ApplyPuzzleDrawingsEdit(_project!, drawings));
                     break;
 
                 case "load-puzzle-art":
@@ -576,22 +591,25 @@ public static class Program
         if (!Path.HasExtension(path))
             path += ".json";
 
-        File.WriteAllText(path, PuzzleFile.Serialize(node.Puzzle));
+        File.WriteAllText(path, PuzzleFile.Serialize(node.Puzzle, _project!.PuzzleDrawings));
         SendStatus(window, $"Exported puzzle to {path}.");
     }
 
     // Checks the file here, but leaves saving it to the page, which sends it back as a normal edit along with
-    // this track's own colours and textures - see puzzleEditor.js's receiveImportedPuzzle.
+    // this track's own colours and textures, and any drawings the library doesn't have yet - see
+    // puzzleEditor.js's receiveImportedPuzzle.
     private static void ImportPuzzle(PhotinoWindow window, Node node)
     {
         var paths = window.ShowOpenFile(title: "Import Sokoban Puzzle", filters: PuzzleFileFilter);
         if (paths.Length == 0)
             return;
 
-        var objects = PuzzleFile.Parse(File.ReadAllText(paths[0]));
+        var (objects, fileDrawings) = PuzzleFile.Parse(File.ReadAllText(paths[0]));
+        var drawings = PuzzleDrawings.Merge(_project!.PuzzleDrawings, fileDrawings, objects);
         ProjectEditing.ValidatePuzzle(new Puzzle { Objects = objects });
+        ProjectEditing.AddPuzzleDrawings(CopyForCheck(_project), CopyForCheck(drawings));
 
-        window.SendWebMessage(JsonSerializer.Serialize(new { type = "puzzle-imported", nodeId = node.Id, objects }, OutboundOptions));
+        window.SendWebMessage(JsonSerializer.Serialize(new { type = "puzzle-imported", nodeId = node.Id, objects, drawings }, OutboundOptions));
     }
 
     private static void PickBackgroundMusic(PhotinoWindow window)
