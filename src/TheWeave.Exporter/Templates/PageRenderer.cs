@@ -70,6 +70,9 @@ public sealed class PageRenderer
         sb.AppendLine();
         sb.AppendLine("  <body>");
         sb.AppendLine();
+        // First in the page, so that it's what the very first frame shows - see main.js's loading screen.
+        sb.AppendLine("    <div id=\"loadingScreen\"><div id=\"loadingPanel\"><div id=\"loadingLabel\">Entering..</div><div id=\"loadingBar\"><div id=\"loadingFill\"></div></div></div></div>");
+        sb.AppendLine();
         sb.AppendLine("    <!-- Background -->");
         sb.AppendLine($"     <img id=\"bgmap\" class=\"pannable\" src=\"{EscapeAttr(ResolveAsset(page.Background.ImagePath))}\">");
 

@@ -128,6 +128,8 @@ public class PageRendererTests
 
               <body>
 
+                <div id="loadingScreen"><div id="loadingPanel"><div id="loadingLabel">Entering..</div><div id="loadingBar"><div id="loadingFill"></div></div></div></div>
+
                 <!-- Background -->
                  <img id="bgmap" class="pannable" src="img/the_weave/the_weave.png">
 
