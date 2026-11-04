@@ -571,19 +571,6 @@ h3 {
   height: 1.2em;
 }
 
-/* A key with no art of its own - see main.js's BACK_KEY_HINT. Colors taken from img/ui/key_z.gif. */
-#trackFocusText .drawnKeyHint {
-  display: inline-block;
-  border: 0.12em solid #535353;
-  border-radius: 0.15em;
-  background: #b1b1b1;
-  color: #323232;
-  font-size: 1em;
-  font-weight: 700;
-  line-height: 1em;
-  text-align: center;
-}
-
 #trackFocusText h2 {
   margin: 0 0 0.6em;
   font-size: 1.6em;
