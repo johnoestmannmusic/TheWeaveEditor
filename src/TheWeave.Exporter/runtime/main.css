@@ -236,6 +236,20 @@ h3 {
   transform-origin: center center;
 }
 
+/* A planet's unexplored squares - see main.js's buildFog. Over the map and its locations, but under the
+   ship, any open card (.node.cardOpen), and persistent cards, which show wherever they are. */
+#fog {
+  left: 0;
+  top: 0;
+  z-index: 2;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+.node.persistentCard {
+  z-index: 5;
+}
+
 /* See main.js's createContrails. On the map, above its own layers and below every .node. */
 .contrails {
   z-index: 0;
@@ -277,6 +291,13 @@ h3 {
   position: absolute;
   left: 0;
   image-rendering: auto;
+}
+
+/* The fog, over the minimap's locations - see main.js's buildMinimap. */
+#minimapFog {
+  position: absolute;
+  left: 0;
+  image-rendering: pixelated;
 }
 
 /* The screen currently in view. */

@@ -21,6 +21,8 @@ public static class PageConfigScriptRenderer
         var grid = GridLayout.For(page, project);
         var payload = new
         {
+            // What main.js saves a visitor's progress on this page under, like which squares they've explored.
+            id = page.Id,
             globeEffect = page.GlobeEffect,
             worldWidth = page.WorldWidthPx ?? project.DefaultWorldWidthPx,
             worldHeight = page.WorldHeightPx ?? project.DefaultWorldHeightPx,

@@ -59,7 +59,7 @@ let arrivalRoot = null;  // the node back to The Weave the ship arrived on and h
 // The page's own config (see window.__weavePage, emitted per-page by PageConfigScriptRenderer) -
 // worldWidth/worldHeight are the page's authoritative world size, and grid is the board of squares
 // the ship walks (see loadPageConfig).
-let weavePage = { globeEffect: false, worldWidth: 0, worldHeight: 0, defaultSpawnX: null, defaultSpawnY: null, isHomePage: false, grid: null, screen: null };
+let weavePage = { id: '', globeEffect: false, worldWidth: 0, worldHeight: 0, defaultSpawnX: null, defaultSpawnY: null, isHomePage: false, grid: null, screen: null };
 
 
 // Ship tuning
@@ -126,6 +126,7 @@ let view = { position: null, slide: null, scale: 1, offsetX: 0, offsetY: 0 };
 let screenFrameEl = null; // see buildScreenFrame
 let minimap = null; // see buildMinimap
 let mapContrails = null; // the ship's on the map - see buildMapContrails
+let fog = null; // what's still unexplored on a planet - see buildFog
 
 // Input state
 const KEY_DIRECTIONS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
@@ -153,6 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
   indexNodesByCell();
   noteArrivalRoot();
   buildScreenFrame();
+  buildFog();
   buildMinimap();
   buildMapContrails();
   updateViewScale();
@@ -201,6 +203,7 @@ function clamp(value, min, max){
 function loadPageConfig(){
   let cfg = window.__weavePage;
 
+  weavePage.id = cfg.id ?? '';
   weavePage.globeEffect = !!cfg.globeEffect;
   weavePage.worldWidth = cfg.worldWidth;
   weavePage.worldHeight = cfg.worldHeight;
@@ -1137,12 +1140,164 @@ function buildMinimap(){
     nodes.push({ icon, center: weavePage.grid.centerOf(meta.cell) });
   });
 
+  // Over the minimap's locations, so an unexplored one stays hidden there too - see buildFog.
+  let fogCanvas = null;
+  if (fog) {
+    fogCanvas = document.createElement('canvas');
+    fogCanvas.id = 'minimapFog';
+    fogCanvas.width = fog.canvas.width;
+    fogCanvas.height = fog.canvas.height;
+    el.appendChild(fogCanvas);
+    fog.minimapCanvas = fogCanvas;
+    drawFog();
+  }
+
   let screen = document.createElement('div');
   screen.id = 'minimapScreen';
   el.appendChild(screen);
 
   screenFrameEl.appendChild(el);
-  minimap = { el, image, nodes, screen, scale: 1, top: 0 };
+  minimap = { el, image, fog: fogCanvas, nodes, screen, scale: 1, top: 0 };
+}
+
+// ---------- fog ----------
+
+// How many world pixels one of the map image's own pixels covers, which is what the fog is drawn at, so that
+// it lines up with the map's pixels.
+function mapPixelSize(){
+  return weavePage.screen.width / SOURCE_SCREEN_WIDTH;
+}
+
+// How far around the ship a planet's fog clears: the same circle as a Lantern's on a board (see puzzle.js's
+// LANTERN_REACH), 3 squares out straight, and fewer on the diagonals.
+const FOG_REACH = 3.5;
+const FOG_FADE_MS = 400;
+const FOG_KEY_PREFIX = "weave-fog:";
+// The same as #screenFrame's surround, so unexplored map runs on into it.
+const FOG_COLOR = [17, 17, 17];
+
+// A planet's unexplored squares are covered, and clear as the ship comes within reach of them, for good:
+// what's been explored is kept in localStorage, like solved puzzles. The Weave itself is never fogged. Drawn
+// at the map's own pixel size, so the checkered edge between explored and unexplored is part of its pixel art.
+function buildFog(){
+  if (weavePage.isHomePage) return;
+
+  let pixel = mapPixelSize();
+  let canvas = document.createElement('canvas');
+  canvas.id = 'fog';
+  canvas.width = Math.round(weavePage.worldWidth / pixel);
+  canvas.height = Math.round(weavePage.worldHeight / pixel);
+  canvas.style.width = weavePage.worldWidth + "px";
+  canvas.style.height = weavePage.worldHeight + "px";
+  document.body.appendChild(canvas);
+
+  // Which square each column and row of the fog's pixels is over. Past the grid's own edges, the nearest one.
+  let grid = weavePage.grid;
+  let colOf = Array.from({ length: canvas.width }, (_, x) => grid.cellAt((x + 0.5) * pixel, 0).col);
+  let rowOf = Array.from({ length: canvas.height }, (_, y) => grid.cellAt(0, (y + 0.5) * pixel).row);
+
+  fog = {
+    canvas,
+    minimapCanvas: null, // see buildMinimap
+    image: canvas.getContext('2d').createImageData(canvas.width, canvas.height),
+    colOf,
+    rowOf,
+    explored: loadExplored(),
+    fading: new Map(), // "col,row" -> { left, wasEdge }, for squares just revealed
+    at: null, // the square last revealed around
+  };
+
+  revealAround(grid.cellAt(ship.x, ship.y), false);
+  drawFog();
+}
+
+function loadExplored(){
+  try {
+    return WeaveSokoban.decodeCells(weavePage.grid, localStorage.getItem(FOG_KEY_PREFIX + weavePage.id));
+  } catch (e) {
+    return new Set(); // storage unavailable - see isPuzzleSolved
+  }
+}
+
+function saveExplored(){
+  try {
+    localStorage.setItem(FOG_KEY_PREFIX + weavePage.id, WeaveSokoban.encodeCells(weavePage.grid, fog.explored));
+  } catch (e) {
+    // storage unavailable - see isPuzzleSolved
+  }
+}
+
+// Reveals everything within reach of a square. Returns whether that was anything new.
+function revealAround(cell, fade){
+  fog.at = cell;
+  let edge = fade ? WeaveSokoban.edgeOf(weavePage.grid, fog.explored) : null;
+  let revealed = false;
+
+  for (const near of WeaveSokoban.cellsWithin(weavePage.grid, cell, FOG_REACH)) {
+    let key = cellKey(near);
+    if (fog.explored.has(key)) continue;
+    fog.explored.add(key);
+    if (fade) fog.fading.set(key, { left: FOG_FADE_MS, wasEdge: edge.has(key) });
+    revealed = true;
+  }
+  return revealed;
+}
+
+// Counts the square nearest the ship, so the fog opens halfway through a step rather than at either end.
+function updateFog(dtMs){
+  if (!fog) return;
+
+  let changed = false;
+  let cell = weavePage.grid.cellAt(ship.x, ship.y);
+  if (cell.col !== fog.at.col || cell.row !== fog.at.row) {
+    if (revealAround(cell, true)) {
+      saveExplored();
+      changed = true;
+    }
+  }
+
+  for (const [key, fading] of fog.fading) {
+    fading.left -= dtMs;
+    if (fading.left <= 0) fog.fading.delete(key);
+    changed = true;
+  }
+
+  if (changed) drawFog();
+}
+
+// Unexplored squares solid, the ones bordering what's explored checkered, and anything just revealed fading
+// out from whichever of those it was.
+function drawFog(){
+  let { image, colOf, rowOf, explored, fading } = fog;
+  let edge = WeaveSokoban.edgeOf(weavePage.grid, explored);
+  let [r, g, b] = FOG_COLOR;
+  let data = image.data;
+
+  for (let y = 0; y < image.height; y++) {
+    for (let x = 0; x < image.width; x++) {
+      let key = colOf[x] + "," + rowOf[y];
+      let checker = (x + y) % 2 === 0;
+      let alpha;
+      if (!explored.has(key)) alpha = !edge.has(key) || checker ? 255 : 0;
+      else if (fading.has(key)) {
+        let { left, wasEdge } = fading.get(key);
+        alpha = !wasEdge || checker ? Math.round(255 * left / FOG_FADE_MS) : 0;
+      } else alpha = 0;
+
+      let i = (y * image.width + x) * 4;
+      data[i] = r;
+      data[i + 1] = g;
+      data[i + 2] = b;
+      data[i + 3] = alpha;
+    }
+  }
+
+  fog.canvas.getContext('2d').putImageData(image, 0, 0);
+  if (fog.minimapCanvas) {
+    let context = fog.minimapCanvas.getContext('2d');
+    context.clearRect(0, 0, fog.minimapCanvas.width, fog.minimapCanvas.height);
+    context.drawImage(fog.canvas, 0, 0);
+  }
 }
 
 // A single map's minimap takes MINIMAP_WIDTH_FRACTION of the picture's width. A wider map keeps the same
@@ -1171,6 +1326,11 @@ function layoutMinimap(pictureWidth){
   minimap.image.style.width = width + "px";
   minimap.image.style.height = (weavePage.worldHeight * minimap.scale) + "px";
   minimap.image.style.top = (-minimap.top * minimap.scale) + "px";
+  if (minimap.fog) {
+    minimap.fog.style.width = minimap.image.style.width;
+    minimap.fog.style.height = minimap.image.style.height;
+    minimap.fog.style.top = minimap.image.style.top;
+  }
 
   minimap.screen.style.width = (screen.width * minimap.scale) + "px";
   minimap.screen.style.height = (screen.height * minimap.scale) + "px";
@@ -1372,6 +1532,8 @@ function placePersistentCards(){
   nodeMeta.forEach((meta, node) => {
     if (meta.isTopLevel && !meta.isModal && meta.persistent && meta.info.style.display !== 'none') {
       placeCard(node, meta);
+      // Shown whatever's been explored, so it's kept above the fog - see main.css's #fog.
+      node.classList.add('persistentCard');
     }
   });
 }
@@ -2093,6 +2255,7 @@ function loop(timestamp){
 
   updateInput();
   updateShip(dt);
+  updateFog(dt * MS_PER_FRAME);
   updateView(dt * MS_PER_FRAME);
   updateMapContrails(dt * MS_PER_FRAME);
   updateMinimap();

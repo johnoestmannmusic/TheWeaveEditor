@@ -271,3 +271,39 @@ test('teleporting mid-step abandons that step', () => {
   m.update(STEP_MS);
   assert.deepEqual(m.cell, { col: 2, row: 2 });
 });
+
+// ---------- exploring ----------
+
+const { cellsWithin, encodeCells, decodeCells, edgeOf } = require('../../src/TheWeave.Exporter/runtime/sokoban.js');
+
+const planet = () => createGrid({ columns: 20, rows: 10, cellWidth: 150, cellHeight: 150, originX: 0, originY: 150 });
+
+test('a reach of 3.5 is a circle 3, 3, 2 and 1 squares out', () => {
+  let keys = new Set(cellsWithin(planet(), { col: 10, row: 5 }, 3.5).map(c => c.col + ',' + c.row));
+  let across = (row) => [...keys].filter(k => k.endsWith(',' + row)).length;
+  assert.deepEqual([2, 3, 4, 5, 6, 7, 8].map(across), [3, 5, 7, 7, 7, 5, 3]);
+  assert.equal(keys.size, 37);
+});
+
+test('the circle stops at the edges of the grid', () => {
+  let cells = cellsWithin(planet(), { col: 0, row: 0 }, 3.5);
+  assert.ok(cells.every(c => c.col >= 0 && c.row >= 0));
+  assert.equal(cells.length, 4 + 4 + 3 + 2);
+});
+
+test('explored squares save and load, and a save for another size of grid is nothing', () => {
+  let grid = planet();
+  let cells = new Set(['0,0', '19,9', '7,3']);
+  let text = encodeCells(grid, cells);
+  assert.equal(text.length, 200);
+  assert.deepEqual(decodeCells(grid, text), cells);
+  assert.equal(decodeCells(grid, '101').size, 0);
+  assert.equal(decodeCells(grid, null).size, 0);
+});
+
+test('the edge is every unexplored square touching an explored one, diagonals included', () => {
+  let edge = edgeOf(planet(), new Set(['5,5', '6,5']));
+  assert.equal(edge.size, 10);
+  assert.ok(edge.has('4,4') && edge.has('7,6') && !edge.has('5,5'));
+  assert.equal(edgeOf(planet(), new Set(['0,0'])).size, 3);
+});
