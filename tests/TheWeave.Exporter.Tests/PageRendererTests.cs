@@ -153,7 +153,7 @@ public class PageRendererTests
               <script src="jsx/main.js?v={{RuntimeAssets.Version}}"></script>
 
               <script>
-                window.__weavePage = {"globeEffect":true,"worldWidth":3000,"worldHeight":1686,"defaultSpawnX":null,"defaultSpawnY":null,"isHomePage":false,"grid":{{ExactGridJson}},"screen":{{ExactScreenJson}}};
+                window.__weavePage = {"id":"tutorial-only","globeEffect":true,"worldWidth":3000,"worldHeight":1686,"defaultSpawnX":null,"defaultSpawnY":null,"isHomePage":false,"grid":{{ExactGridJson}},"screen":{{ExactScreenJson}}};
               </script>
               </head>
 
@@ -456,7 +456,7 @@ public class PageRendererTests
         project.Pages.Add(planet);
 
         var planetHtml = new PageRenderer(project).RenderPage(planet);
-        Assert.Contains("window.__weavePage = {\"globeEffect\":true,\"worldWidth\":3000,\"worldHeight\":1686,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":" + ExactGridJson + ",\"screen\":" + ExactScreenJson + "};", planetHtml);
+        Assert.Contains("window.__weavePage = {\"id\":\"planet\",\"globeEffect\":true,\"worldWidth\":3000,\"worldHeight\":1686,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":" + ExactGridJson + ",\"screen\":" + ExactScreenJson + "};", planetHtml);
 
         var merged = MakePage("index", "index.html");
         merged.GlobeEffect = false;
@@ -465,7 +465,7 @@ public class PageRendererTests
         project.Pages.Add(merged);
 
         var mergedHtml = new PageRenderer(project).RenderPage(merged);
-        Assert.Contains("window.__weavePage = {\"globeEffect\":false,\"worldWidth\":6000,\"worldHeight\":1686,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":{\"columns\":40,\"rows\":10,\"cellWidth\":150,\"cellHeight\":150,\"originX\":0,\"originY\":150},\"screen\":" + ExactScreenJson + "};", mergedHtml);
+        Assert.Contains("window.__weavePage = {\"id\":\"index\",\"globeEffect\":false,\"worldWidth\":6000,\"worldHeight\":1686,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":{\"columns\":40,\"rows\":10,\"cellWidth\":150,\"cellHeight\":150,\"originX\":0,\"originY\":150},\"screen\":" + ExactScreenJson + "};", mergedHtml);
     }
 
     [Fact]

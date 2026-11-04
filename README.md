@@ -98,6 +98,10 @@ Neocities, replacing hand-authoring HTML per location.
   it can't be played or heard. Reaching a Finish remembers that in the visitor's browser and moves straight
   on to the next part's puzzle, or back to Track Focus if it doesn't have one. A part with no puzzle, or
   one with no Finish, never locks anything.
+- Each track's square on a planet's map shows its album art, see-through, with its puzzle shrunk on top,
+  drawn at the map's own pixel size, like a zoomed-out view of the boards.
+- Black fog over a planet's unexplored squares, with a checkered pixel edge. It clears in a circle 3 squares
+  around the ship and stays cleared, saved in the visitor's browser. The minimap is fogged too. The Weave isn't.
 - Static screens instead of a follow camera: each map splits into 10x5-square screens (4 per map, 8
   on The Weave), and walking off one slides the view to the next. The picture scales to fill the
   window's width. Cards always fit on the screen.

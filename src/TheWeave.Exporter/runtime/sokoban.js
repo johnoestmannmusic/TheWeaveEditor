@@ -178,5 +178,56 @@
     };
   }
 
-  return { createGrid, createMover };
+  // ---------- exploring ----------
+
+  // Every square on the grid within reach of one, measured centre to centre: a reach of 3.5 is a circle 3
+  // squares out straight, and fewer on the diagonals.
+  function cellsWithin(grid, cell, reach){
+    let cells = [];
+    let span = Math.floor(reach);
+    for (let row = cell.row - span; row <= cell.row + span; row++) {
+      for (let col = cell.col - span; col <= cell.col + span; col++) {
+        let other = { col, row };
+        if (grid.inBounds(other) && Math.hypot(col - cell.col, row - cell.row) <= reach) cells.push(other);
+      }
+    }
+    return cells;
+  }
+
+  // A set of squares (by "col,row") as one character per square, row by row, for saving: "1" for in it.
+  function encodeCells(grid, cells){
+    let text = '';
+    for (let row = 0; row < grid.rows; row++) {
+      for (let col = 0; col < grid.columns; col++) text += cells.has(col + ',' + row) ? '1' : '0';
+    }
+    return text;
+  }
+
+  // Back from encodeCells. Anything that isn't a save for a grid this size is nothing at all.
+  function decodeCells(grid, text){
+    let cells = new Set();
+    if (typeof text !== 'string' || text.length !== grid.columns * grid.rows) return cells;
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === '1') cells.add((i % grid.columns) + ',' + Math.floor(i / grid.columns));
+    }
+    return cells;
+  }
+
+  // The squares not in a set that touch one that is, sideways or diagonally: the edge of what's explored.
+  function edgeOf(grid, cells){
+    let edge = new Set();
+    for (const key of cells) {
+      let [col, row] = key.split(',').map(Number);
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          let other = { col: col + dc, row: row + dr };
+          let otherKey = other.col + ',' + other.row;
+          if (grid.inBounds(other) && !cells.has(otherKey)) edge.add(otherKey);
+        }
+      }
+    }
+    return edge;
+  }
+
+  return { createGrid, createMover, cellsWithin, encodeCells, decodeCells, edgeOf };
 });

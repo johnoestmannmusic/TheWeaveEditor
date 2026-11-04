@@ -951,3 +951,29 @@ test('only an object blocks an entrance, not a floor tile or Start', () => {
   assert.equal(blockingEntrance([obj('Wall', 1, 1)], at(1, 1)).kind, 'Wall');
   assert.equal(blockingEntrance([obj('Wall', 2, 1)], at(1, 1)), null);
 });
+
+// ---------- shrinking ----------
+
+const { shrinkImage } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+
+test('shrinking keeps each patch\'s most common colour, exactly, and see-through where most of it is', () => {
+  let image = { data: new Uint8ClampedArray(4 * 4 * 4), width: 4, height: 4 };
+  let set = (x, y, rgba) => image.data.set(rgba, (y * 4 + x) * 4);
+  // Top left patch: 3 red, 1 blue. Top right: 3 see-through, 1 green. Bottom: all white.
+  set(0, 0, [255, 0, 0, 255]); set(1, 0, [255, 0, 0, 255]); set(0, 1, [255, 0, 0, 255]); set(1, 1, [0, 0, 255, 255]);
+  set(3, 1, [0, 255, 0, 255]);
+  for (let y = 2; y < 4; y++) for (let x = 0; x < 4; x++) set(x, y, [255, 255, 255, 255]);
+  let small = shrinkImage(image, 2);
+  assert.deepEqual([...small.data], [255, 0, 0, 255, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255]);
+});
+
+test('a whole board shrinks to the map\'s 25 pixels a square, in the board\'s own colours', () => {
+  let { look } = artLook();
+  let image = blank();
+  renderBoard(image, [obj('Wall', 0, 0), obj('Finish', 9, 9), obj('Key', 4, 4)], look);
+  let small = shrinkImage(image, 25);
+  assert.equal(small.data.length, 25 * 25 * 4);
+  let inBoard = colorsIn(image.data);
+  for (const color of colorsIn(small.data)) assert.ok(inBoard.has(color), color);
+  assert.ok(colorsIn(small.data).size >= 3);
+});

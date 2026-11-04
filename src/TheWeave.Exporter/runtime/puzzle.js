@@ -995,6 +995,31 @@
     }
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, TILE_PX, ART_PX, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, pickPalette, pickTextures, renderBoard, hasFinish, createPuzzleGame,
+  // RGBA pixel data shrunk to size x size, each pixel the colour covering most of its patch, see-through
+  // counting as a colour too. So it stays pixel art, every colour exact, and a thin outline that covers most of
+  // a patch survives rather than coming and going with where a sample happens to land.
+  function shrinkImage(image, size){
+    let { data, width, height } = image;
+    let out = new Uint8ClampedArray(size * size * 4);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        let counts = new Map();
+        let best = null;
+        for (let sy = Math.floor(y * height / size); sy < Math.floor((y + 1) * height / size); sy++) {
+          for (let sx = Math.floor(x * width / size); sx < Math.floor((x + 1) * width / size); sx++) {
+            let i = (sy * width + sx) * 4;
+            let key = data[i + 3] === 0 ? -1 : (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+            let count = (counts.get(key) ?? 0) + 1;
+            counts.set(key, count);
+            if (!best || count > best.count) best = { key, count };
+          }
+        }
+        if (best && best.key !== -1) out.set([best.key >> 16, (best.key >> 8) & 255, best.key & 255, 255], (y * size + x) * 4);
+      }
+    }
+    return { data: out, width: size, height: size };
+  }
+
+  return { shrinkImage, BOARD_SIZE, DEFAULT_START, LETTERS, TILE_PX, ART_PX, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, pickPalette, pickTextures, renderBoard, hasFinish, createPuzzleGame,
     PAINTS, DRAWN_KINDS, SPRITE_ROLES, TEXTURE_SHADES, standardDrawing, standardMix, mixTexture };
 });
