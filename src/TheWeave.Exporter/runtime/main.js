@@ -1603,13 +1603,13 @@ function renderTrackFocus(){
   actions.id = 'trackFocusActions';
   if (boardMover) {
     if (boardGame) actions.appendChild(buildTrackFocusAction('[ Restart ]', 'img/ui/key_x.gif', restartBoardGame));
-    actions.appendChild(buildTrackFocusAction('[ Back ]', BACK_KEY_HINT, leaveBoardGame));
+    actions.appendChild(buildTrackFocusAction('[ Back ]', 'img/ui/key_c.gif', leaveBoardGame));
   } else {
     if (cover && !lockedBy) actions.appendChild(buildTrackFocusAction('[ Enter ]', 'img/ui/key_z.gif', startBoardGame));
     if (nodeMeta.get(activeRoot).chain.length > 1) {
       actions.appendChild(buildTrackFocusAction('[ Switch ]', 'img/ui/key_x.gif', cycleChainNode));
     }
-    actions.appendChild(buildTrackFocusAction('[ Back ]', BACK_KEY_HINT, closeTrackFocus));
+    actions.appendChild(buildTrackFocusAction('[ Back ]', 'img/ui/key_c.gif', closeTrackFocus));
     // Only reachable from here for a chain's later parts, since their cards never open on the map.
     if (download && !lockedBy) actions.appendChild(download.cloneNode(true));
   }
@@ -1636,10 +1636,6 @@ function buildArtLabel(text){
   return label;
 }
 
-// The key hint for an action with no drawn key to show: there's no img/ui/key_c.gif, so main.css's
-// .drawnKeyHint draws this one to match the others.
-const BACK_KEY_HINT = 'C';
-
 function buildTrackFocusAction(label, hint, onClick){
   let action = document.createElement('span');
   action.className = 'trackFocusAction';
@@ -1649,17 +1645,10 @@ function buildTrackFocusAction(label, hint, onClick){
   text.addEventListener('click', onClick);
   action.appendChild(text);
 
-  if (hint === BACK_KEY_HINT) {
-    let hintKey = document.createElement('span');
-    hintKey.className = 'keyHint drawnKeyHint';
-    hintKey.textContent = hint;
-    action.appendChild(hintKey);
-  } else {
-    let hintImg = document.createElement('img');
-    hintImg.className = 'keyHint';
-    hintImg.src = hint;
-    action.appendChild(hintImg);
-  }
+  let hintImg = document.createElement('img');
+  hintImg.className = 'keyHint';
+  hintImg.src = hint;
+  action.appendChild(hintImg);
 
   return action;
 }
