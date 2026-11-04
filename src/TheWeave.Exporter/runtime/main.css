@@ -236,14 +236,6 @@ h3 {
   transform-origin: center center;
 }
 
-/* A track's album art and shrunk puzzle on its square - see main.js's buildCellArt. On the map, under
-   every .node, drawn at the map's own pixel size. */
-.cellArt {
-  z-index: 0;
-  pointer-events: none;
-  image-rendering: pixelated;
-}
-
 /* A planet's unexplored squares - see main.js's buildFog. Over the map and its locations, but under the
    ship, any open card (.node.cardOpen), and persistent cards, which show wherever they are. */
 #fog {

@@ -152,7 +152,6 @@ document.addEventListener('DOMContentLoaded', function() {
   initShip();
   loadNodes();
   indexNodesByCell();
-  buildCellArt();
   noteArrivalRoot();
   buildScreenFrame();
   buildFog();
@@ -1161,73 +1160,13 @@ function buildMinimap(){
   minimap = { el, image, fog: fogCanvas, nodes, screen, scale: 1, top: 0 };
 }
 
-// ---------- the map's squares ----------
+// ---------- fog ----------
 
-// How many world pixels one of the map image's own pixels covers, which is the size everything drawn onto the
-// map in pixel art is drawn at, so that it lines up with the map's pixels.
+// How many world pixels one of the map image's own pixels covers, which is what the fog is drawn at, so that
+// it lines up with the map's pixels.
 function mapPixelSize(){
   return weavePage.screen.width / SOURCE_SCREEN_WIDTH;
 }
-
-// How see-through a track's album art is on its square - see buildCellArt.
-const CELL_ART_OPACITY = 0.45;
-
-// Every track's square on the map shows its album art, see-through, with its puzzle shrunk down on top: the
-// map seen as the boards it's made of. Drawn at the map's own pixel size, so it's part of the map's pixel art.
-// Only for locations that open Track Focus, from their first part, since that's the one on the map.
-function buildCellArt(){
-  let size = Math.round(weavePage.grid.cellWidth / mapPixelSize());
-  let above = document.getElementById('bgmap2') ?? document.getElementById('bgmap');
-
-  nodeMeta.forEach((meta) => {
-    if (!meta.isTopLevel || meta.isModal || !meta.audio) return;
-    if (meta.info.querySelector('.poetry-travel a')) return;
-    let cover = meta.info.querySelector(':scope > .songCover');
-    if (!cover) return;
-
-    let canvas = document.createElement('canvas');
-    canvas.className = 'cellArt';
-    canvas.width = size;
-    canvas.height = size;
-    let center = weavePage.grid.centerOf(meta.cell);
-    canvas.style.left = (center.x - weavePage.grid.cellWidth / 2) + "px";
-    canvas.style.top = (center.y - weavePage.grid.cellHeight / 2) + "px";
-    canvas.style.width = weavePage.grid.cellWidth + "px";
-    canvas.style.height = weavePage.grid.cellHeight + "px";
-    above.after(canvas);
-
-    let draw = () => drawCellArt(canvas, cover, meta.puzzle);
-    if (cover.complete && cover.naturalWidth) draw();
-    else cover.addEventListener('load', draw, { once: true });
-  });
-}
-
-// The art is shrunk by drawing it rather than reading its pixels, which a site opened from disk isn't allowed
-// to do. Without smoothing, every pixel is still an exact one of the art's.
-function drawCellArt(canvas, cover, puzzle){
-  let context = canvas.getContext('2d');
-  context.imageSmoothingEnabled = false;
-  context.globalAlpha = CELL_ART_OPACITY;
-  context.drawImage(cover, 0, 0, canvas.width, canvas.height);
-  context.globalAlpha = 1;
-  if (!puzzle) return;
-
-  // The puzzle as it starts: unlit Lanterns, nothing invisible showing, Switches waiting on any Keys.
-  let board = { data: new Uint8ClampedArray(TRACK_FOCUS_ART_PX * TRACK_FOCUS_ART_PX * 4), width: TRACK_FOCUS_ART_PX, height: TRACK_FOCUS_ART_PX };
-  WeavePuzzle.renderBoard(board, puzzle.objects, puzzle, {
-    switchesActive: !puzzle.objects.some((object) => object.kind === 'Key'),
-  });
-  let small = WeavePuzzle.shrinkImage(board, canvas.width);
-
-  // putImageData would replace the art underneath, see-through pixels included, so it's drawn over instead.
-  let layer = document.createElement('canvas');
-  layer.width = canvas.width;
-  layer.height = canvas.height;
-  layer.getContext('2d').putImageData(new ImageData(small.data, small.width, small.height), 0, 0);
-  context.drawImage(layer, 0, 0);
-}
-
-// ---------- fog ----------
 
 // How far around the ship a planet's fog clears: the same circle as a Lantern's on a board (see puzzle.js's
 // LANTERN_REACH), 3 squares out straight, and fewer on the diagonals.
