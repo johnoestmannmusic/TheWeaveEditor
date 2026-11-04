@@ -48,6 +48,9 @@ let boardRotatorActiveMs = 0;
 let boardRotatorGlideMs = 0;
 let boardRotatorClockMs = 0;
 let boardSolvedMs = null; // how long ago it was solved, while pausing there before returning to Track Focus
+// Each part's board as it was last left, while crossing between connected boards: part -> { game, cell }.
+// Forgotten on leaving the board - see crossBoard.
+let boardVisits = new Map();
 // While one part's board scrolls across to the next's: the two slide layers, the edge it's crossing, and how
 // far through - see startBoardScroll.
 let boardScroll = null;
@@ -1888,10 +1891,12 @@ function startBoardGame(){
 }
 
 // Everything that starts fresh, whether that's starting the board or restarting it. facing is the way the ship
-// starts out facing, if not up.
-function buildBoardGame(facing){
+// starts out facing, if not up. visit is a board to carry on from instead, as it was left - see crossBoard - or
+// just where to put the ship on a fresh one. Either way the ship is simply there, without arriving.
+function buildBoardGame(facing, visit){
   let puzzle = nodeMeta.get(activeNode).puzzle;
-  boardGame = puzzle ? WeavePuzzle.createPuzzleGame(puzzle) : null;
+  boardGame = visit?.game ?? (puzzle ? WeavePuzzle.createPuzzleGame(puzzle) : null);
+  if (visit) boardGame?.placeShip(visit.cell);
   boardStreamMs = 0;
   boardRotatorActiveMs = 0;
   boardRotatorGlideMs = BOARD_ROTATOR_TICK_MS;
@@ -1907,7 +1912,7 @@ function buildBoardGame(facing){
       cellHeight: BOARD_TILE_PX,
     }),
     {
-      cell: boardGame ? boardGame.start : WeavePuzzle.DEFAULT_START,
+      cell: visit?.cell ?? (boardGame ? boardGame.start : WeavePuzzle.DEFAULT_START),
       stepMs: BOARD_STEP_MS,
       facing: facing ?? 'up',
       canEnter: boardGame ? boardGame.canEnter : undefined,
@@ -1915,6 +1920,7 @@ function buildBoardGame(facing){
         onBoardEvent(boardGame.shipArrivedAt(cell));
         carryBoardShip();
       } : undefined,
+      onBlocked: onBoardBlocked,
     }
   );
   boardContrails = createContrails(BOARD_SHIP_WIDTH / 12, BOARD_TILE_PX, boardMover.position);
@@ -1923,6 +1929,7 @@ function buildBoardGame(facing){
 function restartBoardGame(){
   if (!boardGame) return;
 
+  boardVisits.delete(activeNode);
   releaseDirections();
   buildBoardGame();
   renderTrackFocus();
@@ -1948,7 +1955,7 @@ function onBoardEvent(event){
   if (event.finished) {
     markPuzzleSolved(nodeMeta.get(activeNode).puzzle);
     releaseDirections();
-    if (connectedExit()) {
+    if (connectedExit(chainIndex)) {
       boardSolvedMs = BOARD_SOLVED_PAUSE_MS - BOARD_SCROLL_DELAY_MS;
     } else {
       boardSolvedMs = 0;
@@ -1963,31 +1970,87 @@ function onBoardEvent(event){
 function finishBoardLevel(){
   let chain = nodeMeta.get(activeRoot).chain;
   let next = chain[chainIndex + 1];
-  let exit = connectedExit();
-  if (next) {
+  let exit = connectedExit(chainIndex);
+
+  if (next && exit) {
+    crossBoard(exit, chainIndex + 1);
+  } else if (next && nodeMeta.get(next).puzzle) {
     chainIndex++;
     activeNode = next;
-  }
-
-  if (next && nodeMeta.get(next).puzzle) {
-    let leaving = exit ? document.getElementById('trackFocusArtSlide') : null;
     releaseDirections();
-    buildBoardGame(exit?.toLowerCase());
+    buildBoardGame();
     renderTrackFocus();
-    // A scroll is its own transition, and covering it would hide it.
-    if (leaving) startBoardScroll(leaving, exit);
-    else showSceneLoading(trackFocusEl.querySelector('.trackFocusArtSlide > img'));
+    showSceneLoading(trackFocusEl.querySelector('.trackFocusArtSlide > img'));
     renderBoardShip();
   } else {
+    if (next) {
+      chainIndex++;
+      activeNode = next;
+    }
     leaveBoardGame();
   }
 }
 
-// The edge this part's board leads off to the next part's, if they're connected: its one Finish is on an edge,
-// and the next part's Start is directly across from it. Otherwise null, and moving on is a plain jump.
-function connectedExit(){
-  let next = nodeMeta.get(activeRoot).chain[chainIndex + 1];
+// Pushing off the edge of a board, between connected boards: from a part's Start back across to the part
+// before, onto its Finish, or from a solved Finish across to the next part again. So the ship can always cross
+// back and forth, whatever has moved around on either board since.
+function onBoardBlocked(cell, direction){
+  if (!boardGame || boardSolvedMs !== null || boardScroll) return;
+  let pushed = PUZZLE_DIRECTIONS[direction];
+  let isAt = (object) => object && object.col === cell.col && object.row === cell.row;
   let here = nodeMeta.get(activeNode).puzzle;
+
+  let back = chainIndex > 0 ? connectedExit(chainIndex - 1) : null;
+  if (back && WeavePuzzle.exitDirectionOf(cell) === pushed && pushed === OPPOSITE_DIRECTIONS[back]
+      && isAt(here.objects.find(object => object.kind === 'Start'))) {
+    crossBoard(pushed, chainIndex - 1);
+    return;
+  }
+
+  let ahead = connectedExit(chainIndex);
+  if (ahead === pushed && isPuzzleSolved(here) && isAt(here.objects.find(object => object.kind === 'Finish')))
+    crossBoard(pushed, chainIndex + 1);
+}
+
+const PUZZLE_DIRECTIONS = { up: 'Up', down: 'Down', left: 'Left', right: 'Right' };
+const OPPOSITE_DIRECTIONS = { Up: 'Down', Down: 'Up', Left: 'Right', Right: 'Left' };
+
+// Scrolls from this part's board across to a connected one's, the ship crossing the gap with them. This board
+// is remembered as it's left, and the other picks up as it was last left, if it has been: otherwise it starts
+// fresh with the ship coming in on the square across from where it left this one.
+function crossBoard(exit, toIndex){
+  let chain = nodeMeta.get(activeRoot).chain;
+  boardVisits.set(activeNode, { game: boardGame, cell: boardMover.cell });
+
+  let across = crossedTo(boardMover.cell, exit);
+  chainIndex = toIndex;
+  activeNode = chain[toIndex];
+  let visit = boardVisits.get(activeNode) ?? { game: null, cell: across };
+
+  let leaving = document.getElementById('trackFocusArtSlide');
+  releaseDirections();
+  buildBoardGame(exit.toLowerCase(), visit);
+  renderTrackFocus();
+  // A scroll is its own transition, and covering it would hide it.
+  startBoardScroll(leaving, exit);
+  renderBoardShip();
+}
+
+// The square on the next board across from one on this board's edge, leaving it in a direction.
+function crossedTo(cell, exit){
+  let last = TRACK_FOCUS_BOARD_SQUARES - 1;
+  if (exit === 'Left') return { col: last, row: cell.row };
+  if (exit === 'Right') return { col: 0, row: cell.row };
+  if (exit === 'Up') return { col: cell.col, row: last };
+  return { col: cell.col, row: 0 };
+}
+
+// The edge a part's board leads off to the next part's, if they're connected: its one Finish is on an edge, and
+// the next part's Start is directly across from it. Otherwise null, and moving on is a plain jump.
+function connectedExit(index){
+  let chain = nodeMeta.get(activeRoot).chain;
+  let next = chain[index + 1];
+  let here = nodeMeta.get(chain[index]).puzzle;
   let there = next ? nodeMeta.get(next).puzzle : null;
   let entrance = WeavePuzzle.entranceAfter(here);
   let start = there?.objects.find(object => object.kind === 'Start');
@@ -2039,6 +2102,7 @@ function leaveBoardGame(){
   if (!boardMover) return;
 
   boardScroll = null;
+  boardVisits.clear();
   releaseDirections();
   boardMover = null;
   boardShipEl = null;

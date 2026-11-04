@@ -305,6 +305,11 @@
 
       shipArrivedAt: arriveAt,
 
+      // Puts the ship on a square without anything there happening, for coming back onto a board where it was.
+      placeShip(cell){
+        shipCell = cell;
+      },
+
       // Which way a Stream is carrying a ship on this square, as sokoban.js's direction, or null.
       carryDirection(cell){
         let direction = streams.get(cellKey(cell));
