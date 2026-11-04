@@ -21,8 +21,8 @@ Neocities, replacing hand-authoring HTML per location.
 - Drawings for the puzzles' objects, painted pixel by pixel in the Puzzle Editor's Drawings view and
   shared by every puzzle in the project. Each kind of object can have as many as you like, besides its
   Standard drawing, which can be redrawn too. Drawings can be grouped into named Drawing Sets, such as one
-  per colour balance. Clicking an object's tool opens a tray of its sets and drawings to place with, and
-  placing from a set gives each square one of its drawings at random. A drawing is painted in the outline
+  per colour balance. Clicking an object's tool opens a tray of its sets to place from, or a Default one of
+  its Standard drawing while it has none, and placing from a set gives each square one of its drawings at random. A drawing is painted in the outline
   and light colours, its own mix of up to 4 palette colours, or Grain: that mix laid out in the album art's
   own pattern, each colour covering its percentage of it. Every album recolours a drawing from its own
   palette, and Gates have an Open frame too. Puzzle files carry the drawings they use.

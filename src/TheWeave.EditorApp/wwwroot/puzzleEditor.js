@@ -73,7 +73,7 @@ function openPuzzleEditor(pageId, nodeId) {
     direction: 'Right',
     gateOpen: false,
     invisible: false,
-    choices: {}, // kind -> { set } or { drawing } it's placed with, see placingChoice
+    choices: {}, // kind -> the id of the drawing set it's placed from, see placingSet
     objects: [],
     art: null, // the album art's pixels, once loaded, for the Drawings view's album patches
     palette: null,
@@ -354,83 +354,72 @@ function showPuzzleTool() {
   document.getElementById('pe-edge-ring').hidden = !(tool.kind === 'Finish' && leadsOn);
 }
 
-// What a kind is placed with, as chosen in its tray: a set of drawings or one drawing, while it still exists
-// (and a set still has drawings in it), or else its Standard drawing.
-function placingChoice(kind) {
-  const choice = puzzleEditor.choices[kind];
-  if (choice?.set && setMembers(drawingSetsOfKind(kind).find((set) => set.id === choice.set)).length > 0) return choice;
-  if (choice?.drawing && drawingsOfKind(kind).some((drawing) => drawing.id === choice.drawing)) return choice;
-  return { drawing: kind };
+// The sets a kind can be placed from: its own sets that have drawings in them, or, while it has none, a
+// Default one holding just its Standard drawing.
+function placeableSets(kind) {
+  const sets = drawingSetsOfKind(kind).filter((set) => setMembers(set).length > 0);
+  return sets.length > 0 ? sets : [{ id: '', kind, name: 'Default', drawings: [kind] }];
 }
 
-// The drawing for a new square: the chosen one, or one of the chosen set's at random, for variety.
+// The set a kind is placed from: the one chosen in its tray while it can still be, or else the first.
+function placingSet(kind) {
+  const sets = placeableSets(kind);
+  return sets.find((set) => set.id === puzzleEditor.choices[kind]) ?? sets[0];
+}
+
+// The drawing for a new square: one of the set's at random, for variety.
 function variantToPlace(kind) {
-  const choice = placingChoice(kind);
-  if (!choice.set) return choice.drawing;
-  const members = setMembers(drawingSetsOfKind(kind).find((set) => set.id === choice.set));
-  return members[Math.floor(Math.random() * members.length)].id;
+  const members = setMembers(placingSet(kind));
+  const random = crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32;
+  return members[Math.floor(random * members.length)].id;
 }
 
-// The one place to choose what an object is placed with: a tray under its tool, of its drawing sets and then
-// its single drawings. Only shown for a kind with something to choose between. Only rebuilt when those or their
-// colours change, so that a project-state can't replace a button mid-click.
+// The one place to choose what an object is placed with: a tray under its tool, of its drawing sets. Only
+// rebuilt when those or their colours change, so that a project-state can't replace a button mid-click.
 const puzzleToolTray = document.createElement('div');
 puzzleToolTray.id = 'pe-tray';
 
 function renderToolTray() {
   const kind = puzzleEditor.tool;
-  const drawn = WeavePuzzle.DRAWN_KINDS.includes(kind);
-  const sets = drawn ? drawingSetsOfKind(kind) : [];
-  const drawings = drawn ? drawingsOfKind(kind) : [];
+  const sets = WeavePuzzle.DRAWN_KINDS.includes(kind) ? placeableSets(kind) : [];
   const tray = puzzleToolTray;
 
-  tray.hidden = sets.length === 0 && drawings.length < 2;
+  tray.hidden = sets.length === 0;
   const toolButton = document.querySelector(`#pe-tool-buttons button[data-tool="${kind}"]`);
   if (toolButton && toolButton.nextElementSibling !== tray) toolButton.after(tray);
 
-  const key = JSON.stringify([kind, sets, drawings]);
+  const key = JSON.stringify([kind, sets.map((set) => [set.id, set.name, setMembers(set)])]);
   if (tray.dataset.key !== key || tray.look !== puzzleLook()) {
     tray.dataset.key = key;
     tray.look = puzzleLook();
 
-    const heading = (text) => {
-      const label = document.createElement('div');
-      label.className = 'pe-tray-heading';
-      label.textContent = text;
-      return label;
-    };
-    const item = (name, thumbnails, choice, empty) => {
+    const heading = document.createElement('div');
+    heading.className = 'pe-tray-heading';
+    heading.textContent = 'Drawing sets';
+
+    tray.replaceChildren(heading, ...sets.map((set) => {
+      const members = setMembers(set);
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'pe-tray-item';
-      button.dataset.choice = JSON.stringify(choice);
-      button.disabled = empty;
-      button.title = empty ? 'This set has no drawings yet. Add some in the Drawings view.' : name;
+      button.dataset.set = set.id;
+      button.title = members.length > 1 ? `Each square gets one of its ${members.length} drawings at random` : set.name;
       const pictures = document.createElement('span');
       pictures.className = 'pe-tray-thumbs';
-      pictures.append(...thumbnails);
+      pictures.append(...members.slice(0, 4).map(drawingThumbnail));
       const label = document.createElement('span');
-      label.textContent = name;
+      label.textContent = members.length > 1 ? `${set.name} (${members.length})` : set.name;
       button.append(pictures, label);
       button.addEventListener('click', () => {
-        puzzleEditor.choices[kind] = choice;
+        puzzleEditor.choices[kind] = set.id;
         renderToolTray();
       });
       return button;
-    };
-
-    tray.replaceChildren(
-      ...(sets.length > 0 ? [heading('Drawing sets'), ...sets.map((set) => {
-        const members = setMembers(set);
-        return item(`${set.name} (${members.length})`, members.slice(0, 4).map(drawingThumbnail), { set: set.id }, members.length === 0);
-      })] : []),
-      heading('Drawings'),
-      ...drawings.map((drawing) => item(drawing.name, [drawingThumbnail(drawing)], { drawing: drawing.id }, false)),
-    );
+    }));
   }
 
-  const chosen = JSON.stringify(placingChoice(kind));
-  for (const button of tray.querySelectorAll('.pe-tray-item')) button.classList.toggle('active', button.dataset.choice === chosen);
+  const chosen = placingSet(kind)?.id;
+  for (const button of tray.querySelectorAll('.pe-tray-item')) button.classList.toggle('active', button.dataset.set === chosen);
 }
 
 function renderPuzzlePalette() {

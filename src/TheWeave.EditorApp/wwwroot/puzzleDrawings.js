@@ -112,11 +112,11 @@ function drawingThumbnail(drawing) {
 function openDrawings() {
   const tool = puzzleEditor.tool;
   const kind = WeavePuzzle.DRAWN_KINDS.includes(tool) ? tool : 'Wall';
-  const choice = placingChoice(kind);
+  const setId = placingSet(kind).id || null;
   puzzleEditor.drawings = {
     kind,
-    id: choice.drawing ?? kind,
-    setId: choice.set ?? null, // the set being looked at, which new drawings join
+    id: kind,
+    setId, // the set being looked at, which new drawings join
     frame: 'closed',
     paint: 'G',
     tool: 'pencil',
@@ -143,9 +143,9 @@ function openDrawings() {
 }
 
 function closeDrawings() {
-  // The board is placing with whichever set, or else drawing, was last being looked at.
-  const { kind, id, setId } = puzzleEditor.drawings;
-  puzzleEditor.choices[kind] = setId ? { set: setId } : { drawing: id };
+  // The board places from whichever set was last being looked at.
+  const { kind, setId } = puzzleEditor.drawings;
+  if (setId) puzzleEditor.choices[kind] = setId;
   puzzleEditor.drawings = null;
 
   document.getElementById('pe-main').classList.remove('drawing-mode');
@@ -818,9 +818,8 @@ document.getElementById('pd-kind').addEventListener('change', (e) => {
   const view = puzzleEditor.drawings;
   view.kind = e.target.value;
   view.frame = 'closed';
-  const choice = placingChoice(view.kind);
-  view.setId = choice.set ?? null;
-  chooseDrawing(choice.drawing ?? view.kind);
+  view.setId = placingSet(view.kind).id || null;
+  chooseDrawing(view.kind);
 });
 
 document.getElementById('pd-set-new').addEventListener('click', () => {
