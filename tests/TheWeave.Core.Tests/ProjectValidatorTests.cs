@@ -37,6 +37,56 @@ public class ProjectValidatorTests
             .ToList();
     }
 
+    private static List<string> DrawingProblems(List<PuzzleDrawing>? library, params PuzzleObject[] objects)
+    {
+        var node = new Node
+        {
+            Id = "track",
+            Card = new Card { CoverImagePath = "img/track.png", Audio = new AudioRef { Url = "track.ogg" } },
+            Puzzle = new Puzzle { PaletteSource = "img/track.png", Objects = objects.ToList(), Textures = { ["wall"] = new PuzzleTexture() } },
+        };
+        var project = new WeaveProject { Pages = { MakePage("ouros", node) }, PuzzleDrawings = library };
+        return ProjectValidator.Validate(project).Select(i => i.Message).Where(m => m.Contains("rawing")).ToList();
+    }
+
+    private static PuzzleDrawing Drawing(string id, PuzzleObjectKind kind, char paint = 'G') => new()
+    {
+        Id = id,
+        Kind = kind,
+        Name = id,
+        Pixels = new string(paint, PuzzleDrawings.TilePixels),
+        Mix = { new PuzzleMixColour { Role = "wall", Shade = 2, Percent = 100 } },
+    };
+
+    [Fact]
+    public void ObjectsUsingADrawingTheLibraryDoesntHave_AreReported_OncePerDrawing()
+    {
+        var problems = DrawingProblems(
+            [Drawing("mossy", PuzzleObjectKind.Wall), Drawing("shiny", PuzzleObjectKind.Key)],
+            Finish,
+            new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 1, Variant = "mossy" },
+            new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 2, Variant = "gone" },
+            new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 3, Variant = "gone" },
+            new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 4, Variant = "shiny" });
+
+        Assert.Equal(
+        [
+            "Puzzle on 'track': 2 Walls use drawing 'gone', which isn't in the library, so they're drawn as Standard.",
+            "Puzzle on 'track': a Wall uses drawing 'shiny', which isn't in the library, so it's drawn as Standard.",
+        ], problems);
+    }
+
+    [Fact]
+    public void ADrawingWithNothingDrawn_IsReported_ButAnEmptyOpenGateIsnt()
+    {
+        var gate = Drawing("gate", PuzzleObjectKind.Gate);
+        gate.OpenPixels = new string('.', PuzzleDrawings.TilePixels);
+
+        var problems = DrawingProblems([Drawing("blank", PuzzleObjectKind.Wall, '.'), gate], Finish);
+
+        Assert.Equal(["Drawing 'blank' (Wall) has nothing drawn, so anything using it is invisible."], problems);
+    }
+
     private static PuzzleObject Finish => new() { Kind = PuzzleObjectKind.Finish };
     private static PuzzleObject Lettered(PuzzleObjectKind kind, string letter) => new() { Kind = kind, Letter = letter };
 

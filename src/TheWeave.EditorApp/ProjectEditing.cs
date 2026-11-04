@@ -287,6 +287,9 @@ internal static class ProjectEditing
 
             if (obj.Kind != PuzzleObjectKind.Gate)
                 obj.Open = false;
+
+            if (!PuzzleDrawings.DrawnKinds.Contains(obj.Kind) || string.IsNullOrEmpty(obj.Variant))
+                obj.Variant = null;
         }
 
         var crowded = puzzle.Objects
@@ -298,16 +301,119 @@ internal static class ProjectEditing
         if (puzzle.Objects.Count(o => o.Kind == PuzzleObjectKind.Start) > 1)
             throw new InvalidOperationException("A puzzle can only have one Start.");
 
-        var tilePixels = 24 * 24;
         foreach (var (role, texture) in puzzle.Textures)
         {
-            if (texture.Ramp.Count == 0 || texture.Pixels.Length != tilePixels)
+            if (texture.Ramp.Count == 0 || (texture.Grain ?? texture.Pixels)?.Length != PuzzleDrawings.TilePixels)
                 throw new InvalidOperationException($"The {role} texture isn't complete.");
         }
     }
 
     private static bool IsFloorTile(PuzzleObject obj) =>
         obj.Kind is PuzzleObjectKind.Stream or PuzzleObjectKind.RotatorTile;
+
+    /// <summary>
+    /// Replaces the project's whole library of drawings, and its sets of them unless sets is null. Anything drawn
+    /// with a drawing that's gone goes back to its kind's Standard drawing, and it leaves every set it was in.
+    /// </summary>
+    public static void ApplyPuzzleDrawingsEdit(WeaveProject project, List<PuzzleDrawing> drawings, List<PuzzleDrawingSet>? sets = null)
+    {
+        ValidatePuzzleDrawings(drawings);
+        sets ??= project.PuzzleDrawingSets?.Select(s => new PuzzleDrawingSet { Id = s.Id, Kind = s.Kind, Name = s.Name, Drawings = [.. s.Drawings] }).ToList() ?? [];
+        ValidatePuzzleDrawingSets(sets);
+
+        project.PuzzleDrawings = drawings.Count > 0 ? drawings : null;
+
+        bool Exists(PuzzleObjectKind kind, string id) => id == kind.ToString() || drawings.Any(d => d.Id == id && d.Kind == kind);
+        foreach (var set in sets)
+            set.Drawings = set.Drawings.Where(id => Exists(set.Kind, id)).Distinct().ToList();
+        project.PuzzleDrawingSets = sets.Count > 0 ? sets : null;
+
+        foreach (var obj in PuzzlesIn(project.Pages.SelectMany(p => p.Nodes)).SelectMany(p => p.Objects))
+        {
+            if (obj.Variant is not null && !drawings.Any(d => d.Id == obj.Variant && d.Kind == obj.Kind))
+                obj.Variant = null;
+        }
+    }
+
+    public static void ValidatePuzzleDrawingSets(List<PuzzleDrawingSet> sets)
+    {
+        foreach (var set in sets)
+        {
+            if (string.IsNullOrWhiteSpace(set.Id))
+                throw new InvalidOperationException("A drawing set needs an id.");
+            if (!PuzzleDrawings.DrawnKinds.Contains(set.Kind))
+                throw new InvalidOperationException($"A {set.Kind} can't have drawing sets, since it has no drawings.");
+
+            set.Name = set.Name.Trim();
+            if (set.Name.Length == 0)
+                throw new InvalidOperationException("A drawing set needs a name.");
+        }
+
+        if (sets.GroupBy(s => s.Id).FirstOrDefault(g => g.Count() > 1) is { } repeated)
+            throw new InvalidOperationException($"More than one drawing set has the id '{repeated.Key}'.");
+    }
+
+    /// <summary>Adds the drawings a puzzle file brought with it (see PuzzleDrawings.Merge), leaving any already there alone.</summary>
+    public static void AddPuzzleDrawings(WeaveProject project, List<PuzzleDrawing> drawings)
+    {
+        var library = project.PuzzleDrawings ?? [];
+        var combined = library.Concat(drawings.Where(d => library.All(existing => existing.Id != d.Id))).ToList();
+        ValidatePuzzleDrawings(combined);
+        project.PuzzleDrawings = combined.Count > 0 ? combined : null;
+    }
+
+    private static IEnumerable<Puzzle> PuzzlesIn(IEnumerable<Node> nodes) =>
+        nodes.SelectMany(n => (n.Puzzle is null ? [] : new[] { n.Puzzle }).Concat(PuzzlesIn(n.Children)));
+
+    public static void ValidatePuzzleDrawings(List<PuzzleDrawing> drawings)
+    {
+        foreach (var drawing in drawings)
+        {
+            if (string.IsNullOrWhiteSpace(drawing.Id))
+                throw new InvalidOperationException("A drawing needs an id.");
+            if (!PuzzleDrawings.DrawnKinds.Contains(drawing.Kind))
+                throw new InvalidOperationException($"A {drawing.Kind} can't have drawings: it's drawn in code, since it moves.");
+            // A kind's name is the id of its Standard drawing, so no other kind's drawing can have it.
+            if (Enum.TryParse<PuzzleObjectKind>(drawing.Id, out var kindNamed) && kindNamed != drawing.Kind)
+                throw new InvalidOperationException($"'{drawing.Id}' is the id of the {kindNamed}'s Standard drawing.");
+
+            drawing.Name = drawing.Name.Trim();
+            if (drawing.Name.Length == 0)
+                throw new InvalidOperationException("A drawing needs a name.");
+
+            CheckDrawingPixels(drawing, drawing.Pixels);
+            if (drawing.Kind != PuzzleObjectKind.Gate)
+                drawing.OpenPixels = null;
+            else if (drawing.OpenPixels is not null)
+                CheckDrawingPixels(drawing, drawing.OpenPixels);
+
+            if (drawing.Mix.Count is 0 or > 4)
+                throw new InvalidOperationException($"Drawing '{drawing.Name}' needs from 1 to 4 colours in its mix.");
+            foreach (var colour in drawing.Mix)
+            {
+                if (!PuzzleDrawings.Roles.Contains(colour.Role))
+                    throw new InvalidOperationException($"Drawing '{drawing.Name}' mixes in an unknown colour, '{colour.Role}'.");
+                if (colour.Shade is < 0 or > 3)
+                    throw new InvalidOperationException($"Drawing '{drawing.Name}' has a shade that isn't Darkest, Dark, Main or Light.");
+                if (colour.Percent is < 0 or > 100)
+                    throw new InvalidOperationException($"Drawing '{drawing.Name}' has a percentage outside 0 to 100.");
+                // The outline and light colours have only the one shade.
+                if (colour.Role is "outline" or "light")
+                    colour.Shade = 0;
+            }
+            if (drawing.Mix.All(c => c.Percent == 0))
+                throw new InvalidOperationException($"Drawing '{drawing.Name}' needs some of at least one colour in its mix.");
+        }
+
+        if (drawings.GroupBy(d => d.Id).FirstOrDefault(g => g.Count() > 1) is { } repeated)
+            throw new InvalidOperationException($"More than one drawing has the id '{repeated.Key}'.");
+    }
+
+    private static void CheckDrawingPixels(PuzzleDrawing drawing, string pixels)
+    {
+        if (pixels.Length != PuzzleDrawings.TilePixels || pixels.Any(p => !PuzzleDrawings.Paints.Contains(p)))
+            throw new InvalidOperationException($"Drawing '{drawing.Name}' isn't a complete 24x24 drawing.");
+    }
 
     public static void ApplyPageEdit(WeaveProject project, Page page, PageEditRequest edit)
     {

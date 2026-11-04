@@ -73,16 +73,155 @@ public sealed class PuzzleObject
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Invisible { get; set; }
+
+    /// <summary>
+    /// The id of the PuzzleDrawing in WeaveProject.PuzzleDrawings it's drawn with. Left out of the project file
+    /// when it's its kind's Standard drawing.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Variant { get; set; }
 }
 
 /// <summary>
-/// One object colour's texture, generated from the album art (see runtime/puzzle.js's pickTextures): the
-/// shades it's made of, and one digit per pixel of a square saying which shade goes there.
+/// One object colour's texture, generated from the album art (see runtime/puzzle.js's pickTextures): its 4
+/// shades, darkest first, the art's grain for mixes, and its Standard look.
 /// </summary>
 public sealed class PuzzleTexture
 {
     public List<string> Ramp { get; set; } = new();
+
+    /// <summary>One base-36 lightness digit per pixel of a square. Missing from a texture made before mixes.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Grain { get; set; }
+
+    /// <summary>
+    /// One digit per pixel saying which of Ramp's shades goes there in the Standard look. In a texture made
+    /// before mixes, Ramp held only the shades the art had, and this stands in for the grain too.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Pixels { get; set; }
+}
+
+/// <summary>One of a drawing's mix of colours: a shade of a palette colour, and how much of the drawing's grain it covers.</summary>
+public sealed class PuzzleMixColour
+{
+    /// <summary>A palette role, like "wall" or "key", or "outline" or "light", which have only the one shade.</summary>
+    public string Role { get; set; } = "";
+
+    /// <summary>0 to 3: Darkest, Dark, Main or Light.</summary>
+    public int Shade { get; set; }
+
+    /// <summary>Taken in proportion to the others, so they needn't add up to exactly 100.</summary>
+    public int Percent { get; set; }
+}
+
+/// <summary>
+/// Pixel art for one kind of object, shared by every puzzle in the project and recoloured from each one's
+/// album art (see runtime/puzzle.js's buildSprite). One whose Id is its Kind's name redraws that kind's Standard drawing.
+/// </summary>
+public sealed class PuzzleDrawing
+{
+    public string Id { get; set; } = "";
+    public PuzzleObjectKind Kind { get; set; }
+    public string Name { get; set; } = "";
+
+    /// <summary>One paint per pixel of a square, row by row - see PuzzleDrawings.Paints.</summary>
     public string Pixels { get; set; } = "";
+
+    /// <summary>Gate only: how it looks open.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? OpenPixels { get; set; }
+
+    public List<PuzzleMixColour> Mix { get; set; } = new();
+}
+
+/// <summary>
+/// A named group of one kind's drawings, for the Puzzle Editor to place from: each square placed from a set gets
+/// one of its drawings at random. Only a way of placing, so the game never sees it - each object still has its
+/// own drawing.
+/// </summary>
+public sealed class PuzzleDrawingSet
+{
+    public string Id { get; set; } = "";
+    public PuzzleObjectKind Kind { get; set; }
+    public string Name { get; set; } = "";
+
+    /// <summary>Its drawings' ids. A kind's own name is its Standard drawing, which can be in a set too.</summary>
+    public List<string> Drawings { get; set; } = new();
+}
+
+/// <summary>The rules for PuzzleDrawings, shared with runtime/puzzle.js.</summary>
+public static class PuzzleDrawings
+{
+    public const int TilePixels = 24 * 24;
+
+    /// <summary>
+    /// Nothing, the outline colour, the light colour, the mix laid out in the album's grain, or one of the
+    /// mix's colours (darkest first) on its own.
+    /// </summary>
+    public const string Paints = ".OHG1234";
+
+    public static readonly IReadOnlyList<string> Roles = ["wall", "finish", "gate", "teleporter", "stream", "key", "rotator", "lantern", "outline", "light"];
+
+    /// <summary>Every kind drawn from a drawing. Streams and Rotator tiles are animated, so they're drawn in code.</summary>
+    public static readonly IReadOnlySet<PuzzleObjectKind> DrawnKinds = new HashSet<PuzzleObjectKind>
+    {
+        PuzzleObjectKind.Wall, PuzzleObjectKind.Finish, PuzzleObjectKind.Gate, PuzzleObjectKind.Switch,
+        PuzzleObjectKind.Teleporter, PuzzleObjectKind.Key, PuzzleObjectKind.RotatorSwitch, PuzzleObjectKind.Lantern,
+    };
+
+    public static bool IsStandard(PuzzleDrawing drawing) => drawing.Id == drawing.Kind.ToString();
+
+    /// <summary>
+    /// The drawings from a library that a puzzle is drawn with: its objects' variants, and, unless only
+    /// variants are wanted, any redrawn Standard drawing of a kind it has.
+    /// </summary>
+    public static List<PuzzleDrawing> UsedBy(Puzzle puzzle, IEnumerable<PuzzleDrawing>? library, bool includeStandard = true) =>
+        (library ?? []).Where(drawing => puzzle.Objects.Any(o => o.Kind == drawing.Kind
+            && (o.Variant == drawing.Id || (includeStandard && IsStandard(drawing))))).ToList();
+
+    /// <summary>
+    /// Which of a puzzle file's drawings a library needs adding, pointing its objects at the ones added. One
+    /// with the same id as a different drawing already there comes in as a copy under a new id.
+    /// </summary>
+    public static List<PuzzleDrawing> Merge(IEnumerable<PuzzleDrawing>? library, IEnumerable<PuzzleDrawing> incoming, List<PuzzleObject> objects)
+    {
+        var existing = (library ?? []).ToList();
+        var added = new List<PuzzleDrawing>();
+
+        foreach (var drawing in incoming.Where(d => !IsStandard(d)))
+        {
+            var same = existing.Concat(added).FirstOrDefault(d => d.Id == drawing.Id);
+            if (same is not null && SameDrawing(same, drawing))
+                continue;
+
+            var id = drawing.Id;
+            if (same is not null)
+            {
+                var taken = existing.Concat(added).Select(d => d.Id).ToHashSet();
+                for (var n = 2; taken.Contains(id); n++)
+                    id = $"{drawing.Id}-{n}";
+                foreach (var obj in objects.Where(o => o.Kind == drawing.Kind && o.Variant == drawing.Id))
+                    obj.Variant = id;
+            }
+
+            added.Add(new PuzzleDrawing
+            {
+                Id = id,
+                Kind = drawing.Kind,
+                Name = drawing.Name,
+                Pixels = drawing.Pixels,
+                OpenPixels = drawing.OpenPixels,
+                Mix = drawing.Mix.Select(m => new PuzzleMixColour { Role = m.Role, Shade = m.Shade, Percent = m.Percent }).ToList(),
+            });
+        }
+        return added;
+    }
+
+    private static bool SameDrawing(PuzzleDrawing a, PuzzleDrawing b) =>
+        a.Kind == b.Kind && a.Name == b.Name && a.Pixels == b.Pixels && a.OpenPixels == b.OpenPixels
+        && a.Mix.Count == b.Mix.Count
+        && a.Mix.Zip(b.Mix).All(pair => pair.First.Role == pair.Second.Role && pair.First.Shade == pair.Second.Shade && pair.First.Percent == pair.Second.Percent);
 }
 
 /// <summary>

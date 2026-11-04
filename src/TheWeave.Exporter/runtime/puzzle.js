@@ -460,28 +460,34 @@
 
   // Every role that has a texture of its own. A Switch shares its Gate's, as it does its colour.
   const TEXTURE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern'];
-  // The shades a texture is made of, by how far they're aimed from its main colour in lightness, and how
-  // much of the texture each covers. A shade only exists if the art really has a colour like it.
+  // The 4 shades of a role's colour, darkest first: how far each is aimed from the main colour in lightness,
+  // and how much of an object it covers unless a drawing's mix says otherwise. A shade the art has nothing
+  // like is filled in by its neighbour towards the main colour.
   const TEXTURE_SHADES = [
     { offset: -30, share: 0.15 },
     { offset: -14, share: 0.25 },
     { offset: 0, share: 0.45 },
     { offset: 16, share: 0.15 },
   ];
+  const MAIN_SHADE = 2;
   // How close a colour in the art has to be to count as a shade of one, or towards finding a patch of it.
   const TEXTURE_SHADE_DISTANCE = 110;
   const TEXTURE_PATCH_DISTANCE = 70;
   const TEXTURE_PATCH_STEP = 4;
+  // How many levels of lightness a grain is stored in, as one base-36 digit per pixel.
+  const GRAIN_LEVELS = 36;
 
   function hexToColor(hex){
     let value = parseInt(hex.slice(1), 16);
     return { r: value >> 16, g: (value >> 8) & 255, b: value & 255 };
   }
 
-  // Generates each object's texture from an album's art (RGBA bytes, width x height): the pattern of light
-  // and dark from wherever the art has the most of that object's colour, recoloured in shades of that
-  // colour that are also exact colours from the art. So it carries the album's own grain and dithering, but
-  // still reads as that object, rather than blending into the art behind it.
+  // Works out what each object's colour needs from an album's art (RGBA bytes, width x height): its 4 shades,
+  // each an exact colour from the art, and the grain of wherever the art has the most of it, as a lightness
+  // per pixel. A drawing's mix lays its colours out in that grain (see mixTexture), so objects carry the
+  // album's own texture and dithering, but still read as themselves rather than blending into the art. Also
+  // which shade goes where in the colour's Standard look, worked out as it always has been, so that a
+  // Standard object looks just as it did before mixes.
   function pickTextures(pixels, width, height, palette){
     let colors = new Map();
     for (let i = 0; i + 3 < pixels.length; i += 4) {
@@ -494,34 +500,40 @@
     let textures = {};
     for (const role of TEXTURE_ROLES) {
       let color = hexToColor(palette[role]);
-      let { ramp, baseIndex } = pickShades(color, artColors);
+      let found = pickShades(color, artColors);
       let patch = findPatch(pixels, width, height, color);
-      textures[role] = { ramp: ramp.map(toHex), pixels: patternOf(pixels, width, height, patch, ramp.length, baseIndex) };
+      textures[role] = {
+        ramp: fillShades(found).map(toHex),
+        grain: grainOf(pixels, width, height, patch),
+        pixels: patternOf(pixels, width, height, patch, found),
+      };
     }
     return textures;
   }
 
-  // The art's colours nearest each shade wanted, darkest first, with no shade repeated.
+  // The art's colours nearest each shade wanted, darkest first, or null for one the art has nothing like.
   function pickShades(color, artColors){
     let near = artColors.filter(other => colorDistance(other, color) <= TEXTURE_SHADE_DISTANCE);
-    let shades = [];
-    let baseIndex = 0;
 
-    for (const shade of TEXTURE_SHADES) {
-      if (shade.offset === 0) {
-        baseIndex = shades.length;
-        shades.push(color);
-        continue;
-      }
+    return TEXTURE_SHADES.map(shade => {
+      if (shade.offset === 0) return color;
       let wanted = lightnessOf(color) + shade.offset;
       let best = null;
       for (const other of near) {
         let miss = Math.abs(lightnessOf(other) - wanted);
         if (miss <= Math.abs(shade.offset) / 2 && (!best || miss < best.miss)) best = { other, miss };
       }
-      if (best) shades.push(best.other);
-    }
-    return { ramp: shades, baseIndex };
+      return best?.other ?? null;
+    });
+  }
+
+  // Each missing shade filled in by its neighbour towards the main colour.
+  function fillShades(shades){
+    return shades.map((shade, index) => {
+      let step = index < MAIN_SHADE ? 1 : -1;
+      for (let i = index; shade === null; i += step) shade = shades[i + step];
+      return shade;
+    });
   }
 
   // The top-left of the square of art holding the most of a colour, using a running total of matching
@@ -547,9 +559,8 @@
     return best;
   }
 
-  // A patch of art as one digit per pixel, each the index of the shade to draw there. Stretches the patch's
-  // own range of lightness across the shades, so that even a nearly flat patch shows its pattern.
-  function patternOf(pixels, width, height, patch, shadeCount, baseIndex){
+  // The lightness of each pixel of a square patch of art.
+  function patchLightness(pixels, width, height, patch){
     let values = [];
     for (let y = 0; y < TILE_PX; y++) {
       for (let x = 0; x < TILE_PX; x++) {
@@ -557,24 +568,125 @@
         values.push(lightnessOf({ r: pixels[i], g: pixels[i + 1], b: pixels[i + 2] }));
       }
     }
+    return values;
+  }
 
+  // A patch of art as one digit per pixel, each the shade to draw there in the Standard look. Stretches the
+  // patch's own range of lightness across the shades the art has, so that even a nearly flat patch shows its
+  // pattern, sharing them out in proportion to the first that many shares, which is how it's always been done.
+  function patternOf(pixels, width, height, patch, found){
+    let values = patchLightness(pixels, width, height, patch);
     let sorted = [...values].sort((a, b) => a - b);
     let flat = sorted[0] === sorted[sorted.length - 1];
 
-    // How far through the patch's lightness each shade ends, sharing the shades that do exist in proportion.
-    let shades = TEXTURE_SHADES.slice(0, shadeCount);
+    // Which of the 4 shades each one the art has is, and how far through the patch's lightness each ends.
+    let present = found.map((shade, index) => shade ? index : -1).filter(index => index !== -1);
+    let shares = TEXTURE_SHADES.slice(0, present.length);
     let walked = 0;
-    let total = shades.reduce((sum, shade) => sum + shade.share, 0);
-    let limits = shades.map(shade => {
+    let total = shares.reduce((sum, shade) => sum + shade.share, 0);
+    let limits = shares.map(shade => {
       walked += shade.share / total;
       return sorted[Math.min(sorted.length - 1, Math.floor(walked * sorted.length))];
     });
 
     return values.map(value => {
-      if (flat) return baseIndex;
+      if (flat) return MAIN_SHADE;
       let index = limits.findIndex(limit => value <= limit);
-      return index === -1 ? shadeCount - 1 : index;
+      return present[index === -1 ? present.length - 1 : index];
     }).join('');
+  }
+
+  // A patch of art as one base-36 digit per pixel, its lightness there. Stretches the patch's own range of
+  // lightness across every level, so that even a nearly flat patch shows its pattern.
+  function grainOf(pixels, width, height, patch){
+    let values = patchLightness(pixels, width, height, patch);
+    let darkest = Math.min(...values), lightest = Math.max(...values);
+    let range = lightest - darkest || 1;
+    return values.map(value => Math.round((value - darkest) / range * (GRAIN_LEVELS - 1)).toString(36)).join('');
+  }
+
+  // ---------- mixes ----------
+
+  // The mix an object has unless its drawing says otherwise: its own colour's 4 shades, mostly the main one.
+  function standardMix(role){
+    return TEXTURE_SHADES.map((shade, index) => ({ role, shade: index, percent: Math.round(shade.share * 100) }));
+  }
+
+  // One of a mix's colours: a shade of an object's colour, or the outline or light colour, which have no shades.
+  function mixColorOf(look, row){
+    let { palette, textures } = look;
+    let texture = textures?.[row.role];
+    if (!texture) return hexToColor(palette[row.role] ?? palette.wall);
+    if (texture.grain) return hexToColor(texture.ramp[row.shade] ?? texture.ramp[MAIN_SHADE]);
+
+    // Saved before textures had all 4 shades: only the shades the art had, with its own colour among them.
+    let main = Math.max(0, texture.ramp.indexOf(palette[row.role]));
+    let index = Math.min(texture.ramp.length - 1, Math.max(0, main + row.shade - MAIN_SHADE));
+    return hexToColor(texture.ramp[index]);
+  }
+
+  // A texture's grain as a number per pixel, or null if it has none. One saved before grains were stored only
+  // has which of its shades went where in its Standard look, which is a coarser grain but the same pattern.
+  function grainValuesOf(texture){
+    let digits = texture?.grain ?? texture?.pixels;
+    return digits?.length === TILE_PX * TILE_PX ? [...digits].map(digit => parseInt(digit, 36)) : null;
+  }
+
+  function isMix(rows, other){
+    return rows.length === other.length && rows.every((row, i) => row.role === other[i].role && row.shade === other[i].shade && row.percent === other[i].percent);
+  }
+
+  // Breaks ties between pixels of the same lightness in a scattered order, rather than top to bottom.
+  function scatter(index){
+    return Math.imul(index + 1, 2654435761) >>> 0;
+  }
+
+  const mixCaches = new WeakMap();
+
+  // A mix of colours (a list of { role, shade, percent }) laid out across a square: colours, darkest first,
+  // and for each pixel which of them goes there. The grain of the colour with the most of the mix decides
+  // where: its darkest pixels get the darkest colour, and so on, each colour covering its percentage of them.
+  function mixTexture(look, mix){
+    let cache = mixCaches.get(look);
+    if (!cache) mixCaches.set(look, cache = new Map());
+    let key = JSON.stringify(mix);
+    if (cache.has(key)) return cache.get(key);
+
+    let rows = (mix ?? []).filter(row => row.percent > 0).slice(0, 4);
+    if (rows.length === 0) rows = [{ role: 'wall', shade: MAIN_SHADE, percent: 100 }];
+    let biggest = rows.reduce((best, row) => row.percent > best.percent ? row : best);
+
+    let mixed;
+    let own = look.textures?.[rows[0].role];
+    if (own?.pixels && isMix(rows, standardMix(rows[0].role))) {
+      // A colour's own standard mix keeps exactly the pattern its texture was made with: its Standard look.
+      let colors = own.ramp.map(hexToColor);
+      mixed = { colors, pixels: [...own.pixels].map(Number), main: Math.max(0, own.ramp.indexOf(look.palette[rows[0].role])) };
+    } else {
+      let colored = rows
+        .map(row => ({ row, color: mixColorOf(look, row) }))
+        .sort((a, b) => lightnessOf(a.color) - lightnessOf(b.color));
+      let colors = colored.map(entry => entry.color);
+      let main = colored.findIndex(entry => entry.row === biggest);
+
+      let grainRow = [...rows].sort((a, b) => b.percent - a.percent).find(row => grainValuesOf(look.textures?.[row.role]));
+      let grain = grainRow ? grainValuesOf(look.textures[grainRow.role]) : null;
+      let pixels = new Array(TILE_PX * TILE_PX).fill(main);
+
+      if (grain && new Set(grain).size > 1) {
+        let order = grain.map((value, index) => index).sort((a, b) => grain[a] - grain[b] || scatter(a) - scatter(b));
+        let total = colored.reduce((sum, entry) => sum + entry.row.percent, 0);
+        let index = 0, reached = colored[0].row.percent;
+        order.forEach((pixel, rank) => {
+          while (index < colored.length - 1 && (rank + 0.5) / order.length * total > reached) reached += colored[++index].row.percent;
+          pixels[pixel] = index;
+        });
+      }
+      mixed = { colors, pixels, main };
+    }
+
+    cache.set(key, mixed);
+    return mixed;
   }
 
   // ---------- drawing ----------
@@ -625,12 +737,10 @@
   const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
   const SPRITE_ROLES = { Wall: 'wall', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern' };
 
-  // What colour a role's pixel at x, y of a square is: its texture's shade there, or its plain colour for a
-  // puzzle saved before it had textures.
+  // What colour a role's pixel at x, y of a square is, in its standard mix.
   function roleColorAt(look, role, x, y){
-    let texture = look.textures?.[role];
-    let shade = texture?.pixels?.[y * TILE_PX + x];
-    return hexToColor(shade !== undefined ? texture.ramp[Number(shade)] : look.palette[role] ?? look.palette.wall);
+    let mix = mixTexture(look, standardMix(role));
+    return mix.colors[mix.pixels[y * TILE_PX + x]];
   }
 
   function maskOf(test){
@@ -665,33 +775,80 @@
     }
   }
 
+  // ---------- drawings ----------
+
+  // What each character of a drawing paints: nothing, the outline colour, the light colour, the drawing's mix
+  // laid out in the album's grain, or one of the mix's colours (darkest first) on its own.
+  const PAINTS = { clear: '.', outline: 'O', light: 'H', grain: 'G', colors: ['1', '2', '3', '4'] };
+
+  // Every kind of object drawn from a drawing. Streams and Rotator tiles are animated, so they're drawn in code.
+  const DRAWN_KINDS = Object.keys(SPRITE_SHAPES);
+
+  const standardDrawings = new Map();
+
+  // The drawing each kind has unless the project's library redraws it: its shape, outlined, in its standard
+  // mix. Its id is the kind's own name, which is also how a library tells its redrawn Standard ones apart.
+  function standardDrawing(kind){
+    if (!standardDrawings.has(kind)) {
+      let pixelsOf = (test) => {
+        let mask = maskOf(test);
+        let paints = '';
+        for (let y = 0; y < TILE_PX; y++) {
+          for (let x = 0; x < TILE_PX; x++) paints += !mask[y * TILE_PX + x] ? PAINTS.clear : isEdge(mask, x, y) ? PAINTS.outline : PAINTS.grain;
+        }
+        return paints;
+      };
+
+      let body = SHAPES[SPRITE_SHAPES[kind]];
+      let drawing = { id: kind, kind, name: 'Standard', pixels: pixelsOf(body), mix: standardMix(SPRITE_ROLES[kind]) };
+      if (kind === 'Gate') drawing.openPixels = pixelsOf((dx, dy) => body(dx, dy) && !SHAPES.octagonHole(dx, dy));
+      standardDrawings.set(kind, drawing);
+    }
+    return standardDrawings.get(kind);
+  }
+
+  // The drawing an object is drawn with: its variant from the library, or else its kind's Standard one, as
+  // the library has it if it's been redrawn.
+  function drawingFor(look, object){
+    let find = (id) => look.drawings?.find(drawing => drawing.id === id && drawing.kind === object.kind);
+    return (object.variant && find(object.variant)) || find(object.kind) || standardDrawing(object.kind);
+  }
+
+  function paintColor(paint, mix, index, outline, light){
+    if (paint === PAINTS.outline) return outline;
+    if (paint === PAINTS.light) return light;
+    if (paint === PAINTS.grain) return mix.colors[mix.pixels[index]];
+    let color = PAINTS.colors.indexOf(paint);
+    return color === -1 ? null : mix.colors[Math.min(color, mix.colors.length - 1)];
+  }
+
   // A square's worth of pixels for one object: a colour per pixel, or null where it's see-through.
   function buildSprite(object, look, switchesActive){
     let sprite = new Array(TILE_PX * TILE_PX).fill(null);
-    let role = SPRITE_ROLES[object.kind];
     let outline = hexToColor(look.palette.outline);
     let light = hexToColor(look.palette.light);
 
     let isOpenGate = object.kind === 'Gate' && object.open;
     let isDim = (object.kind === 'Switch' && !switchesActive) || (object.kind === 'Lantern' && !object.lit);
 
-    let body = SHAPES[SPRITE_SHAPES[object.kind]];
-    let test = isOpenGate ? (dx, dy) => body(dx, dy) && !SHAPES.octagonHole(dx, dy) : body;
-    let mask = maskOf(test);
+    let drawing = drawingFor(look, object);
+    let paints = isOpenGate ? drawing.openPixels ?? standardDrawing('Gate').openPixels : drawing.pixels;
+    let mix = mixTexture(look, drawing.mix);
 
     for (let y = 0; y < TILE_PX; y++) {
       for (let x = 0; x < TILE_PX; x++) {
-        if (!mask[y * TILE_PX + x]) continue;
+        let index = y * TILE_PX + x;
+        let color = paintColor(paints[index], mix, index, outline, light);
+        if (!color) continue;
         // De-activated: every other pixel gives way to the outline's colour, the classic look of something disabled.
-        let dimmed = isDim && (x + y) % 2 === 0;
-        sprite[y * TILE_PX + x] = isEdge(mask, x, y) || dimmed ? outline : roleColorAt(look, role, x, y);
+        sprite[index] = isDim && (x + y) % 2 === 0 ? outline : color;
       }
     }
 
     if (object.kind === 'Gate' || object.kind === 'Switch' || object.kind === 'Teleporter') {
       // Whichever of the art's lightest and darkest colours stands out from this shape the most. An open
       // Gate's letter has only the art behind it, so that one gets a dark edge to stand out from it.
-      let fill = hexToColor(look.palette[role]);
+      let fill = mix.colors[mix.main];
       let useDark = Math.abs(lightnessOf(fill) - lightnessOf(outline)) >= Math.abs(lightnessOf(fill) - lightnessOf(light));
       // Twice the alphabet's size where it fits. A diamond narrows too quickly for that, so its stays small.
       let scale = object.kind === 'Teleporter' ? 1 : 2;
@@ -765,7 +922,7 @@
   function spriteKey(object, switchesActive, streamPhase, rotatorPhase){
     if (object.kind === 'Stream') return `Stream|${object.direction}|${streamPhase}`;
     if (object.kind === 'RotatorTile') return `RotatorTile|${object.direction}|${rotatorPhase}`;
-    return `${object.kind}|${object.letter ?? ''}|${object.kind === 'Gate' && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}`;
+    return `${object.kind}|${object.variant ?? ''}|${object.letter ?? ''}|${object.kind === 'Gate' && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}`;
   }
 
   function spriteFor(object, look, switchesActive, streamPhase, rotatorPhase){
@@ -808,7 +965,7 @@
   // is, so that every pixel of every object lands on one of the art's. Floor tiles go first, so that whatever's
   // on one sits on top of it. Start isn't drawn, since that's where the ship itself goes.
   //
-  // look is { palette, textures }. Options:
+  // look is { palette, textures, drawings }, drawings being the project's library (see drawingFor). Options:
   // - timeMs drives a Stream's animation, and rotatorTimeMs a Rotator tile's, which only moves when it's told to.
   // - switchesActive says whether Switches work yet.
   // - along and rotatorAlong are how far objects are through moving from their fromCol and fromRow, for
@@ -838,5 +995,6 @@
     }
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, TILE_PX, ART_PX, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, pickPalette, pickTextures, renderBoard, hasFinish, createPuzzleGame };
+  return { BOARD_SIZE, DEFAULT_START, LETTERS, TILE_PX, ART_PX, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, pickPalette, pickTextures, renderBoard, hasFinish, createPuzzleGame,
+    PAINTS, DRAWN_KINDS, SPRITE_ROLES, TEXTURE_SHADES, standardDrawing, standardMix, mixTexture };
 });

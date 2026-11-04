@@ -18,6 +18,18 @@ Neocities, replacing hand-authoring HTML per location.
   listed as you go. A puzzle's layout can be exported to a JSON file and imported onto another track,
   where it takes on that track's colours and textures. What the objects look like and how they're placed lives in `runtime/puzzle.js`,
   shared with the exported site.
+- Drawings for the puzzles' objects, painted pixel by pixel in the Puzzle Editor's Drawings view and
+  shared by every puzzle in the project. Each kind of object can have as many as you like, besides its
+  Standard drawing, which can be redrawn too. Drawings can be grouped into named Drawing Sets, such as one
+  per colour balance. Clicking an object's tool opens a tray of its sets to place from, or a Default one of
+  its Standard drawing while it has none, and placing from a set gives each square one of its drawings at random. A drawing is painted in the outline
+  and light colours, its own mix of up to 4 palette colours, or Grain: that mix laid out in the album art's
+  own pattern, each colour covering its percentage of it. Every album recolours a drawing from its own
+  palette, and Gates have an Open frame too. Puzzle files carry the drawings they use.
+- A Generate panel in the Drawings view, offering patterns to start a new drawing from: patches of the
+  album art, natural textures (clouds, speckle, moss, veins and stones, which tile seamlessly) and dithers.
+  Any of the palette's colours can be laid out across them, each covering the percentage you choose. Picking
+  one makes it a new drawing of the current shape, in solid colours to edit pixel by pixel.
 - Tree navigator + Inspector: browse every page and (nested) location in a project, and edit
   a location's full card — heading, position, icon style, persistence, card size, cover
   image/audio, poetry lines, and its download/travel action (including arrival position) — or

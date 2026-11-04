@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace TheWeave.Core.Model;
 
 /// <summary>The whole site: every page, node, and asset reference, in one file.</summary>
@@ -44,4 +46,15 @@ public sealed class WeaveProject
     /// action leads back to it - see main.js's updateHubMusicSignal.
     /// </summary>
     public string? BackgroundMusicPath { get; set; }
+
+    /// <summary>
+    /// The project's library of Sokoban object drawings, shared by every puzzle - see PuzzleDrawing. Null
+    /// rather than empty while there are none, so a project without any is saved exactly as before.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<PuzzleDrawing>? PuzzleDrawings { get; set; }
+
+    /// <summary>Groups of those drawings to place from - see PuzzleDrawingSet. Null rather than empty while there are none.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<PuzzleDrawingSet>? PuzzleDrawingSets { get; set; }
 }

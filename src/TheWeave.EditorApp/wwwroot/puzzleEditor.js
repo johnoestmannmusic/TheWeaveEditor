@@ -3,7 +3,8 @@
 // puzzle's objects on. Like the rest of the UI, nothing here is the real copy of the puzzle - every
 // edit goes to the C# side, and comes back in the next project-state (see syncPuzzleEditor), which is
 // also how undo and redo reach this screen. What objects look like and how they can be placed lives in
-// runtime/puzzle.js, shared with the exported site.
+// runtime/puzzle.js, shared with the exported site. The drawings objects are drawn with are painted on
+// this screen's Drawings view - see puzzleDrawings.js.
 
 const PUZZLE_TOOLS = [
   { kind: 'Wall', label: 'Wall', hint: 'Blocks the way. Drag to paint.', paints: true, canHide: true },
@@ -72,10 +73,13 @@ function openPuzzleEditor(pageId, nodeId) {
     direction: 'Right',
     gateOpen: false,
     invisible: false,
+    choices: {}, // kind -> the id of the drawing set it's placed from, see placingSet
     objects: [],
+    art: null, // the album art's pixels, once loaded, for the Drawings view's album patches
     palette: null,
     textures: null,
-    look: null, // both of those, as puzzle.js's renderBoard wants them
+    lookFor: null, // what puzzleLook last made its look from, and that look
+    drawings: null, // the Drawings view's state while it's open - see puzzleDrawings.js
     image: null, // the art-sized pixels drawn onto the board's canvas - see drawPuzzleBoard
     painting: null, // { erasing, last } during a drag
     tile: PUZZLE_TILE_PX,
@@ -98,6 +102,7 @@ function openPuzzleEditor(pageId, nodeId) {
 }
 
 function closePuzzleEditor() {
+  if (puzzleEditor?.drawings) closeDrawings();
   puzzleEditor = null;
   document.getElementById('puzzle-editor').hidden = true;
   document.querySelector('main').classList.remove('behind-puzzle-editor');
@@ -123,9 +128,10 @@ function syncPuzzleEditor() {
   if (node.puzzle?.palette && Object.keys(node.puzzle.palette).length > 0 && !puzzleEditor.palette) {
     puzzleEditor.palette = node.puzzle.palette;
     puzzleEditor.textures = node.puzzle.textures ?? null;
-    puzzleEditor.look = { palette: puzzleEditor.palette, textures: puzzleEditor.textures };
   }
 
+  renderToolTray();
+  syncDrawings();
   renderPuzzleProblems();
   document.getElementById('pe-export').disabled = !node.puzzle;
 
@@ -147,10 +153,12 @@ function receivePuzzleArt(message) {
     const context = reader.getContext('2d', { willReadFrequently: true });
     context.drawImage(art, 0, 0);
     const pixels = context.getImageData(0, 0, reader.width, reader.height).data;
+    puzzleEditor.art = { pixels, width: reader.width, height: reader.height };
     puzzleEditor.palette = WeavePuzzle.pickPalette(pixels);
     puzzleEditor.textures = WeavePuzzle.pickTextures(pixels, reader.width, reader.height, puzzleEditor.palette);
-    puzzleEditor.look = { palette: puzzleEditor.palette, textures: puzzleEditor.textures };
     renderPuzzlePalette();
+    renderToolTray();
+    syncDrawings();
 
     // Keeps a saved puzzle's colours and textures up to date with its art. This does nothing to the project
     // if they already were, so opening a puzzle doesn't count as an edit.
@@ -166,7 +174,8 @@ function receivePuzzleArt(message) {
 }
 
 // A file's layout takes this track's colours and textures, so it's saved like any other edit, and can be
-// undone like one. A file with no Start gets the same default one as a new puzzle.
+// undone like one, along with any drawings it brought that the library didn't have. A file with no Start
+// gets the same default one as a new puzzle.
 function receiveImportedPuzzle(message) {
   if (!puzzleEditor || message.nodeId !== puzzleEditor.nodeId) return;
 
@@ -174,18 +183,40 @@ function receiveImportedPuzzle(message) {
   if (!objects.some((object) => object.kind === 'Start'))
     objects.push({ kind: 'Start', col: WeavePuzzle.DEFAULT_START.col, row: WeavePuzzle.DEFAULT_START.row });
 
-  savePuzzle(objects);
-  showToast(`Imported ${objects.length} objects. Ctrl+Z puts the old puzzle back.`, false);
+  const drawings = message.drawings ?? [];
+  savePuzzle(objects, drawings);
+  const added = drawings.length === 0 ? '' : ` and ${drawings.length} drawing${drawings.length === 1 ? '' : 's'}`;
+  showToast(`Imported ${objects.length} objects${added}. Ctrl+Z puts the old puzzle back.`, false);
 }
 
-function savePuzzle(objects) {
+function savePuzzle(objects, drawings = []) {
   const { pageId, nodeId, palette, textures } = puzzleEditor;
   puzzleEditor.objects = objects;
   send('update-puzzle', {
     pageId,
     nodeId,
     puzzle: { objects, palette: palette ?? {}, textures: textures ?? {}, paletteSource: findNode(pageId, nodeId).card.coverImagePath },
+    ...(drawings.length > 0 ? { drawings } : {}),
   });
+}
+
+// What the board and drawings are drawn with: this album's colours, and the project's drawings, with the
+// one being painted standing in for its saved copy until it's saved. The same object while none of that
+// changes, since puzzle.js keeps what it's drawn by it.
+function puzzleLook() {
+  const { palette, textures } = puzzleEditor;
+  if (!palette) return null;
+
+  const library = project?.puzzleDrawings ?? [];
+  const working = puzzleEditor.drawings?.working ?? null;
+  const last = puzzleEditor.lookFor;
+  if (last && last.palette === palette && last.textures === textures && last.library === library && last.working === working)
+    return last.look;
+
+  const drawings = working ? [...library.filter((drawing) => drawing.id !== working.id), working] : library;
+  const look = { palette, textures, drawings };
+  puzzleEditor.lookFor = { palette, textures, library, working, look };
+  return look;
 }
 
 // Whether a following part's Start isn't where the ship comes in from the part before, and could be.
@@ -315,11 +346,80 @@ function showPuzzleTool() {
   document.getElementById('pe-letter-row').hidden = !tool.letter;
   document.getElementById('pe-gate-state-row').hidden = !tool.gateState;
   document.getElementById('pe-direction-row').hidden = !tool.direction;
+  renderToolTray();
   let hint = tool.hint;
   if (tool.kind === 'Finish' && leadsOn)
     hint = `This part leads on to '${next.card.headingText}', so it has one Finish, on an edge but not a corner. The ship comes in across from it on the next board.`;
   document.getElementById('pe-tool-hint').textContent = hint;
   document.getElementById('pe-edge-ring').hidden = !(tool.kind === 'Finish' && leadsOn);
+}
+
+// The sets a kind can be placed from: its own sets that have drawings in them, or, while it has none, a
+// Default one holding just its Standard drawing.
+function placeableSets(kind) {
+  const sets = drawingSetsOfKind(kind).filter((set) => setMembers(set).length > 0);
+  return sets.length > 0 ? sets : [{ id: '', kind, name: 'Default', drawings: [kind] }];
+}
+
+// The set a kind is placed from: the one chosen in its tray while it can still be, or else the first.
+function placingSet(kind) {
+  const sets = placeableSets(kind);
+  return sets.find((set) => set.id === puzzleEditor.choices[kind]) ?? sets[0];
+}
+
+// The drawing for a new square: one of the set's at random, for variety.
+function variantToPlace(kind) {
+  const members = setMembers(placingSet(kind));
+  const random = crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32;
+  return members[Math.floor(random * members.length)].id;
+}
+
+// The one place to choose what an object is placed with: a tray under its tool, of its drawing sets. Only
+// rebuilt when those or their colours change, so that a project-state can't replace a button mid-click.
+const puzzleToolTray = document.createElement('div');
+puzzleToolTray.id = 'pe-tray';
+
+function renderToolTray() {
+  const kind = puzzleEditor.tool;
+  const sets = WeavePuzzle.DRAWN_KINDS.includes(kind) ? placeableSets(kind) : [];
+  const tray = puzzleToolTray;
+
+  tray.hidden = sets.length === 0;
+  const toolButton = document.querySelector(`#pe-tool-buttons button[data-tool="${kind}"]`);
+  if (toolButton && toolButton.nextElementSibling !== tray) toolButton.after(tray);
+
+  const key = JSON.stringify([kind, sets.map((set) => [set.id, set.name, setMembers(set)])]);
+  if (tray.dataset.key !== key || tray.look !== puzzleLook()) {
+    tray.dataset.key = key;
+    tray.look = puzzleLook();
+
+    const heading = document.createElement('div');
+    heading.className = 'pe-tray-heading';
+    heading.textContent = 'Drawing sets';
+
+    tray.replaceChildren(heading, ...sets.map((set) => {
+      const members = setMembers(set);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'pe-tray-item';
+      button.dataset.set = set.id;
+      button.title = members.length > 1 ? `Each square gets one of its ${members.length} drawings at random` : set.name;
+      const pictures = document.createElement('span');
+      pictures.className = 'pe-tray-thumbs';
+      pictures.append(...members.slice(0, 4).map(drawingThumbnail));
+      const label = document.createElement('span');
+      label.textContent = members.length > 1 ? `${set.name} (${members.length})` : set.name;
+      button.append(pictures, label);
+      button.addEventListener('click', () => {
+        puzzleEditor.choices[kind] = set.id;
+        renderToolTray();
+      });
+      return button;
+    }));
+  }
+
+  const chosen = placingSet(kind)?.id;
+  for (const button of tray.querySelectorAll('.pe-tray-item')) button.classList.toggle('active', button.dataset.set === chosen);
 }
 
 function renderPuzzlePalette() {
@@ -386,10 +486,11 @@ function drawPuzzleBoard(timeMs) {
   const context = canvas.getContext('2d');
   context.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (puzzleEditor.look) {
+  const look = puzzleLook();
+  if (look && !puzzleEditor.drawings) {
     puzzleEditor.image ??= context.createImageData(PUZZLE_ART_PX, PUZZLE_ART_PX);
     const objects = puzzleEditor.objects;
-    WeavePuzzle.renderBoard(puzzleEditor.image, objects, puzzleEditor.look, {
+    WeavePuzzle.renderBoard(puzzleEditor.image, objects, look, {
       timeMs,
       rotatorTimeMs: timeMs,
       switchesActive: !objects.some((object) => object.kind === 'Key'),
@@ -423,10 +524,12 @@ function puzzleCellAt(e) {
 
 function buildPuzzleObject(cell) {
   const tool = currentPuzzleTool();
+  const variant = WeavePuzzle.DRAWN_KINDS.includes(tool.kind) ? variantToPlace(tool.kind) : tool.kind;
   return {
     kind: tool.kind,
     col: cell.col,
     row: cell.row,
+    ...(variant !== tool.kind ? { variant } : {}),
     ...(tool.letter ? { letter: puzzleEditor.letter } : {}),
     ...(tool.direction ? { direction: puzzleEditor.direction } : {}),
     ...(tool.gateState && puzzleEditor.gateOpen ? { open: true } : {}),
@@ -506,7 +609,9 @@ document.getElementById('pe-clear').addEventListener('click', () => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (puzzleEditor && e.key === 'Escape') closePuzzleEditor();
+  if (!puzzleEditor || e.key !== 'Escape') return;
+  if (puzzleEditor.drawings) escapeDrawings();
+  else closePuzzleEditor();
 });
 
 window.addEventListener('resize', layoutPuzzleBoard);

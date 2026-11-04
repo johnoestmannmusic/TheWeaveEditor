@@ -130,7 +130,7 @@ public sealed class PageRenderer
                 : "";
 
         sb.AppendLine($"{pad}<!-- {SafeComment(node.Card.HeadingText)} -->");
-        sb.AppendLine($"{pad}<div class=\"node\"{persistentAttr}{modalAttr}{travelHomeAttr}{BuildPuzzleAttr(node)} style=\"left: {Px(left)}px; top: {Px(top)}px;\">");
+        sb.AppendLine($"{pad}<div class=\"node\"{persistentAttr}{modalAttr}{travelHomeAttr}{BuildPuzzleAttr(node, _project.PuzzleDrawings)} style=\"left: {Px(left)}px; top: {Px(top)}px;\">");
         sb.AppendLine($"{pad}  <img class=\"nodeImage\" src=\"{iconSrc}\">");
 
         sb.AppendLine();
@@ -238,14 +238,23 @@ public sealed class PageRenderer
 
     // A track's puzzle, for main.js to play on its Sokoban board. Only where it could be played: the
     // board needs Track Focus and the art. The id is another exception to Node.Id staying out of the
-    // HTML, for the same reason as a modal's: main.js remembers across visits which were solved.
-    private static string BuildPuzzleAttr(Node node)
+    // HTML, for the same reason as a modal's: main.js remembers across visits which were solved. Only the
+    // drawings from the project's library that this puzzle uses come along.
+    private static string BuildPuzzleAttr(Node node, List<PuzzleDrawing>? library)
     {
         var puzzle = node.Puzzle;
         if (puzzle is null || !OpensTrackFocus(node.Card) || string.IsNullOrEmpty(node.Card.CoverImagePath))
             return "";
 
-        var json = JsonSerializer.Serialize(new { id = node.Id, objects = puzzle.Objects, palette = puzzle.Palette, textures = puzzle.Textures }, PuzzleJsonOptions);
+        var drawings = PuzzleDrawings.UsedBy(puzzle, library);
+        var json = JsonSerializer.Serialize(new
+        {
+            id = node.Id,
+            objects = puzzle.Objects,
+            palette = puzzle.Palette,
+            textures = puzzle.Textures,
+            drawings = drawings.Count > 0 ? drawings : null,
+        }, PuzzleJsonOptions);
         return $" data-puzzle=\"{EscapeAttr(json)}\"";
     }
 
