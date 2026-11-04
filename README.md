@@ -24,6 +24,10 @@ Neocities, replacing hand-authoring HTML per location.
   and light colours, its own mix of up to 4 palette colours, or Grain: that mix laid out in the album art's
   own pattern, each colour covering its percentage of it. Every album recolours a drawing from its own
   palette, and Gates have an Open frame too. Puzzle files carry the drawings they use.
+- A Generate panel in the Drawings view, offering patterns to start a new drawing from: patches of the
+  album art, natural textures (clouds, speckle, moss, veins and stones, which tile seamlessly) and dithers.
+  Any of the palette's colours can be laid out across them, each covering the percentage you choose. Picking
+  one makes it a new drawing of the current shape, in solid colours to edit pixel by pixel.
 - Tree navigator + Inspector: browse every page and (nested) location in a project, and edit
   a location's full card — heading, position, icon style, persistence, card size, cover
   image/audio, poetry lines, and its download/travel action (including arrival position) — or

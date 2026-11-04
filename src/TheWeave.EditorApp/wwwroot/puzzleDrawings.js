@@ -24,6 +24,7 @@ const DRAWING_ROLE_LABELS = {
 const DRAWING_MAX_MIX = 4;
 const DRAWING_LETTERED = ['Gate', 'Switch', 'Teleporter'];
 const DRAWING_PREVIEW_TILES = 3;
+const DRAWING_CANDIDATES = 8;
 
 function drawingKindLabel(kind) {
   return PUZZLE_TOOLS.find((tool) => tool.kind === kind)?.label ?? kind;
@@ -55,9 +56,10 @@ function drawingUses(drawing) {
 
 // ---------- drawing them ----------
 
-// One object drawn with a drawing, onto a canvas at the art's own pixels, starting at a square's corner.
+// One object drawn with a drawing, onto a canvas at the art's own pixels, starting at a square's corner. A
+// drawing that isn't in the library yet, like a generated one, comes with a look that includes it.
 function renderDrawingOnto(context, drawing, options = {}) {
-  const look = puzzleLook();
+  const look = options.look ?? puzzleLook();
   if (!look) return;
 
   const tiles = options.tiles ?? 1;
@@ -111,6 +113,7 @@ function openDrawings() {
     working: null, // the drawing as it's being painted, until the stroke is saved
     stroke: null, // { paint, field, last } during a stroke
     deleting: false,
+    generator: null, // the Generate panel's state while it's open - see openGenerator
   };
 
   document.getElementById('pe-main').classList.add('drawing-mode');
@@ -140,7 +143,9 @@ function closeDrawings() {
 }
 
 function escapeDrawings() {
-  if (puzzleEditor.drawings.deleting) {
+  if (puzzleEditor.drawings.generator) {
+    closeGenerator();
+  } else if (puzzleEditor.drawings.deleting) {
     puzzleEditor.drawings.deleting = false;
     renderDrawings();
   } else {
@@ -247,6 +252,7 @@ function renderDrawings() {
 
   renderDrawingPaints(drawing, look);
   renderDrawingMix(drawing, look);
+  renderGenerator(drawing, look);
   drawDrawingCanvas();
 }
 
@@ -304,10 +310,23 @@ function renderDrawingPaints(drawing, look) {
 }
 
 function renderDrawingMix(drawing, look) {
-  const list = document.getElementById('pd-mix');
-  const rows = drawing.mix;
+  renderMixRows(document.getElementById('pd-mix'), drawing.mix, look, `${drawing.kind}|${drawing.id}`, {
+    change: changeMixRow,
+    remove: (index) => saveDrawing({ ...currentDrawing(), mix: currentDrawing().mix.filter((_, i) => i !== index) }),
+  });
+  document.getElementById('pd-mix-add').disabled = drawing.mix.length >= DRAWING_MAX_MIX;
+  document.getElementById('pd-mix-total').textContent = mixTotalText(drawing.mix);
+}
 
-  rebuildIfChanged(list, `${drawing.kind}|${drawing.id}|${rows.length}`, () => {
+function mixTotalText(rows) {
+  const total = rows.reduce((sum, row) => sum + row.percent, 0);
+  return total === 100 ? 'Total 100%' : `Total ${total}%, taken in proportion`;
+}
+
+// A row per colour of a mix: which palette colour, which of its shades, and how much. Shared by a drawing's
+// own mix and the Generate panel's balance.
+function renderMixRows(list, rows, look, key, { change, remove }) {
+  rebuildIfChanged(list, `${key}|${rows.length}`, () => {
     list.replaceChildren(...rows.map((row, index) => {
       const line = document.createElement('div');
       line.className = 'pd-mix-row';
@@ -319,13 +338,13 @@ function renderDrawingMix(drawing, look) {
       role.className = 'pd-mix-role';
       role.title = 'Which of the palette\'s colours';
       role.append(...PUZZLE_PALETTE_ROLES.map((value) => new Option(DRAWING_ROLE_LABELS[value], value)));
-      role.addEventListener('change', () => changeMixRow(index, { role: role.value, ...(['outline', 'light'].includes(role.value) ? { shade: 0 } : {}) }));
+      role.addEventListener('change', () => change(index, { role: role.value, ...(['outline', 'light'].includes(role.value) ? { shade: 0 } : {}) }));
 
       const shade = document.createElement('select');
       shade.className = 'pd-mix-shade';
       shade.title = 'Which of its shades';
       shade.append(...DRAWING_SHADES.map((label, value) => new Option(label, value)));
-      shade.addEventListener('change', () => changeMixRow(index, { shade: Number(shade.value) }));
+      shade.addEventListener('change', () => change(index, { shade: Number(shade.value) }));
 
       const percent = document.createElement('input');
       percent.type = 'number';
@@ -333,20 +352,20 @@ function renderDrawingMix(drawing, look) {
       percent.min = 0;
       percent.max = 100;
       percent.step = 5;
-      percent.title = 'How much of the grain it covers';
+      percent.title = 'How much of the square it covers';
       percent.addEventListener('change', () => {
         const value = Math.max(0, Math.min(100, Math.round(Number(percent.value) || 0)));
-        changeMixRow(index, { percent: value });
+        change(index, { percent: value });
       });
 
-      const remove = document.createElement('button');
-      remove.type = 'button';
-      remove.className = 'small';
-      remove.textContent = '×';
-      remove.title = 'Takes this colour out of the mix';
-      remove.addEventListener('click', () => saveDrawing({ ...currentDrawing(), mix: currentDrawing().mix.filter((_, i) => i !== index) }));
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'small';
+      removeButton.textContent = '×';
+      removeButton.title = 'Takes this colour out';
+      removeButton.addEventListener('click', () => remove(index));
 
-      line.append(swatch, role, shade, percent, '%', remove);
+      line.append(swatch, role, shade, percent, '%', removeButton);
       return line;
     }));
   });
@@ -357,24 +376,189 @@ function renderDrawingMix(drawing, look) {
     if (document.activeElement !== role) role.value = row.role;
     if (document.activeElement !== shade) shade.value = String(row.shade);
     if (document.activeElement !== percent) percent.value = String(row.percent);
-    const oneShade = row.role === 'outline' || row.role === 'light';
-    shade.disabled = oneShade;
+    shade.disabled = row.role === 'outline' || row.role === 'light';
     line.querySelector('button').disabled = rows.length === 1;
     if (look) {
-      const color = WeavePuzzle.mixTexture(look, [{ ...row, percent: 100 }]).colors[0];
+      const color = mixRowColor(look, row);
       swatch.style.background = `rgb(${color.r}, ${color.g}, ${color.b})`;
     }
   });
+}
 
-  const total = rows.reduce((sum, row) => sum + row.percent, 0);
-  document.getElementById('pd-mix-add').disabled = rows.length >= DRAWING_MAX_MIX;
-  document.getElementById('pd-mix-total').textContent = total === 100 ? 'Total 100%' : `Total ${total}%, taken in proportion`;
+function mixRowColor(look, row) {
+  return WeavePuzzle.mixTexture(look, [{ ...row, percent: 100 }]).colors[0];
 }
 
 function changeMixRow(index, change) {
   const drawing = currentDrawing();
   saveDrawing({ ...drawing, mix: drawing.mix.map((row, i) => (i === index ? { ...row, ...change } : row)) });
 }
+
+// ---------- generating ----------
+
+// Patterns to start a new drawing from, each with the panel's balance of colours laid out across it, in the
+// current drawing's shape. The same seed always gives the same patterns, so changing the balance only
+// recolours them; More moves on to a new seed.
+function openGenerator() {
+  const view = puzzleEditor.drawings;
+  view.generator = {
+    seed: Math.floor(Math.random() * 1e9),
+    families: [...WeaveGrains.FAMILIES],
+    balance: currentDrawing().mix.map((row) => ({ ...row })),
+    candidates: [],
+  };
+  generateCandidates();
+  renderDrawings();
+}
+
+function closeGenerator() {
+  puzzleEditor.drawings.generator = null;
+  renderDrawings();
+  layoutDrawingCanvas();
+}
+
+function generateCandidates() {
+  const generator = puzzleEditor.drawings.generator;
+  generator.candidates = WeaveGrains.candidates({
+    seed: generator.seed,
+    count: DRAWING_CANDIDATES,
+    families: generator.families,
+    art: puzzleEditor.art,
+  });
+}
+
+// The balance's colours that cover anything, darkest first in this album's colours, which is the order a
+// drawing's Colour 1 to 4 paints are in.
+function sortedBalance(look, balance) {
+  return balance
+    .filter((row) => row.percent > 0)
+    .map((row) => ({ row, lightness: (({ r, g, b }) => 0.2126 * r + 0.7152 * g + 0.0722 * b)(mixRowColor(look, row)) }))
+    .sort((a, b) => a.lightness - b.lightness)
+    .map(({ row }) => ({ ...row }));
+}
+
+// A candidate as a drawing of the current one's shape, its pattern painted in as solid colours.
+function candidateDrawing(candidate, index, look) {
+  const drawing = currentDrawing();
+  const mix = sortedBalance(look, puzzleEditor.drawings.generator.balance);
+  const colors = WeaveGrains.bake(candidate.values, mix.map((row) => row.percent));
+  const generated = {
+    id: `generated-${index}`,
+    kind: drawing.kind,
+    name: `${drawingKindLabel(drawing.kind)} ${candidate.name.toLowerCase()}`,
+    pixels: WeaveGrains.paintInto(drawing.pixels, colors),
+    mix,
+  };
+  if (drawing.kind === 'Gate')
+    generated.openPixels = WeaveGrains.paintInto(drawing.openPixels ?? WeavePuzzle.standardDrawing('Gate').openPixels, colors);
+  return generated;
+}
+
+function renderGenerator(drawing, look) {
+  const generator = puzzleEditor.drawings.generator;
+  const panel = document.getElementById('pd-generator');
+  panel.hidden = !generator;
+  document.getElementById('pd-board').hidden = !!generator;
+  document.getElementById('pd-stage-tools').hidden = !!generator;
+  document.getElementById('pd-stage-hint').hidden = !!generator;
+  if (!generator) return;
+
+  for (const button of document.querySelectorAll('#pd-families button')) {
+    const family = button.dataset.family;
+    button.classList.toggle('active', generator.families.includes(family));
+    button.disabled = family === 'album' && !puzzleEditor.art;
+  }
+
+  renderMixRows(document.getElementById('pd-balance'), generator.balance, look, 'balance', {
+    change: (index, change) => {
+      generator.balance = generator.balance.map((row, i) => (i === index ? { ...row, ...change } : row));
+      renderDrawings();
+    },
+    remove: (index) => {
+      generator.balance = generator.balance.filter((_, i) => i !== index);
+      renderDrawings();
+    },
+  });
+  document.getElementById('pd-balance-add').disabled = generator.balance.length >= DRAWING_MAX_MIX;
+  document.getElementById('pd-balance-total').textContent = mixTotalText(generator.balance);
+
+  const list = document.getElementById('pd-candidates');
+  const usable = look && generator.balance.some((row) => row.percent > 0);
+  const key = JSON.stringify([generator.seed, generator.families, generator.balance, drawing.pixels, drawing.openPixels, !!usable]);
+  if (list.dataset.key === key && list.look === look) return;
+  list.dataset.key = key;
+  list.look = look;
+
+  list.replaceChildren(...(usable ? generator.candidates : []).map((candidate, index) => {
+    const generated = candidateDrawing(candidate, index, look);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'pd-candidate';
+    button.title = `Makes '${generated.name}', a new drawing to edit`;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = PUZZLE_TILE_PX;
+    canvas.height = PUZZLE_TILE_PX;
+    renderDrawingOnto(canvas.getContext('2d'), generated, { letter: true, look: { ...look, drawings: [...look.drawings, generated] } });
+
+    button.append(canvas, candidate.name);
+    button.addEventListener('click', () => {
+      puzzleEditor.drawings.generator = null;
+      addDrawing(generated, generated.name);
+      layoutDrawingCanvas();
+    });
+    return button;
+  }));
+}
+
+// Two to four of the palette's colours at random, in random amounts that add up to 100, as a place to start.
+function shuffledBalance() {
+  const count = 2 + Math.floor(Math.random() * 3);
+  // Twenty lots of 5%, one to each colour first so that none is left out.
+  const lots = Array(count).fill(1);
+  for (let i = count; i < 20; i++) lots[Math.floor(Math.random() * count)]++;
+  return lots.map((lot) => {
+    const percent = lot * 5;
+    const role = PUZZLE_PALETTE_ROLES[Math.floor(Math.random() * PUZZLE_PALETTE_ROLES.length)];
+    return { role, shade: ['outline', 'light'].includes(role) ? 0 : Math.floor(Math.random() * DRAWING_SHADES.length), percent };
+  });
+}
+
+document.getElementById('pd-generate').addEventListener('click', openGenerator);
+document.getElementById('pd-generate-close').addEventListener('click', closeGenerator);
+
+document.getElementById('pd-generate-more').addEventListener('click', () => {
+  puzzleEditor.drawings.generator.seed += 1;
+  generateCandidates();
+  renderDrawings();
+});
+
+for (const button of document.querySelectorAll('#pd-families button')) {
+  button.addEventListener('click', () => {
+    const generator = puzzleEditor.drawings.generator;
+    const family = button.dataset.family;
+    const families = generator.families.includes(family)
+      ? generator.families.filter((other) => other !== family)
+      : [...generator.families, family];
+    // Always at least one, so there's something to show.
+    if (families.length === 0) return;
+    generator.families = WeaveGrains.FAMILIES.filter((other) => families.includes(other));
+    generateCandidates();
+    renderDrawings();
+  });
+}
+
+document.getElementById('pd-balance-add').addEventListener('click', () => {
+  const generator = puzzleEditor.drawings.generator;
+  if (generator.balance.length >= DRAWING_MAX_MIX) return;
+  generator.balance = [...generator.balance, { role: WeavePuzzle.SPRITE_ROLES[puzzleEditor.drawings.kind], shade: 3, percent: 10 }];
+  renderDrawings();
+});
+
+document.getElementById('pd-balance-shuffle').addEventListener('click', () => {
+  puzzleEditor.drawings.generator.balance = shuffledBalance();
+  renderDrawings();
+});
 
 // ---------- the canvas ----------
 

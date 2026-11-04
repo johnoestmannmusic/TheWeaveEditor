@@ -1004,3 +1004,65 @@ main.behind-puzzle-editor {
 #pd-kind:disabled, .pd-mix-row select:disabled {
   opacity: 0.4;
 }
+
+/* The Drawings view's Generate panel, in place of the canvas while it's open. */
+#pd-stage-tools[hidden], #pd-board[hidden], #pd-generator[hidden] {
+  display: none;
+}
+
+#pd-generator {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.pd-generator-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.pd-generator-row strong {
+  color: var(--text);
+  font-size: 13px;
+  margin-right: 6px;
+}
+
+#pd-families {
+  display: flex;
+  gap: 4px;
+}
+
+#pd-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#pd-candidates {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.pd-candidate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  font-size: 11px;
+}
+
+.pd-candidate canvas {
+  width: 96px;
+  height: 96px;
+  image-rendering: pixelated;
+  background: repeating-conic-gradient(#2c2a28 0% 25%, #3a3836 0% 50%) 0 0 / 8px 8px;
+}

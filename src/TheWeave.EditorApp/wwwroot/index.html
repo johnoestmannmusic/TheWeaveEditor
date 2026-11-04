@@ -170,13 +170,36 @@
           <div id="pd-board">
             <canvas id="pd-canvas" width="24" height="24"></canvas>
           </div>
+          <div id="pd-generator" hidden>
+            <div class="pd-generator-row">
+              <strong>Generate</strong>
+              <div id="pd-families">
+                <button type="button" data-family="album" title="The light and dark of other parts of this track's album art">Album art</button>
+                <button type="button" data-family="natural" title="Clouds, speckle, moss, veins and stones, which tile seamlessly">Natural</button>
+                <button type="button" data-family="dither" title="Checkerboards and ordered dithers">Dither</button>
+              </div>
+              <div class="spacer"></div>
+              <button type="button" id="pd-generate-more" title="A new set of patterns">More</button>
+              <button type="button" id="pd-generate-close">Close</button>
+            </div>
+            <div class="field-hint">Colours to lay out across each pattern, and how much of it each covers. Any of this album's palette, which every album recolours.</div>
+            <div id="pd-balance"></div>
+            <div class="pd-generator-row">
+              <button type="button" id="pd-balance-add" class="small">Add colour</button>
+              <button type="button" id="pd-balance-shuffle" class="small" title="Picks colours and percentages at random, to start from">Shuffle colours</button>
+              <span id="pd-balance-total"></span>
+            </div>
+            <div id="pd-candidates"></div>
+            <div class="field-hint">Click one to make it a new drawing of this shape, painted in solid colours you can edit pixel by pixel.</div>
+          </div>
           <div id="pd-stage-tools">
             <button type="button" data-drawing-tool="pencil">Pencil</button>
             <button type="button" data-drawing-tool="fill">Fill</button>
             <button type="button" id="pd-mirror" title="Paints both halves at once, mirrored left to right">Mirror</button>
             <button type="button" id="pd-letter" hidden title="Shows the letter drawn over this object, as on the board">Letter</button>
+            <button type="button" id="pd-generate" title="Patterns and colour balances to start a new drawing from">Generate…</button>
           </div>
-          <div class="field-hint">Left-click paints, right-click clears. Every stroke is saved, and Ctrl+Z undoes it.</div>
+          <div id="pd-stage-hint" class="field-hint">Left-click paints, right-click clears. Every stroke is saved, and Ctrl+Z undoes it.</div>
         </div>
         <aside id="pd-side">
           <h3>Paints</h3>
@@ -202,6 +225,7 @@
   <script src="puzzle.js"></script>
   <script src="app.js"></script>
   <script src="puzzleEditor.js"></script>
+  <script src="grainPatterns.js"></script>
   <script src="puzzleDrawings.js"></script>
 </body>
 </html>

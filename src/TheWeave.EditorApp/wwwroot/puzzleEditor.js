@@ -75,6 +75,7 @@ function openPuzzleEditor(pageId, nodeId) {
     invisible: false,
     variants: {}, // kind -> the id of the drawing it's placed with, see selectedVariant
     objects: [],
+    art: null, // the album art's pixels, once loaded, for the Drawings view's album patches
     palette: null,
     textures: null,
     lookFor: null, // what puzzleLook last made its look from, and that look
@@ -152,6 +153,7 @@ function receivePuzzleArt(message) {
     const context = reader.getContext('2d', { willReadFrequently: true });
     context.drawImage(art, 0, 0);
     const pixels = context.getImageData(0, 0, reader.width, reader.height).data;
+    puzzleEditor.art = { pixels, width: reader.width, height: reader.height };
     puzzleEditor.palette = WeavePuzzle.pickPalette(pixels);
     puzzleEditor.textures = WeavePuzzle.pickTextures(pixels, reader.width, reader.height, puzzleEditor.palette);
     renderPuzzlePalette();
