@@ -85,6 +85,9 @@ Neocities, replacing hand-authoring HTML per location.
   of the art. C, gamepad B, or clicking the backdrop closes it; the track keeps playing throughout.
 - A Sokoban board over the album art, started with Z/gamepad A from Track Focus: the ship walks a
   10x10 grid using the same movement as the map.
+- Solid objects (Walls and closed Gates) stand up off the board like blocks seen from slightly above,
+  rising into the square above with a darker front face, while things you step onto lie on the floor. It's
+  worked out from each drawing, so every drawing gets it.
 - Puzzles on that board, built in the Editor's Puzzle Editor, with objects drawn as pixel art lined up
   with the album art's own pixels, and textured from it. Walls block the way, Switches toggle Gates with
   the same letter (which can start open or closed), Keys have to be collected before Switches work, and

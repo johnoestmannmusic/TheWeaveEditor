@@ -948,6 +948,71 @@
       else drawPixelLetter(sprite, object.letter, useDark ? outline : light, null, scale);
     }
 
+    let solid = object.kind === 'Wall' || (object.kind === 'Gate' && !isOpenGate);
+    return addDepth(sprite, look, solid, mix, outline, light);
+  }
+
+  // ---------- depth ----------
+
+  // Objects are drawn with depth, worked out from their flat sprite in their own colours, so that any drawing gets
+  // it and it stays pixel art. Solid ones, that block the way, stand up like blocks seen from slightly above: their
+  // top drawn RAISED_PX higher, into the square above, with a darker front face below it, a lit top-left edge, and a
+  // dithered shadow. The ones stepped onto lie on the floor, with just the lit edge and a smaller shadow. look.depth
+  // 'flat' leaves them as drawn, for the Editor's painter, where every pixel has to be where it's painted.
+  const RAISED_PX = 3;
+
+  // The light and dark that depth is shaded with: the mix's own lightest and darkest, or, for a mix of only one
+  // colour, the art's lightest and darkest.
+  function depthShades(mix, outline, light){
+    return mix.colors.length > 1
+      ? { lit: mix.colors[mix.colors.length - 1], dark: mix.colors[0] }
+      : { lit: light, dark: outline };
+  }
+
+  // A sprite with depth added. One that rises above its square has extra rows on top, how many being its rise.
+  function addDepth(flat, look, solid, mix, outline, light){
+    if (look.depth === 'flat') return flat;
+
+    let { lit, dark } = depthShades(mix, outline, light);
+    let rise = solid ? RAISED_PX : 0;
+    let sprite = new Array(TILE_PX * (TILE_PX + rise)).fill(null);
+    // x and y in the square's own pixels, y going negative into the rows above it.
+    let flatAt = (x, y) => x >= 0 && x < TILE_PX && y >= 0 && y < TILE_PX ? flat[y * TILE_PX + x] : null;
+    let set = (x, y, color) => { sprite[(y + rise) * TILE_PX + x] = color; };
+
+    // The front face: everything the object covers on its way up, darker, outlined where it meets the floor.
+    if (rise) {
+      let covered = (x, y) => { for (let k = 0; k <= rise; k++) if (flatAt(x, y + k)) return true; return false; };
+      for (let y = -rise; y < TILE_PX; y++) {
+        for (let x = 0; x < TILE_PX; x++) {
+          if (!covered(x, y)) continue;
+          set(x, y, !covered(x - 1, y) || !covered(x + 1, y) || !covered(x, y + 1) ? outline : dark);
+        }
+      }
+    }
+
+    // The face itself, lifted by its rise, lit along its top-left just inside its outline.
+    let face = (x, y) => flatAt(x, y + rise);
+    let insideAt = (x, y) => { let color = face(x, y); return color && color !== outline; };
+    for (let y = -rise; y < TILE_PX - rise; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        let color = face(x, y);
+        if (!color) continue;
+        if (mix.colors.includes(color) && (!insideAt(x - 1, y) || !insideAt(x, y - 1))) color = lit;
+        set(x, y, color);
+      }
+    }
+
+    // A dithered shadow down and to the right, on the floor within the square: smaller under something lying on it.
+    let offset = solid ? 2 : 1;
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        if ((x + y) % 2 !== 0 || sprite[(y + rise) * TILE_PX + x]) continue;
+        if (flatAt(x - offset, y - offset)) set(x, y, outline);
+      }
+    }
+
+    sprite.rise = rise;
     return sprite;
   }
 
@@ -1056,12 +1121,17 @@
 
   // For the Editor, where something invisible still has to be seen: every other pixel of it, see-through.
   function ghostOf(sprite){
-    return sprite.map((color, i) => (Math.floor(i / TILE_PX) + i % TILE_PX) % 2 === 0 ? color : null);
+    let rise = sprite.rise ?? 0;
+    let ghost = sprite.map((color, i) => (Math.floor(i / TILE_PX) + rise + i % TILE_PX) % 2 === 0 ? color : null);
+    ghost.rise = rise;
+    return ghost;
   }
 
+  // A sprite that rises above its square starts that many rows higher.
   function blit(image, sprite, left, top){
     let { data, width, height } = image;
-    for (let y = 0; y < TILE_PX; y++) {
+    top -= sprite.rise ?? 0;
+    for (let y = 0; y < sprite.length / TILE_PX; y++) {
       for (let x = 0; x < TILE_PX; x++) {
         let color = sprite[y * TILE_PX + x];
         let px = left + x, py = top + y;
@@ -1085,6 +1155,9 @@
   // - along and rotatorAlong are how far objects are through moving from their fromCol and fromRow, for
   //   ones in play, depending on which kind of tile moved them. They move in whole pixels, like everything else.
   // - showInvisible draws anything invisible and unrevealed as a ghost, rather than leaving it out.
+  // - originY moves the whole board down by that many pixels, to leave room for objects rising above row 0.
+  // Objects are drawn top row first, so that one rising into the square above it (see addDepth) is drawn over
+  // whatever's there.
   function renderBoard(image, objects, look, options = {}){
     image.data.fill(0);
 
@@ -1095,9 +1168,10 @@
     let streams = new Map(objects.filter(object => object.kind === 'Stream').map(object => [object.col + ',' + object.row, object.direction]));
     let switchesActive = options.switchesActive ?? true;
 
+    let drawnRow = (object) => object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * ((object.glide === 'rotator' ? options.rotatorAlong : options.along) ?? 1);
     let floorsFirst = objects
       .filter(object => object.kind !== 'Start')
-      .sort((a, b) => isFloor(b) - isFloor(a));
+      .sort((a, b) => isFloor(b) - isFloor(a) || drawnRow(a) - drawnRow(b));
 
     for (const object of floorsFirst) {
       let hidden = object.invisible && !object.revealed;
@@ -1107,10 +1181,10 @@
       let col = object.fromCol === undefined ? object.col : object.fromCol + (object.col - object.fromCol) * along;
       let row = object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * along;
       let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams);
-      blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX), Math.round(row * TILE_PX));
+      blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX), Math.round(row * TILE_PX) + (options.originY ?? 0));
     }
   }
 
   return { BOARD_SIZE, DEFAULT_START, LETTERS, TILE_PX, ART_PX, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, pickPalette, pickTextures, renderBoard, hasFinish, createPuzzleGame,
-    PAINTS, DRAWN_KINDS, ANIMATED_KINDS, SPRITE_ROLES, TEXTURE_SHADES, standardDrawing, standardMix, mixTexture, renderDrawingLayer };
+    PAINTS, DRAWN_KINDS, ANIMATED_KINDS, SPRITE_ROLES, TEXTURE_SHADES, standardDrawing, standardMix, mixTexture, renderDrawingLayer, RAISED_PX };
 });
