@@ -91,6 +91,9 @@ Neocities, replacing hand-authoring HTML per location.
 - Entering a planet lands on its number column's top square, on the node back to The Weave. That node
   stays asleep on arrival: its card only opens, and Z only travels, once the ship has stepped off it
   and come back. Leaving a planet lands on that planet's own node on The Weave.
+- An "Entering.." screen with a pixel-art progress bar whenever a new page or scene loads: travelling
+  between pages, the site's first load, opening Track Focus, and jumping to the next part's puzzle board.
+  The bar follows the new page's images loading, and hands over from one page to the next with no gap.
 - A minimap in the bottom-right corner of each map screen, showing the whole map, the screen in view,
   and every location. It fades back when the ship, a location, or an open card is under it.
 - Contrails from both of the ship's engines, on the map and on a Sokoban board, following the path it

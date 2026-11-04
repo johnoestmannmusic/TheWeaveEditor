@@ -1,6 +1,9 @@
 @font-face {
     font-family: 'Medodica'; /*a name to be used later*/
     src: url('../fnt/MedodicaRegular.otf'); /*URL to font*/
+    /* Text shows in a fallback font until this one arrives, rather than not at all - otherwise the loading
+       screen's "Entering.." would be invisible on a slow connection, which is exactly when it's needed. */
+    font-display: swap;
 }
 
 /* Nothing scrolls: main.js's updateView moves the world underneath a fixed screen. */
@@ -285,6 +288,83 @@ h3 {
 
 .minimapNode {
   position: absolute;
+}
+
+/* "Entering.." while a page or scene loads - see main.js's loading screen. Above everything, including Track
+   Focus, but never in the way of a click. Pixel-art like the rest: a gold outline and blocks of fill a whole
+   number of pixels wide, one per segment of progress, with a highlight running across them. */
+#loadingScreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: rgba(17, 17, 17, 0.45);
+  transition: opacity 200ms;
+}
+
+#loadingScreen[hidden] {
+  display: none;
+}
+
+#loadingScreen.loadingDone {
+  opacity: 0;
+}
+
+#loadingPanel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+#loadingLabel {
+  position: relative;
+  font-family: Medodica, monospace;
+  color: antiquewhite;
+  font-size: 28px;
+  text-shadow: 0 0 4px rgb(17, 17, 17), 0 2px 2px rgb(17, 17, 17);
+}
+
+#loadingBar {
+  position: relative;
+  width: 296px;
+  height: 28px;
+  padding: 4px;
+  border: 4px solid #d4bc93;
+  background: rgb(17, 17, 17);
+  box-shadow: 0 0 0 4px rgb(17, 17, 17);
+}
+
+#loadingFill {
+  position: relative;
+  height: 100%;
+  width: calc(var(--loading-segments, 0) * 14px);
+  overflow: hidden;
+  background: repeating-linear-gradient(to right, antiquewhite 0 10px, transparent 10px 14px);
+}
+
+/* A brighter block running along whatever's filled, a segment at a time. */
+#loadingFill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 100%;
+  background: #fff7e6;
+  animation: loading-shimmer 1.4s steps(20) infinite;
+}
+
+@keyframes loading-shimmer {
+  from { transform: translateX(0); }
+  to { transform: translateX(280px); }
 }
 
 /* The edge darkening of Page.GlobeEffect. */
