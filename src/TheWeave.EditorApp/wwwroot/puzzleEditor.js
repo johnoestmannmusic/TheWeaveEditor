@@ -127,6 +127,7 @@ function syncPuzzleEditor() {
   }
 
   renderPuzzleProblems();
+  document.getElementById('pe-export').disabled = !node.puzzle;
 
   // A Gate keeps its letter, since several sharing one is common. The others look for what they need next.
   if (puzzleEditor.tool !== 'Gate') updateSuggestedLetter();
@@ -162,6 +163,19 @@ function receivePuzzleArt(message) {
       savePuzzle(lineUpStart(puzzleEditor.objects));
   };
   art.src = message.dataUrl;
+}
+
+// A file's layout takes this track's colours and textures, so it's saved like any other edit, and can be
+// undone like one. A file with no Start gets the same default one as a new puzzle.
+function receiveImportedPuzzle(message) {
+  if (!puzzleEditor || message.nodeId !== puzzleEditor.nodeId) return;
+
+  const objects = message.objects;
+  if (!objects.some((object) => object.kind === 'Start'))
+    objects.push({ kind: 'Start', col: WeavePuzzle.DEFAULT_START.col, row: WeavePuzzle.DEFAULT_START.row });
+
+  savePuzzle(objects);
+  showToast(`Imported ${objects.length} objects. Ctrl+Z puts the old puzzle back.`, false);
 }
 
 function savePuzzle(objects) {
@@ -476,6 +490,14 @@ puzzleCanvas.addEventListener('pointerup', finishPuzzlePainting);
 puzzleCanvas.addEventListener('pointercancel', finishPuzzlePainting);
 
 document.getElementById('pe-close').addEventListener('click', closePuzzleEditor);
+
+document.getElementById('pe-import').addEventListener('click', () => {
+  send('import-puzzle', { pageId: puzzleEditor.pageId, nodeId: puzzleEditor.nodeId });
+});
+
+document.getElementById('pe-export').addEventListener('click', () => {
+  send('export-puzzle', { pageId: puzzleEditor.pageId, nodeId: puzzleEditor.nodeId });
+});
 
 document.getElementById('pe-clear').addEventListener('click', () => {
   const { pageId, nodeId } = puzzleEditor;

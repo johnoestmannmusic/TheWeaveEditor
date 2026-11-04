@@ -45,6 +45,11 @@ public static class Program
         ("Weave Project", new[] { "*.json" }),
     };
 
+    private static readonly (string Name, string[] Extensions)[] PuzzleFileFilter =
+    {
+        ("Sokoban Puzzle", new[] { "*.json" }),
+    };
+
     // One extension per filter entry, not a single entry listing several - confirmed (via
     // Photino.Native's Linux AddFilters, which joins multiple extensions with ";" before
     // handing the string to GTK) that its strtok-based parsing only ever splits the *first*
@@ -246,6 +251,16 @@ public static class Program
                 case "load-puzzle-art":
                     RequireProject();
                     SendPuzzleArt(window, RequireNode(RequirePage(message.PageId), message.NodeId));
+                    break;
+
+                case "export-puzzle":
+                    RequireProject();
+                    ExportPuzzle(window, RequireNode(RequirePage(message.PageId), message.NodeId));
+                    break;
+
+                case "import-puzzle":
+                    RequireProject();
+                    ImportPuzzle(window, RequireNode(RequirePage(message.PageId), message.NodeId));
                     break;
 
                 case "delete-node":
@@ -547,6 +562,36 @@ public static class Program
             nodeId = node.Id,
             dataUrl = $"data:{mime};base64,{Convert.ToBase64String(File.ReadAllBytes(absolute))}",
         }, OutboundOptions));
+    }
+
+    private static void ExportPuzzle(PhotinoWindow window, Node node)
+    {
+        if (node.Puzzle is null)
+            throw new InvalidOperationException("This track has no puzzle to export yet.");
+
+        var path = window.ShowSaveFile(title: "Export Sokoban Puzzle", filters: PuzzleFileFilter);
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        if (!Path.HasExtension(path))
+            path += ".json";
+
+        File.WriteAllText(path, PuzzleFile.Serialize(node.Puzzle));
+        SendStatus(window, $"Exported puzzle to {path}.");
+    }
+
+    // Checks the file here, but leaves saving it to the page, which sends it back as a normal edit along with
+    // this track's own colours and textures - see puzzleEditor.js's receiveImportedPuzzle.
+    private static void ImportPuzzle(PhotinoWindow window, Node node)
+    {
+        var paths = window.ShowOpenFile(title: "Import Sokoban Puzzle", filters: PuzzleFileFilter);
+        if (paths.Length == 0)
+            return;
+
+        var objects = PuzzleFile.Parse(File.ReadAllText(paths[0]));
+        ProjectEditing.ValidatePuzzle(new Puzzle { Objects = objects });
+
+        window.SendWebMessage(JsonSerializer.Serialize(new { type = "puzzle-imported", nodeId = node.Id, objects }, OutboundOptions));
     }
 
     private static void PickBackgroundMusic(PhotinoWindow window)

@@ -7,6 +7,67 @@ namespace TheWeave.Core.Tests;
 
 public class WeaveProjectSerializerTests
 {
+    private static Puzzle MakeFilePuzzle() => new()
+    {
+        PaletteSource = "img/track.png",
+        Palette = { ["wall"] = "#112233" },
+        Textures = { ["wall"] = new PuzzleTexture { Ramp = { "#112233" }, Pixels = "0" } },
+        Objects =
+        {
+            new PuzzleObject { Kind = PuzzleObjectKind.Gate, Col = 2, Row = 3, Letter = "A", Open = true },
+            new PuzzleObject { Kind = PuzzleObjectKind.Stream, Col = 4, Row = 5, Direction = PuzzleDirection.Left },
+            new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 6, Row = 7 },
+        },
+    };
+
+    [Fact]
+    public void PuzzleFile_RoundTripsTheLayout()
+    {
+        var objects = PuzzleFile.Parse(PuzzleFile.Serialize(MakeFilePuzzle()));
+
+        Assert.Equal(3, objects.Count);
+        Assert.Equal(PuzzleObjectKind.Gate, objects[0].Kind);
+        Assert.Equal((2, 3), (objects[0].Col, objects[0].Row));
+        Assert.Equal("A", objects[0].Letter);
+        Assert.True(objects[0].Open);
+        Assert.Equal(PuzzleDirection.Left, objects[1].Direction);
+        Assert.Null(objects[2].Letter);
+        Assert.False(objects[2].Open);
+    }
+
+    [Fact]
+    public void PuzzleFile_LeavesOutWhatComesFromTheArt_AndIsEasyToRead()
+    {
+        var json = PuzzleFile.Serialize(MakeFilePuzzle());
+
+        Assert.DoesNotContain("Palette", json);
+        Assert.DoesNotContain("Textures", json);
+        Assert.DoesNotContain("#112233", json);
+        Assert.Contains("\"Kind\": \"Wall\"", json);
+        Assert.DoesNotContain("null", json);
+    }
+
+    [Theory]
+    [InlineData("not json at all", "can't be read")]
+    [InlineData("{}", "isn't a Sokoban puzzle file")]
+    [InlineData("{ \"Pages\": [] }", "isn't a Sokoban puzzle file")]
+    [InlineData("null", "isn't a Sokoban puzzle file")]
+    [InlineData("[1, 2]", "can't be read")]
+    [InlineData("{ \"Format\": \"weave-sokoban-puzzle\", \"Version\": 99, \"Objects\": [] }", "newer version")]
+    [InlineData("{ \"Format\": \"weave-sokoban-puzzle\", \"Version\": 1, \"Objects\": [{ \"Kind\": \"Dragon\" }] }", "can't be read")]
+    public void PuzzleFile_RejectsWhatItCantUse(string json, string expected)
+    {
+        var e = Assert.Throws<InvalidDataException>(() => PuzzleFile.Parse(json));
+
+        Assert.Contains(expected, e.Message);
+    }
+
+    [Fact]
+    public void PuzzleFile_WithNoObjects_IsAnEmptyBoard()
+    {
+        Assert.Empty(PuzzleFile.Parse("{ \"format\": \"weave-sokoban-puzzle\", \"version\": 1 }"));
+    }
+
     [Fact]
     public void Puzzle_RoundTrips_WithItsKindsAndDirectionsWrittenByName()
     {
