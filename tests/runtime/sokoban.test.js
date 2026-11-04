@@ -50,6 +50,20 @@ test('a tap too quick to span an update still moves exactly one square', () => {
   assert.equal(m.isMoving, false);
 });
 
+test('a step off the grid calls onBlocked, and one blocked by canEnter doesn\'t', () => {
+  let blocked = [];
+  let m = mover(mapGrid(), {
+    cell: { col: 0, row: 5 },
+    canEnter: (from, to) => to.row !== 4,
+    onBlocked: (cell, direction) => blocked.push([cell.col, cell.row, direction]),
+  });
+  m.press('left'); m.release('left'); m.update(STEP_MS);
+  m.press('up'); m.release('up'); m.update(STEP_MS);
+  assert.deepEqual(blocked, [[0, 5, 'left']]);
+  assert.deepEqual(m.cell, { col: 0, row: 5 });
+  assert.equal(m.facing, 'up');
+});
+
 test('position glides smoothly between squares', () => {
   let m = mover();
   m.press('right');

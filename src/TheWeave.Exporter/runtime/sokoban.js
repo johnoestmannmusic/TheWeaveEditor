@@ -78,7 +78,8 @@
   // canEnter(from, to, direction) is the hook for anything that can block a step (walls, or a box
   // that can only be pushed if there's room behind it). A blocked step only turns to face that way.
   // onArrive(cell) is called on finishing each step, for anything that happens on reaching a square.
-  function createMover(grid, { cell, stepMs, canEnter = () => true, onArrive = () => {}, facing = 'up' }) {
+  // onBlocked(cell, direction) is called when a step would leave the grid, for anything off the edge of it.
+  function createMover(grid, { cell, stepMs, canEnter = () => true, onArrive = () => {}, onBlocked = () => {}, facing = 'up' }) {
 
     let current = cell;
     let target = null;
@@ -93,7 +94,11 @@
 
       facing = direction;
       let next = grid.neighbor(current, direction);
-      if (!next || !canEnter(current, next, direction)) return false;
+      if (!next) {
+        onBlocked(current, direction);
+        return false;
+      }
+      if (!canEnter(current, next, direction)) return false;
 
       target = next;
       elapsed = 0;
