@@ -628,6 +628,7 @@ main.behind-puzzle-editor {
 }
 
 #pe-tools {
+  width: 200px;
   border-right: 1px solid var(--border);
 }
 
@@ -775,13 +776,13 @@ main.behind-puzzle-editor {
 }
 
 /* The Drawing row of the tools, and the Drawings view - see puzzleDrawings.js. */
-#pe-variants, #pd-variants {
+#pd-variants, #pd-set-members {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-#pe-variants button, #pd-variants button {
+#pd-variants button, #pd-set-members button, #pd-sets button {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1065,4 +1066,72 @@ main.behind-puzzle-editor {
   height: 96px;
   image-rendering: pixelated;
   background: repeating-conic-gradient(#2c2a28 0% 25%, #3a3836 0% 50%) 0 0 / 8px 8px;
+}
+
+/* The tray under the chosen tool, of what it's placed with - see puzzleEditor.js's renderToolTray. */
+#pe-tray {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0 0 6px 8px;
+  padding-left: 8px;
+  border-left: 2px solid var(--accent);
+}
+
+#pe-tray[hidden], #pd-set-detail[hidden] {
+  display: none;
+}
+
+.pe-tray-heading, .pd-heading {
+  margin: 4px 0 2px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.pd-heading {
+  margin: 12px 0 6px;
+  font-weight: normal;
+}
+
+.pe-tray-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  text-align: left;
+  font-size: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pe-tray-thumbs {
+  flex: none;
+  display: flex;
+  gap: 1px;
+}
+
+#pd-sets {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+#pd-set-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+#pd-set-buttons button {
+  padding: 6px 0;
+}
+
+.pe-tray-thumbs .pd-thumb {
+  width: 18px;
+  height: 18px;
 }

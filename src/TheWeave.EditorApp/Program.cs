@@ -259,8 +259,8 @@ public static class Program
                 case "update-puzzle-drawings":
                     RequireProject();
                     var drawings = message.Drawings ?? [];
-                    ProjectEditing.ValidatePuzzleDrawings(CopyForCheck(drawings));
-                    ApplyMutation(window, () => ProjectEditing.ApplyPuzzleDrawingsEdit(_project!, drawings));
+                    ProjectEditing.ApplyPuzzleDrawingsEdit(CopyForCheck(_project!), CopyForCheck(drawings), message.DrawingSets is null ? null : CopyForCheck(message.DrawingSets));
+                    ApplyMutation(window, () => ProjectEditing.ApplyPuzzleDrawingsEdit(_project!, drawings, message.DrawingSets));
                     break;
 
                 case "load-puzzle-art":

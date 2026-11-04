@@ -110,10 +110,6 @@
           <label>Starts</label>
           <div id="pe-visibilities"></div>
         </div>
-        <div id="pe-variant-row" class="field" hidden>
-          <label>Drawing</label>
-          <div id="pe-variants"></div>
-        </div>
         <div id="pe-tool-hint" class="field-hint"></div>
         <div class="field-hint">Right-click anything to remove it. Start can only be moved.</div>
       </aside>
@@ -160,7 +156,24 @@
             <label for="pd-name">Name</label>
             <input type="text" id="pd-name" maxlength="40">
           </div>
-          <div class="field-hint">Drawings belong to the whole project, so every puzzle can use them, each in its own album's colours.</div>
+          <h3 class="pd-heading">Drawing sets</h3>
+          <div id="pd-sets"></div>
+          <div id="pd-set-buttons">
+            <button type="button" id="pd-set-new" title="A new set, starting with the drawing being looked at">New set</button>
+            <button type="button" id="pd-set-delete" class="danger">Delete set</button>
+          </div>
+          <div id="pd-set-detail" hidden>
+            <div class="field">
+              <label for="pd-set-name">Set name</label>
+              <input type="text" id="pd-set-name" maxlength="40">
+            </div>
+            <div class="field">
+              <label>In this set</label>
+              <div id="pd-set-members"></div>
+            </div>
+            <div class="field-hint">New and generated drawings join this set while it's open.</div>
+          </div>
+          <div class="field-hint">Drawings belong to the whole project, so every puzzle can use them, each in its own album's colours. Placing from a set gives each square one of its drawings at random.</div>
         </aside>
         <div id="pd-stage">
           <div id="pd-frames" hidden>

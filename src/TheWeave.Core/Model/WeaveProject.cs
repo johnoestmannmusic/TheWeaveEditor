@@ -53,4 +53,8 @@ public sealed class WeaveProject
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<PuzzleDrawing>? PuzzleDrawings { get; set; }
+
+    /// <summary>Groups of those drawings to place from - see PuzzleDrawingSet. Null rather than empty while there are none.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<PuzzleDrawingSet>? PuzzleDrawingSets { get; set; }
 }

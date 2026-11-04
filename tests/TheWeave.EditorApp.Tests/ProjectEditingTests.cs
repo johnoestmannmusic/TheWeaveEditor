@@ -97,6 +97,11 @@ public class ProjectEditingTests
         Assert.Equal('.', drawing.OpenPixels![0]);
         Assert.Equal(60, drawing.Mix[0].Percent);
 
+        var withSets = System.Text.Json.JsonSerializer.Deserialize<EditorMessage>(
+            """{ "type": "update-puzzle-drawings", "drawings": [], "drawingSets": [{ "id": "s", "kind": "Key", "name": "Shiny", "drawings": ["Key"] }] }""", Program.InboundOptions)!;
+        Assert.Equal(PuzzleObjectKind.Key, Assert.Single(withSets.DrawingSets!).Kind);
+        Assert.Equal(["Key"], withSets.DrawingSets![0].Drawings);
+
         var withVariant = System.Text.Json.JsonSerializer.Deserialize<EditorMessage>(
             """{ "type": "update-puzzle", "puzzle": { "objects": [{ "kind": "Wall", "col": 1, "row": 1, "variant": "mossy" }] } }""", Program.InboundOptions)!;
         Assert.Equal("mossy", withVariant.Puzzle!.Objects[0].Variant);
@@ -227,6 +232,60 @@ public class ProjectEditingTests
 
         Assert.Same(before, project.PuzzleDrawings);
         Assert.Equal("cracked", project.Pages[0].Nodes[0].Children[0].Puzzle!.Objects[0].Variant);
+    }
+
+    private static PuzzleDrawingSet Set(string id, params string[] drawings) =>
+        new() { Id = id, Kind = PuzzleObjectKind.Wall, Name = $" {id} ", Drawings = drawings.ToList() };
+
+    [Fact]
+    public void ApplyPuzzleDrawingsEdit_SavesSets_KeepingOnlyDrawingsThatExist()
+    {
+        var project = MakeProjectWithVariants();
+
+        ProjectEditing.ApplyPuzzleDrawingsEdit(project, project.PuzzleDrawings!, [Set("mossy-walls", "mossy", "Wall", "mossy", "gone", "Key")]);
+
+        var set = Assert.Single(project.PuzzleDrawingSets!);
+        Assert.Equal("mossy-walls", set.Name);
+        Assert.Equal(["mossy", "Wall"], set.Drawings);
+    }
+
+    [Fact]
+    public void ApplyPuzzleDrawingsEdit_WithoutSets_KeepsThem_ButADeletedDrawingLeavesThem()
+    {
+        var project = MakeProjectWithVariants();
+        ProjectEditing.ApplyPuzzleDrawingsEdit(project, project.PuzzleDrawings!, [Set("a", "mossy", "cracked"), Set("b", "cracked")]);
+
+        ProjectEditing.ApplyPuzzleDrawingsEdit(project, [Drawing("mossy")]);
+
+        Assert.Equal(["a", "b"], project.PuzzleDrawingSets!.Select(s => s.Id));
+        Assert.Equal(["mossy"], project.PuzzleDrawingSets[0].Drawings);
+        Assert.Empty(project.PuzzleDrawingSets[1].Drawings);
+
+        ProjectEditing.ApplyPuzzleDrawingsEdit(project, [Drawing("mossy")], []);
+        Assert.Null(project.PuzzleDrawingSets);
+    }
+
+    public static TheoryData<Action<PuzzleDrawingSet>> InvalidSets => new()
+    {
+        s => s.Id = " ",
+        s => s.Name = " ",
+        s => s.Kind = PuzzleObjectKind.Stream,
+    };
+
+    [Theory]
+    [MemberData(nameof(InvalidSets))]
+    public void ApplyPuzzleDrawingsEdit_RejectsAnInvalidSet_LeavingEverything(Action<PuzzleDrawingSet> spoil)
+    {
+        var project = MakeProjectWithVariants();
+        var before = project.PuzzleDrawings;
+        var set = Set("new", "mossy");
+        spoil(set);
+
+        Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyPuzzleDrawingsEdit(project, [Drawing("mossy")], [set]));
+
+        Assert.Same(before, project.PuzzleDrawings);
+        Assert.Null(project.PuzzleDrawingSets);
+        Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyPuzzleDrawingsEdit(project, [Drawing("mossy")], [Set("a"), Set("a")]));
     }
 
     [Fact]

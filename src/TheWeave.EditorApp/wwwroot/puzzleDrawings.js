@@ -36,6 +36,16 @@ function drawingsOfKind(kind) {
   return [library.find((drawing) => drawing.id === kind) ?? WeavePuzzle.standardDrawing(kind), ...library.filter((drawing) => drawing.id !== kind)];
 }
 
+// A kind's drawing sets, in the order they were made - see PuzzleDrawingSet.
+function drawingSetsOfKind(kind) {
+  return (project?.puzzleDrawingSets ?? []).filter((set) => set.kind === kind);
+}
+
+// The drawings in a set that still exist, Standard first.
+function setMembers(set) {
+  return set ? drawingsOfKind(set.kind).filter((drawing) => set.drawings.includes(drawing.id)) : [];
+}
+
 function isStandardDrawing(drawing) {
   return drawing.id === drawing.kind;
 }
@@ -102,9 +112,11 @@ function drawingThumbnail(drawing) {
 function openDrawings() {
   const tool = puzzleEditor.tool;
   const kind = WeavePuzzle.DRAWN_KINDS.includes(tool) ? tool : 'Wall';
+  const choice = placingChoice(kind);
   puzzleEditor.drawings = {
     kind,
-    id: selectedVariant(kind),
+    id: choice.drawing ?? kind,
+    setId: choice.set ?? null, // the set being looked at, which new drawings join
     frame: 'closed',
     paint: 'G',
     tool: 'pencil',
@@ -131,9 +143,9 @@ function openDrawings() {
 }
 
 function closeDrawings() {
-  // The board is placing with whichever drawing was last being looked at.
-  const { kind, id } = puzzleEditor.drawings;
-  puzzleEditor.variants[kind] = id;
+  // The board is placing with whichever set, or else drawing, was last being looked at.
+  const { kind, id, setId } = puzzleEditor.drawings;
+  puzzleEditor.choices[kind] = setId ? { set: setId } : { drawing: id };
   puzzleEditor.drawings = null;
 
   document.getElementById('pe-main').classList.remove('drawing-mode');
@@ -159,6 +171,7 @@ function syncDrawings() {
   if (!view) return;
   if (!view.stroke) view.working = null;
   if (!drawingsOfKind(view.kind).some((drawing) => drawing.id === view.id)) view.id = view.kind;
+  if (!drawingSetsOfKind(view.kind).some((set) => set.id === view.setId)) view.setId = null;
   renderDrawings();
 }
 
@@ -250,10 +263,75 @@ function renderDrawings() {
   letter.hidden = !DRAWING_LETTERED.includes(view.kind);
   letter.classList.toggle('active', view.letter);
 
+  renderDrawingSets(look);
   renderDrawingPaints(drawing, look);
   renderDrawingMix(drawing, look);
   renderGenerator(drawing, look);
   drawDrawingCanvas();
+}
+
+// The kind's sets, and which drawings are in the one being looked at.
+function renderDrawingSets(look) {
+  const view = puzzleEditor.drawings;
+  const sets = drawingSetsOfKind(view.kind);
+  const selected = sets.find((set) => set.id === view.setId) ?? null;
+
+  const list = document.getElementById('pd-sets');
+  rebuildIfChanged(list, JSON.stringify(sets.map((set) => [set.id, set.name, setMembers(set).length])), () => {
+    list.replaceChildren(...sets.map((set) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.id = set.id;
+      button.textContent = `${set.name} (${setMembers(set).length})`;
+      button.title = 'Shows which drawings are in it. Click again to put it away.';
+      button.addEventListener('click', () => {
+        view.setId = view.setId === set.id ? null : set.id;
+        renderDrawings();
+      });
+      return button;
+    }));
+    if (sets.length === 0) {
+      const none = document.createElement('div');
+      none.className = 'field-hint';
+      none.textContent = 'None yet.';
+      list.append(none);
+    }
+  });
+  for (const button of list.querySelectorAll('button')) button.classList.toggle('active', button.dataset.id === view.setId);
+
+  document.getElementById('pd-set-delete').disabled = !selected;
+  document.getElementById('pd-set-detail').hidden = !selected;
+  if (!selected) return;
+
+  const name = document.getElementById('pd-set-name');
+  if (document.activeElement !== name) name.value = selected.name;
+
+  const members = document.getElementById('pd-set-members');
+  const choices = drawingsOfKind(view.kind);
+  rebuildIfChanged(members, JSON.stringify([selected.id, choices.map((choice) => [choice.id, choice.name]), !!look]), () => {
+    members.replaceChildren(...choices.map((choice) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.id = choice.id;
+      button.title = 'Click to put it in this set, or take it out';
+      button.append(drawingThumbnail(choice), choice.name);
+      button.addEventListener('click', () => toggleSetMember(choice.id));
+      return button;
+    }));
+  });
+  for (const button of members.querySelectorAll('button')) button.classList.toggle('active', selected.drawings.includes(button.dataset.id));
+}
+
+function saveSets(sets) {
+  sendDrawings(project?.puzzleDrawings ?? [], sets);
+}
+
+function toggleSetMember(id) {
+  const view = puzzleEditor.drawings;
+  saveSets((project?.puzzleDrawingSets ?? []).map((set) => {
+    if (set.id !== view.setId) return set;
+    return { ...set, drawings: set.drawings.includes(id) ? set.drawings.filter((member) => member !== id) : [...set.drawings, id] };
+  }));
 }
 
 function renderDrawingPaints(drawing, look) {
@@ -689,7 +767,9 @@ drawingCanvas.addEventListener('pointercancel', finishDrawingStroke);
 
 // Saves one drawing into the library, as the whole new library. A Standard one that's never been redrawn
 // goes in under its kind's name.
-function saveDrawing(drawing) {
+// Saves one drawing into the library, as the whole new library. A Standard one that's never been redrawn
+// goes in under its kind's name. A newly made one also joins the set being looked at, in the same change.
+function saveDrawing(drawing, { joinSet = false } = {}) {
   const view = puzzleEditor.drawings;
   view.working = drawing;
   const library = project?.puzzleDrawings ?? [];
@@ -698,12 +778,16 @@ function saveDrawing(drawing) {
   const drawings = library.some((existing) => existing.id === drawing.id)
     ? library.map((existing) => (existing.id === drawing.id ? saved : existing))
     : [...library, saved];
-  sendDrawings(drawings);
+  const sets = joinSet && view.setId
+    ? (project?.puzzleDrawingSets ?? []).map((set) => (set.id === view.setId ? { ...set, drawings: [...set.drawings, drawing.id] } : set))
+    : undefined;
+  sendDrawings(drawings, sets);
   renderDrawings();
 }
 
-function sendDrawings(drawings) {
-  send('update-puzzle-drawings', { drawings });
+// Sets are only sent when they change. Otherwise the C# side keeps them, less any drawing that's gone.
+function sendDrawings(drawings, sets) {
+  send('update-puzzle-drawings', { drawings, ...(sets ? { drawingSets: sets } : {}) });
 }
 
 function newDrawingId(kind) {
@@ -718,7 +802,7 @@ function addDrawing(from, name) {
   const id = newDrawingId(view.kind);
   view.id = id;
   view.deleting = false;
-  saveDrawing({ ...from, id, name, mix: from.mix.map((row) => ({ ...row })) });
+  saveDrawing({ ...from, id, name, mix: from.mix.map((row) => ({ ...row })) }, { joinSet: true });
 }
 
 function chooseDrawing(id) {
@@ -734,7 +818,41 @@ document.getElementById('pd-kind').addEventListener('change', (e) => {
   const view = puzzleEditor.drawings;
   view.kind = e.target.value;
   view.frame = 'closed';
-  chooseDrawing(selectedVariant(view.kind));
+  const choice = placingChoice(view.kind);
+  view.setId = choice.set ?? null;
+  chooseDrawing(choice.drawing ?? view.kind);
+});
+
+document.getElementById('pd-set-new').addEventListener('click', () => {
+  const view = puzzleEditor.drawings;
+  const all = project?.puzzleDrawingSets ?? [];
+  const taken = new Set(all.map((set) => set.id));
+  let n = drawingSetsOfKind(view.kind).length + 1;
+  while (taken.has(`${view.kind.toLowerCase()}-set-${n}`)) n++;
+  const set = { id: `${view.kind.toLowerCase()}-set-${n}`, kind: view.kind, name: `${drawingKindLabel(view.kind)} set ${n}`, drawings: [view.id] };
+  view.setId = set.id;
+  saveSets([...all, set]);
+  renderDrawings();
+});
+
+// Nothing placed changes, since a set is only a way of placing, so there's no need to ask first.
+document.getElementById('pd-set-delete').addEventListener('click', () => {
+  const view = puzzleEditor.drawings;
+  const id = view.setId;
+  view.setId = null;
+  saveSets((project?.puzzleDrawingSets ?? []).filter((set) => set.id !== id));
+  renderDrawings();
+});
+
+document.getElementById('pd-set-name').addEventListener('change', (e) => {
+  const view = puzzleEditor.drawings;
+  const name = e.target.value.trim();
+  const set = drawingSetsOfKind(view.kind).find((candidate) => candidate.id === view.setId);
+  if (!set || !name || name === set.name) {
+    if (set) e.target.value = set.name;
+    return;
+  }
+  saveSets((project?.puzzleDrawingSets ?? []).map((candidate) => (candidate.id === set.id ? { ...candidate, name } : candidate)));
 });
 
 document.getElementById('pd-new').addEventListener('click', () => {

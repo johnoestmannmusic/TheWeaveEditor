@@ -135,6 +135,21 @@ public sealed class PuzzleDrawing
     public List<PuzzleMixColour> Mix { get; set; } = new();
 }
 
+/// <summary>
+/// A named group of one kind's drawings, for the Puzzle Editor to place from: each square placed from a set gets
+/// one of its drawings at random. Only a way of placing, so the game never sees it - each object still has its
+/// own drawing.
+/// </summary>
+public sealed class PuzzleDrawingSet
+{
+    public string Id { get; set; } = "";
+    public PuzzleObjectKind Kind { get; set; }
+    public string Name { get; set; } = "";
+
+    /// <summary>Its drawings' ids. A kind's own name is its Standard drawing, which can be in a set too.</summary>
+    public List<string> Drawings { get; set; } = new();
+}
+
 /// <summary>The rules for PuzzleDrawings, shared with runtime/puzzle.js.</summary>
 public static class PuzzleDrawings
 {

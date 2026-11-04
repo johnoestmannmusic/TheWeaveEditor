@@ -73,7 +73,7 @@ function openPuzzleEditor(pageId, nodeId) {
     direction: 'Right',
     gateOpen: false,
     invisible: false,
-    variants: {}, // kind -> the id of the drawing it's placed with, see selectedVariant
+    choices: {}, // kind -> { set } or { drawing } it's placed with, see placingChoice
     objects: [],
     art: null, // the album art's pixels, once loaded, for the Drawings view's album patches
     palette: null,
@@ -130,7 +130,7 @@ function syncPuzzleEditor() {
     puzzleEditor.textures = node.puzzle.textures ?? null;
   }
 
-  renderVariantButtons();
+  renderToolTray();
   syncDrawings();
   renderPuzzleProblems();
   document.getElementById('pe-export').disabled = !node.puzzle;
@@ -157,7 +157,7 @@ function receivePuzzleArt(message) {
     puzzleEditor.palette = WeavePuzzle.pickPalette(pixels);
     puzzleEditor.textures = WeavePuzzle.pickTextures(pixels, reader.width, reader.height, puzzleEditor.palette);
     renderPuzzlePalette();
-    renderVariantButtons();
+    renderToolTray();
     syncDrawings();
 
     // Keeps a saved puzzle's colours and textures up to date with its art. This does nothing to the project
@@ -346,7 +346,7 @@ function showPuzzleTool() {
   document.getElementById('pe-letter-row').hidden = !tool.letter;
   document.getElementById('pe-gate-state-row').hidden = !tool.gateState;
   document.getElementById('pe-direction-row').hidden = !tool.direction;
-  showVariantButtons();
+  renderToolTray();
   let hint = tool.hint;
   if (tool.kind === 'Finish' && leadsOn)
     hint = `This part leads on to '${next.card.headingText}', so it has one Finish, on an edge but not a corner. The ship comes in across from it on the next board.`;
@@ -354,52 +354,83 @@ function showPuzzleTool() {
   document.getElementById('pe-edge-ring').hidden = !(tool.kind === 'Finish' && leadsOn);
 }
 
-// Which drawing a kind is placed with: the one chosen for it, while it still exists, or else its Standard one.
-function selectedVariant(kind) {
-  const id = puzzleEditor.variants[kind];
-  return drawingsOfKind(kind).some((drawing) => drawing.id === id) ? id : kind;
+// What a kind is placed with, as chosen in its tray: a set of drawings or one drawing, while it still exists
+// (and a set still has drawings in it), or else its Standard drawing.
+function placingChoice(kind) {
+  const choice = puzzleEditor.choices[kind];
+  if (choice?.set && setMembers(drawingSetsOfKind(kind).find((set) => set.id === choice.set)).length > 0) return choice;
+  if (choice?.drawing && drawingsOfKind(kind).some((drawing) => drawing.id === choice.drawing)) return choice;
+  return { drawing: kind };
 }
 
-// A button per drawing the current tool's kind has, if it has more than its Standard one. Only rebuilt when
-// those drawings or their colours change, so that a project-state can't replace a button mid-click.
-function renderVariantButtons() {
+// The drawing for a new square: the chosen one, or one of the chosen set's at random, for variety.
+function variantToPlace(kind) {
+  const choice = placingChoice(kind);
+  if (!choice.set) return choice.drawing;
+  const members = setMembers(drawingSetsOfKind(kind).find((set) => set.id === choice.set));
+  return members[Math.floor(Math.random() * members.length)].id;
+}
+
+// The one place to choose what an object is placed with: a tray under its tool, of its drawing sets and then
+// its single drawings. Only shown for a kind with something to choose between. Only rebuilt when those or their
+// colours change, so that a project-state can't replace a button mid-click.
+const puzzleToolTray = document.createElement('div');
+puzzleToolTray.id = 'pe-tray';
+
+function renderToolTray() {
   const kind = puzzleEditor.tool;
-  const choices = WeavePuzzle.DRAWN_KINDS.includes(kind) ? drawingsOfKind(kind) : [];
-  const list = document.getElementById('pe-variants');
-  const key = JSON.stringify([kind, choices]);
-  if (list.dataset.key === key && list.look === puzzleLook()) {
-    showVariantButtons();
-    return;
-  }
-  list.dataset.key = key;
-  list.look = puzzleLook();
+  const drawn = WeavePuzzle.DRAWN_KINDS.includes(kind);
+  const sets = drawn ? drawingSetsOfKind(kind) : [];
+  const drawings = drawn ? drawingsOfKind(kind) : [];
+  const tray = puzzleToolTray;
 
-  list.replaceChildren(...choices.map((drawing) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.dataset.variant = drawing.id;
-    button.title = drawing.name;
-    button.append(drawingThumbnail(drawing), drawing.name);
-    button.addEventListener('click', () => {
-      puzzleEditor.variants[kind] = drawing.id;
-      showVariantButtons();
-    });
-    return button;
-  }));
-  list.dataset.kind = kind;
-  showVariantButtons();
-}
+  tray.hidden = sets.length === 0 && drawings.length < 2;
+  const toolButton = document.querySelector(`#pe-tool-buttons button[data-tool="${kind}"]`);
+  if (toolButton && toolButton.nextElementSibling !== tray) toolButton.after(tray);
 
-function showVariantButtons() {
-  const list = document.getElementById('pe-variants');
-  if (list.dataset.kind !== puzzleEditor.tool) {
-    renderVariantButtons();
-    return;
+  const key = JSON.stringify([kind, sets, drawings]);
+  if (tray.dataset.key !== key || tray.look !== puzzleLook()) {
+    tray.dataset.key = key;
+    tray.look = puzzleLook();
+
+    const heading = (text) => {
+      const label = document.createElement('div');
+      label.className = 'pe-tray-heading';
+      label.textContent = text;
+      return label;
+    };
+    const item = (name, thumbnails, choice, empty) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'pe-tray-item';
+      button.dataset.choice = JSON.stringify(choice);
+      button.disabled = empty;
+      button.title = empty ? 'This set has no drawings yet. Add some in the Drawings view.' : name;
+      const pictures = document.createElement('span');
+      pictures.className = 'pe-tray-thumbs';
+      pictures.append(...thumbnails);
+      const label = document.createElement('span');
+      label.textContent = name;
+      button.append(pictures, label);
+      button.addEventListener('click', () => {
+        puzzleEditor.choices[kind] = choice;
+        renderToolTray();
+      });
+      return button;
+    };
+
+    tray.replaceChildren(
+      ...(sets.length > 0 ? [heading('Drawing sets'), ...sets.map((set) => {
+        const members = setMembers(set);
+        return item(`${set.name} (${members.length})`, members.slice(0, 4).map(drawingThumbnail), { set: set.id }, members.length === 0);
+      })] : []),
+      heading('Drawings'),
+      ...drawings.map((drawing) => item(drawing.name, [drawingThumbnail(drawing)], { drawing: drawing.id }, false)),
+    );
   }
-  const selected = selectedVariant(puzzleEditor.tool);
-  for (const button of list.querySelectorAll('button'))
-    button.classList.toggle('active', button.dataset.variant === selected);
-  document.getElementById('pe-variant-row').hidden = list.children.length < 2;
+
+  const chosen = JSON.stringify(placingChoice(kind));
+  for (const button of tray.querySelectorAll('.pe-tray-item')) button.classList.toggle('active', button.dataset.choice === chosen);
 }
 
 function renderPuzzlePalette() {
@@ -504,7 +535,7 @@ function puzzleCellAt(e) {
 
 function buildPuzzleObject(cell) {
   const tool = currentPuzzleTool();
-  const variant = WeavePuzzle.DRAWN_KINDS.includes(tool.kind) ? selectedVariant(tool.kind) : tool.kind;
+  const variant = WeavePuzzle.DRAWN_KINDS.includes(tool.kind) ? variantToPlace(tool.kind) : tool.kind;
   return {
     kind: tool.kind,
     col: cell.col,

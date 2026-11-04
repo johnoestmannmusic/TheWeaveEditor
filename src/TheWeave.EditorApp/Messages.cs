@@ -34,6 +34,9 @@ public sealed class EditorMessage
     /// puzzle file brought with it, to add to the library along with the puzzle.
     /// </summary>
     public List<PuzzleDrawing>? Drawings { get; set; }
+
+    /// <summary>"update-puzzle-drawings": the project's whole new list of drawing sets, or null to keep them as they are.</summary>
+    public List<PuzzleDrawingSet>? DrawingSets { get; set; }
 }
 
 public sealed class PageEditRequest

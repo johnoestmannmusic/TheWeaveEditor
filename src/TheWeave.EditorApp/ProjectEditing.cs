@@ -312,19 +312,45 @@ internal static class ProjectEditing
         obj.Kind is PuzzleObjectKind.Stream or PuzzleObjectKind.RotatorTile;
 
     /// <summary>
-    /// Replaces the project's whole library of drawings. Anything drawn with one that's gone goes back to its
-    /// kind's Standard drawing.
+    /// Replaces the project's whole library of drawings, and its sets of them unless sets is null. Anything drawn
+    /// with a drawing that's gone goes back to its kind's Standard drawing, and it leaves every set it was in.
     /// </summary>
-    public static void ApplyPuzzleDrawingsEdit(WeaveProject project, List<PuzzleDrawing> drawings)
+    public static void ApplyPuzzleDrawingsEdit(WeaveProject project, List<PuzzleDrawing> drawings, List<PuzzleDrawingSet>? sets = null)
     {
         ValidatePuzzleDrawings(drawings);
+        sets ??= project.PuzzleDrawingSets?.Select(s => new PuzzleDrawingSet { Id = s.Id, Kind = s.Kind, Name = s.Name, Drawings = [.. s.Drawings] }).ToList() ?? [];
+        ValidatePuzzleDrawingSets(sets);
+
         project.PuzzleDrawings = drawings.Count > 0 ? drawings : null;
+
+        bool Exists(PuzzleObjectKind kind, string id) => id == kind.ToString() || drawings.Any(d => d.Id == id && d.Kind == kind);
+        foreach (var set in sets)
+            set.Drawings = set.Drawings.Where(id => Exists(set.Kind, id)).Distinct().ToList();
+        project.PuzzleDrawingSets = sets.Count > 0 ? sets : null;
 
         foreach (var obj in PuzzlesIn(project.Pages.SelectMany(p => p.Nodes)).SelectMany(p => p.Objects))
         {
             if (obj.Variant is not null && !drawings.Any(d => d.Id == obj.Variant && d.Kind == obj.Kind))
                 obj.Variant = null;
         }
+    }
+
+    public static void ValidatePuzzleDrawingSets(List<PuzzleDrawingSet> sets)
+    {
+        foreach (var set in sets)
+        {
+            if (string.IsNullOrWhiteSpace(set.Id))
+                throw new InvalidOperationException("A drawing set needs an id.");
+            if (!PuzzleDrawings.DrawnKinds.Contains(set.Kind))
+                throw new InvalidOperationException($"A {set.Kind} can't have drawing sets, since it has no drawings.");
+
+            set.Name = set.Name.Trim();
+            if (set.Name.Length == 0)
+                throw new InvalidOperationException("A drawing set needs a name.");
+        }
+
+        if (sets.GroupBy(s => s.Id).FirstOrDefault(g => g.Count() > 1) is { } repeated)
+            throw new InvalidOperationException($"More than one drawing set has the id '{repeated.Key}'.");
     }
 
     /// <summary>Adds the drawings a puzzle file brought with it (see PuzzleDrawings.Merge), leaving any already there alone.</summary>
