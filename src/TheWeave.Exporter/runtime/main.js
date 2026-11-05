@@ -1601,6 +1601,7 @@ function markPuzzleSolved(puzzle){
 
 // X (keyboard) / X (gamepad): restarts the puzzle on the board, otherwise steps through a location's parts.
 function onSwitchButton(){
+  if (focusTransition) return;
   if (boardMover) restartBoardGame();
   else cycleChainNode();
 }
@@ -1666,7 +1667,11 @@ function onInteract(){
 // Appended to <html>, not <body>, for the same reason as #modalBackdrop - see #screenFrame's
 // comment in buildScreenFrame.
 function openTrackFocus(){
-  if (trackFocusEl || !activeNode) return;
+  if (trackFocusEl || !activeNode || focusTransition) return;
+
+  // The card's own cover on the map, which grows into Track Focus's art. Its art is already loaded, so there's
+  // nothing to wait for.
+  let cardCover = nodeMeta.get(activeNode).info.querySelector(':scope > .songCover');
 
   trackFocusEl = document.createElement('div');
   trackFocusEl.id = 'trackFocus';
@@ -1674,7 +1679,7 @@ function openTrackFocus(){
   renderTrackFocus();
   updateTrackFocusScale();
   document.documentElement.appendChild(trackFocusEl);
-  showSceneLoading(trackFocusEl.querySelector('.trackFocusArtSlide > img'));
+  runFocusTransition(() => growFromCard(trackFocusEl, cardCover, false));
 }
 
 // (Re)builds the screen for activeNode. Everything shown is read from that node's card already in the
@@ -1790,6 +1795,8 @@ function renderTrackFocus(){
   });
 
   trackFocusEl.classList.toggle('boardPlaying', boardMover !== null);
+  // The line of key hints is measured for where the board goes - see updateTrackFocusScale.
+  if (trackFocusEl.isConnected) updateTrackFocusScale();
   trackFocusEl.classList.toggle('partLocked', lockedBy !== null);
 }
 
@@ -1821,11 +1828,163 @@ function buildTrackFocusAction(label, hint, onClick){
 // A no-op when it isn't open, so every way of closing it can just call this. Always comes back to the
 // location's first part: that's the only card the map ever shows, and the music should match it.
 function closeTrackFocus(){
-  if (!trackFocusEl) return;
-  trackFocusEl.remove();
-  trackFocusEl = null;
-  activeNode = activeRoot;
-  chainIndex = 0;
+  if (!trackFocusEl || focusTransition) return;
+
+  let closing = trackFocusEl;
+  let cardCover = nodeMeta.get(activeRoot).info.querySelector(':scope > .songCover');
+  runFocusTransition(() => growFromCard(closing, cardCover, true)).then(() => {
+    closing.remove();
+    trackFocusEl = null;
+    activeNode = activeRoot;
+    chainIndex = 0;
+  });
+}
+
+// ---------- transitions ----------
+
+// How long Track Focus takes to open or close, and to flip over between its art and its board.
+const FOCUS_OPEN_MS = 450;
+const FOCUS_FLIP_MS = 400;
+// How far away the flip's perspective is, in art frames, which decides how much the near edge grows as it turns.
+const FOCUS_FLIP_PERSPECTIVE = 4;
+
+// How long past its end an animation is given before it's finished off anyway - see playFocusAnimation.
+const FOCUS_OVERDUE_MS = 1000;
+
+// Whether a transition is playing, which holds everything else back until it's done - see runFocusTransition.
+let focusTransition = false;
+
+function prefersReducedMotion(){
+  return !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
+
+// Plays an animation on an element, resolving once it's done and taken off again. Without the element, or for a
+// visitor who's asked for reduced motion, it's done straight away.
+function playFocusAnimation(element, keyframes, ms, { easing = 'ease-in-out', delay = 0 } = {}){
+  if (!element || prefersReducedMotion() || !element.animate) return Promise.resolve();
+  let animation = element.animate(keyframes, { duration: ms, delay, easing, fill: 'both' });
+  // Never waited on for longer than it should take, so a transition can't ever hold the game up.
+  let overdue = new Promise(resolve => setTimeout(resolve, delay + ms + FOCUS_OVERDUE_MS));
+  return Promise.race([animation.finished.catch(() => {}), overdue]).then(() => animation.cancel());
+}
+
+// Runs a transition, holding input back until it's over. Anything pressed meanwhile is let go of at the end,
+// so a key held through a flip doesn't set the ship off the moment it lands.
+async function runFocusTransition(transition){
+  focusTransition = true;
+  try {
+    await transition();
+  } finally {
+    focusTransition = false;
+    releaseDirections();
+  }
+}
+
+// A card's cover on the map growing into Track Focus's art while everything else fades in, or the other way
+// round when closing. A card that isn't on screen has nothing to grow from, so everything just fades.
+function growFromCard(focusEl, cardCover, closing){
+  let art = focusEl.querySelector('#trackFocusArt');
+  let text = focusEl.querySelector('#trackFocusText');
+  let backdrop = focusEl.querySelector('#trackFocusBackdrop');
+  let from = cardCover?.getBoundingClientRect();
+  let to = art?.getBoundingClientRect();
+  let order = (frames) => closing ? [...frames].reverse() : frames;
+
+  let animations = [
+    playFocusAnimation(focusEl, order([
+      { backgroundColor: 'rgba(0, 0, 0, 0)', backdropFilter: 'blur(0px)', webkitBackdropFilter: 'blur(0px)' },
+      { backgroundColor: 'rgba(0, 0, 0, 0.82)', backdropFilter: 'blur(8px)', webkitBackdropFilter: 'blur(8px)' },
+    ]), FOCUS_OPEN_MS),
+    playFocusAnimation(backdrop, order([{ opacity: 0 }, { opacity: 0.25 }]), FOCUS_OPEN_MS),
+    // The text comes in once the art's most of the way there, and goes first when closing.
+    playFocusAnimation(text, order([{ opacity: 0 }, { opacity: 1 }]), FOCUS_OPEN_MS * (closing ? 0.4 : 0.6), { delay: closing ? 0 : FOCUS_OPEN_MS * 0.4 }),
+  ];
+
+  // Closing, everything is left where it ends up, since each animation is taken off as it finishes, and Track
+  // Focus only goes once they all have: otherwise whatever finished first would show again meanwhile.
+  let rest = (element, styles) => { if (closing && element) Object.assign(element.style, styles); };
+  rest(focusEl, { backgroundColor: 'rgba(0, 0, 0, 0)', backdropFilter: 'none', webkitBackdropFilter: 'none' });
+  rest(backdrop, { opacity: '0' });
+  rest(text, { opacity: '0' });
+
+  if (art && from && from.width > 0 && to.width > 0) {
+    let shrunk = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width})`;
+    rest(art, { transform: shrunk, transformOrigin: '0 0', boxShadow: 'none' });
+    if (cardCover) cardCover.style.visibility = 'hidden';
+    // Closing on a later part of a location, whose art isn't the card's, it fades into the card's own cover as
+    // it shrinks, so that it lands as the picture that's really there.
+    if (closing) {
+      let landing = document.createElement('img');
+      landing.className = 'trackFocusLanding';
+      landing.src = cardCover.src;
+      landing.style.opacity = '1';
+      art.appendChild(landing);
+      animations.push(playFocusAnimation(landing, [{ opacity: 0 }, { opacity: 1 }], FOCUS_OPEN_MS, { easing: 'ease-in' }));
+    }
+    animations.push(playFocusAnimation(art, order([
+      { transform: shrunk, transformOrigin: '0 0', boxShadow: 'none' },
+      { transform: 'none', transformOrigin: '0 0' },
+    ]), FOCUS_OPEN_MS).then(() => { if (cardCover) cardCover.style.visibility = ''; }));
+  } else {
+    rest(art, { opacity: '0' });
+    animations.push(playFocusAnimation(art, order([{ opacity: 0 }, { opacity: 1 }]), FOCUS_OPEN_MS));
+  }
+  return Promise.all(animations);
+}
+
+// Flips the art over, like turning a card, to or from the board on its back. It turns edge-on, the screen
+// changes underneath it (change), and it turns the rest of the way round, moving to wherever the art is in the new
+// layout across the whole flip. Done in two halves so that the art never shows mirrored, and there's no back to
+// keep in step with the front. The text fades out over the first half, and the new text in over the second.
+async function flipFocus(change, toPlaying){
+  let art = document.getElementById('trackFocusArt');
+  let text = document.getElementById('trackFocusText');
+  if (!art || prefersReducedMotion()) {
+    change();
+    return;
+  }
+
+  // Where the art will be, from a look at the new layout without drawing it.
+  let before = art.getBoundingClientRect();
+  trackFocusEl.classList.toggle('boardPlaying', toPlaying);
+  let after = art.getBoundingClientRect();
+  trackFocusEl.classList.toggle('boardPlaying', !toPlaying);
+  let half = { x: (after.left - before.left) / 2, y: (after.top - before.top) / 2 };
+  let perspective = `perspective(${Math.round(before.width * FOCUS_FLIP_PERSPECTIVE)}px)`;
+
+  await Promise.all([
+    playFocusAnimation(art, [
+      { transform: `${perspective} translate(0, 0) rotateY(0deg)` },
+      { transform: `${perspective} translate(${half.x}px, ${half.y}px) rotateY(90deg)` },
+    ], FOCUS_FLIP_MS / 2, { easing: 'ease-in' }),
+    playFocusAnimation(text, [{ opacity: 1 }, { opacity: 0 }], FOCUS_FLIP_MS / 2),
+  ]);
+
+  // Hidden for the moment between the halves, so that the old art never shows face on again.
+  art.style.visibility = 'hidden';
+  change();
+
+  await Promise.all([
+    playFocusAnimation(document.getElementById('trackFocusArt'), [
+      { transform: `${perspective} translate(${-half.x}px, ${-half.y}px) rotateY(-90deg)` },
+      { transform: `${perspective} translate(0, 0) rotateY(0deg)` },
+    ], FOCUS_FLIP_MS / 2, { easing: 'ease-out' }),
+    playFocusAnimation(document.getElementById('trackFocusText'), [{ opacity: 0 }, { opacity: 1 }], FOCUS_FLIP_MS / 2),
+  ]);
+}
+
+// The part's title over its board for its first few seconds, then fading away - see main.css's
+// .trackFocusBoardTitle. Shown on starting a puzzle, and on moving from one part's to another's.
+function showBoardTitle(){
+  let frame = document.getElementById('trackFocusArt');
+  let title = nodeMeta.get(activeNode).info.querySelector(':scope > h3')?.textContent;
+  if (!frame || !title) return;
+
+  frame.querySelector('.trackFocusBoardTitle')?.remove();
+  let label = buildArtLabel(title);
+  label.classList.add('trackFocusBoardTitle');
+  label.addEventListener('animationend', () => label.remove());
+  frame.appendChild(label);
 }
 
 // Album art is 240x240, on a 10x10 board of 24-source-pixel tiles. Picks the largest size that fits with
@@ -1838,6 +1997,8 @@ const BOARD_TILE_PX = TRACK_FOCUS_ART_PX / TRACK_FOCUS_BOARD_SQUARES;
 const TRACK_FOCUS_MAX_HEIGHT_FRACTION = 0.92;
 const TRACK_FOCUS_MAX_WIDTH_FRACTION = 0.55;
 const TRACK_FOCUS_SNAP_FRACTION = 0.95;
+// The gap between the board and its line of key hints while it's played, in the art's own pixels - see main.css.
+const BOARD_HINTS_GAP_LINES = 4;
 
 function updateTrackFocusScale(){
   if (!trackFocusEl) return;
@@ -1862,6 +2023,13 @@ function updateTrackFocusScale(){
   let top = Math.max(0, Math.floor((window.innerHeight - tile * TRACK_FOCUS_BOARD_SQUARES) / 2));
   trackFocusEl.style.setProperty('--focus-top', top + 'px');
   trackFocusEl.style.setProperty('--focus-left', Math.min(top, tile) + 'px');
+  // Where the art sits centred while its board's being played, on a whole pixel like the rest. Higher up than
+  // otherwise, so that it and the line of key hints under it are centred together, and the hints stay on screen.
+  let board = tile * TRACK_FOCUS_BOARD_SQUARES;
+  let hints = trackFocusEl.querySelector('#trackFocusActions');
+  let hintsHeight = hints ? Math.ceil(hints.getBoundingClientRect().height) + BOARD_HINTS_GAP_LINES * Math.max(1, Math.round(trackFocusScale)) : 0;
+  trackFocusEl.style.setProperty('--focus-centre', Math.max(0, Math.floor((window.innerWidth - board) / 2)) + 'px');
+  trackFocusEl.style.setProperty('--focus-play-top', Math.max(0, Math.floor((window.innerHeight - board - hintsHeight) / 2)) + 'px');
 }
 
 // The Sokoban board: the ship walking a 10x10 grid over the album art, on the same reusable movement
@@ -1882,12 +2050,15 @@ const BOARD_SHIP_WIDTH = 12;
 const BOARD_SHIP_HEIGHT = 16;
 
 function startBoardGame(){
-  if (!trackFocusEl || boardMover || !document.getElementById('trackFocusBoard') || partLockedBy(activeNode)) return;
+  if (!trackFocusEl || boardMover || focusTransition || !document.getElementById('trackFocusBoard') || partLockedBy(activeNode)) return;
 
   releaseDirections();
-  buildBoardGame();
-  renderTrackFocus();
-  renderBoardShip();
+  runFocusTransition(() => flipFocus(() => {
+    buildBoardGame();
+    renderTrackFocus();
+    renderBoardShip();
+    showBoardTitle();
+  }, true));
 }
 
 // Everything that starts fresh, whether that's starting the board or restarting it. facing is the way the ship
@@ -1982,6 +2153,7 @@ function finishBoardLevel(){
     renderTrackFocus();
     showSceneLoading(trackFocusEl.querySelector('.trackFocusArtSlide > img'));
     renderBoardShip();
+    showBoardTitle();
   } else {
     if (next) {
       chainIndex++;
@@ -2034,6 +2206,7 @@ function crossBoard(exit, toIndex){
   // A scroll is its own transition, and covering it would hide it.
   startBoardScroll(leaving, exit);
   renderBoardShip();
+  showBoardTitle();
 }
 
 // The square on the next board across from one on this board's edge, leaving it in a direction.
@@ -2098,20 +2271,23 @@ function updateBoardScroll(dtMs){
   }
 }
 
+// Flips back over from the board to the art, and the text alongside it.
 function leaveBoardGame(){
-  if (!boardMover) return;
+  if (!boardMover || focusTransition) return;
 
   boardScroll = null;
   boardVisits.clear();
   releaseDirections();
-  boardMover = null;
-  boardShipEl = null;
-  boardContrails = null;
-  boardGame = null;
-  boardObjectsCanvas = null;
-  boardObjectsImage = null;
-  boardSolvedMs = null;
-  renderTrackFocus();
+  runFocusTransition(() => flipFocus(() => {
+    boardMover = null;
+    boardShipEl = null;
+    boardContrails = null;
+    boardGame = null;
+    boardObjectsCanvas = null;
+    boardObjectsImage = null;
+    boardSolvedMs = null;
+    renderTrackFocus();
+  }, false));
 }
 
 function buildBoardShip(){
@@ -2124,6 +2300,13 @@ function buildBoardShip(){
 
 function updateBoardGame(dtMs){
   if (!boardMover) return;
+
+  // Nothing moves while the board's still flipping in, though it's drawn as it turns.
+  if (focusTransition) {
+    drawBoardObjects();
+    renderBoardShip();
+    return;
+  }
 
   if (boardScroll) {
     updateBoardScroll(dtMs);

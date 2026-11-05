@@ -538,6 +538,60 @@ h3 {
   height: 100%;
 }
 
+/* While the board is being played, it moves to the middle of the screen, on a whole pixel - see main.js's
+   updateTrackFocusScale - with only the actions line left of the text, centred under it. */
+#trackFocus.boardPlaying #trackFocusContent {
+  flex-direction: column;
+  padding: 0;
+  row-gap: calc(var(--focus-line) * 4);
+}
+
+#trackFocus.boardPlaying #trackFocusArt {
+  margin-top: var(--focus-play-top);
+  margin-left: var(--focus-centre);
+}
+
+#trackFocus.boardPlaying #trackFocusText {
+  flex: none;
+  align-self: center;
+  margin: 0;
+  text-align: center;
+}
+
+#trackFocus.boardPlaying #trackFocusText > :not(#trackFocusActions) {
+  display: none;
+}
+
+#trackFocus.boardPlaying #trackFocusActions {
+  margin-top: 0;
+}
+
+#trackFocus.boardPlaying .trackFocusAction {
+  margin: 0 0.75em;
+}
+
+/* The card's own cover, fading in over the art as Track Focus closes - see main.js's growFromCard. */
+.trackFocusLanding {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  opacity: 0;
+}
+
+/* The part's title over its board for its first few seconds - see main.js's showBoardTitle. */
+.trackFocusBoardTitle {
+  padding: 0 var(--focus-cell);
+  text-align: center;
+  animation: trackFocusBoardTitle 3000ms linear forwards;
+}
+
+@keyframes trackFocusBoardTitle {
+  0%, 83% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* Dulled while the board is being played, so the ship and anything else on it stands out. */
 #trackFocus.boardPlaying .trackFocusArtSlide > img {
   filter: brightness(0.65) saturate(0.7);
