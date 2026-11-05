@@ -1795,6 +1795,8 @@ function renderTrackFocus(){
   });
 
   trackFocusEl.classList.toggle('boardPlaying', boardMover !== null);
+  // The line of key hints is measured for where the board goes - see updateTrackFocusScale.
+  if (trackFocusEl.isConnected) updateTrackFocusScale();
   trackFocusEl.classList.toggle('partLocked', lockedBy !== null);
 }
 
@@ -1976,6 +1978,8 @@ const BOARD_TILE_PX = TRACK_FOCUS_ART_PX / TRACK_FOCUS_BOARD_SQUARES;
 const TRACK_FOCUS_MAX_HEIGHT_FRACTION = 0.92;
 const TRACK_FOCUS_MAX_WIDTH_FRACTION = 0.55;
 const TRACK_FOCUS_SNAP_FRACTION = 0.95;
+// The gap between the board and its line of key hints while it's played, in the art's own pixels - see main.css.
+const BOARD_HINTS_GAP_LINES = 4;
 
 function updateTrackFocusScale(){
   if (!trackFocusEl) return;
@@ -2000,8 +2004,13 @@ function updateTrackFocusScale(){
   let top = Math.max(0, Math.floor((window.innerHeight - tile * TRACK_FOCUS_BOARD_SQUARES) / 2));
   trackFocusEl.style.setProperty('--focus-top', top + 'px');
   trackFocusEl.style.setProperty('--focus-left', Math.min(top, tile) + 'px');
-  // Where the art sits centred while its board's being played, on a whole pixel like the rest.
-  trackFocusEl.style.setProperty('--focus-centre', Math.max(0, Math.floor((window.innerWidth - tile * TRACK_FOCUS_BOARD_SQUARES) / 2)) + 'px');
+  // Where the art sits centred while its board's being played, on a whole pixel like the rest. Higher up than
+  // otherwise, so that it and the line of key hints under it are centred together, and the hints stay on screen.
+  let board = tile * TRACK_FOCUS_BOARD_SQUARES;
+  let hints = trackFocusEl.querySelector('#trackFocusActions');
+  let hintsHeight = hints ? Math.ceil(hints.getBoundingClientRect().height) + BOARD_HINTS_GAP_LINES * Math.max(1, Math.round(trackFocusScale)) : 0;
+  trackFocusEl.style.setProperty('--focus-centre', Math.max(0, Math.floor((window.innerWidth - board) / 2)) + 'px');
+  trackFocusEl.style.setProperty('--focus-play-top', Math.max(0, Math.floor((window.innerHeight - board - hintsHeight) / 2)) + 'px');
 }
 
 // The Sokoban board: the ship walking a 10x10 grid over the album art, on the same reusable movement

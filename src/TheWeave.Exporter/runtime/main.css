@@ -547,6 +547,7 @@ h3 {
 }
 
 #trackFocus.boardPlaying #trackFocusArt {
+  margin-top: var(--focus-play-top);
   margin-left: var(--focus-centre);
 }
 
