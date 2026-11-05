@@ -122,6 +122,8 @@
   // How far a lit Lantern reaches, in squares from its own. A little past 3 makes it read as a circle on a
   // grid of squares: each row outward from it reaches 3, 3, 2 and 1 squares to either side.
   const LANTERN_REACH = 3.5;
+  // How many Jump Tiles can launch the ship one after another before the next one lets it stay.
+  const MAX_JUMPS_IN_A_ROW = 8;
   // sokoban.js's directions are lower case, and a puzzle's are capitalized as they are in the project file.
   const MOVER_DIRECTIONS = { Up: 'up', Down: 'down', Left: 'left', Right: 'right' };
   const PUZZLE_DIRECTIONS = { up: 'Up', down: 'Down', left: 'Left', right: 'Right' };
@@ -153,6 +155,8 @@
 
     let shipCell = start;
     let solved = false;
+    // How many Jump Tiles in a row the ship has been launched from, so two facing each other can't go on forever.
+    let jumpsInARow = 0;
 
     function cellKey(cell){
       return cell.col + "," + cell.row;
@@ -167,7 +171,47 @@
     }
 
     function isSolid(object){
-      return object.kind === 'Wall' || (object.kind === 'Gate' && !object.open);
+      return object.kind === 'Wall' || object.kind === 'PushBlock' || (object.kind === 'Gate' && !object.open);
+    }
+
+    function onBoard(cell){
+      return cell.col >= 0 && cell.col < BOARD_SIZE && cell.row >= 0 && cell.row < BOARD_SIZE;
+    }
+
+    // Where a Push Block would go if pushed along a direction: the next square, if it's on the board, has nothing
+    // on it, and isn't a Stream flowing straight back at it. Otherwise null, and it can't be pushed.
+    function pushedTo(block, direction){
+      let to = nextCell(block, direction);
+      if (!onBoard(to) || objectAt(to) || streams.get(cellKey(to)) === OPPOSITES[direction]) return null;
+      return to;
+    }
+
+    // Push Blocks with the same symbol touching side by side sink into the ground together, two or more at a time.
+    // Returns the ones that sank, taken off the board, or null if none did.
+    function sinkMatches(){
+      let blocks = objects.filter(object => object.kind === 'PushBlock');
+      let sinking = new Set();
+      for (const block of blocks) {
+        for (const other of blocks) {
+          let touching = Math.abs(block.col - other.col) + Math.abs(block.row - other.row) === 1;
+          if (other !== block && touching && other.symbol === block.symbol) sinking.add(block).add(other);
+        }
+      }
+      if (sinking.size === 0) return null;
+      objects = objects.filter(object => !sinking.has(object));
+      return [...sinking];
+    }
+
+    // Where a Jump Tile launches the ship: 2 squares along, or just 1 if it can't land that far, over whatever's
+    // in between. Only somewhere on the board with nothing solid on it. Null if it can land on neither.
+    function jumpFrom(tile){
+      let delta = DIRECTION_DELTAS[tile.direction];
+      for (const distance of [2, 1]) {
+        let to = { col: tile.col + delta.x * distance, row: tile.row + delta.y * distance };
+        let there = objectAt(to);
+        if (onBoard(to) && !(there && isSolid(there))) return to;
+      }
+      return null;
     }
 
     function nextCell(cell, direction){
@@ -187,9 +231,11 @@
     }
 
     // What standing on a square does to the board, and where that leaves the ship: null, or
-    // { teleportTo } or { finished } for the caller to act on.
-    function arriveAt(cell){
+    // { teleportTo }, { jumpTo } or { finished } for the caller to act on. jumped says the ship landed here from a
+    // Jump Tile, rather than walking or being carried.
+    function arriveAt(cell, { jumped = false } = {}){
       shipCell = cell;
+      if (!jumped) jumpsInARow = 0;
       let object = objectAt(cell);
       if (!object) return null;
 
@@ -222,6 +268,14 @@
           object.lit = true;
           revealLitAreas();
           return null;
+
+        case 'JumpTile': {
+          let landing = jumpFrom(object);
+          if (!landing || jumpsInARow >= MAX_JUMPS_IN_A_ROW) return null;
+          jumpsInARow++;
+          shipCell = landing;
+          return { jumpTo: landing };
+        }
       }
 
       return null;
@@ -278,8 +332,10 @@
       }
       if (moves.size > 0) revealLitAreas();
 
-      let cameUnder = !shipHeadingTo && [...moves.keys()].some(object => isAt(object, shipCell));
-      return cameUnder ? arriveAt(shipCell) : null;
+      let sank = moves.size > 0 ? sinkMatches() : null;
+      let cameUnder = !shipHeadingTo && [...moves.keys()].some(object => isAt(object, shipCell) && objects.includes(object));
+      let arrived = cameUnder ? arriveAt(shipCell) : null;
+      return sank ? { ...arrived, sank } : arrived;
     }
 
     return {
@@ -300,7 +356,40 @@
         if (holding && holding !== direction) return false;
         if (streams.get(cellKey(to)) === OPPOSITES[direction]) return false;
         let object = objectAt(to);
+        if (object?.kind === 'PushBlock') return !!pushedTo(object, direction);
         return !(object && isSolid(object));
+      },
+
+      // Whether a Push Block can be pushed along a direction (sokoban.js's), for showing that it can.
+      canPush(cell, moverDirection){
+        let block = objectAt(cell);
+        return block?.kind === 'PushBlock' && !!pushedTo(block, PUZZLE_DIRECTIONS[moverDirection]);
+      },
+
+      // For sokoban.js's onStepStart: the ship stepping into a Push Block pushes it on ahead, gliding along with
+      // the ship - see renderBoard's pushAlong. Returns { sank } if that brought matching blocks together.
+      pushFrom(from, to, moverDirection){
+        let block = objectAt(to);
+        if (block?.kind !== 'PushBlock') return null;
+        let next = pushedTo(block, PUZZLE_DIRECTIONS[moverDirection]);
+        if (!next) return null;
+        block.fromCol = block.col;
+        block.fromRow = block.row;
+        block.glide = 'push';
+        block.col = next.col;
+        block.row = next.row;
+        revealLitAreas();
+        let sank = sinkMatches();
+        return sank ? { sank } : null;
+      },
+
+      // Once a push has finished gliding, the block is simply where it is.
+      settlePushes(){
+        for (const object of objects) {
+          if (object.glide !== 'push') continue;
+          object.fromCol = object.col;
+          object.fromRow = object.row;
+        }
       },
 
       shipArrivedAt: arriveAt,
@@ -440,6 +529,11 @@
     // Added after the others, so that they keep the colours they've always had.
     let rotator = choose(different); // a Rotator tile and its Switch are one idea, like a Gate and its Switch
     let lantern = choose(different);
+    // A Push Block's metal: a plain, mid-toned colour, away from the lightest, which its symbol is drawn in, and
+    // standing apart from what's been chosen. Art with only a few colours may still leave it near the lightest - see
+    // buildSprite, which draws the symbol dark then.
+    let block = choose((group) => -vividnessOf(group) * 0.5 - Math.abs(lightnessOf(group) - 95) + Math.min(...chosen.map(other => colorDistance(group, other))) * 0.25 + Math.min(colorDistance(group, light), 150) * 0.3);
+    let jump = choose(different);
 
     return {
       wall: toHex(wall),
@@ -452,6 +546,8 @@
       rotator: toHex(rotator),
       rotatorSwitch: toHex(rotator),
       lantern: toHex(lantern),
+      block: toHex(block),
+      jump: toHex(jump),
       outline: toHex(outline),
       light: toHex(light),
     };
@@ -464,7 +560,7 @@
   const ART_PX = TILE_PX * BOARD_SIZE;
 
   // Every role that has a texture of its own. A Switch shares its Gate's, as it does its colour.
-  const TEXTURE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern'];
+  const TEXTURE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'block', 'jump'];
   // The 4 shades of a role's colour, darkest first: how far each is aimed from the main colour in lightness,
   // and how much of an object it covers unless a drawing's mix says otherwise. A shade the art has nothing
   // like is filled in by its neighbour towards the main colour.
@@ -759,7 +855,7 @@
   };
 
   const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
-  const SPRITE_ROLES = { Wall: 'wall', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern' };
+  const SPRITE_ROLES = { Wall: 'wall', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump' };
 
   function maskOf(test){
     let mask = [];
@@ -805,8 +901,11 @@
   // from its left - see streamJoins.
   const ANIMATED_KINDS = ['Stream', 'RotatorTile'];
 
+  // Objects with a direction, drawn pointing right and turned the way they point, as animated tiles are.
+  const TURNED_KINDS = ['JumpTile'];
+
   // Every kind of object drawn from a drawing.
-  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), ...ANIMATED_KINDS];
+  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'PushBlock', ...TURNED_KINDS, ...ANIMATED_KINDS];
 
   const standardDrawings = new Map();
 
@@ -826,6 +925,8 @@
       let drawing;
       if (kind === 'Stream') drawing = { id: kind, kind, name: 'Standard', ...standardStreamLayers(), mix: standardMix('stream') };
       else if (kind === 'RotatorTile') drawing = { id: kind, kind, name: 'Standard', ...standardRotatorLayers(), mix: standardMix('rotator') };
+      else if (kind === 'PushBlock') drawing = { id: kind, kind, name: 'Standard', pixels: standardPushBlockPixels(), mix: standardMix('block') };
+      else if (kind === 'JumpTile') drawing = { id: kind, kind, name: 'Standard', pixels: standardJumpTilePixels(), mix: standardMix('jump') };
       else {
         let body = SHAPES[SPRITE_SHAPES[kind]];
         drawing = { id: kind, kind, name: 'Standard', pixels: pixelsOf(body), mix: standardMix(SPRITE_ROLES[kind]) };
@@ -883,6 +984,46 @@
     return { pixels, bendPixels, flowPixels };
   }
 
+  // A Push Block's Standard drawing: a metal plate, bevelled, with a panel seam inset around its middle, where its
+  // symbol goes (see drawSymbol), and a rivet in each corner.
+  function standardPushBlockPixels(){
+    let inPlate = (u, v) => {
+      let dx = Math.abs(u - 11.5), dy = Math.abs(v - 11.5);
+      let cornerX = Math.max(0, dx - 7.5), cornerY = Math.max(0, dy - 7.5);
+      return dx <= 10.5 && dy <= 10.5 && cornerX * cornerX + cornerY * cornerY <= 9;
+    };
+    let rivets = [[4, 4], [19, 4], [4, 19], [19, 19]];
+    return layerOf((u, v) => {
+      if (!inPlate(u, v)) return PAINTS.clear;
+      if (!inPlate(u - 1, v) || !inPlate(u + 1, v) || !inPlate(u, v - 1) || !inPlate(u, v + 1)) return PAINTS.outline;
+      if (!inPlate(u - 2, v) || !inPlate(u, v - 2)) return '4';
+      if (!inPlate(u + 2, v) || !inPlate(u, v + 2)) return '1';
+      if (rivets.some(([x, y]) => x === u && y === v)) return PAINTS.light;
+      let seam = (u === 5 || u === 18) && v >= 5 && v <= 18 || (v === 5 || v === 18) && u >= 5 && u <= 18;
+      if (seam) return '2';
+      // Brushed: faint lighter streaks running across it.
+      return v % 4 === 2 && (u * 5 + v) % 7 > 2 ? '4' : '3';
+    });
+  }
+
+  // A Jump Tile's Standard drawing, pointing right: a pad lying on the floor with a double chevron on it, each with
+  // a darker edge below.
+  function standardJumpTilePixels(){
+    let onPad = (u, v) => u >= 0 && v >= 0 && u < TILE_PX && v < TILE_PX && SHAPES.roundedSquare(u + 0.5 - TILE_PX / 2, v + 0.5 - TILE_PX / 2);
+    let onChevron = (u, v) => [5, 11].some(start => {
+      let across = Math.abs(v - 11.5);
+      let along = u - start - (5.5 - across);
+      return across <= 5.5 && along >= -1 && along <= 0.5;
+    });
+    return layerOf((u, v) => {
+      if (!onPad(u, v)) return PAINTS.clear;
+      if (!onPad(u - 1, v) || !onPad(u + 1, v) || !onPad(u, v - 1) || !onPad(u, v + 1)) return PAINTS.outline;
+      if (onChevron(u, v)) return '4';
+      if (onChevron(u, v - 1)) return '1';
+      return '2';
+    });
+  }
+
   // A Rotator tile's Standard layers: two rails, with chevrons between them pointing along them.
   function standardRotatorLayers(){
     let pixels = layerOf((u, v) => {
@@ -926,11 +1067,13 @@
     let drawing = drawingFor(look, object);
     let paints = isOpenGate ? drawing.openPixels ?? standardDrawing('Gate').openPixels : drawing.pixels;
     let mix = mixTexture(look, drawing.mix);
+    let turn = TURNED_KINDS.includes(object.kind) ? FLOW_TURNS[object.direction] ?? FLOW_TURNS.Right : null;
 
     for (let y = 0; y < TILE_PX; y++) {
       for (let x = 0; x < TILE_PX; x++) {
         let index = y * TILE_PX + x;
-        let color = paintColor(paints[index], mix, index, outline, light);
+        let [u, v] = turn ? turn(x, y) : [x, y];
+        let color = paintColor(paints[v * TILE_PX + u], mix, index, outline, light);
         if (!color) continue;
         // De-activated: every other pixel gives way to the outline's colour, the classic look of something disabled.
         sprite[index] = isDim && (x + y) % 2 === 0 ? outline : color;
@@ -948,8 +1091,54 @@
       else drawPixelLetter(sprite, object.letter, useDark ? outline : light, null, scale);
     }
 
-    let solid = object.kind === 'Wall' || (object.kind === 'Gate' && !isOpenGate);
+    if (object.kind === 'PushBlock') {
+      // In the light colour, unless the block's own colour is too near it to show, as with a Gate's letter.
+      let fill = mix.colors[mix.main];
+      let tooLight = Math.abs(lightnessOf(fill) - lightnessOf(light)) < PALETTE_MIN_CONTRAST;
+      let lightest = mix.colors[mix.colors.length - 1];
+      drawSymbol(sprite, object.symbol, tooLight ? outline : light, tooLight || lightest === fill ? null : lightest);
+    }
+
+    let solid = object.kind === 'Wall' || object.kind === 'PushBlock' || (object.kind === 'Gate' && !isOpenGate);
     return addDepth(sprite, look, solid, mix, outline, light);
+  }
+
+  // A Push Block's symbol, as a hollow outline 9 pixels across, so that two that match read at a glance.
+  const SYMBOLS = {
+    Circle: '..XXXXX.. .X.....X. X.......X X.......X X.......X X.......X X.......X .X.....X. ..XXXXX..',
+    Cross: 'X.......X .X.....X. ..X...X.. ...X.X... ....X.... ...X.X... ..X...X.. .X.....X. X.......X',
+    Triangle: '....X.... ....X.... ...X.X... ...X.X... ..X...X.. ..X...X.. .X.....X. .X.....X. XXXXXXXXX',
+    Square: 'XXXXXXXXX X.......X X.......X X.......X X.......X X.......X X.......X X.......X XXXXXXXXX',
+    Star: '....X.... ...X.X... XXX...XXX X.......X .X.....X. ..X...X.. .X..X..X. .X.X.X.X. .XX...XX.',
+  };
+  const SYMBOL_PX = 9;
+
+  // The symbol drawn in the light colour, glowing like neon: a halo just outside it, side by side with it, in glow (the
+  // block's own lightest shade). Only outside, so that a hollow symbol stays hollow, and its shape stays clear.
+  function drawSymbol(sprite, symbol, color, glow){
+    let rows = SYMBOLS[symbol]?.split(' ');
+    if (!rows) return;
+    let start = Math.floor((TILE_PX - SYMBOL_PX) / 2);
+    let on = (x, y) => rows[y - start]?.[x - start] === 'X';
+
+    // Everything that can be reached from the edge of the square without crossing the symbol is outside it.
+    let outside = new Set();
+    let queue = [[0, 0]];
+    while (queue.length > 0) {
+      let [x, y] = queue.pop();
+      let key = y * TILE_PX + x;
+      if (x < 0 || y < 0 || x >= TILE_PX || y >= TILE_PX || outside.has(key) || on(x, y)) continue;
+      outside.add(key);
+      queue.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+    }
+
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        let glowing = glow && outside.has(y * TILE_PX + x) && (on(x - 1, y) || on(x + 1, y) || on(x, y - 1) || on(x, y + 1));
+        if (on(x, y)) sprite[y * TILE_PX + x] = color;
+        else if (glowing) sprite[y * TILE_PX + x] = glow;
+      }
+    }
   }
 
   // ---------- depth ----------
@@ -1100,7 +1289,7 @@
   function spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins){
     if (object.kind === 'Stream') return `Stream|${object.variant ?? ''}|${object.direction}|${streamPhase}|${joins.back}|${joins.left}|${joins.right}`;
     if (object.kind === 'RotatorTile') return `RotatorTile|${object.variant ?? ''}|${object.direction}|${rotatorPhase}`;
-    return `${object.kind}|${object.variant ?? ''}|${object.letter ?? ''}|${object.kind === 'Gate' && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}`;
+    return `${object.kind}|${object.variant ?? ''}|${object.letter ?? ''}|${object.symbol ?? ''}|${object.direction ?? ''}|${object.kind === 'Gate' && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}`;
   }
 
   function spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams){
@@ -1127,15 +1316,16 @@
     return ghost;
   }
 
-  // A sprite that rises above its square starts that many rows higher.
-  function blit(image, sprite, left, top){
+  // A sprite that rises above its square starts that many rows higher. Nothing is drawn from below clipBottom, which
+  // is how something sinking into its square disappears into the ground.
+  function blit(image, sprite, left, top, clipBottom = Infinity){
     let { data, width, height } = image;
     top -= sprite.rise ?? 0;
     for (let y = 0; y < sprite.length / TILE_PX; y++) {
       for (let x = 0; x < TILE_PX; x++) {
         let color = sprite[y * TILE_PX + x];
         let px = left + x, py = top + y;
-        if (!color || px < 0 || px >= width || py < 0 || py >= height) continue;
+        if (!color || px < 0 || px >= width || py < 0 || py >= height || py >= clipBottom) continue;
         let i = (py * width + px) * 4;
         data[i] = color.r;
         data[i + 1] = color.g;
@@ -1155,6 +1345,10 @@
   // - along and rotatorAlong are how far objects are through moving from their fromCol and fromRow, for
   //   ones in play, depending on which kind of tile moved them. They move in whole pixels, like everything else.
   // - showInvisible draws anything invisible and unrevealed as a ghost, rather than leaving it out.
+  // - pushAlong is how far a Push Block being pushed is through its glide, along with the ship.
+  // - An object's own sink, from 0 to 1, is how far it's sunk into its square, after matching - see sinkMatches.
+  // - pushHint ({ col, row, direction, bob }) shows that the Push Block on that square can be pushed: an arrow just
+  //   past it, pointing the way it would go, bob pixels further out as it bobs.
   // - originY moves the whole board down by that many pixels, to leave room for objects rising above row 0.
   // Objects are drawn top row first, so that one rising into the square above it (see addDepth) is drawn over
   // whatever's there.
@@ -1168,7 +1362,8 @@
     let streams = new Map(objects.filter(object => object.kind === 'Stream').map(object => [object.col + ',' + object.row, object.direction]));
     let switchesActive = options.switchesActive ?? true;
 
-    let drawnRow = (object) => object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * ((object.glide === 'rotator' ? options.rotatorAlong : options.along) ?? 1);
+    let alongFor = (object) => (object.glide === 'rotator' ? options.rotatorAlong : object.glide === 'push' ? options.pushAlong : options.along) ?? 1;
+    let drawnRow = (object) => object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * alongFor(object);
     let floorsFirst = objects
       .filter(object => object.kind !== 'Start')
       .sort((a, b) => isFloor(b) - isFloor(a) || drawnRow(a) - drawnRow(b));
@@ -1177,14 +1372,60 @@
       let hidden = object.invisible && !object.revealed;
       if (hidden && !options.showInvisible) continue;
 
-      let along = (object.glide === 'rotator' ? options.rotatorAlong : options.along) ?? 1;
+      let along = alongFor(object);
       let col = object.fromCol === undefined ? object.col : object.fromCol + (object.col - object.fromCol) * along;
       let row = object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * along;
       let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams);
-      blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX), Math.round(row * TILE_PX) + (options.originY ?? 0));
+      let top = Math.round(row * TILE_PX) + (options.originY ?? 0);
+      let sunk = Math.round((object.sink ?? 0) * TILE_PX);
+      blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX), top + sunk, object.sink ? top + TILE_PX : Infinity);
     }
+
+    if (options.pushHint) drawPushHint(image, options.pushHint, look, options.originY ?? 0);
+  }
+
+  // An arrow pointing right, before it's turned the way a push would go.
+  const PUSH_ARROW = ['...X...', '...XX..', 'XXXXXX.', 'XXXXXXX', 'XXXXXX.', '...XX..', '...X...'];
+  const PUSH_ARROW_PX = 7;
+
+  // The arrow just past a Push Block on the side it would be pushed to, in the light colour outlined in the dark.
+  function drawPushHint(image, hint, look, originY){
+    let light = hexToColor(look.palette.light);
+    let outline = hexToColor(look.palette.outline);
+    let last = PUSH_ARROW_PX - 1;
+    let size = PUSH_ARROW_PX + 2;
+    let turn = { Right: (u, v) => [u, v], Down: (u, v) => [last - v, u], Left: (u, v) => [last - u, last - v], Up: (u, v) => [v, last - u] }[hint.direction];
+    if (!turn) return;
+
+    let sprite = new Array(TILE_PX * TILE_PX).fill(null);
+    let on = (x, y) => {
+      for (let v = 0; v < PUSH_ARROW_PX; v++) {
+        for (let u = 0; u < PUSH_ARROW_PX; u++) {
+          let [tx, ty] = turn(u, v);
+          if (tx === x && ty === y && PUSH_ARROW[v][u] === 'X') return true;
+        }
+      }
+      return false;
+    };
+    for (let y = -1; y <= PUSH_ARROW_PX; y++) {
+      for (let x = -1; x <= PUSH_ARROW_PX; x++) {
+        let color = on(x, y) ? light : [-1, 0, 1].some(dy => [-1, 0, 1].some(dx => on(x + dx, y + dy))) ? outline : null;
+        if (color) sprite[(y + 1) * TILE_PX + x + 1] = color;
+      }
+    }
+
+    let gap = 1 + (hint.bob ?? 0);
+    let middle = Math.floor((TILE_PX - size) / 2);
+    let left = hint.col * TILE_PX, top = hint.row * TILE_PX + originY;
+    let placed = {
+      Right: [left + TILE_PX + gap, top + middle],
+      Left: [left - size - gap, top + middle],
+      Down: [left + middle, top + TILE_PX + gap],
+      Up: [left + middle, top - size - gap],
+    }[hint.direction];
+    blit(image, sprite, placed[0], placed[1]);
   }
 
   return { BOARD_SIZE, DEFAULT_START, LETTERS, TILE_PX, ART_PX, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, pickPalette, pickTextures, renderBoard, hasFinish, createPuzzleGame,
-    PAINTS, DRAWN_KINDS, ANIMATED_KINDS, SPRITE_ROLES, TEXTURE_SHADES, standardDrawing, standardMix, mixTexture, renderDrawingLayer, RAISED_PX };
+    PAINTS, DRAWN_KINDS, ANIMATED_KINDS, TURNED_KINDS, SYMBOLS, SPRITE_ROLES, TEXTURE_SHADES, standardDrawing, standardMix, mixTexture, renderDrawingLayer, RAISED_PX };
 });

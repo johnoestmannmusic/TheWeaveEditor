@@ -406,6 +406,31 @@ public class ProjectEditingTests
     }
 
     [Fact]
+    public void ApplyPuzzleEdit_KeepsAPushBlocksSymbol_AndAJumpTilesDirection_DroppingThemElsewhere()
+    {
+        var node = new Node();
+
+        ProjectEditing.ApplyPuzzleEdit(node, MakePuzzle(
+            new PuzzleObject { Kind = PuzzleObjectKind.PushBlock, Symbol = PuzzleSymbol.Star, Direction = PuzzleDirection.Up },
+            new PuzzleObject { Kind = PuzzleObjectKind.JumpTile, Col = 1, Direction = PuzzleDirection.Left, Symbol = PuzzleSymbol.Circle },
+            new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 2, Symbol = PuzzleSymbol.Square }));
+
+        var objects = node.Puzzle!.Objects;
+        Assert.Equal((PuzzleSymbol?)PuzzleSymbol.Star, objects[0].Symbol);
+        Assert.Null(objects[0].Direction);
+        Assert.Equal((PuzzleDirection?)PuzzleDirection.Left, objects[1].Direction);
+        Assert.Null(objects[1].Symbol);
+        Assert.Null(objects[2].Symbol);
+    }
+
+    [Fact]
+    public void ApplyPuzzleEdit_RejectsAPushBlockWithNoSymbol_OrAJumpTileWithNoDirection()
+    {
+        Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyPuzzleEdit(new Node(), MakePuzzle(new PuzzleObject { Kind = PuzzleObjectKind.PushBlock })));
+        Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyPuzzleEdit(new Node(), MakePuzzle(new PuzzleObject { Kind = PuzzleObjectKind.JumpTile })));
+    }
+
+    [Fact]
     public void ApplyPuzzleEdit_KeepsAGatePlacedOpen()
     {
         var node = new Node();

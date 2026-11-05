@@ -51,6 +51,10 @@ let boardSolvedMs = null; // how long ago it was solved, while pausing there bef
 // Each part's board as it was last left, while crossing between connected boards: part -> { game, cell }.
 // Forgotten on leaving the board - see crossBoard.
 let boardVisits = new Map();
+// Push Blocks sinking into the ground, after matching: { object, ms, glideMs } - see onBoardEvent.
+let boardSinking = [];
+// The ship in mid-air, launched by a Jump Tile: { from, to, ms, durationMs }, or null - see startBoardJump.
+let boardJump = null;
 // While one part's board scrolls across to the next's: the two slide layers, the edge it's crossing, and how
 // far through - see startBoardScroll.
 let boardScroll = null;
@@ -2069,6 +2073,8 @@ function buildBoardGame(facing, visit){
   boardGame = visit?.game ?? (puzzle ? WeavePuzzle.createPuzzleGame(puzzle) : null);
   if (visit) boardGame?.placeShip(visit.cell);
   boardStreamMs = 0;
+  boardSinking = [];
+  boardJump = null;
   boardRotatorActiveMs = 0;
   boardRotatorGlideMs = BOARD_ROTATOR_TICK_MS;
   boardRotatorClockMs = 0;
@@ -2088,9 +2094,12 @@ function buildBoardGame(facing, visit){
       facing: facing ?? 'up',
       canEnter: boardGame ? boardGame.canEnter : undefined,
       onArrive: boardGame ? (cell) => {
+        boardGame.settlePushes();
         onBoardEvent(boardGame.shipArrivedAt(cell));
         carryBoardShip();
       } : undefined,
+      // Walking into a Push Block pushes it on ahead, as the step begins.
+      onStepStart: boardGame ? (from, to, direction) => onBoardEvent(boardGame.pushFrom(from, to, direction)) : undefined,
       onBlocked: onBoardBlocked,
     }
   );
@@ -2109,7 +2118,7 @@ function restartBoardGame(){
 
 // A Stream carries a ship on it, one square at a time, whatever's being pressed - see puzzle.js's canEnter.
 function carryBoardShip(){
-  if (!boardGame || boardSolvedMs !== null) return;
+  if (!boardGame || boardSolvedMs !== null || boardJump) return;
 
   let carry = boardGame.carryDirection(boardMover.cell);
   if (carry) boardMover.queue(carry);
@@ -2123,6 +2132,14 @@ function onBoardEvent(event){
     boardMover.teleport(event.teleportTo);
     breakContrails(boardContrails, boardMover.position);
   }
+  // Push Blocks that matched sink together, once whichever of them is moving has finished gliding into place.
+  let glideOf = (object) => {
+    if (object.fromCol === undefined || (object.fromCol === object.col && object.fromRow === object.row)) return 0;
+    return object.glide === 'push' ? BOARD_STEP_MS : object.glide === 'rotator' ? BOARD_ROTATOR_TICK_MS : BOARD_STREAM_TICK_MS;
+  };
+  let glideMs = Math.max(0, ...(event.sank ?? []).map(glideOf));
+  for (const object of event.sank ?? []) boardSinking.push({ object, ms: 0, glideMs });
+  if (event.jumpTo) startBoardJump(event.jumpTo);
   if (event.finished) {
     markPuzzleSolved(nodeMeta.get(activeNode).puzzle);
     releaseDirections();
@@ -2298,8 +2315,52 @@ function buildBoardShip(){
   return boardShipEl;
 }
 
+// The ship leaps from a Jump Tile to where it lands, over whatever's between, nothing else moving meanwhile, and
+// arrives there as if it had walked.
+const BOARD_JUMP_MS_PER_SQUARE = 175;
+// How much bigger the ship looks at the top of its leap.
+const BOARD_JUMP_RISE = 0.4;
+// How long a matched Push Block takes to sink into the ground.
+const BOARD_SINK_MS = 500;
+
+function startBoardJump(to){
+  let from = boardMover.cell;
+  let squares = Math.abs(to.col - from.col) + Math.abs(to.row - from.row);
+  releaseDirections();
+  breakContrails(boardContrails, boardMover.position);
+  boardJump = { from, to, ms: 0, durationMs: squares * BOARD_JUMP_MS_PER_SQUARE };
+}
+
+function updateBoardJump(dtMs){
+  boardJump.ms += dtMs;
+  if (boardJump.ms < boardJump.durationMs) return;
+
+  let { to } = boardJump;
+  boardJump = null;
+  boardMover.teleport(to);
+  breakContrails(boardContrails, boardMover.position);
+  releaseDirections();
+  onBoardEvent(boardGame.shipArrivedAt(to, { jumped: true }));
+  carryBoardShip();
+}
+
+function updateBoardSinking(dtMs){
+  for (const sinking of boardSinking) sinking.ms += dtMs;
+  boardSinking = boardSinking.filter(sinking => sinking.ms < sinking.glideMs + BOARD_SINK_MS);
+}
+
 function updateBoardGame(dtMs){
   if (!boardMover) return;
+
+  updateBoardSinking(dtMs);
+
+  // Nothing else moves while the ship's in the air.
+  if (boardJump && !focusTransition && !boardScroll) {
+    updateBoardJump(dtMs);
+    renderBoardShip();
+    drawBoardObjects();
+    return;
+  }
 
   // Nothing moves while the board's still flipping in, though it's drawn as it turns.
   if (focusTransition) {
@@ -2372,12 +2433,30 @@ function drawBoardObjects(){
   if (!boardGame || !boardObjectsCanvas) return;
 
   let puzzle = nodeMeta.get(activeNode).puzzle;
-  WeavePuzzle.renderBoard(boardObjectsImage, [...boardGame.floors, ...boardGame.objects], puzzle, {
+  let along = boardStreamMs / BOARD_STREAM_TICK_MS;
+  let rotatorAlong = boardRotatorGlideMs / BOARD_ROTATOR_TICK_MS;
+  let pushAlong = boardMover.progress;
+  // Each sinking block finishes its glide first, from wherever it was gliding from, then sinks into its square.
+  let sinking = boardSinking.map(({ object, ms, glideMs }) => {
+    let glided = glideMs === 0 ? 1 : Math.min(1, ms / glideMs);
+    let fromCol = object.fromCol ?? object.col, fromRow = object.fromRow ?? object.row;
+    return {
+      ...object,
+      col: fromCol + (object.col - fromCol) * glided,
+      row: fromRow + (object.row - fromRow) * glided,
+      fromCol: undefined,
+      fromRow: undefined,
+      sink: Math.max(0, Math.min(1, (ms - glideMs) / BOARD_SINK_MS)),
+    };
+  });
+  WeavePuzzle.renderBoard(boardObjectsImage, [...boardGame.floors, ...boardGame.objects, ...sinking], puzzle, {
     timeMs: performance.now(),
     rotatorTimeMs: boardRotatorClockMs,
     switchesActive: boardGame.switchesActive,
-    along: boardStreamMs / BOARD_STREAM_TICK_MS,
-    rotatorAlong: boardRotatorGlideMs / BOARD_ROTATOR_TICK_MS,
+    along,
+    rotatorAlong,
+    pushAlong,
+    pushHint: boardPushHint(),
   });
   boardObjectsCanvas.getContext('2d').putImageData(boardObjectsImage, 0, 0);
 }
@@ -2395,8 +2474,29 @@ function updateBoardContrails(dtMs){
   drawContrails(boardContrails, trackFocusScale, 0, 0);
 }
 
+// When the ship's standing still facing a Push Block it could push, an arrow on the block's far side, bobbing,
+// says it can be.
+const BOARD_PUSH_HINT_BOB_MS = 300;
+
+function boardPushHint(){
+  if (!boardGame || boardMover.isMoving || boardJump || boardScroll || focusTransition || boardSolvedMs !== null) return null;
+  let delta = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[boardMover.facing];
+  let ahead = { col: boardMover.cell.col + delta[0], row: boardMover.cell.row + delta[1] };
+  if (!boardGame.canPush(ahead, boardMover.facing)) return null;
+  return { ...ahead, direction: PUZZLE_DIRECTIONS[boardMover.facing], bob: Math.floor(performance.now() / BOARD_PUSH_HINT_BOB_MS) % 2 };
+}
+
 function renderBoardShip(){
   let position = boardMover.position;
+  let leap = 1;
+  // In mid-air from a Jump Tile: along a straight line between the squares, growing towards the middle of it.
+  if (boardJump) {
+    let t = Math.min(1, boardJump.ms / boardJump.durationMs);
+    let from = { x: (boardJump.from.col + 0.5) * BOARD_TILE_PX, y: (boardJump.from.row + 0.5) * BOARD_TILE_PX };
+    let to = { x: (boardJump.to.col + 0.5) * BOARD_TILE_PX, y: (boardJump.to.row + 0.5) * BOARD_TILE_PX };
+    position = { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t };
+    leap = 1 + BOARD_JUMP_RISE * Math.sin(Math.PI * t);
+  }
   // Crossing the gap from the last board's Finish onto this one's entrance, while the boards scroll.
   if (boardScroll) {
     let delta = BOARD_SCROLL_DELTAS[boardScroll.exit];
@@ -2410,7 +2510,7 @@ function renderBoardShip(){
   boardShipEl.style.left = (position.x * trackFocusScale - width / 2) + "px";
   boardShipEl.style.top = (position.y * trackFocusScale - height / 2) + "px";
   // Sprite's forward points "up" at rest, same as the map ship - see renderShip.
-  boardShipEl.style.transform = "rotate(" + (FACING_ANGLES[boardMover.facing] + Math.PI / 2) + "rad)";
+  boardShipEl.style.transform = "rotate(" + (FACING_ANGLES[boardMover.facing] + Math.PI / 2) + "rad) scale(" + leap + ")";
 }
 
 // Generic per-page visual effects (drifting sprites, a cross-fading second

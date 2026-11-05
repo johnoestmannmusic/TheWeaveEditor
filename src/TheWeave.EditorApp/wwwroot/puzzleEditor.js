@@ -17,6 +17,8 @@ const PUZZLE_TOOLS = [
   { kind: 'RotatorTile', label: 'Rotator Tile', hint: 'Moves anything on it along to the next Rotator Tile, once per second, while the ship is on a Rotator Switch. The ship can walk on it freely. Drag to paint.', paints: true, direction: true, canHide: true },
   { kind: 'RotatorSwitch', label: 'Rotator Switch', hint: 'While the ship is on this, Rotator Tiles move.', canHide: true },
   { kind: 'Lantern', label: 'Lantern', hint: 'Stepping on this lights it for good, revealing invisible things within 3 squares, in a circle.', canHide: true },
+  { kind: 'PushBlock', label: 'Push Block', hint: 'Walking into it pushes it a square, onto anything but another object. Two or more with the same symbol, side by side, sink into the ground.', symbol: true, canHide: true },
+  { kind: 'JumpTile', label: 'Jump Tile', hint: 'Stepping on it launches the ship 2 squares the way it points, over anything in between, or 1 if it can\'t land that far.', direction: true, canHide: true },
   { kind: 'Start', label: 'Start', hint: 'Where the ship begins. There\'s only one.' },
   { kind: 'Erase', label: 'Erase', hint: 'Removes the top thing on a square. Drag to paint.', paints: true },
 ];
@@ -33,7 +35,16 @@ const PUZZLE_TILE_PX = WeavePuzzle.TILE_PX;
 // img/ui/pilot-ship.png's own size, which is what the ship is drawn at against the art.
 const PUZZLE_SHIP_WIDTH = 12;
 const PUZZLE_SHIP_HEIGHT = 16;
-const PUZZLE_PALETTE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'outline', 'light'];
+const PUZZLE_PALETTE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'block', 'jump', 'outline', 'light'];
+
+// A Push Block's symbols, with a character to show each on its button - see puzzle.js's SYMBOLS.
+const PUZZLE_SYMBOLS = [
+  { name: 'Circle', label: '○' },
+  { name: 'Cross', label: '✕' },
+  { name: 'Triangle', label: '△' },
+  { name: 'Square', label: '□' },
+  { name: 'Star', label: '☆' },
+];
 
 // How this part connects to the parts either side of it: the part played just before, if it's this one's
 // parent and this is its first child, and the part played just after - see puzzle.js's connected boards.
@@ -71,6 +82,7 @@ function openPuzzleEditor(pageId, nodeId) {
     letter: 'A',
     letterChosen: false, // whether the letter is the user's own choice, rather than one suggested
     direction: 'Right',
+    symbol: 'Circle',
     gateOpen: false,
     invisible: false,
     choices: {}, // kind -> the id of the drawing set it's placed from, see placingSet
@@ -286,6 +298,20 @@ function renderPuzzleTools() {
     return button;
   }));
 
+  const symbols = document.getElementById('pe-symbols');
+  symbols.replaceChildren(...PUZZLE_SYMBOLS.map(({ name, label }) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.symbol = name;
+    button.title = name;
+    button.textContent = label;
+    button.addEventListener('click', () => {
+      puzzleEditor.symbol = name;
+      showPuzzleTool();
+    });
+    return button;
+  }));
+
   const directions = document.getElementById('pe-directions');
   directions.replaceChildren(...PUZZLE_DIRECTIONS.map(({ name, label }) => {
     const button = document.createElement('button');
@@ -333,6 +359,8 @@ function showPuzzleTool() {
   }
   for (const button of document.querySelectorAll('#pe-directions button'))
     button.classList.toggle('active', button.dataset.direction === puzzleEditor.direction);
+  for (const button of document.querySelectorAll('#pe-symbols button'))
+    button.classList.toggle('active', button.dataset.symbol === puzzleEditor.symbol);
 
   for (const button of document.querySelectorAll('#pe-letters button'))
     button.classList.toggle('active', button.dataset.letter === puzzleEditor.letter);
@@ -346,6 +374,7 @@ function showPuzzleTool() {
   document.getElementById('pe-letter-row').hidden = !tool.letter;
   document.getElementById('pe-gate-state-row').hidden = !tool.gateState;
   document.getElementById('pe-direction-row').hidden = !tool.direction;
+  document.getElementById('pe-symbol-row').hidden = !tool.symbol;
   renderToolTray();
   let hint = tool.hint;
   if (tool.kind === 'Finish' && leadsOn)
@@ -534,6 +563,7 @@ function buildPuzzleObject(cell) {
     ...(variant !== tool.kind ? { variant } : {}),
     ...(tool.letter ? { letter: puzzleEditor.letter } : {}),
     ...(tool.direction ? { direction: puzzleEditor.direction } : {}),
+    ...(tool.symbol ? { symbol: puzzleEditor.symbol } : {}),
     ...(tool.gateState && puzzleEditor.gateOpen ? { open: true } : {}),
     ...(tool.canHide && puzzleEditor.invisible ? { invisible: true } : {}),
   };

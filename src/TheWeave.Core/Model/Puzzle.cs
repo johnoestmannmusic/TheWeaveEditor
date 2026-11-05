@@ -39,6 +39,23 @@ public enum PuzzleObjectKind
 
     /// <summary>Stepping on this lights it for good, revealing Invisible things within reach of it.</summary>
     Lantern,
+
+    /// <summary>Pushed a square by the ship walking into it. Two or more with the same Symbol side by side sink into the ground.</summary>
+    PushBlock,
+
+    /// <summary>Stepping on this launches the ship 2 squares in its Direction, over anything in between, or 1 if it can't land that far.</summary>
+    JumpTile,
+}
+
+/// <summary>A Push Block's symbol, drawn on it as a hollow outline - see runtime/puzzle.js's SYMBOLS.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<PuzzleSymbol>))]
+public enum PuzzleSymbol
+{
+    Circle,
+    Cross,
+    Triangle,
+    Square,
+    Star,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<PuzzleDirection>))]
@@ -60,8 +77,12 @@ public sealed class PuzzleObject
     /// <summary>Gate, Switch and Teleporter only. Gates and Switches pair up by letter, and Teleporters do separately.</summary>
     public string? Letter { get; set; }
 
-    /// <summary>Stream and RotatorTile only.</summary>
+    /// <summary>Stream, RotatorTile and JumpTile only.</summary>
     public PuzzleDirection? Direction { get; set; }
+
+    /// <summary>PushBlock only.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PuzzleSymbol? Symbol { get; set; }
 
     /// <summary>Gate only: whether it starts the puzzle open. Left out of the project file when it doesn't.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -172,14 +193,14 @@ public static class PuzzleDrawings
     /// </summary>
     public const string Paints = ".OHG1234";
 
-    public static readonly IReadOnlyList<string> Roles = ["wall", "finish", "gate", "teleporter", "stream", "key", "rotator", "lantern", "outline", "light"];
+    public static readonly IReadOnlyList<string> Roles = ["wall", "finish", "gate", "teleporter", "stream", "key", "rotator", "lantern", "block", "jump", "outline", "light"];
 
     /// <summary>Every kind drawn from a drawing.</summary>
     public static readonly IReadOnlySet<PuzzleObjectKind> DrawnKinds = new HashSet<PuzzleObjectKind>
     {
         PuzzleObjectKind.Wall, PuzzleObjectKind.Finish, PuzzleObjectKind.Gate, PuzzleObjectKind.Switch,
         PuzzleObjectKind.Teleporter, PuzzleObjectKind.Key, PuzzleObjectKind.RotatorSwitch, PuzzleObjectKind.Lantern,
-        PuzzleObjectKind.Stream, PuzzleObjectKind.RotatorTile,
+        PuzzleObjectKind.Stream, PuzzleObjectKind.RotatorTile, PuzzleObjectKind.PushBlock, PuzzleObjectKind.JumpTile,
     };
 
     /// <summary>The kinds animated as they flow: a Still layer, and a Flow layer that moves along it.</summary>

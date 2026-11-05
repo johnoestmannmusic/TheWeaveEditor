@@ -31,7 +31,8 @@ Neocities, replacing hand-authoring HTML per location.
   and Rotator tiles have drawings too, painted flowing right and turned for each direction: a Still layer, a
   Flow layer that moves along it and wraps around, and for a Stream, a Bend for where another pours in.
 - A Generate panel in the Drawings view, offering patterns to start a new drawing from: patches of the
-  album art, natural textures (clouds, speckle, moss, veins and stones, which tile seamlessly) and dithers.
+  album art, natural textures (clouds, speckle, moss, veins and stones, which tile seamlessly), dithers, and
+  metals (brushed metal and a polished sheen).
   Any of the palette's colours can be laid out across them, each covering the percentage you choose. Picking
   one makes it a new drawing of the current shape, in solid colours to edit pixel by pixel.
 - Tree navigator + Inspector: browse every page and (nested) location in a project, and edit
@@ -97,6 +98,12 @@ Neocities, replacing hand-authoring HTML per location.
   the same letter (which can start open or closed), Keys have to be collected before Switches work, and
   Teleporters jump to their partner. Streams carry the ship and any objects on them, and hold the ship
   until they push it onto a non-Stream square. X restarts the puzzle.
+- Push Blocks, marked with a circle, X, triangle, square or star: walking into one pushes it a square, onto
+  anything but another object. Two or more with the same symbol side by side, pushed or carried there, sink into
+  the ground and disappear. Standing still facing one that can be pushed shows a small bobbing arrow past it.
+  They're metal plates by default, with their symbol as a glowing hollow outline.
+- Jump Tiles launch the ship 2 squares the way they point, over anything in between, or 1 if it can't land that
+  far. Landing works like arriving, so it can land on a Switch, a Key or another Jump Tile.
 - Rotator Tiles work like Streams, but only move what's on them, once per second, while the ship is on a
   Rotator Switch, and the ship can walk over them freely. Any object but Finish can start out Invisible,
   behaving exactly the same but unseen until the ship lights a Lantern within reach of it. A lit Lantern
