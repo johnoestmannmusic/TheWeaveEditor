@@ -39,6 +39,9 @@ let boardContrails = null;
 // While a track's puzzle is being played: its rules (see puzzle.js's createPuzzleGame), the canvas its
 // objects are drawn on, and how far through the current Stream tick it is. Null for a track with no puzzle.
 let boardGame = null;
+// The puzzle boardGame is being played from: what it's drawn with. Kept rather than looked up from activeNode, which
+// moves on to the next part before the board has finished flipping away - see finishBoardLevel.
+let boardPuzzle = null;
 let boardObjectsCanvas = null;
 let boardObjectsImage = null; // the art-sized pixels drawn onto that canvas - see drawBoardObjects
 let boardStreamMs = 0;
@@ -2070,6 +2073,7 @@ function startBoardGame(){
 // just where to put the ship on a fresh one. Either way the ship is simply there, without arriving.
 function buildBoardGame(facing, visit){
   let puzzle = nodeMeta.get(activeNode).puzzle;
+  boardPuzzle = puzzle;
   boardGame = visit?.game ?? (puzzle ? WeavePuzzle.createPuzzleGame(puzzle) : null);
   if (visit) boardGame?.placeShip(visit.cell);
   boardStreamMs = 0;
@@ -2300,6 +2304,7 @@ function leaveBoardGame(){
     boardShipEl = null;
     boardContrails = null;
     boardGame = null;
+    boardPuzzle = null;
     boardObjectsCanvas = null;
     boardObjectsImage = null;
     boardSolvedMs = null;
@@ -2430,9 +2435,9 @@ function updateBoardRotators(dtMs){
 // their pixels line up. Redrawn every frame, because Streams are always moving, and something on one glides
 // between its last square and its new one over a whole tick.
 function drawBoardObjects(){
-  if (!boardGame || !boardObjectsCanvas) return;
+  if (!boardGame || !boardObjectsCanvas || !boardPuzzle) return;
 
-  let puzzle = nodeMeta.get(activeNode).puzzle;
+  let puzzle = boardPuzzle;
   let along = boardStreamMs / BOARD_STREAM_TICK_MS;
   let rotatorAlong = boardRotatorGlideMs / BOARD_ROTATOR_TICK_MS;
   let pushAlong = boardMover.progress;
@@ -2596,6 +2601,10 @@ function applyDriftEffect(fx){
 }
 
 function loop(timestamp){
+  // The next frame is asked for first, so that if anything goes wrong in this one, the game carries on rather
+  // than freezing for good. The error still shows in the browser's console.
+  requestAnimationFrame(loop);
+
   if (lastFrameTime === null) lastFrameTime = timestamp;
   let dt = clamp((timestamp - lastFrameTime) / (1000 / 60), 0, 3);
   lastFrameTime = timestamp;
@@ -2610,6 +2619,4 @@ function loop(timestamp){
   updateNodeProximity();
   updateLocationAudio(dt);
   updateHubMusicSignal();
-
-  requestAnimationFrame(loop);
 }
