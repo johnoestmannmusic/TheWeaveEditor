@@ -26,6 +26,10 @@ Neocities, replacing hand-authoring HTML per location.
   and light colours, its own mix of up to 4 palette colours, or Grain: that mix laid out in the album art's
   own pattern, each colour covering its percentage of it. Every album recolours a drawing from its own
   palette, and Gates have an Open frame too. Puzzle files carry the drawings they use.
+- Streams drawn as running liquid in the album's colours, so one palette makes water and another lava: a
+  channel that joins up with its neighbours, bends towards whatever pours into it, and flows along. Streams
+  and Rotator tiles have drawings too, painted flowing right and turned for each direction: a Still layer, a
+  Flow layer that moves along it and wraps around, and for a Stream, a Bend for where another pours in.
 - A Generate panel in the Drawings view, offering patterns to start a new drawing from: patches of the
   album art, natural textures (clouds, speckle, moss, veins and stones, which tile seamlessly) and dithers.
   Any of the palette's colours can be laid out across them, each covering the percentage you choose. Picking

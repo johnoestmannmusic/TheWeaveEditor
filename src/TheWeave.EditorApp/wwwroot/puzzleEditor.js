@@ -487,6 +487,8 @@ function drawPuzzleBoard(timeMs) {
   context.clearRect(0, 0, canvas.width, canvas.height);
 
   const look = puzzleLook();
+  // A Stream or Rotator tile's preview flows, so it's kept moving.
+  if (puzzleEditor.drawings && !puzzleEditor.drawings.stroke && isAnimatedKind(puzzleEditor.drawings.kind)) drawDrawingPreview(timeMs);
   if (look && !puzzleEditor.drawings) {
     puzzleEditor.image ??= context.createImageData(PUZZLE_ART_PX, PUZZLE_ART_PX);
     const objects = puzzleEditor.objects;

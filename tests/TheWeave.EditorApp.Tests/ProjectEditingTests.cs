@@ -205,8 +205,10 @@ public class ProjectEditingTests
     {
         d => d.Pixels = d.Pixels[1..],
         d => d.Pixels = "X" + d.Pixels[1..],
-        d => d.Kind = PuzzleObjectKind.Stream,
         d => d.Kind = PuzzleObjectKind.Start,
+        d => d.Kind = PuzzleObjectKind.Finish + 100,
+        d => { d.Kind = PuzzleObjectKind.Stream; d.FlowPixels = "."; },
+        d => { d.Kind = PuzzleObjectKind.Stream; d.BendPixels = new string('X', PuzzleDrawings.TilePixels); },
         d => d.Id = "Key",
         d => d.Id = " ",
         d => d.Name = " ",
@@ -269,7 +271,7 @@ public class ProjectEditingTests
     {
         s => s.Id = " ",
         s => s.Name = " ",
-        s => s.Kind = PuzzleObjectKind.Stream,
+        s => s.Kind = PuzzleObjectKind.Start,
     };
 
     [Theory]
@@ -286,6 +288,34 @@ public class ProjectEditingTests
         Assert.Same(before, project.PuzzleDrawings);
         Assert.Null(project.PuzzleDrawingSets);
         Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyPuzzleDrawingsEdit(project, [Drawing("mossy")], [Set("a"), Set("a")]));
+    }
+
+    [Fact]
+    public void AStreamOrRotatorTileDrawing_KeepsOnlyTheLayersItsKindHas()
+    {
+        var layer = new string('G', PuzzleDrawings.TilePixels);
+        var stream = Drawing("river", PuzzleObjectKind.Stream);
+        (stream.BendPixels, stream.FlowPixels, stream.OpenPixels) = (layer, layer, layer);
+        var rotator = Drawing("belt", PuzzleObjectKind.RotatorTile);
+        (rotator.BendPixels, rotator.FlowPixels) = (layer, layer);
+        var wall = Drawing("brick");
+        (wall.BendPixels, wall.FlowPixels) = (layer, layer);
+
+        ProjectEditing.ApplyPuzzleDrawingsEdit(new WeaveProject(), [stream, rotator, wall]);
+
+        Assert.Equal((layer, layer, (string?)null), (stream.BendPixels, stream.FlowPixels, stream.OpenPixels));
+        Assert.Equal(((string?)null, layer), (rotator.BendPixels, rotator.FlowPixels));
+        Assert.Equal(((string?)null, (string?)null), (wall.BendPixels, wall.FlowPixels));
+    }
+
+    [Fact]
+    public void ApplyPuzzleEdit_KeepsAStreamsVariant()
+    {
+        var node = new Node();
+
+        ProjectEditing.ApplyPuzzleEdit(node, MakePuzzle(new PuzzleObject { Kind = PuzzleObjectKind.Stream, Direction = PuzzleDirection.Up, Variant = "river" }));
+
+        Assert.Equal("river", node.Puzzle!.Objects[0].Variant);
     }
 
     [Fact]
@@ -324,7 +354,7 @@ public class ProjectEditingTests
 
         ProjectEditing.ApplyPuzzleEdit(node, MakePuzzle(
             new PuzzleObject { Kind = PuzzleObjectKind.Wall, Variant = "mossy" },
-            new PuzzleObject { Kind = PuzzleObjectKind.Stream, Col = 1, Direction = PuzzleDirection.Up, Variant = "mossy" },
+            new PuzzleObject { Kind = PuzzleObjectKind.Start, Col = 1, Variant = "mossy" },
             new PuzzleObject { Kind = PuzzleObjectKind.Key, Col = 2, Variant = "" }));
 
         Assert.Equal(["mossy", null, null], node.Puzzle!.Objects.Select(o => o.Variant));

@@ -696,11 +696,30 @@
 
   // ---------- drawing ----------
 
-  // How long a Stream's cross-lines take to move one whole square, and how far apart they are. A Rotator
-  // tile's chevrons are as far apart, and move as fast as things on it do.
+  // How long a Stream's liquid takes to flow one whole square. Its pattern repeats every square, so a run of them
+  // flows on from one to the next without a seam.
   const STREAM_CYCLE_MS = 900;
+  // A Rotator tile's chevrons: how far apart they are, and how long they take to move a square, as fast as things
+  // on it do.
   const STREAM_LINE_SPACING = 8;
   const ROTATOR_CYCLE_MS = 1000;
+  // A Stream's channel, across a square: from its bank on one side to its bank on the other.
+  const STREAM_BANK_LOW = 3;
+  const STREAM_BANK_HIGH = TILE_PX - 1 - STREAM_BANK_LOW;
+  // Each streak running down a Stream: where it is across the channel, where along it starts, how long it is, how
+  // far it wanders from side to side as it goes, and whether its leading pixel glints.
+  const STREAM_STREAKS = [
+    { across: 7, start: 0, length: 7, wander: 1, glint: true },
+    { across: 11, start: 14, length: 5, wander: 1, glint: false },
+    { across: 15, start: 6, length: 8, wander: 1, glint: true },
+    { across: 18, start: 19, length: 4, wander: 0, glint: false },
+  ];
+  // Darker ripples between the streaks, for the body of the liquid.
+  const STREAM_RIPPLES = [
+    { across: 9, start: 9, length: 4, wander: 1 },
+    { across: 13, start: 21, length: 6, wander: 1 },
+    { across: 6, start: 17, length: 3, wander: 0 },
+  ];
 
   // Each letter as 7 rows of 5 pixels.
   const PIXEL_LETTERS = {
@@ -742,12 +761,6 @@
   const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
   const SPRITE_ROLES = { Wall: 'wall', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern' };
 
-  // What colour a role's pixel at x, y of a square is, in its standard mix.
-  function roleColorAt(look, role, x, y){
-    let mix = mixTexture(look, standardMix(role));
-    return mix.colors[mix.pixels[y * TILE_PX + x]];
-  }
-
   function maskOf(test){
     let mask = [];
     for (let y = 0; y < TILE_PX; y++) {
@@ -786,8 +799,14 @@
   // laid out in the album's grain, or one of the mix's colours (darkest first) on its own.
   const PAINTS = { clear: '.', outline: 'O', light: 'H', grain: 'G', colors: ['1', '2', '3', '4'] };
 
-  // Every kind of object drawn from a drawing. Streams and Rotator tiles are animated, so they're drawn in code.
-  const DRAWN_KINDS = Object.keys(SPRITE_SHAPES);
+  // Floor tiles that move what's on them, and are animated to show it. Each is drawn flowing right, and turned for
+  // the other directions: a Still layer that stays put, and a Flow layer that runs along it, wrapping around, so a
+  // line of them flows on from one square to the next. A Stream also has a Bend, for where another pours into it
+  // from its left - see streamJoins.
+  const ANIMATED_KINDS = ['Stream', 'RotatorTile'];
+
+  // Every kind of object drawn from a drawing.
+  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), ...ANIMATED_KINDS];
 
   const standardDrawings = new Map();
 
@@ -804,12 +823,80 @@
         return paints;
       };
 
-      let body = SHAPES[SPRITE_SHAPES[kind]];
-      let drawing = { id: kind, kind, name: 'Standard', pixels: pixelsOf(body), mix: standardMix(SPRITE_ROLES[kind]) };
-      if (kind === 'Gate') drawing.openPixels = pixelsOf((dx, dy) => body(dx, dy) && !SHAPES.octagonHole(dx, dy));
+      let drawing;
+      if (kind === 'Stream') drawing = { id: kind, kind, name: 'Standard', ...standardStreamLayers(), mix: standardMix('stream') };
+      else if (kind === 'RotatorTile') drawing = { id: kind, kind, name: 'Standard', ...standardRotatorLayers(), mix: standardMix('rotator') };
+      else {
+        let body = SHAPES[SPRITE_SHAPES[kind]];
+        drawing = { id: kind, kind, name: 'Standard', pixels: pixelsOf(body), mix: standardMix(SPRITE_ROLES[kind]) };
+        if (kind === 'Gate') drawing.openPixels = pixelsOf((dx, dy) => body(dx, dy) && !SHAPES.octagonHole(dx, dy));
+      }
       standardDrawings.set(kind, drawing);
     }
     return standardDrawings.get(kind);
+  }
+
+  // A layer of paints from a function of where each pixel is, flowing right: u along the flow, v across it.
+  function layerOf(paintAt){
+    let paints = '';
+    for (let v = 0; v < TILE_PX; v++) {
+      for (let u = 0; u < TILE_PX; u++) paints += paintAt(u, v);
+    }
+    return paints;
+  }
+
+  // A Stream's Standard layers: running liquid in its colours, so that the album decides whether it's water, lava
+  // or anything else. A channel, outlined where it meets the floor and darker along its banks, with lighter
+  // streaks and darker ripples wandering along it, and the odd glint.
+  function standardStreamLayers(){
+    // Its channel, straight through or bending in from the left, with the banks along its edges and the deeper
+    // liquid just inside them. Beyond the square counts as more channel, since that's where it carries on.
+    let channelPaints = (inChannel) => {
+      let within = (u, v) => u < 0 || v < 0 || u >= TILE_PX || v >= TILE_PX || inChannel(u, v);
+      let isBank = (u, v) => within(u, v) && (!within(u - 1, v) || !within(u + 1, v) || !within(u, v - 1) || !within(u, v + 1));
+      return layerOf((u, v) => {
+        if (!inChannel(u, v)) return PAINTS.clear;
+        if (isBank(u, v)) return PAINTS.outline;
+        if (isBank(u - 1, v) || isBank(u + 1, v) || isBank(u, v - 1) || isBank(u, v + 1)) return '1';
+        return '3';
+      });
+    };
+    let inBand = (v) => v >= STREAM_BANK_LOW && v <= STREAM_BANK_HIGH;
+    let pixels = channelPaints((u, v) => inBand(v));
+    let bendPixels = channelPaints((u, v) => u >= STREAM_BANK_LOW && (inBand(v) || (v < STREAM_BANK_LOW && u <= STREAM_BANK_HIGH)));
+
+    let wrap = (value) => ((value % TILE_PX) + TILE_PX) % TILE_PX;
+    let onLine = (line, u, v) => {
+      let into = wrap(u - line.start);
+      if (into >= line.length) return null;
+      return v === line.across + Math.round(Math.sin(u / TILE_PX * Math.PI * 2) * line.wander) ? into : null;
+    };
+    let flowPixels = layerOf((u, v) => {
+      let paint = PAINTS.clear;
+      for (const line of STREAM_RIPPLES) if (onLine(line, u, v) !== null) paint = '2';
+      for (const line of STREAM_STREAKS) {
+        let into = onLine(line, u, v);
+        if (into !== null) paint = line.glint && into === line.length - 1 ? PAINTS.light : '4';
+      }
+      return paint;
+    });
+    return { pixels, bendPixels, flowPixels };
+  }
+
+  // A Rotator tile's Standard layers: two rails, with chevrons between them pointing along them.
+  function standardRotatorLayers(){
+    let pixels = layerOf((u, v) => {
+      if (v === 1 || v === 3 || v === 20 || v === 22) return PAINTS.outline;
+      return v === 2 || v === 21 ? PAINTS.grain : PAINTS.clear;
+    });
+    let flowPixels = layerOf((u, v) => {
+      if (v <= 3 || v >= 20) return PAINTS.clear;
+      let fromMiddle = Math.floor(Math.abs(v - (TILE_PX - 1) / 2));
+      let moved = (u + fromMiddle) % STREAM_LINE_SPACING;
+      if (moved > 3) return PAINTS.clear;
+      return moved === 0 || moved === 3 ? PAINTS.outline : PAINTS.grain;
+    });
+    return { pixels, flowPixels };
   }
 
   // The drawing an object is drawn with: its variant from the library, or else its kind's Standard one, as
@@ -864,81 +951,103 @@
     return sprite;
   }
 
-  // A Stream's two rails running in its direction of travel, with cross-lines between them moving along.
-  function buildStreamSprite(direction, look, phase){
+  // Which of a Stream's layers its square is drawn from: straight through, if a Stream flows in from straight
+  // behind it or none flows in from anywhere (where a Stream begins, it runs in from the edge), and bending in from
+  // either side that a Stream pours in from. So a run of them reads as one channel, a bend opens towards whatever
+  // pours into it, and two side by side stay apart.
+  function streamJoins(object, streams){
+    let { x, y } = DIRECTION_DELTAS[object.direction];
+    let flowsIn = (dx, dy) => {
+      let from = streams.get((object.col + dx) + ',' + (object.row + dy));
+      return !!from && DIRECTION_DELTAS[from].x === -dx && DIRECTION_DELTAS[from].y === -dy;
+    };
+    // Its left and right, looking downstream.
+    let left = flowsIn(y, -x), right = flowsIn(-y, x);
+    return { back: flowsIn(-x, -y) || (!left && !right), left, right };
+  }
+
+  // Where a pixel of a square is in a drawing flowing right, for a tile flowing each way: u along the flow and v
+  // across it, so the drawing's top is always on the flow's left.
+  const FLOW_TURNS = {
+    Right: (x, y) => [x, y],
+    Down: (x, y) => [y, TILE_PX - 1 - x],
+    Left: (x, y) => [TILE_PX - 1 - x, TILE_PX - 1 - y],
+    Up: (x, y) => [TILE_PX - 1 - y, x],
+  };
+
+  const isLiquid = (paint) => paint !== PAINTS.clear && paint !== PAINTS.outline;
+
+  // A Stream or Rotator tile, turned to the way it flows, its Flow layer moved phase pixels along. A Stream's Flow
+  // only shows on its liquid, so that it keeps to the channel round a bend; a Rotator tile's shows anywhere. Where
+  // a Stream's straight and bending channels meet, liquid wins over a bank, and a bank over nothing.
+  function buildAnimatedSprite(object, look, phase, joins = { back: true, left: false, right: false }){
     let sprite = new Array(TILE_PX * TILE_PX).fill(null);
-    let delta = DIRECTION_DELTAS[direction];
-    let horizontal = delta.x !== 0;
-    let forward = delta.x + delta.y > 0;
+    let drawing = drawingFor(look, object);
+    let standard = standardDrawing(object.kind);
+    let still = drawing.pixels;
+    let bend = drawing.bendPixels ?? standard.bendPixels;
+    let flow = drawing.flowPixels ?? standard.flowPixels;
+    let isStream = object.kind === 'Stream';
+    let mix = mixTexture(look, drawing.mix);
     let outline = hexToColor(look.palette.outline);
+    let light = hexToColor(look.palette.light);
+    let turn = FLOW_TURNS[object.direction] ?? FLOW_TURNS.Right;
+    let rank = (paint) => paint === undefined ? -1 : isLiquid(paint) ? 2 : paint === PAINTS.outline ? 1 : 0;
 
     for (let y = 0; y < TILE_PX; y++) {
       for (let x = 0; x < TILE_PX; x++) {
-        let along = horizontal ? x : y;
-        let across = horizontal ? y : x;
-        let color = null;
-
-        let rail = across <= 5 ? across - 2 : across - 18;
-        if (rail >= 0 && rail <= 3 && (across <= 5 || across >= 18)) {
-          color = rail === 0 || rail === 3 ? outline : roleColorAt(look, 'stream', x, y);
-        } else if (across > 5 && across < 18) {
-          let moved = ((forward ? along - phase : along + phase) % STREAM_LINE_SPACING + STREAM_LINE_SPACING) % STREAM_LINE_SPACING;
-          if (moved <= 3) color = moved === 0 || moved === 3 ? outline : roleColorAt(look, 'stream', x, y);
+        let [u, v] = turn(x, y);
+        let paint = still[v * TILE_PX + u];
+        if (isStream) {
+          let layers = [joins.back ? paint : undefined, joins.left ? bend[v * TILE_PX + u] : undefined, joins.right ? bend[(TILE_PX - 1 - v) * TILE_PX + u] : undefined];
+          paint = layers.reduce((best, layer) => rank(layer) > rank(best) ? layer : best, undefined) ?? PAINTS.clear;
         }
+        let moving = flow[v * TILE_PX + (((u - phase) % TILE_PX) + TILE_PX) % TILE_PX];
+        if (moving !== PAINTS.clear && (!isStream || isLiquid(paint))) paint = moving;
 
-        sprite[y * TILE_PX + x] = color;
+        let index = y * TILE_PX + x;
+        sprite[index] = paintColor(paint, mix, index, outline, light);
       }
     }
     return sprite;
   }
 
-  // A Rotator tile's two rails, with chevrons between them pointing along them, and moving that way.
-  function buildRotatorSprite(direction, look, phase){
-    let sprite = new Array(TILE_PX * TILE_PX).fill(null);
-    let delta = DIRECTION_DELTAS[direction];
-    let horizontal = delta.x !== 0;
-    let forward = delta.x + delta.y > 0;
+  // A drawing's layer on its own, flowing right, for the Drawings view to paint on: Still or Bend, or Flow over the
+  // Still layer, shown wherever it's painted, so that nothing painted is hidden.
+  function renderDrawingLayer(image, drawing, look, layer){
+    let standard = standardDrawing(drawing.kind);
+    let mix = mixTexture(look, drawing.mix);
     let outline = hexToColor(look.palette.outline);
-
-    for (let y = 0; y < TILE_PX; y++) {
-      for (let x = 0; x < TILE_PX; x++) {
-        let along = horizontal ? x : y;
-        let across = horizontal ? y : x;
-        let travelled = forward ? along : TILE_PX - 1 - along;
-        let color = null;
-
-        if ((across >= 1 && across <= 3) || (across >= 20 && across <= 22)) {
-          color = across === 1 || across === 3 || across === 20 || across === 22 ? outline : roleColorAt(look, 'rotator', x, y);
-        } else if (across > 3 && across < 20) {
-          let fromMiddle = Math.floor(Math.abs(across - (TILE_PX - 1) / 2));
-          let moved = ((travelled + fromMiddle - phase) % STREAM_LINE_SPACING + STREAM_LINE_SPACING) % STREAM_LINE_SPACING;
-          if (moved <= 3) color = moved === 0 || moved === 3 ? outline : roleColorAt(look, 'rotator', x, y);
-        }
-
-        sprite[y * TILE_PX + x] = color;
-      }
+    let light = hexToColor(look.palette.light);
+    let base = layer === 'bend' ? drawing.bendPixels ?? standard.bendPixels : drawing.pixels;
+    let flow = layer === 'flow' ? drawing.flowPixels ?? standard.flowPixels : null;
+    image.data.fill(0);
+    for (let index = 0; index < TILE_PX * TILE_PX; index++) {
+      let paint = flow && flow[index] !== PAINTS.clear ? flow[index] : base[index];
+      let color = paintColor(paint, mix, index, outline, light);
+      if (color) image.data.set([color.r, color.g, color.b, 255], (Math.floor(index / TILE_PX) * image.width + index % TILE_PX) * 4);
     }
-    return sprite;
   }
 
   // Sprites are only worth working out once per look, since there are only so many things to be drawn.
   const spriteCaches = new WeakMap();
 
-  function spriteKey(object, switchesActive, streamPhase, rotatorPhase){
-    if (object.kind === 'Stream') return `Stream|${object.direction}|${streamPhase}`;
-    if (object.kind === 'RotatorTile') return `RotatorTile|${object.direction}|${rotatorPhase}`;
+  function spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins){
+    if (object.kind === 'Stream') return `Stream|${object.variant ?? ''}|${object.direction}|${streamPhase}|${joins.back}|${joins.left}|${joins.right}`;
+    if (object.kind === 'RotatorTile') return `RotatorTile|${object.variant ?? ''}|${object.direction}|${rotatorPhase}`;
     return `${object.kind}|${object.variant ?? ''}|${object.letter ?? ''}|${object.kind === 'Gate' && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}`;
   }
 
-  function spriteFor(object, look, switchesActive, streamPhase, rotatorPhase){
+  function spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams){
     let cache = spriteCaches.get(look);
     if (!cache) spriteCaches.set(look, cache = new Map());
 
-    let key = spriteKey(object, switchesActive, streamPhase, rotatorPhase);
+    let joins = object.kind === 'Stream' ? streamJoins(object, streams) : null;
+    let key = spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins);
     let sprite = cache.get(key);
     if (!sprite) {
-      if (object.kind === 'Stream') sprite = buildStreamSprite(object.direction, look, streamPhase);
-      else if (object.kind === 'RotatorTile') sprite = buildRotatorSprite(object.direction, look, rotatorPhase);
+      if (object.kind === 'Stream') sprite = buildAnimatedSprite(object, look, streamPhase, joins);
+      else if (object.kind === 'RotatorTile') sprite = buildAnimatedSprite(object, look, rotatorPhase);
       else sprite = buildSprite(object, look, switchesActive);
       cache.set(key, sprite);
     }
@@ -979,9 +1088,11 @@
   function renderBoard(image, objects, look, options = {}){
     image.data.fill(0);
 
-    let phaseOf = (timeMs, cycle) => Math.floor(((timeMs ?? 0) % cycle) / cycle * TILE_PX) % STREAM_LINE_SPACING;
+    let phaseOf = (timeMs, cycle) => Math.floor(((timeMs ?? 0) % cycle) / cycle * TILE_PX);
     let streamPhase = phaseOf(options.timeMs, STREAM_CYCLE_MS);
     let rotatorPhase = phaseOf(options.rotatorTimeMs, ROTATOR_CYCLE_MS);
+    // Where every Stream is, and which way it flows, for how they join up - see streamJoins.
+    let streams = new Map(objects.filter(object => object.kind === 'Stream').map(object => [object.col + ',' + object.row, object.direction]));
     let switchesActive = options.switchesActive ?? true;
 
     let floorsFirst = objects
@@ -995,11 +1106,11 @@
       let along = (object.glide === 'rotator' ? options.rotatorAlong : options.along) ?? 1;
       let col = object.fromCol === undefined ? object.col : object.fromCol + (object.col - object.fromCol) * along;
       let row = object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * along;
-      let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase);
+      let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams);
       blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX), Math.round(row * TILE_PX));
     }
   }
 
   return { BOARD_SIZE, DEFAULT_START, LETTERS, TILE_PX, ART_PX, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, pickPalette, pickTextures, renderBoard, hasFinish, createPuzzleGame,
-    PAINTS, DRAWN_KINDS, SPRITE_ROLES, TEXTURE_SHADES, standardDrawing, standardMix, mixTexture };
+    PAINTS, DRAWN_KINDS, ANIMATED_KINDS, SPRITE_ROLES, TEXTURE_SHADES, standardDrawing, standardMix, mixTexture, renderDrawingLayer };
 });

@@ -382,10 +382,9 @@ internal static class ProjectEditing
                 throw new InvalidOperationException("A drawing needs a name.");
 
             CheckDrawingPixels(drawing, drawing.Pixels);
-            if (drawing.Kind != PuzzleObjectKind.Gate)
-                drawing.OpenPixels = null;
-            else if (drawing.OpenPixels is not null)
-                CheckDrawingPixels(drawing, drawing.OpenPixels);
+            drawing.OpenPixels = OnlyFor(drawing, drawing.Kind == PuzzleObjectKind.Gate, drawing.OpenPixels);
+            drawing.BendPixels = OnlyFor(drawing, drawing.Kind == PuzzleObjectKind.Stream, drawing.BendPixels);
+            drawing.FlowPixels = OnlyFor(drawing, PuzzleDrawings.IsAnimated(drawing.Kind), drawing.FlowPixels);
 
             if (drawing.Mix.Count is 0 or > 4)
                 throw new InvalidOperationException($"Drawing '{drawing.Name}' needs from 1 to 4 colours in its mix.");
@@ -407,6 +406,15 @@ internal static class ProjectEditing
 
         if (drawings.GroupBy(d => d.Id).FirstOrDefault(g => g.Count() > 1) is { } repeated)
             throw new InvalidOperationException($"More than one drawing has the id '{repeated.Key}'.");
+    }
+
+    // A layer a drawing's kind has, checked, or dropped if its kind has no such layer.
+    private static string? OnlyFor(PuzzleDrawing drawing, bool kindHasIt, string? pixels)
+    {
+        if (!kindHasIt || pixels is null)
+            return null;
+        CheckDrawingPixels(drawing, pixels);
+        return pixels;
     }
 
     private static void CheckDrawingPixels(PuzzleDrawing drawing, string pixels)

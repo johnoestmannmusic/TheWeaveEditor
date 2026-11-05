@@ -1135,3 +1135,12 @@ main.behind-puzzle-editor {
   width: 18px;
   height: 18px;
 }
+
+#pd-frame-hint {
+  max-width: 440px;
+  text-align: center;
+}
+
+#pd-frame-hint[hidden] {
+  display: none;
+}
