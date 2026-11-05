@@ -649,7 +649,7 @@ test('a redrawn Standard drawing is used by everything of its kind without a var
   let { look } = artLook();
   let drawings = [drawing('Wall', 'Wall', filled('H'), standardMix('wall'))];
   let image = blank();
-  renderBoard(image, [obj('Wall', 0, 0), obj('Wall', 1, 0)], { ...look, drawings });
+  renderBoard(image, [obj('Wall', 0, 0), obj('Wall', 1, 0)], { ...look, drawings, depth: 'flat' });
   assert.equal(hexAt(image, 0, 0), look.palette.light);
   assert.equal(hexAt(image, 47, 23), look.palette.light);
 });
@@ -1046,4 +1046,61 @@ test('the Drawings view sees a layer on its own, with Flow over Still wherever i
   assert.deepEqual(pixelAt(image, 0, 0).slice(0, 3), toRgb(look.palette.light));
   renderDrawingLayer(image, standardDrawing('Stream'), look, 'bend');
   assert.ok(drawnAt(image, 12, 0) && !drawnAt(image, 0, 12));
+});
+
+// ---------- depth ----------
+
+const { RAISED_PX } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+
+const rowsDrawn = (image, col) => { let rows = new Set(); for (let y = 0; y < ART_PX; y++) for (let x = col * TILE_PX; x < (col + 1) * TILE_PX; x++) if (pixelAt(image, x, y)[3]) rows.add(y); return [...rows]; };
+
+test('raised and flat both draw only colours from the art, with no see-through blends', () => {
+  let { art, look } = artLook();
+  let allowed = colorsIn(art);
+  for (const depth of ['raised', 'flat']) {
+    let image = blank();
+    renderBoard(image, [obj('Wall', 1, 2), obj('Gate', 2, 2, { letter: 'A' }), obj('Gate', 3, 2, { letter: 'B', open: true }), obj('Switch', 4, 2, { letter: 'A' }), obj('Finish', 5, 2), obj('Key', 6, 2), obj('Lantern', 7, 2), obj('Teleporter', 8, 2, { letter: 'T' })], { ...look, depth }, { switchesActive: false });
+    for (let i = 0; i < image.data.length; i += 4) assert.ok(image.data[i + 3] === 0 || image.data[i + 3] === 255, depth);
+    for (const color of colorsIn(image.data)) assert.ok(allowed.has(color), `${depth}: ${color}`);
+  }
+});
+
+test('a raised Wall rises into the square above, and something stepped onto doesn\'t', () => {
+  let { look } = artLook();
+  let image = blank();
+  renderBoard(image, [obj('Wall', 0, 2), obj('Finish', 1, 2), obj('Gate', 2, 2, { letter: 'A', open: true }), obj('Gate', 3, 2, { letter: 'A' })], { ...look, depth: 'raised' });
+  assert.equal(Math.min(...rowsDrawn(image, 0)), 2 * TILE_PX + 1 - RAISED_PX);
+  assert.ok(Math.min(...rowsDrawn(image, 1)) >= 2 * TILE_PX, 'a Finish lies flat');
+  assert.ok(Math.min(...rowsDrawn(image, 2)) >= 2 * TILE_PX, 'an open Gate lies flat');
+  assert.equal(Math.min(...rowsDrawn(image, 3)), 2 * TILE_PX + 1 - RAISED_PX, 'a closed Gate stands up');
+});
+
+test('a raised Wall is drawn over whatever\'s in the square above it, whichever order they come in', () => {
+  let { look } = artLook();
+  let a = blank(), b = blank();
+  renderBoard(a, [obj('Key', 0, 1), obj('Wall', 0, 2)], { ...look, depth: 'raised' });
+  renderBoard(b, [obj('Wall', 0, 2), obj('Key', 0, 1)], { ...look, depth: 'raised' });
+  assert.equal(tile(a, 0, 1), tile(b, 0, 1));
+});
+
+test('objects are raised unless the look says flat, and Streams and Rotator tiles stay on the floor', () => {
+  let { look } = artLook();
+  let draw = (depth, kind) => { let image = blank(); renderBoard(image, [obj(kind, 1, 1, { direction: 'Up' })], depth ? { ...look, depth } : look, { timeMs: 100 }); return image.data.join(); };
+  assert.equal(draw(undefined, 'Wall'), draw('raised', 'Wall'));
+  assert.notEqual(draw(undefined, 'Wall'), draw('flat', 'Wall'));
+  for (const kind of ['Stream', 'RotatorTile']) assert.equal(draw(undefined, kind), draw('flat', kind), kind);
+});
+
+test('a ghost of a raised object rises with it', () => {
+  let { look } = artLook();
+  let image = blank();
+  renderBoard(image, [obj('Wall', 0, 2, { invisible: true })], { ...look, depth: 'raised' }, { showInvisible: true });
+  assert.ok(Math.min(...rowsDrawn(image, 0)) < 2 * TILE_PX);
+});
+
+test('originY moves the whole board down, leaving room above row 0', () => {
+  let { look } = artLook();
+  let image = blank();
+  renderBoard(image, [obj('Wall', 0, 0)], { ...look, depth: 'raised' }, { originY: RAISED_PX });
+  assert.equal(Math.min(...rowsDrawn(image, 0)), 1);
 });

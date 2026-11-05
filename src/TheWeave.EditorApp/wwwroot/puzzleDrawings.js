@@ -716,7 +716,9 @@ function drawDrawingCanvas() {
       context.putImageData(image, 0, 0);
     }
   } else {
-    renderDrawingOnto(context, drawing, { open: frameField(drawing) === 'openPixels', letter: view.letter });
+    // Flat, so that every pixel painted is exactly where it's shown - see puzzle.js's addDepth.
+    const look = puzzleLook();
+    renderDrawingOnto(context, drawing, { open: frameField(drawing) === 'openPixels', letter: view.letter, look: look && { ...look, depth: 'flat' } });
   }
 
   drawDrawingPreview(performance.now());
