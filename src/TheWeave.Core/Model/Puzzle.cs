@@ -132,6 +132,17 @@ public sealed class PuzzleDrawing
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? OpenPixels { get; set; }
 
+    /// <summary>
+    /// Stream only: its channel bending in from its left, for where another Stream pours into it from the side.
+    /// Drawn flowing right, like Pixels, which for a Stream or Rotator tile is its Still layer.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? BendPixels { get; set; }
+
+    /// <summary>Stream and Rotator tile only: the layer that moves along with the flow, over the Still one.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? FlowPixels { get; set; }
+
     public List<PuzzleMixColour> Mix { get; set; } = new();
 }
 
@@ -163,12 +174,16 @@ public static class PuzzleDrawings
 
     public static readonly IReadOnlyList<string> Roles = ["wall", "finish", "gate", "teleporter", "stream", "key", "rotator", "lantern", "outline", "light"];
 
-    /// <summary>Every kind drawn from a drawing. Streams and Rotator tiles are animated, so they're drawn in code.</summary>
+    /// <summary>Every kind drawn from a drawing.</summary>
     public static readonly IReadOnlySet<PuzzleObjectKind> DrawnKinds = new HashSet<PuzzleObjectKind>
     {
         PuzzleObjectKind.Wall, PuzzleObjectKind.Finish, PuzzleObjectKind.Gate, PuzzleObjectKind.Switch,
         PuzzleObjectKind.Teleporter, PuzzleObjectKind.Key, PuzzleObjectKind.RotatorSwitch, PuzzleObjectKind.Lantern,
+        PuzzleObjectKind.Stream, PuzzleObjectKind.RotatorTile,
     };
+
+    /// <summary>The kinds animated as they flow: a Still layer, and a Flow layer that moves along it.</summary>
+    public static bool IsAnimated(PuzzleObjectKind kind) => kind is PuzzleObjectKind.Stream or PuzzleObjectKind.RotatorTile;
 
     public static bool IsStandard(PuzzleDrawing drawing) => drawing.Id == drawing.Kind.ToString();
 
@@ -212,6 +227,8 @@ public static class PuzzleDrawings
                 Name = drawing.Name,
                 Pixels = drawing.Pixels,
                 OpenPixels = drawing.OpenPixels,
+                BendPixels = drawing.BendPixels,
+                FlowPixels = drawing.FlowPixels,
                 Mix = drawing.Mix.Select(m => new PuzzleMixColour { Role = m.Role, Shade = m.Shade, Percent = m.Percent }).ToList(),
             });
         }
@@ -220,6 +237,7 @@ public static class PuzzleDrawings
 
     private static bool SameDrawing(PuzzleDrawing a, PuzzleDrawing b) =>
         a.Kind == b.Kind && a.Name == b.Name && a.Pixels == b.Pixels && a.OpenPixels == b.OpenPixels
+        && a.BendPixels == b.BendPixels && a.FlowPixels == b.FlowPixels
         && a.Mix.Count == b.Mix.Count
         && a.Mix.Zip(b.Mix).All(pair => pair.First.Role == pair.Second.Role && pair.First.Shade == pair.Second.Shade && pair.First.Percent == pair.Second.Percent);
 }

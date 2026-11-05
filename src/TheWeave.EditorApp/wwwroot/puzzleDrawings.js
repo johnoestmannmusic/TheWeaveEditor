@@ -24,6 +24,33 @@ const DRAWING_ROLE_LABELS = {
 const DRAWING_MAX_MIX = 4;
 const DRAWING_LETTERED = ['Gate', 'Switch', 'Teleporter'];
 const DRAWING_PREVIEW_TILES = 3;
+// The layers a drawing of each kind is painted in, as tabs over its canvas. A Stream or Rotator tile is drawn
+// flowing right, and turned for the other directions - see puzzle.js's buildAnimatedSprite.
+const DRAWING_FRAMES = {
+  Gate: [
+    { frame: 'closed', label: 'Closed', field: 'pixels' },
+    { frame: 'open', label: 'Open', field: 'openPixels' },
+  ],
+  Stream: [
+    { frame: 'still', label: 'Still', field: 'pixels', hint: 'The part that stays put, drawn flowing right. The Flow layer only shows on its liquid: anything painted but Clear or Outline.' },
+    { frame: 'bend', label: 'Bend', field: 'bendPixels', hint: 'Where another Stream pours in from its left, flowing right. Turned and flipped for every other bend.' },
+    { frame: 'flow', label: 'Flow', field: 'flowPixels', hint: 'The part that moves, flowing right, shown here over the Still layer. It wraps around, so make its left and right edges meet.' },
+  ],
+  RotatorTile: [
+    { frame: 'still', label: 'Still', field: 'pixels', hint: 'The part that stays put, drawn moving right.' },
+    { frame: 'flow', label: 'Flow', field: 'flowPixels', hint: 'The part that moves along while a Rotator Switch is held, shown here over the Still layer. It wraps around, so make its left and right edges meet.' },
+  ],
+};
+// The loop the preview shows a Stream or Rotator tile flowing round, bends and all: [col, row, direction].
+const DRAWING_PREVIEW_LOOP = [[0, 0, 'Right'], [1, 0, 'Right'], [2, 0, 'Down'], [2, 1, 'Down'], [2, 2, 'Left'], [1, 2, 'Left'], [0, 2, 'Up'], [0, 1, 'Up']];
+
+function framesOf(kind) {
+  return DRAWING_FRAMES[kind] ?? [{ frame: 'drawing', label: 'Drawing', field: 'pixels' }];
+}
+
+function isAnimatedKind(kind) {
+  return WeavePuzzle.ANIMATED_KINDS.includes(kind);
+}
 const DRAWING_CANDIDATES = 8;
 
 function drawingKindLabel(kind) {
@@ -82,6 +109,7 @@ function renderDrawingOnto(context, drawing, options = {}) {
         col,
         row,
         lit: true,
+        ...(isAnimatedKind(drawing.kind) ? { direction: 'Right' } : {}),
         ...(isStandardDrawing(drawing) ? {} : { variant: drawing.id }),
         ...(options.open ? { open: true } : {}),
         ...(options.letter && DRAWING_LETTERED.includes(drawing.kind) ? { letter: 'A' } : {}),
@@ -117,7 +145,7 @@ function openDrawings() {
     kind,
     id: kind,
     setId, // the set being looked at, which new drawings join
-    frame: 'closed',
+    frame: framesOf(kind)[0].frame,
     paint: 'G',
     tool: 'pencil',
     mirror: false,
@@ -180,15 +208,15 @@ function currentDrawing() {
   return view.working ?? drawingsOfKind(view.kind).find((drawing) => drawing.id === view.id);
 }
 
-// The field of a drawing the current frame paints: a Gate's open frame has its own.
+// The field of a drawing the current tab paints, like a Gate's open frame or a Stream's Flow layer.
 function frameField(drawing) {
-  return drawing.kind === 'Gate' && puzzleEditor.drawings.frame === 'open' ? 'openPixels' : 'pixels';
+  return framesOf(drawing.kind).find((entry) => entry.frame === puzzleEditor.drawings.frame)?.field ?? 'pixels';
 }
 
+// A layer a drawing has never had painted is its kind's Standard one.
 function framePixels(drawing) {
-  return frameField(drawing) === 'openPixels'
-    ? drawing.openPixels ?? WeavePuzzle.standardDrawing('Gate').openPixels
-    : drawing.pixels;
+  const field = frameField(drawing);
+  return drawing[field] ?? WeavePuzzle.standardDrawing(drawing.kind)[field];
 }
 
 // Rebuilds a part of the view only when what it shows has changed, so that a project-state can't replace a
@@ -254,8 +282,25 @@ function renderDrawings() {
   }
 
   const frames = document.getElementById('pd-frames');
-  frames.hidden = view.kind !== 'Gate';
+  const kindFrames = framesOf(view.kind);
+  rebuildIfChanged(frames, view.kind, () => {
+    frames.replaceChildren(...kindFrames.map((entry) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.frame = entry.frame;
+      button.textContent = entry.label;
+      button.addEventListener('click', () => {
+        puzzleEditor.drawings.frame = entry.frame;
+        renderDrawings();
+      });
+      return button;
+    }));
+  });
+  frames.hidden = kindFrames.length < 2;
   for (const button of frames.querySelectorAll('button')) button.classList.toggle('active', button.dataset.frame === view.frame);
+  const frameHint = document.getElementById('pd-frame-hint');
+  frameHint.textContent = kindFrames.find((entry) => entry.frame === view.frame)?.hint ?? '';
+  frameHint.hidden = !frameHint.textContent;
   for (const button of document.querySelectorAll('#pd-stage-tools [data-drawing-tool]'))
     button.classList.toggle('active', button.dataset.drawingTool === view.tool);
   document.getElementById('pd-mirror').classList.toggle('active', view.mirror);
@@ -527,8 +572,12 @@ function candidateDrawing(candidate, index, look) {
     pixels: WeaveGrains.paintInto(drawing.pixels, colors),
     mix,
   };
-  if (drawing.kind === 'Gate')
-    generated.openPixels = WeaveGrains.paintInto(drawing.openPixels ?? WeavePuzzle.standardDrawing('Gate').openPixels, colors);
+  // Every layer that stays put takes the pattern. A Flow layer is left as it was, since it moves over it.
+  const standard = WeavePuzzle.standardDrawing(drawing.kind);
+  for (const field of ['openPixels', 'bendPixels']) {
+    if (standard[field]) generated[field] = WeaveGrains.paintInto(drawing[field] ?? standard[field], colors);
+  }
+  if (standard.flowPixels) generated.flowPixels = drawing.flowPixels ?? standard.flowPixels;
   return generated;
 }
 
@@ -562,7 +611,7 @@ function renderGenerator(drawing, look) {
 
   const list = document.getElementById('pd-candidates');
   const usable = look && generator.balance.some((row) => row.percent > 0);
-  const key = JSON.stringify([generator.seed, generator.families, generator.balance, drawing.pixels, drawing.openPixels, !!usable]);
+  const key = JSON.stringify([generator.seed, generator.families, generator.balance, drawing.pixels, drawing.openPixels, drawing.bendPixels, drawing.flowPixels, !!usable]);
   if (list.dataset.key === key && list.look === look) return;
   list.dataset.key = key;
   list.look = look;
@@ -658,8 +707,25 @@ function drawDrawingCanvas() {
   const canvas = document.getElementById('pd-canvas');
   const context = canvas.getContext('2d');
   context.clearRect(0, 0, canvas.width, canvas.height);
-  renderDrawingOnto(context, drawing, { open: frameField(drawing) === 'openPixels', letter: view.letter });
+  if (isAnimatedKind(drawing.kind)) {
+    // One layer at a time, flowing right, exactly as it's painted.
+    const look = puzzleLook();
+    if (look) {
+      const image = context.createImageData(PUZZLE_TILE_PX, PUZZLE_TILE_PX);
+      WeavePuzzle.renderDrawingLayer(image, drawing, look, view.frame);
+      context.putImageData(image, 0, 0);
+    }
+  } else {
+    renderDrawingOnto(context, drawing, { open: frameField(drawing) === 'openPixels', letter: view.letter });
+  }
 
+  drawDrawingPreview(performance.now());
+}
+
+// The drawing on this track's album art, as on the board: a few of it, or for a Stream or Rotator tile, a loop of
+// them flowing round, redrawn every frame while it's open - see puzzleEditor.js's drawPuzzleBoard.
+function drawDrawingPreview(timeMs) {
+  const drawing = currentDrawing();
   const preview = document.getElementById('pd-preview');
   const previewContext = preview.getContext('2d');
   previewContext.clearRect(0, 0, preview.width, preview.height);
@@ -671,7 +737,24 @@ function drawDrawingCanvas() {
     previewContext.drawImage(art, (art.naturalWidth - size) / 2, (art.naturalHeight - size) / 2, size, size, 0, 0, size, size);
     previewContext.filter = 'none';
   }
-  renderDrawingOnto(previewContext, drawing, { tiles: DRAWING_PREVIEW_TILES, letter: true, open: frameField(drawing) === 'openPixels' });
+  if (!isAnimatedKind(drawing.kind)) {
+    renderDrawingOnto(previewContext, drawing, { tiles: DRAWING_PREVIEW_TILES, letter: true, open: frameField(drawing) === 'openPixels' });
+    return;
+  }
+
+  const look = puzzleLook();
+  if (!look) return;
+  const working = { ...look, drawings: [...look.drawings.filter((other) => other.id !== drawing.id), drawing] };
+  const image = previewContext.createImageData(preview.width, preview.height);
+  const objects = DRAWING_PREVIEW_LOOP.map(([col, row, direction]) => ({
+    kind: drawing.kind, col, row, direction, ...(isStandardDrawing(drawing) ? {} : { variant: drawing.id }),
+  }));
+  WeavePuzzle.renderBoard(image, objects, working, { timeMs, rotatorTimeMs: timeMs });
+  const layer = document.createElement('canvas');
+  layer.width = image.width;
+  layer.height = image.height;
+  layer.getContext('2d').putImageData(image, 0, 0);
+  previewContext.drawImage(layer, 0, 0);
 }
 
 function drawingPixelAt(e) {
@@ -774,7 +857,10 @@ function saveDrawing(drawing, { joinSet = false } = {}) {
   view.working = drawing;
   const library = project?.puzzleDrawings ?? [];
   const saved = { id: drawing.id, kind: drawing.kind, name: drawing.name, pixels: drawing.pixels, mix: drawing.mix };
-  if (drawing.kind === 'Gate') saved.openPixels = drawing.openPixels ?? WeavePuzzle.standardDrawing('Gate').openPixels;
+  const standard = WeavePuzzle.standardDrawing(drawing.kind);
+  for (const field of ['openPixels', 'bendPixels', 'flowPixels']) {
+    if (standard[field]) saved[field] = drawing[field] ?? standard[field];
+  }
   const drawings = library.some((existing) => existing.id === drawing.id)
     ? library.map((existing) => (existing.id === drawing.id ? saved : existing))
     : [...library, saved];
@@ -817,7 +903,7 @@ function chooseDrawing(id) {
 document.getElementById('pd-kind').addEventListener('change', (e) => {
   const view = puzzleEditor.drawings;
   view.kind = e.target.value;
-  view.frame = 'closed';
+  view.frame = framesOf(view.kind)[0].frame;
   view.setId = placingSet(view.kind).id || null;
   chooseDrawing(view.kind);
 });
@@ -909,12 +995,6 @@ document.getElementById('pd-mix-add').addEventListener('click', () => {
   saveDrawing({ ...drawing, mix: [...drawing.mix, { role, shade: 3, percent: 10 }] });
 });
 
-for (const button of document.querySelectorAll('#pd-frames button')) {
-  button.addEventListener('click', () => {
-    puzzleEditor.drawings.frame = button.dataset.frame;
-    renderDrawings();
-  });
-}
 
 for (const button of document.querySelectorAll('#pd-stage-tools [data-drawing-tool]')) {
   button.addEventListener('click', () => {

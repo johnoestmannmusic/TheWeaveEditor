@@ -951,3 +951,99 @@ test('only an object blocks an entrance, not a floor tile or Start', () => {
   assert.equal(blockingEntrance([obj('Wall', 1, 1)], at(1, 1)).kind, 'Wall');
   assert.equal(blockingEntrance([obj('Wall', 2, 1)], at(1, 1)), null);
 });
+
+// ---------- Streams and Rotator tiles as drawings ----------
+
+const { ANIMATED_KINDS, renderDrawingLayer } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+
+const flowing = (col, row, direction, extra = {}) => obj('Stream', col, row, { direction, ...extra });
+const drawnAt = (image, x, y) => pixelAt(image, x, y)[3] !== 0;
+
+test('a Stream and a Rotator tile each have Standard Still and Flow layers, and a Stream a Bend', () => {
+  for (const kind of ANIMATED_KINDS) {
+    let standard = standardDrawing(kind);
+    for (const layer of ['pixels', 'flowPixels', ...(kind === 'Stream' ? ['bendPixels'] : [])]) assert.match(standard[layer], /^[.OHG1234]{576}$/, `${kind} ${layer}`);
+  }
+  assert.equal(standardDrawing('RotatorTile').bendPixels, undefined);
+});
+
+test('a run of Streams is one channel, with no bank where they meet', () => {
+  let { look } = artLook();
+  let image = blank();
+  renderBoard(image, [flowing(0, 0, 'Right'), flowing(1, 0, 'Right')], look);
+  let outline = toRgb(look.palette.outline).join();
+  for (const x of [23, 24]) {
+    assert.ok(drawnAt(image, x, 12), x);
+    assert.notEqual(pixelAt(image, x, 12).slice(0, 3).join(), outline, x);
+  }
+});
+
+test('a Stream bends to open towards one pouring into it from the side, and closes behind', () => {
+  let { look } = artLook();
+  let image = blank();
+  // Pouring down into a Stream flowing right: its left is up, where the water comes in.
+  renderBoard(image, [flowing(1, 0, 'Down'), flowing(1, 1, 'Right')], look);
+  assert.ok(drawnAt(image, 36, 24), 'open at the top');
+  assert.ok(!drawnAt(image, 24, 36), 'closed behind, on the left');
+  assert.ok(drawnAt(image, 47, 36), 'and on through to the right');
+  // From its right instead: up into a Stream flowing right, from below.
+  let other = blank();
+  renderBoard(other, [flowing(1, 2, 'Up'), flowing(1, 1, 'Right')], look);
+  assert.ok(drawnAt(other, 36, 47) && !drawnAt(other, 36, 24) && !drawnAt(other, 24, 36));
+});
+
+test('Streams side by side stay separate', () => {
+  let { look } = artLook();
+  let image = blank();
+  renderBoard(image, [flowing(0, 0, 'Right'), flowing(0, 1, 'Right')], look);
+  assert.ok(!drawnAt(image, 12, 23) && !drawnAt(image, 12, 24));
+});
+
+test('a Stream\'s flow keeps to its channel round a bend, at every moment', () => {
+  let { look } = artLook();
+  for (let timeMs = 0; timeMs < 900; timeMs += 37) {
+    let image = blank();
+    renderBoard(image, [flowing(1, 0, 'Down'), flowing(1, 1, 'Right')], look, { timeMs });
+    for (let y = 30; y < 42; y++) assert.ok(!drawnAt(image, 24, y) && !drawnAt(image, 25, y), `${timeMs}ms`);
+  }
+});
+
+test('a Stream\'s Flow only shows on its liquid, and a Rotator tile\'s anywhere', () => {
+  let { look } = artLook();
+  let flowEverywhere = filled('4');
+  let drawings = [
+    { ...standardDrawing('Stream'), id: 's', name: 's', flowPixels: flowEverywhere },
+    { ...standardDrawing('RotatorTile'), id: 'r', name: 'r', flowPixels: flowEverywhere },
+  ];
+  let image = blank();
+  renderBoard(image, [flowing(0, 0, 'Right', { variant: 's' }), obj('RotatorTile', 1, 0, { direction: 'Right', variant: 'r' })], { ...look, drawings });
+  assert.ok(!drawnAt(image, 12, 0), 'outside the Stream\'s channel');
+  assert.equal(pixelAt(image, 12, 2)[3], 0);
+  assert.ok(drawnAt(image, 24 + 12, 0), 'a Rotator tile\'s flow over nothing');
+});
+
+test('a drawing is turned to the way the tile flows, its top on the flow\'s left', () => {
+  let { look } = artLook();
+  // Still: only the top row painted, which is the flow's left.
+  let topRow = 'H'.repeat(24) + '.'.repeat(552);
+  let drawings = [{ ...standardDrawing('RotatorTile'), id: 'r', name: 'r', pixels: topRow, flowPixels: filled('.') }];
+  let where = (direction) => {
+    let image = blank();
+    renderBoard(image, [obj('RotatorTile', 0, 0, { direction, variant: 'r' })], { ...look, drawings });
+    return [[12, 0], [23, 12], [12, 23], [0, 12]].map(([x, y]) => drawnAt(image, x, y) ? 1 : 0).join('');
+  };
+  assert.equal(where('Right'), '1000');
+  assert.equal(where('Down'), '0100');
+  assert.equal(where('Left'), '0010');
+  assert.equal(where('Up'), '0001');
+});
+
+test('the Drawings view sees a layer on its own, with Flow over Still wherever it\'s painted', () => {
+  let { look } = artLook();
+  let drawing = { ...standardDrawing('Stream'), flowPixels: filled('H') };
+  let image = blank();
+  renderDrawingLayer(image, drawing, look, 'flow');
+  assert.deepEqual(pixelAt(image, 0, 0).slice(0, 3), toRgb(look.palette.light));
+  renderDrawingLayer(image, standardDrawing('Stream'), look, 'bend');
+  assert.ok(drawnAt(image, 12, 0) && !drawnAt(image, 0, 12));
+});
