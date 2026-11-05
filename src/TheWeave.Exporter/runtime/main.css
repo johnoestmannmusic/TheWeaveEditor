@@ -570,6 +570,16 @@ h3 {
   margin: 0 0.75em;
 }
 
+/* The card's own cover, fading in over the art as Track Focus closes - see main.js's growFromCard. */
+.trackFocusLanding {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  opacity: 0;
+}
+
 /* The part's title over its board for its first few seconds - see main.js's showBoardTitle. */
 .trackFocusBoardTitle {
   padding: 0 var(--focus-cell);

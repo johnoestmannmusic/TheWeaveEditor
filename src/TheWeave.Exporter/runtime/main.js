@@ -1900,14 +1900,33 @@ function growFromCard(focusEl, cardCover, closing){
     playFocusAnimation(text, order([{ opacity: 0 }, { opacity: 1 }]), FOCUS_OPEN_MS * (closing ? 0.4 : 0.6), { delay: closing ? 0 : FOCUS_OPEN_MS * 0.4 }),
   ];
 
+  // Closing, everything is left where it ends up, since each animation is taken off as it finishes, and Track
+  // Focus only goes once they all have: otherwise whatever finished first would show again meanwhile.
+  let rest = (element, styles) => { if (closing && element) Object.assign(element.style, styles); };
+  rest(focusEl, { backgroundColor: 'rgba(0, 0, 0, 0)', backdropFilter: 'none', webkitBackdropFilter: 'none' });
+  rest(backdrop, { opacity: '0' });
+  rest(text, { opacity: '0' });
+
   if (art && from && from.width > 0 && to.width > 0) {
     let shrunk = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width})`;
+    rest(art, { transform: shrunk, transformOrigin: '0 0', boxShadow: 'none' });
     if (cardCover) cardCover.style.visibility = 'hidden';
+    // Closing on a later part of a location, whose art isn't the card's, it fades into the card's own cover as
+    // it shrinks, so that it lands as the picture that's really there.
+    if (closing) {
+      let landing = document.createElement('img');
+      landing.className = 'trackFocusLanding';
+      landing.src = cardCover.src;
+      landing.style.opacity = '1';
+      art.appendChild(landing);
+      animations.push(playFocusAnimation(landing, [{ opacity: 0 }, { opacity: 1 }], FOCUS_OPEN_MS, { easing: 'ease-in' }));
+    }
     animations.push(playFocusAnimation(art, order([
       { transform: shrunk, transformOrigin: '0 0', boxShadow: 'none' },
       { transform: 'none', transformOrigin: '0 0' },
     ]), FOCUS_OPEN_MS).then(() => { if (cardCover) cardCover.style.visibility = ''; }));
   } else {
+    rest(art, { opacity: '0' });
     animations.push(playFocusAnimation(art, order([{ opacity: 0 }, { opacity: 1 }]), FOCUS_OPEN_MS));
   }
   return Promise.all(animations);
