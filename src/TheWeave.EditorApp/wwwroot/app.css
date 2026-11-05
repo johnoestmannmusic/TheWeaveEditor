@@ -1144,3 +1144,37 @@ main.behind-puzzle-editor {
 #pd-frame-hint[hidden] {
   display: none;
 }
+
+/* Saving a drawing as a PNG and bringing one back - see puzzleDrawings.js. */
+#pd-png-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+#pd-png-buttons button {
+  padding: 6px 0;
+}
+
+#pd-png-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-bottom: 12px;
+}
+
+#pd-png-key > div {
+  flex-basis: 100%;
+}
+
+.pd-png-key-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pd-png-key-item .pe-swatch {
+  width: 12px;
+  height: 12px;
+}

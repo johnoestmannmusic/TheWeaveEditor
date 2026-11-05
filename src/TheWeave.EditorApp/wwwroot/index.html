@@ -145,6 +145,11 @@
             <button type="button" id="pd-duplicate">Duplicate</button>
             <button type="button" id="pd-delete" class="danger"></button>
           </div>
+          <div id="pd-png-buttons">
+            <button type="button" id="pd-png-export" title="Saves this drawing as a PNG, to draw in other art software">Export PNG…</button>
+            <button type="button" id="pd-png-import" title="Replaces this drawing's pixels with a PNG's. Ctrl+Z puts them back.">Import PNG…</button>
+          </div>
+          <div id="pd-png-key" class="field-hint"></div>
           <div id="pd-confirm" hidden>
             <div id="pd-confirm-text"></div>
             <div class="pd-confirm-buttons">
@@ -237,6 +242,7 @@
   <script src="app.js"></script>
   <script src="puzzleEditor.js"></script>
   <script src="grainPatterns.js"></script>
+  <script src="drawingPng.js"></script>
   <script src="puzzleDrawings.js"></script>
 </body>
 </html>

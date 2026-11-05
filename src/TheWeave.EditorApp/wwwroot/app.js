@@ -115,6 +115,8 @@ window.external.receiveMessage((raw) => {
     receivePuzzleArt(message);
   } else if (message.type === 'puzzle-imported') {
     receiveImportedPuzzle(message);
+  } else if (message.type === 'drawing-png-imported') {
+    receiveDrawingPng(message);
   } else if (message.type === 'status') {
     setStatus(message.message, false);
     showToast(message.message, false);
