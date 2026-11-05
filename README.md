@@ -84,7 +84,7 @@ Neocities, replacing hand-authoring HTML per location.
   left and its title and poetry on the right (a track's card on the map skips the poetry), over the dimmed map and a blurred, blown-up copy
   of the art. C, gamepad B, or clicking the backdrop closes it; the track keeps playing throughout.
 - Transitions between them: a card's cover grows into Track Focus's art as it fades in, and shrinks back on
-  closing. Starting a puzzle flips the art over in 750ms to the board on its back, centred, with the poetry
+  closing. Starting a puzzle flips the art over in 400ms to the board on its back, centred, with the poetry
   put away, a line of key hints under it, and the track's title over the board for its first few seconds,
   as on moving between parts. Leaving flips it back. Visitors who ask for reduced motion get instant switches.
 - A Sokoban board over the album art, started with Z/gamepad A from Track Focus: the ship walks a

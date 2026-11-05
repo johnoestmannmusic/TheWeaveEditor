@@ -1842,7 +1842,7 @@ function closeTrackFocus(){
 
 // How long Track Focus takes to open or close, and to flip over between its art and its board.
 const FOCUS_OPEN_MS = 450;
-const FOCUS_FLIP_MS = 750;
+const FOCUS_FLIP_MS = 400;
 // How far away the flip's perspective is, in art frames, which decides how much the near edge grows as it turns.
 const FOCUS_FLIP_PERSPECTIVE = 4;
 
