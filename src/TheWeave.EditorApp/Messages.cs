@@ -37,6 +37,10 @@ public sealed class EditorMessage
 
     /// <summary>"update-puzzle-drawings": the project's whole new list of drawing sets, or null to keep them as they are.</summary>
     public List<PuzzleDrawingSet>? DrawingSets { get; set; }
+
+    /// <summary>"export-drawing-png": the PNG to save, as a data URL, and what to call it.</summary>
+    public string? DataUrl { get; set; }
+    public string? FileName { get; set; }
 }
 
 public sealed class PageEditRequest

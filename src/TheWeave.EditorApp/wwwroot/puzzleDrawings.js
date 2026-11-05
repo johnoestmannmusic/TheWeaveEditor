@@ -308,6 +308,7 @@ function renderDrawings() {
   letter.hidden = !DRAWING_LETTERED.includes(view.kind);
   letter.classList.toggle('active', view.letter);
 
+  renderPngKey();
   renderDrawingSets(look);
   renderDrawingPaints(drawing, look);
   renderDrawingMix(drawing, look);
@@ -516,6 +517,69 @@ function changeMixRow(index, change) {
   const drawing = currentDrawing();
   saveDrawing({ ...drawing, mix: drawing.mix.map((row, i) => (i === index ? { ...row, ...change } : row)) });
 }
+
+// ---------- PNG files ----------
+
+// The key to which colour in a PNG is which paint, as swatches - see drawingPng.js.
+function renderPngKey() {
+  const key = document.getElementById('pd-png-key');
+  if (key.childElementCount > 0) return;
+  const title = document.createElement('div');
+  title.textContent = 'In a PNG, each paint is one colour, its layers side by side:';
+  key.append(title, ...WeaveDrawingPng.PNG_KEY.map((entry) => {
+    const item = document.createElement('span');
+    item.className = 'pd-png-key-item';
+    const swatch = document.createElement('span');
+    swatch.className = 'pe-swatch' + (entry.rgb ? '' : ' pd-clear');
+    if (entry.rgb) swatch.style.background = WeaveDrawingPng.hexOf(entry.rgb);
+    item.append(swatch, `${entry.label}${entry.rgb ? ` ${WeaveDrawingPng.hexOf(entry.rgb)}` : ''}`);
+    return item;
+  }));
+}
+
+function exportDrawingPng() {
+  const drawing = currentDrawing();
+  const image = WeaveDrawingPng.toImage(drawing, WeavePuzzle.standardDrawing(drawing.kind));
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width;
+  canvas.height = image.height;
+  canvas.getContext('2d').putImageData(new ImageData(image.data, image.width, image.height), 0, 0);
+  send('export-drawing-png', { dataUrl: canvas.toDataURL('image/png'), fileName: drawing.name });
+}
+
+// The PNG comes back as a data URL, which unlike a file:// image lets a canvas read its pixels. It replaces the
+// drawing's layers as one change, so one undo puts them back.
+function receiveDrawingPng(message) {
+  if (!puzzleEditor?.drawings) return;
+
+  const image = new Image();
+  image.onload = () => {
+    if (!puzzleEditor?.drawings) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    context.drawImage(image, 0, 0);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+
+    const drawing = currentDrawing();
+    let read;
+    try {
+      read = WeaveDrawingPng.fromImage(pixels, WeavePuzzle.standardDrawing(drawing.kind));
+    } catch (e) {
+      showToast(e.message, true);
+      return;
+    }
+    saveDrawing({ ...drawing, ...read.layers });
+    const off = read.inexact === 0 ? '' : ` ${read.inexact} pixel${read.inexact === 1 ? ' wasn\'t' : 's weren\'t'} one of the key's colours, so took the nearest.`;
+    showToast(`Imported into '${drawing.name}'.${off} Ctrl+Z puts it back.`, false);
+  };
+  image.onerror = () => showToast('That PNG couldn\'t be read.', true);
+  image.src = message.dataUrl;
+}
+
+document.getElementById('pd-png-export').addEventListener('click', exportDrawingPng);
+document.getElementById('pd-png-import').addEventListener('click', () => send('import-drawing-png'));
 
 // ---------- generating ----------
 

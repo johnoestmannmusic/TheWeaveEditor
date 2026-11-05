@@ -30,6 +30,11 @@ Neocities, replacing hand-authoring HTML per location.
   channel that joins up with its neighbours, bends towards whatever pours into it, and flows along. Streams
   and Rotator tiles have drawings too, painted flowing right and turned for each direction: a Still layer, a
   Flow layer that moves along it and wraps around, and for a Stream, a Bend for where another pours in.
+- Drawings can be exported as PNGs to draw in other art software, and imported back, as one undo step. Each
+  paint is a fixed colour in the file: Clear is transparent, Outline `#000000`, Colours 1-4 `#3c3c3c`,
+  `#6e6e6e`, `#a0a0a0` and `#d2d2d2`, Light `#ffffff`, and Grain `#ff00ff`. A drawing's layers sit side by
+  side, 24 pixels each, in the order of its tabs. Importing accepts any whole-number enlargement, or a single
+  layer on its own, and turns any other colour into the nearest paint.
 - A Generate panel in the Drawings view, offering patterns to start a new drawing from: patches of the
   album art, natural textures (clouds, speckle, moss, veins and stones, which tile seamlessly) and dithers.
   Any of the palette's colours can be laid out across them, each covering the percentage you choose. Picking

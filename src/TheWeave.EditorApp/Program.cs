@@ -50,6 +50,11 @@ public static class Program
         ("Sokoban Puzzle", new[] { "*.json" }),
     };
 
+    private static readonly (string Name, string[] Extensions)[] PngFileFilter =
+    {
+        ("PNG Image", new[] { "*.png" }),
+    };
+
     // One extension per filter entry, not a single entry listing several - confirmed (via
     // Photino.Native's Linux AddFilters, which joins multiple extensions with ";" before
     // handing the string to GTK) that its strtok-based parsing only ever splits the *first*
@@ -276,6 +281,14 @@ public static class Program
                 case "import-puzzle":
                     RequireProject();
                     ImportPuzzle(window, RequireNode(RequirePage(message.PageId), message.NodeId));
+                    break;
+
+                case "export-drawing-png":
+                    ExportDrawingPng(window, message.DataUrl, message.FileName);
+                    break;
+
+                case "import-drawing-png":
+                    ImportDrawingPng(window);
                     break;
 
                 case "delete-node":
@@ -610,6 +623,33 @@ public static class Program
         ProjectEditing.AddPuzzleDrawings(CopyForCheck(_project), CopyForCheck(drawings));
 
         window.SendWebMessage(JsonSerializer.Serialize(new { type = "puzzle-imported", nodeId = node.Id, objects, drawings }, OutboundOptions));
+    }
+
+    // An object drawing as a PNG, for drawing in other art software. The page draws and reads the image itself (see
+    // puzzleDrawings.js's exportDrawingPng and drawingPng.js), so all this does is save and open the file.
+    private static void ExportDrawingPng(PhotinoWindow window, string? dataUrl, string? fileName)
+    {
+        var bytes = DrawingPng.FromDataUrl(dataUrl);
+
+        var path = window.ShowSaveFile(title: $"Export Drawing{(string.IsNullOrWhiteSpace(fileName) ? "" : $" '{fileName}'")}", filters: PngFileFilter);
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        if (!Path.HasExtension(path))
+            path += ".png";
+
+        File.WriteAllBytes(path, bytes);
+        SendStatus(window, $"Exported drawing to {path}.");
+    }
+
+    private static void ImportDrawingPng(PhotinoWindow window)
+    {
+        var paths = window.ShowOpenFile(title: "Import Drawing", filters: PngFileFilter);
+        if (paths.Length == 0)
+            return;
+
+        var dataUrl = DrawingPng.ToDataUrl(File.ReadAllBytes(paths[0]));
+        window.SendWebMessage(JsonSerializer.Serialize(new { type = "drawing-png-imported", dataUrl }, OutboundOptions));
     }
 
     private static void PickBackgroundMusic(PhotinoWindow window)
