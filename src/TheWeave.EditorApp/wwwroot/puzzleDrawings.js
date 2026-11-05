@@ -19,7 +19,7 @@ const DRAWING_PAINTS = [
 const DRAWING_SHADES = ['Darkest', 'Dark', 'Main', 'Light'];
 const DRAWING_ROLE_LABELS = {
   wall: 'Wall', finish: 'Finish', gate: 'Gate + Switch', teleporter: 'Teleporter', stream: 'Stream',
-  key: 'Key', rotator: 'Rotator', lantern: 'Lantern', outline: 'Outline', light: 'Light',
+  key: 'Key', rotator: 'Rotator', lantern: 'Lantern', block: 'Push Block', jump: 'Jump Tile', outline: 'Outline', light: 'Light',
 };
 const DRAWING_MAX_MIX = 4;
 const DRAWING_LETTERED = ['Gate', 'Switch', 'Teleporter'];
@@ -35,6 +35,9 @@ const DRAWING_FRAMES = {
     { frame: 'still', label: 'Still', field: 'pixels', hint: 'The part that stays put, drawn flowing right. The Flow layer only shows on its liquid: anything painted but Clear or Outline.' },
     { frame: 'bend', label: 'Bend', field: 'bendPixels', hint: 'Where another Stream pours in from its left, flowing right. Turned and flipped for every other bend.' },
     { frame: 'flow', label: 'Flow', field: 'flowPixels', hint: 'The part that moves, flowing right, shown here over the Still layer. It wraps around, so make its left and right edges meet.' },
+  ],
+  JumpTile: [
+    { frame: 'drawing', label: 'Drawing', field: 'pixels', hint: 'Drawn pointing right, and turned whichever way a Jump Tile points.' },
   ],
   RotatorTile: [
     { frame: 'still', label: 'Still', field: 'pixels', hint: 'The part that stays put, drawn moving right.' },
@@ -109,7 +112,8 @@ function renderDrawingOnto(context, drawing, options = {}) {
         col,
         row,
         lit: true,
-        ...(isAnimatedKind(drawing.kind) ? { direction: 'Right' } : {}),
+        ...(isAnimatedKind(drawing.kind) || WeavePuzzle.TURNED_KINDS.includes(drawing.kind) ? { direction: 'Right' } : {}),
+        ...(options.letter && drawing.kind === 'PushBlock' ? { symbol: 'Star' } : {}),
         ...(isStandardDrawing(drawing) ? {} : { variant: drawing.id }),
         ...(options.open ? { open: true } : {}),
         ...(options.letter && DRAWING_LETTERED.includes(drawing.kind) ? { letter: 'A' } : {}),
@@ -305,7 +309,10 @@ function renderDrawings() {
     button.classList.toggle('active', button.dataset.drawingTool === view.tool);
   document.getElementById('pd-mirror').classList.toggle('active', view.mirror);
   const letter = document.getElementById('pd-letter');
-  letter.hidden = !DRAWING_LETTERED.includes(view.kind);
+  // A Push Block's symbol is drawn over it as a Gate's letter is, so it's shown and hidden the same way.
+  letter.hidden = !DRAWING_LETTERED.includes(view.kind) && view.kind !== 'PushBlock';
+  letter.textContent = view.kind === 'PushBlock' ? 'Symbol' : 'Letter';
+  letter.title = view.kind === 'PushBlock' ? 'Shows a symbol drawn over this object, as on the board' : 'Shows the letter drawn over this object, as on the board';
   letter.classList.toggle('active', view.letter);
 
   renderPngKey();

@@ -79,7 +79,8 @@
   // that can only be pushed if there's room behind it). A blocked step only turns to face that way.
   // onArrive(cell) is called on finishing each step, for anything that happens on reaching a square.
   // onBlocked(cell, direction) is called when a step would leave the grid, for anything off the edge of it.
-  function createMover(grid, { cell, stepMs, canEnter = () => true, onArrive = () => {}, onBlocked = () => {}, facing = 'up' }) {
+  // onStepStart(from, to, direction) is called as each step begins, for anything that moves along with it.
+  function createMover(grid, { cell, stepMs, canEnter = () => true, onArrive = () => {}, onBlocked = () => {}, onStepStart = () => {}, facing = 'up' }) {
 
     let current = cell;
     let target = null;
@@ -102,6 +103,7 @@
 
       target = next;
       elapsed = 0;
+      onStepStart(current, next, direction);
       return true;
     }
 
@@ -123,6 +125,8 @@
       get cell(){ return target ?? current; },
       get facing(){ return facing; },
       get isMoving(){ return target !== null; },
+      // How far through the step underway it is, from 0 to 1, or 1 while it's standing still.
+      get progress(){ return target ? elapsed / stepMs : 1; },
 
       get position(){
         let from = grid.centerOf(current);

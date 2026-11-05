@@ -1104,3 +1104,162 @@ test('originY moves the whole board down, leaving room above row 0', () => {
   renderBoard(image, [obj('Wall', 0, 0)], { ...look, depth: 'raised' }, { originY: RAISED_PX });
   assert.equal(Math.min(...rowsDrawn(image, 0)), 1);
 });
+
+// ---------- Push Blocks ----------
+
+const block = (col, row, symbol = 'Circle') => obj('PushBlock', col, row, { symbol });
+const blocksIn = (g) => g.objects.filter(o => o.kind === 'PushBlock').map(o => `${o.symbol}@${o.col},${o.row}`).sort();
+
+test('walking into a Push Block pushes it a square, gliding with the ship', () => {
+  let g = game(obj('Start', 1, 5), block(2, 5));
+  assert.equal(g.canEnter(at(1, 5), at(2, 5), 'right'), true);
+  assert.equal(g.pushFrom(at(1, 5), at(2, 5), 'right'), null);
+  let b = find(g, 'PushBlock');
+  assert.deepEqual([b.col, b.row, b.fromCol, b.fromRow, b.glide], [3, 5, 2, 5, 'push']);
+  g.settlePushes();
+  assert.deepEqual([b.fromCol, b.fromRow], [3, 5]);
+});
+
+test('a Push Block can be pushed onto a Stream or Rotator tile, but not onto an object, off the board, or against a Stream', () => {
+  let g = game(block(2, 5), obj('Stream', 3, 5, { direction: 'Down' }), block(5, 5), obj('Key', 6, 5), block(9, 2),
+    block(2, 7), obj('Stream', 3, 7, { direction: 'Left' }), block(5, 7), obj('RotatorTile', 6, 7, { direction: 'Up' }));
+  assert.equal(g.canPush(at(2, 5), 'right'), true, 'onto a Stream across it');
+  assert.equal(g.canPush(at(5, 5), 'right'), false, 'onto a Key');
+  assert.equal(g.canPush(at(9, 2), 'right'), false, 'off the board');
+  assert.equal(g.canPush(at(2, 7), 'right'), false, 'against a Stream flowing back');
+  assert.equal(g.canPush(at(5, 7), 'right'), true, 'onto a Rotator tile');
+  assert.equal(g.canEnter(at(4, 5), at(5, 5), 'right'), false, 'and an unpushable block stops the ship');
+});
+
+test('two blocks of a symbol pushed side by side sink, and only those', () => {
+  let g = game(block(2, 5, 'Star'), block(4, 5, 'Star'), block(4, 6, 'Square'), block(6, 6, 'Star'));
+  let event = g.pushFrom(at(1, 5), at(2, 5), 'right');
+  assert.deepEqual(event.sank.map(o => o.symbol), ['Star', 'Star']);
+  assert.deepEqual(blocksIn(g), ['Square@4,6', 'Star@6,6']);
+});
+
+test('diagonals and different symbols don\'t sink, and a whole group sinks together', () => {
+  let g = game(block(2, 2, 'Cross'), block(3, 3, 'Cross'), block(5, 5, 'Triangle'), block(6, 5, 'Square'));
+  assert.equal(g.pushFrom(at(0, 0), at(9, 9), 'right'), null);
+  let group = game(block(2, 5, 'Circle'), block(4, 5, 'Circle'), block(4, 4, 'Circle'), block(4, 3, 'Square'));
+  let event = group.pushFrom(at(1, 5), at(2, 5), 'right');
+  assert.equal(event.sank.length, 3);
+  assert.deepEqual(blocksIn(group), ['Square@4,3']);
+});
+
+test('blocks carried together by a Stream sink too', () => {
+  let g = game(block(2, 5, 'Star'), obj('Stream', 2, 5, { direction: 'Right' }), obj('Stream', 3, 5, { direction: 'Right' }), block(4, 5, 'Star'));
+  let event = g.tick(null);
+  assert.equal(event.sank.length, 2);
+  assert.deepEqual(blocksIn(g), []);
+});
+
+// ---------- Jump Tiles ----------
+
+const jump = (col, row, direction = 'Right') => obj('JumpTile', col, row, { direction });
+
+test('a Jump Tile launches the ship 2 squares, over whatever\'s in between', () => {
+  let g = game(jump(2, 5), obj('Wall', 3, 5));
+  assert.equal(g.canEnter(at(1, 5), at(2, 5), 'right'), true);
+  assert.deepEqual(g.shipArrivedAt(at(2, 5)), { jumpTo: at(4, 5) });
+  assert.deepEqual(g.shipCell, at(4, 5));
+});
+
+test('it lands just 1 square on if it can\'t land 2, and not at all if it can\'t land either', () => {
+  assert.deepEqual(game(jump(2, 5), obj('Wall', 4, 5)).shipArrivedAt(at(2, 5)), { jumpTo: at(3, 5) });
+  assert.deepEqual(game(jump(8, 5)).shipArrivedAt(at(8, 5)), { jumpTo: at(9, 5) });
+  assert.equal(game(jump(9, 5)).shipArrivedAt(at(9, 5)), null);
+  assert.equal(game(jump(2, 5), block(3, 5), obj('Wall', 4, 5)).shipArrivedAt(at(2, 5)), null);
+});
+
+test('landing works like arriving: on a Switch it flips its Gates, on another Jump Tile it jumps again', () => {
+  let g = game(jump(2, 5), obj('Switch', 4, 5, { letter: 'A' }), obj('Gate', 0, 0, { letter: 'A' }));
+  let landing = g.shipArrivedAt(at(2, 5)).jumpTo;
+  g.shipArrivedAt(landing, { jumped: true });
+  assert.equal(find(g, 'Gate').open, true);
+  let chain = game(jump(1, 5), jump(3, 5));
+  assert.deepEqual(chain.shipArrivedAt(at(1, 5)), { jumpTo: at(3, 5) });
+  assert.deepEqual(chain.shipArrivedAt(at(3, 5), { jumped: true }), { jumpTo: at(5, 5) });
+});
+
+test('two Jump Tiles facing each other stop after 8 jumps in a row', () => {
+  let g = game(jump(2, 5, 'Right'), jump(4, 5, 'Left'));
+  let cell = at(2, 5), jumps = 0, event = g.shipArrivedAt(cell);
+  while (event?.jumpTo && jumps < 50) {
+    jumps++;
+    event = g.shipArrivedAt(event.jumpTo, { jumped: true });
+  }
+  assert.equal(jumps, 8);
+  assert.equal(g.shipArrivedAt(at(2, 5))?.jumpTo !== undefined, true, 'and walking on again starts afresh');
+});
+
+// ---------- drawing Push Blocks and Jump Tiles ----------
+
+const { SYMBOLS } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+
+test('a Push Block and a Jump Tile get their own palette colours, from the art', () => {
+  let { art, look } = artLook();
+  let inArt = colorsIn(art);
+  for (const role of ['block', 'jump']) {
+    assert.ok(inArt.has(toRgb(look.palette[role]).join(',')), role);
+    assert.equal(look.textures[role].ramp.length, 4, role);
+  }
+});
+
+test('every symbol draws differently, in the light colour, on a raised block, all in the art\'s own colours', () => {
+  let { art, look } = artLook();
+  let allowed = colorsIn(art);
+  let tiles = Object.keys(SYMBOLS).map((symbol, i) => {
+    let image = blank();
+    renderBoard(image, [obj('PushBlock', i, 2, { symbol })], look);
+    for (const color of colorsIn(image.data)) assert.ok(allowed.has(color), `${symbol}: ${color}`);
+    // Its 9x9 box, lifted with the block's raised face.
+    let count = (rgb) => { let n = 0; for (let y = 7; y < 16; y++) for (let x = 7; x < 16; x++) if (pixelAt(image, i * 24 + x, 2 * 24 + y - RAISED_PX).slice(0, 3).join() === rgb) n++; return n; };
+    let body = pixelAt(image, i * 24 + 10, 2 * 24 + 3 - RAISED_PX).slice(0, 3).join();
+    let symbolColour = [toRgb(look.palette.light).join(), toRgb(look.palette.outline).join()].find(rgb => rgb !== body && count(rgb) >= 12);
+    assert.ok(symbolColour, `${symbol} is drawn in the light colour, or the dark on a block too light for it, standing out from the block`);
+    return tile(image, i, 2);
+  });
+  assert.equal(new Set(tiles).size, Object.keys(SYMBOLS).length);
+  let image = blank();
+  renderBoard(image, [obj('PushBlock', 0, 2, { symbol: 'Star' })], look);
+  assert.ok(rowsDrawn(image, 0).includes(2 * 24 - 1), 'and it stands up into the square above, as a Wall does');
+});
+
+test('a Jump Tile is turned to point the way it launches', () => {
+  let { look } = artLook();
+  // Flat, since depth always lights the top-left whichever way the tile points.
+  let draw = (direction) => { let image = blank(); renderBoard(image, [obj('JumpTile', 1, 1, { direction })], { ...look, depth: 'flat' }); return image; };
+  let right = draw('Right'), left = draw('Left'), down = draw('Down');
+  let column = (image, x) => { let out = []; for (let y = 24; y < 48; y++) out.push(pixelAt(image, x, y).join()); return out.join('|'); };
+  assert.notEqual(tile(right, 1, 1), tile(left, 1, 1));
+  assert.notEqual(tile(right, 1, 1), tile(down, 1, 1));
+  // Turned round, its middle row reads backwards.
+  let row = (image, y) => { let out = []; for (let x = 24; x < 48; x++) out.push(pixelAt(image, x, y).join()); return out; };
+  assert.deepEqual(row(left, 35).reverse(), row(right, 36));
+  assert.ok(column(down, 36).length > 0);
+});
+
+test('a pushed block glides with pushAlong, and a sinking one disappears into its square', () => {
+  let { look } = artLook();
+  let half = blank(), sunk = blank(), whole = blank();
+  renderBoard(half, [obj('PushBlock', 3, 2, { symbol: 'Circle', fromCol: 2, fromRow: 2, glide: 'push' })], look, { pushAlong: 0.5, along: 0 });
+  let left = Math.min(...[...Array(240).keys()].filter(x => pixelAt(half, x, 60)[3]));
+  assert.equal(left, 2 * 24 + 12 + 1);
+  renderBoard(whole, [obj('PushBlock', 2, 2, { symbol: 'Circle' })], look);
+  renderBoard(sunk, [obj('PushBlock', 2, 2, { symbol: 'Circle', sink: 0.5 })], look);
+  assert.ok(Math.max(...rowsDrawn(sunk, 2)) < 3 * 24, 'never below its square');
+  assert.ok(Math.min(...rowsDrawn(sunk, 2)) >= 2 * 24 + 12 - RAISED_PX, 'and half of it gone');
+});
+
+test('the push hint is an arrow just past the block, pointing the way it would go, and bobs', () => {
+  let { look } = artLook();
+  let light = toRgb(look.palette.light).join();
+  let hasLightIn = (image, x0, y0, x1, y1) => { for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (pixelAt(image, x, y).slice(0, 3).join() === light) return true; return false; };
+  let draw = (direction, bob = 0) => { let image = blank(); renderBoard(image, [], look, { pushHint: { col: 4, row: 4, direction, bob } }); return image; };
+  assert.ok(hasLightIn(draw('Right'), 5 * 24, 4 * 24, 5 * 24 + 12, 5 * 24));
+  assert.ok(hasLightIn(draw('Left'), 4 * 24 - 12, 4 * 24, 4 * 24, 5 * 24));
+  assert.ok(hasLightIn(draw('Down'), 4 * 24, 5 * 24, 5 * 24, 5 * 24 + 12));
+  assert.ok(hasLightIn(draw('Up'), 4 * 24, 4 * 24 - 12, 5 * 24, 4 * 24));
+  assert.notEqual(draw('Right', 0).data.join(), draw('Right', 1).data.join());
+});

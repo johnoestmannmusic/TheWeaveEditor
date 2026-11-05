@@ -88,6 +88,35 @@ public class ProjectValidatorTests
     }
 
     private static PuzzleObject Finish => new() { Kind = PuzzleObjectKind.Finish };
+
+    private static PuzzleObject Block(PuzzleSymbol symbol, int col, int row) => new() { Kind = PuzzleObjectKind.PushBlock, Symbol = symbol, Col = col, Row = row };
+    private static PuzzleObject Jump(int col, int row, PuzzleDirection direction) => new() { Kind = PuzzleObjectKind.JumpTile, Col = col, Row = row, Direction = direction };
+
+    [Fact]
+    public void ALonePushBlock_AndOnesStartingSideBySide_AreReported()
+    {
+        var problems = PuzzleProblems(Finish,
+            Block(PuzzleSymbol.Star, 2, 2), Block(PuzzleSymbol.Star, 5, 5),
+            Block(PuzzleSymbol.Circle, 3, 7),
+            Block(PuzzleSymbol.Square, 7, 1), Block(PuzzleSymbol.Square, 8, 1));
+
+        Assert.Contains("its only Circle block has nothing to sink with.", problems);
+        Assert.Contains("two Square blocks start side by side, so they'll sink as soon as anything moves.", problems);
+        Assert.DoesNotContain(problems, p => p.Contains("Star"));
+    }
+
+    [Fact]
+    public void AJumpTileWithNowhereToLand_IsReported()
+    {
+        var problems = PuzzleProblems(Finish,
+            Jump(9, 3, PuzzleDirection.Right),
+            Jump(2, 6, PuzzleDirection.Down), new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 2, Row = 7 }, new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 2, Row = 8 },
+            Jump(4, 4, PuzzleDirection.Left), new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 2, Row = 4 });
+
+        Assert.Contains("the Jump Tile at column 10, row 4 has nowhere to land, so it does nothing.", problems);
+        Assert.Contains("the Jump Tile at column 3, row 7 has nowhere to land, so it does nothing.", problems);
+        Assert.DoesNotContain(problems, p => p.Contains("column 5, row 5"));
+    }
     private static PuzzleObject Lettered(PuzzleObjectKind kind, string letter) => new() { Kind = kind, Letter = letter };
 
     [Fact]

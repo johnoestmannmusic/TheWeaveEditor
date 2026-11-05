@@ -183,12 +183,50 @@ public static class ProjectValidator
         if (puzzle.Objects.Any(o => o.Invisible) && puzzle.Objects.All(o => o.Kind != PuzzleObjectKind.Lantern))
             Warn("it has invisible objects but no Lantern, so they can never be seen.");
 
+        // Push Blocks only ever go by sinking with another of their symbol.
+        var blocks = puzzle.Objects.Where(o => o.Kind == PuzzleObjectKind.PushBlock).ToList();
+        foreach (var lone in blocks.GroupBy(o => o.Symbol).Where(g => g.Count() == 1).OrderBy(g => g.Key))
+            Warn($"its only {lone.Key} block has nothing to sink with.");
+        var touching = blocks.Where(o => blocks.Any(other => other != o && other.Symbol == o.Symbol && Math.Abs(other.Col - o.Col) + Math.Abs(other.Row - o.Row) == 1))
+            .Select(o => o.Symbol).Distinct().OrderBy(symbol => symbol);
+        foreach (var symbol in touching)
+            Warn($"two {symbol} blocks start side by side, so they'll sink as soon as anything moves.");
+
+        foreach (var jump in puzzle.Objects.Where(o => o.Kind == PuzzleObjectKind.JumpTile))
+        {
+            if (JumpLanding(puzzle, jump) is null)
+                Warn($"the Jump Tile at column {jump.Col + 1}, row {jump.Row + 1} has nowhere to land, so it does nothing.");
+        }
+
         var missingDrawings = puzzle.Objects
             .Where(o => o.Variant is not null && drawings?.Any(d => d.Id == o.Variant && d.Kind == o.Kind) != true)
             .GroupBy(o => (o.Kind, o.Variant))
             .OrderBy(g => g.Key.Kind.ToString()).ThenBy(g => g.Key.Variant);
         foreach (var group in missingDrawings)
             Warn($"{(group.Count() == 1 ? $"a {group.Key.Kind} uses" : $"{group.Count()} {group.Key.Kind}s use")} drawing '{group.Key.Variant}', which isn't in the library, so {(group.Count() == 1 ? "it's" : "they're")} drawn as Standard.");
+    }
+
+    // Where a Jump Tile would land the ship as the puzzle starts: 2 squares along, or 1, on the board and without
+    // anything solid there - see runtime/puzzle.js's jumpFrom. Null if neither.
+    private static (int Col, int Row)? JumpLanding(Puzzle puzzle, PuzzleObject jump)
+    {
+        var (dx, dy) = jump.Direction switch
+        {
+            PuzzleDirection.Up => (0, -1),
+            PuzzleDirection.Down => (0, 1),
+            PuzzleDirection.Left => (-1, 0),
+            _ => (1, 0),
+        };
+        foreach (var distance in new[] { 2, 1 })
+        {
+            var (col, row) = (jump.Col + dx * distance, jump.Row + dy * distance);
+            var onBoard = col >= 0 && col < Puzzle.BoardSize && row >= 0 && row < Puzzle.BoardSize;
+            var solid = puzzle.Objects.Any(o => o.Col == col && o.Row == row
+                && (o.Kind is PuzzleObjectKind.Wall or PuzzleObjectKind.PushBlock || (o.Kind == PuzzleObjectKind.Gate && !o.Open)));
+            if (onBoard && !solid)
+                return (col, row);
+        }
+        return null;
     }
 
     // A Stream holds the ship until it pushes it off, so a path with no way off is somewhere a ship can only

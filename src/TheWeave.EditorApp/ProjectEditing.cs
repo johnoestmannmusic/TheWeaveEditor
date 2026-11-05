@@ -276,11 +276,16 @@ internal static class ProjectEditing
             if (!usesLetter)
                 obj.Letter = null;
 
-            var isFloor = IsFloorTile(obj);
-            if (isFloor && obj.Direction is null)
+            var pointsSomewhere = IsFloorTile(obj) || obj.Kind == PuzzleObjectKind.JumpTile;
+            if (pointsSomewhere && obj.Direction is null)
                 throw new InvalidOperationException($"A {obj.Kind} needs a direction.");
-            if (!isFloor)
+            if (!pointsSomewhere)
                 obj.Direction = null;
+
+            if (obj.Kind == PuzzleObjectKind.PushBlock && obj.Symbol is null)
+                throw new InvalidOperationException("A Push Block needs a symbol.");
+            if (obj.Kind != PuzzleObjectKind.PushBlock)
+                obj.Symbol = null;
 
             if (obj.Kind is PuzzleObjectKind.Finish or PuzzleObjectKind.Start)
                 obj.Invisible = false;

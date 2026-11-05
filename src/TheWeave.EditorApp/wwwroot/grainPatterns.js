@@ -2,7 +2,7 @@
 // John Oestmann
 // Patterns for the Drawings view's Generate panel (see puzzleDrawings.js): each one a value per pixel of a
 // square, from dark to light, which a balance of colours is then laid out across, each colour covering its
-// percentage of the square. Patches of the album art, natural textures and pixel-art dithers. The natural
+// percentage of the square. Patches of the album art, natural textures, pixel-art dithers and metals. The natural
 // ones wrap around at the square's edges, so that they tile seamlessly between neighbouring squares. Knows
 // nothing about the DOM, so it can be tested on its own.
 
@@ -13,7 +13,7 @@
 
   const TILE_PX = 24;
   const PIXELS = TILE_PX * TILE_PX;
-  const FAMILIES = ['album', 'natural', 'dither'];
+  const FAMILIES = ['album', 'natural', 'dither', 'metallic'];
 
   // A repeatable stream of random numbers from 0 to 1, so the same seed always generates the same patterns.
   function randomFrom(seed){
@@ -110,6 +110,23 @@
     { family: 'dither', name: 'Dithered clouds', make: (random) => {
       let noise = layeredNoise(random, [[3, 0.7], [6, 0.3]]);
       return fieldOf((x, y) => noise(x, y) + (bayerAt(x, y) - 0.5) * 0.35);
+    } },
+
+    // Brushed metal: fine streaks running across it, each row a little lighter or darker than the next.
+    { family: 'metallic', name: 'Brushed metal', make: (random) => {
+      let rows = Array.from({ length: TILE_PX }, random);
+      let streaks = noiseOf(random, 2);
+      return fieldOf((x, y) => rows[y] * 0.6 + streaks(x, y) * 0.25 + random() * 0.15);
+    } },
+    // Polished plate: a bright band of sheen across it at an angle, fading to darker either side.
+    { family: 'metallic', name: 'Metal sheen', make: (random) => {
+      let angle = (random() < 0.5 ? 1 : -1) * (0.6 + random() * 0.6);
+      let offset = random();
+      let grain = noiseOf(random, 12);
+      return fieldOf((x, y) => {
+        let along = ((x + y * angle) / (TILE_PX * 1.5) + offset) % 1;
+        return 1 - Math.abs(along - 0.5) * 2 + grain(x, y) * 0.15;
+      });
     } },
   ];
 

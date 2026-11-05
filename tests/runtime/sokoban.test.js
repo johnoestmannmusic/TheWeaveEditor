@@ -64,6 +64,20 @@ test('a step off the grid calls onBlocked, and one blocked by canEnter doesn\'t'
   assert.equal(m.facing, 'up');
 });
 
+test('onStepStart is called as a step begins, and progress follows it', () => {
+  let started = [];
+  let m = mover(mapGrid(), { onStepStart: (from, to, direction) => started.push([from.col, to.col, direction]) });
+  assert.equal(m.progress, 1);
+  m.press('right');
+  m.update(STEP_MS / 4);
+  assert.deepEqual(started, [[5, 6, 'right']]);
+  assert.equal(m.progress, 0.25);
+  m.release('right');
+  m.update(STEP_MS);
+  assert.equal(m.progress, 1);
+  assert.equal(started.length, 1);
+});
+
 test('position glides smoothly between squares', () => {
   let m = mover();
   m.press('right');
