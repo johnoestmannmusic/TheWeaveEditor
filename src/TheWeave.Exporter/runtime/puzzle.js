@@ -139,7 +139,6 @@
     let streams = new Map();
     let rotators = new Map();
     let floors = [];
-    let objects = [];
     let start = { col: DEFAULT_START.col, row: DEFAULT_START.row };
 
     for (const object of puzzle.objects) {
@@ -148,10 +147,17 @@
       } else if (isFloor(object)) {
         (object.kind === 'Stream' ? streams : rotators).set(cellKey(object), object.direction);
         floors.push({ ...object, revealed: false });
-      } else {
-        objects.push({ ...object, fromCol: object.col, fromRow: object.row, open: !!object.open, revealed: false, lit: false });
       }
     }
+
+    // Every object as the puzzle starts, which is also what a Reset Switch puts back. Each keeps its place in the
+    // puzzle's list as its index, so it can be matched up with itself before and after a reset.
+    function startingObjects(){
+      return puzzle.objects.flatMap((object, index) => object.kind === 'Start' || isFloor(object) ? []
+        : [{ ...object, index, fromCol: object.col, fromRow: object.row, open: !!object.open, revealed: false, lit: false }]);
+    }
+
+    let objects = startingObjects();
 
     let shipCell = start;
     let solved = false;
@@ -231,7 +237,7 @@
     }
 
     // What standing on a square does to the board, and where that leaves the ship: null, or
-    // { teleportTo }, { jumpTo } or { finished } for the caller to act on. jumped says the ship landed here from a
+    // { teleportTo }, { jumpTo }, { finished } or { reset } (with the objects as they were) for the caller to act on. jumped says the ship landed here from a
     // Jump Tile, rather than walking or being carried.
     function arriveAt(cell, { jumped = false } = {}){
       shipCell = cell;
@@ -268,6 +274,15 @@
           object.lit = true;
           revealLitAreas();
           return null;
+
+        // Everything back as it started, but the ship: moved objects return, sunk blocks and collected Keys come
+        // back, Gates close or open again, Lanterns go out, and what they revealed is hidden again.
+        case 'ResetSwitch': {
+          let before = objects;
+          objects = startingObjects();
+          for (const floor of floors) floor.revealed = false;
+          return { reset: before };
+        }
 
         case 'JumpTile': {
           let landing = jumpFrom(object);
@@ -534,6 +549,7 @@
     // buildSprite, which draws the symbol dark then.
     let block = choose((group) => -vividnessOf(group) * 0.5 - Math.abs(lightnessOf(group) - 95) + Math.min(...chosen.map(other => colorDistance(group, other))) * 0.25 + Math.min(colorDistance(group, light), 150) * 0.3);
     let jump = choose(different);
+    let reset = choose(different);
 
     return {
       wall: toHex(wall),
@@ -548,6 +564,7 @@
       lantern: toHex(lantern),
       block: toHex(block),
       jump: toHex(jump),
+      reset: toHex(reset),
       outline: toHex(outline),
       light: toHex(light),
     };
@@ -560,7 +577,7 @@
   const ART_PX = TILE_PX * BOARD_SIZE;
 
   // Every role that has a texture of its own. A Switch shares its Gate's, as it does its colour.
-  const TEXTURE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'block', 'jump'];
+  const TEXTURE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'block', 'jump', 'reset'];
   // The 4 shades of a role's colour, darkest first: how far each is aimed from the main colour in lightness,
   // and how much of an object it covers unless a drawing's mix says otherwise. A shade the art has nothing
   // like is filled in by its neighbour towards the main colour.
@@ -855,7 +872,7 @@
   };
 
   const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
-  const SPRITE_ROLES = { Wall: 'wall', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump' };
+  const SPRITE_ROLES = { Wall: 'wall', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset' };
 
   function maskOf(test){
     let mask = [];
@@ -905,7 +922,7 @@
   const TURNED_KINDS = ['JumpTile'];
 
   // Every kind of object drawn from a drawing.
-  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'PushBlock', ...TURNED_KINDS, ...ANIMATED_KINDS];
+  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'PushBlock', ...TURNED_KINDS, 'ResetSwitch', ...ANIMATED_KINDS];
 
   const standardDrawings = new Map();
 
@@ -927,6 +944,7 @@
       else if (kind === 'RotatorTile') drawing = { id: kind, kind, name: 'Standard', ...standardRotatorLayers(), mix: standardMix('rotator') };
       else if (kind === 'PushBlock') drawing = { id: kind, kind, name: 'Standard', pixels: standardPushBlockPixels(), mix: standardMix('block') };
       else if (kind === 'JumpTile') drawing = { id: kind, kind, name: 'Standard', pixels: standardJumpTilePixels(), mix: standardMix('jump') };
+      else if (kind === 'ResetSwitch') drawing = { id: kind, kind, name: 'Standard', pixels: standardResetSwitchPixels(), mix: standardMix('reset') };
       else {
         let body = SHAPES[SPRITE_SHAPES[kind]];
         drawing = { id: kind, kind, name: 'Standard', pixels: pixelsOf(body), mix: standardMix(SPRITE_ROLES[kind]) };
@@ -1020,6 +1038,39 @@
       if (!onPad(u - 1, v) || !onPad(u + 1, v) || !onPad(u, v - 1) || !onPad(u, v + 1)) return PAINTS.outline;
       if (onChevron(u, v)) return '4';
       if (onChevron(u, v - 1)) return '1';
+      return '2';
+    });
+  }
+
+  // A Reset Switch's Standard drawing: a pad lying on the floor, like a Jump Tile's, with two arrows chasing each
+  // other round anticlockwise, each with a darker edge below. One arc runs over the top and down the left, ending
+  // in a head pointing down, and the other under the bottom and up the right, ending in one pointing up.
+  function standardResetSwitchPixels(){
+    let onPad = (u, v) => u >= 0 && v >= 0 && u < TILE_PX && v < TILE_PX && SHAPES.roundedSquare(u + 0.5 - TILE_PX / 2, v + 0.5 - TILE_PX / 2);
+    let middle = (TILE_PX - 1) / 2;
+    let inner = 3.9, outer = 5.9;
+    // Each arc's span, in degrees anticlockwise from pointing right, its head at the end of it.
+    let arcs = [[70, 180], [250, 360]];
+    let onArrow = (u, v) => {
+      let radius = Math.hypot(u - middle, v - middle);
+      let degrees = (Math.atan2(middle - v, u - middle) * 180 / Math.PI + 360) % 360;
+      if (radius >= inner && radius <= outer && arcs.some(([from, to]) => degrees >= from && degrees <= to)) return true;
+      return arcs.some(([, to]) => {
+        let angle = to * Math.PI / 180;
+        let du = u - (middle + Math.cos(angle) * (inner + outer) / 2);
+        let dv = v - (middle - Math.sin(angle) * (inner + outer) / 2);
+        // How far along the way the arc is heading, and how far to either side of it.
+        let along = -du * Math.sin(angle) - dv * Math.cos(angle);
+        let across = du * Math.cos(angle) - dv * Math.sin(angle);
+        // Its ends sit between half-pixels, so that it comes out the same either way round.
+        return along >= -0.6 && along <= 3.6 && Math.abs(across) <= 3 - along * 0.95;
+      });
+    };
+    return layerOf((u, v) => {
+      if (!onPad(u, v)) return PAINTS.clear;
+      if (!onPad(u - 1, v) || !onPad(u + 1, v) || !onPad(u, v - 1) || !onPad(u, v + 1)) return PAINTS.outline;
+      if (onArrow(u, v)) return '4';
+      if (onArrow(u, v - 1)) return '1';
       return '2';
     });
   }
@@ -1317,8 +1368,9 @@
   }
 
   // A sprite that rises above its square starts that many rows higher. Nothing is drawn from below clipBottom, which
-  // is how something sinking into its square disappears into the ground.
-  function blit(image, sprite, left, top, clipBottom = Infinity){
+  // is how something sinking into its square disappears into the ground. opacity below 1 lays it over whatever's
+  // already there, partly see-through, which is how something fades in or out.
+  function blit(image, sprite, left, top, clipBottom = Infinity, opacity = 1){
     let { data, width, height } = image;
     top -= sprite.rise ?? 0;
     for (let y = 0; y < sprite.length / TILE_PX; y++) {
@@ -1327,12 +1379,64 @@
         let px = left + x, py = top + y;
         if (!color || px < 0 || px >= width || py < 0 || py >= height || py >= clipBottom) continue;
         let i = (py * width + px) * 4;
-        data[i] = color.r;
-        data[i + 1] = color.g;
-        data[i + 2] = color.b;
-        data[i + 3] = 255;
+        if (opacity >= 1) {
+          data[i] = color.r;
+          data[i + 1] = color.g;
+          data[i + 2] = color.b;
+          data[i + 3] = 255;
+          continue;
+        }
+        let under = data[i + 3] / 255 * (1 - opacity);
+        let total = opacity + under;
+        data[i] = (color.r * opacity + data[i] * under) / total;
+        data[i + 1] = (color.g * opacity + data[i + 1] * under) / total;
+        data[i + 2] = (color.b * opacity + data[i + 2] * under) / total;
+        data[i + 3] = total * 255;
       }
     }
+  }
+
+  // ---------- resetting ----------
+
+  // A Reset Switch's sweep across the board, from the top-left corner to the bottom-right: as it passes each
+  // object, the object fades out where it was, then fades back in where it started, each over RESET_FADE_MS. Each
+  // diagonal of squares starts RESET_SWEEP_STEP_MS after the one before.
+  const RESET_FADE_MS = 100;
+  const RESET_SWEEP_STEP_MS = 20;
+
+  // When the sweep reaches a square.
+  function sweepReaches(object){
+    return (Math.round(object.col) + Math.round(object.row)) * RESET_SWEEP_STEP_MS;
+  }
+
+  // Walls stay as they are, since nothing ever changes them.
+  function sweeps(object){
+    return object.kind !== 'Wall';
+  }
+
+  // When each object starting again (after) fades back in: once the sweep reaches where it starts, and once it's
+  // faded out from where it was, if it was anywhere (before, matched by index).
+  function fadesInAt(object, before){
+    let was = before.find(other => other.index === object.index);
+    return Math.max(sweepReaches(object), was ? sweepReaches(was) : 0) + RESET_FADE_MS;
+  }
+
+  // How long a whole sweep takes.
+  function resetSweepMs(before, after){
+    return Math.max(0, ...after.filter(sweeps).map(object => fadesInAt(object, before) + RESET_FADE_MS),
+      ...before.filter(sweeps).map(object => sweepReaches(object) + RESET_FADE_MS));
+  }
+
+  // What to draw ms into a sweep: Walls as they are, the objects as they were with how far they've faded out, and
+  // as they start again with how far they've faded in, each with its fade from 0 to 1. Leaves out anything not
+  // showing at all.
+  function resetSweepAt(before, after, ms){
+    let clamp = (value) => Math.max(0, Math.min(1, value));
+    let leaving = before.filter(sweeps)
+      .map(object => ({ ...object, fade: clamp(1 - (ms - sweepReaches(object)) / RESET_FADE_MS) }));
+    let arriving = after.filter(sweeps)
+      .map(object => ({ ...object, fade: clamp((ms - fadesInAt(object, before)) / RESET_FADE_MS) }));
+    return [...after.filter(object => !sweeps(object)), ...leaving, ...arriving].filter(object => (object.fade ?? 1) > 0);
   }
 
   // Draws a whole board into RGBA pixel data the size of the album art, to be scaled up exactly as the art
@@ -1347,6 +1451,7 @@
   // - showInvisible draws anything invisible and unrevealed as a ghost, rather than leaving it out.
   // - pushAlong is how far a Push Block being pushed is through its glide, along with the ship.
   // - An object's own sink, from 0 to 1, is how far it's sunk into its square, after matching - see sinkMatches.
+  // - An object's own fade, from 0 to 1, is how much of it shows, as a Reset Switch's sweep passes - see resetSweepAt.
   // - pushHint ({ col, row, direction, bob }) shows that the Push Block on that square can be pushed: an arrow just
   //   past it, pointing the way it would go, bob pixels further out as it bobs.
   // - originY moves the whole board down by that many pixels, to leave room for objects rising above row 0.
@@ -1378,7 +1483,9 @@
       let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams);
       let top = Math.round(row * TILE_PX) + (options.originY ?? 0);
       let sunk = Math.round((object.sink ?? 0) * TILE_PX);
-      blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX), top + sunk, object.sink ? top + TILE_PX : Infinity);
+      let opacity = object.fade ?? 1;
+      if (opacity <= 0) continue;
+      blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX), top + sunk, object.sink ? top + TILE_PX : Infinity, opacity);
     }
 
     if (options.pushHint) drawPushHint(image, options.pushHint, look, options.originY ?? 0);
@@ -1427,5 +1534,6 @@
   }
 
   return { BOARD_SIZE, DEFAULT_START, LETTERS, TILE_PX, ART_PX, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, pickPalette, pickTextures, renderBoard, hasFinish, createPuzzleGame,
+    RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt,
     PAINTS, DRAWN_KINDS, ANIMATED_KINDS, TURNED_KINDS, SYMBOLS, SPRITE_ROLES, TEXTURE_SHADES, standardDrawing, standardMix, mixTexture, renderDrawingLayer, RAISED_PX };
 });

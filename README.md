@@ -109,6 +109,11 @@ Neocities, replacing hand-authoring HTML per location.
   They're metal plates by default, with their symbol as a glowing hollow outline.
 - Jump Tiles launch the ship 2 squares the way they point, over anything in between, or 1 if it can't land that
   far. Landing works like arriving, so it can land on a Switch, a Key or another Jump Tile.
+- Reset Switches put every object but Walls back as the puzzle started, leaving the ship where it is: moved
+  objects return, sunk blocks and collected Keys come back, Gates and Lanterns are as they began, and whatever a
+  Lantern revealed is hidden again. A sweep crosses the board from the top-left corner to the bottom-right,
+  fading each object out where it was and back in where it started, over 100ms each. The board holds still until
+  it's done. They're a pad with two arrows chasing each other round anticlockwise.
 - Rotator Tiles work like Streams, but only move what's on them, once per second, while the ship is on a
   Rotator Switch, and the ship can walk over them freely. Any object but Finish can start out Invisible,
   behaving exactly the same but unseen until the ship lights a Lantern within reach of it. A lit Lantern
