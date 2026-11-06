@@ -1150,8 +1150,38 @@
       drawSymbol(sprite, object.symbol, tooLight ? outline : light, tooLight || lightest === fill ? null : lightest);
     }
 
+    // Turned before its depth is added, so that its raised edge stays at the bottom whichever way round it is.
+    if (object.spin) sprite = spunBy(sprite, object.spin);
+
     let solid = object.kind === 'Wall' || object.kind === 'PushBlock' || (object.kind === 'Gate' && !isOpenGate);
     return addDepth(sprite, look, solid, mix, outline, light);
+  }
+
+  // A Rotator Switch turns clockwise while the ship stands on it, in SPIN_STEPS steps a turn, each one's sprite kept
+  // like any other. An object's spin is how many steps round it is.
+  const SPIN_STEPS = 32;
+  const SPIN_TURN_MS = 2000;
+
+  // Which step of its turn a Rotator Switch is at, after being stood on for ms.
+  function spinAt(ms){
+    return Math.floor(ms / (SPIN_TURN_MS / SPIN_STEPS)) % SPIN_STEPS;
+  }
+
+  // A square's pixels turned clockwise about its middle, each pixel taken from wherever it turned from.
+  function spunBy(sprite, steps){
+    let angle = steps / SPIN_STEPS * Math.PI * 2;
+    let cos = Math.cos(angle), sin = Math.sin(angle);
+    let middle = (TILE_PX - 1) / 2;
+    let spun = new Array(TILE_PX * TILE_PX).fill(null);
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        let dx = x - middle, dy = y - middle;
+        let fromX = Math.round(middle + dx * cos + dy * sin);
+        let fromY = Math.round(middle - dx * sin + dy * cos);
+        if (fromX >= 0 && fromX < TILE_PX && fromY >= 0 && fromY < TILE_PX) spun[y * TILE_PX + x] = sprite[fromY * TILE_PX + fromX];
+      }
+    }
+    return spun;
   }
 
   // A Push Block's symbol, as a hollow outline 9 pixels across, so that two that match read at a glance.
@@ -1340,7 +1370,7 @@
   function spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins){
     if (object.kind === 'Stream') return `Stream|${object.variant ?? ''}|${object.direction}|${streamPhase}|${joins.back}|${joins.left}|${joins.right}`;
     if (object.kind === 'RotatorTile') return `RotatorTile|${object.variant ?? ''}|${object.direction}|${rotatorPhase}`;
-    return `${object.kind}|${object.variant ?? ''}|${object.letter ?? ''}|${object.symbol ?? ''}|${object.direction ?? ''}|${object.kind === 'Gate' && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}`;
+    return `${object.kind}|${object.variant ?? ''}|${object.letter ?? ''}|${object.symbol ?? ''}|${object.direction ?? ''}|${object.kind === 'Gate' && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}|${object.spin ?? 0}`;
   }
 
   function spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams){
@@ -1451,6 +1481,7 @@
   // - showInvisible draws anything invisible and unrevealed as a ghost, rather than leaving it out.
   // - pushAlong is how far a Push Block being pushed is through its glide, along with the ship.
   // - An object's own sink, from 0 to 1, is how far it's sunk into its square, after matching - see sinkMatches.
+  // - An object's own spin is how far round clockwise it's turned, as a Rotator Switch does while stood on - see spinAt.
   // - An object's own fade, from 0 to 1, is how much of it shows, as a Reset Switch's sweep passes - see resetSweepAt.
   // - pushHint ({ col, row, direction, bob }) shows that the Push Block on that square can be pushed: an arrow just
   //   past it, pointing the way it would go, bob pixels further out as it bobs.
@@ -1534,6 +1565,6 @@
   }
 
   return { BOARD_SIZE, DEFAULT_START, LETTERS, TILE_PX, ART_PX, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, pickPalette, pickTextures, renderBoard, hasFinish, createPuzzleGame,
-    RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt,
+    RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, spinAt,
     PAINTS, DRAWN_KINDS, ANIMATED_KINDS, TURNED_KINDS, SYMBOLS, SPRITE_ROLES, TEXTURE_SHADES, standardDrawing, standardMix, mixTexture, renderDrawingLayer, RAISED_PX };
 });

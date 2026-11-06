@@ -115,7 +115,7 @@ Neocities, replacing hand-authoring HTML per location.
   fading each object out where it was and back in where it started, over 100ms each. The board holds still until
   it's done. They're a pad with two arrows chasing each other round anticlockwise.
 - Rotator Tiles work like Streams, but only move what's on them, once per second, while the ship is on a
-  Rotator Switch, and the ship can walk over them freely. Any object but Finish can start out Invisible,
+  Rotator Switch, which turns clockwise while it's stood on, and the ship can walk over them freely. Any object but Finish can start out Invisible,
   behaving exactly the same but unseen until the ship lights a Lantern within reach of it. A lit Lantern
   stays lit, and reveals a circle reaching 3 squares in every direction.
 - A location's puzzle boards connect edge to edge, like the map's screens: a part that leads on to another
