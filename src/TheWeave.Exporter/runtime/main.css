@@ -153,6 +153,54 @@ h3 {
   cursor: pointer;
 }
 
+/* A location waiting on its requirements - see main.js's refreshNodeLocks. Its icon is greyed out, here and on the
+   minimap, and its card says only what it's waiting for. */
+.node.locked > .nodeImage, .minimapNode.locked {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.node.locked > .floatInfo > :not(.lockedPanel) {
+  display: none !important;
+}
+
+/* Only as tall as what it says, and the standard width, whatever size its card is set to. */
+.node.locked > .floatInfo {
+  width: 252px !important;
+  height: auto !important;
+  padding-bottom: 12px;
+}
+
+.lockedPanel, .lockedPanel * {
+  position: relative;
+}
+
+.lockedPanel h3 {
+  margin: 0 0 0.4em;
+}
+
+.lockedRequirement {
+  margin-top: 0.5em;
+}
+
+.lockedPanel {
+  padding: 12px 14px 0;
+}
+
+.lockedProgress {
+  color: #7a5c2e;
+}
+
+/* A location with every stage solved: its icon's blue centre turned green, or a race's purple, here and on the
+   minimap. Not while its card is open, when the icon is the orange ring instead. */
+.node.completed:not(.cardOpen) > .nodeImage, .minimapNode.completed {
+  filter: hue-rotate(-80deg) saturate(1.1);
+}
+
+.node.completed.raceNode:not(.cardOpen) > .nodeImage, .minimapNode.completed.raceNode {
+  filter: hue-rotate(-140deg) saturate(1.2);
+}
+
 /* The Z-key hint icon (fixtures' img/ui/key_z.gif) shown next to anything Z actually does on a
    card - see PageRenderer's own comments on exactly which cases get one (it mirrors onInteract's
    audio-first precedence, so it's never shown next to two competing actions on the same card). */

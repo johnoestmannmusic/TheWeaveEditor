@@ -1182,3 +1182,24 @@ main.behind-puzzle-editor {
   width: 12px;
   height: 12px;
 }
+
+/* A location's requirements - see app.js's renderRequirementsField. */
+#f-requirements {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#f-requirements li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#f-requirements .muted {
+  color: var(--muted);
+}

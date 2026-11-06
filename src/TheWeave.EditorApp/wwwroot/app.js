@@ -938,6 +938,8 @@ function renderNodeInspector(container, pageId, node) {
 
     ${renderPuzzleField(node)}
 
+    ${onMap ? renderRequirementsField(pageId, node) : ''}
+
     <fieldset>
       <legend>Action</legend>
 
@@ -1022,9 +1024,25 @@ function renderNodeInspector(container, pageId, node) {
         travelSpawnX: arrival?.x ?? null,
         travelSpawnY: arrival?.y ?? null,
         travelSkipTutorial: document.getElementById('f-skip-tutorial')?.checked ?? false,
+        // Only a location on the map has requirements - see renderRequirementsField.
+        requirements: onMap ? requirements : null,
       },
     });
   };
+
+  // The requirements being edited, saved as soon as one is added or taken away.
+  let requirements = [...(node.requirements ?? [])];
+  document.getElementById('f-requirement-add')?.addEventListener('change', (e) => {
+    if (!e.target.value) return;
+    requirements = [...requirements, e.target.value];
+    saveNode();
+  });
+  for (const button of document.querySelectorAll('.f-requirement-remove')) {
+    button.addEventListener('click', () => {
+      requirements = requirements.filter((id) => id !== button.dataset.id);
+      saveNode();
+    });
+  }
 
   document.getElementById('btn-puzzle-editor').addEventListener('click', () => openPuzzleEditor(pageId, node.id));
 
@@ -1057,6 +1075,66 @@ function updateCoverPreview(path, previewId = 'f-cover-preview') {
   } else {
     preview.hidden = true;
   }
+}
+
+// A location's stages, as the game counts them - see PuzzleStages: every puzzle with a Finish, in it and its parts,
+// that can be played.
+function puzzleStagesOf(node) {
+  const own = canHavePuzzle(node) && (node.puzzle?.objects ?? []).some((o) => o.kind === 'Finish') ? [node.id] : [];
+  return [...own, ...(node.children ?? []).flatMap(puzzleStagesOf)];
+}
+
+// Every location on any map that can be a requirement, by page: one with stages to complete.
+function requirementChoices() {
+  return (project?.pages ?? []).map((page) => ({
+    page,
+    nodes: page.nodes.filter((candidate) => !isModalNode(candidate) && puzzleStagesOf(candidate).length > 0),
+  })).filter((group) => group.nodes.length > 0);
+}
+
+// Locations whose puzzles all have to be solved before this one opens in the game - see Node.Requirements.
+function renderRequirementsField(pageId, node) {
+  const chosen = node.requirements ?? [];
+  const groups = requirementChoices();
+  const find = (id) => {
+    for (const { page, nodes } of groups) {
+      const found = nodes.find((candidate) => candidate.id === id);
+      if (found) return { page, node: found };
+    }
+    return null;
+  };
+  const pageName = (page) => (page.title || page.id).split(' - ')[0];
+
+  const list = chosen.map((id) => {
+    const found = find(id);
+    const label = found
+      ? `${escapeHtml(found.node.card.headingText || id)}${found.page.id === pageId ? '' : ` <span class="muted">on ${escapeHtml(pageName(found.page))}</span>`} <span class="muted">(${puzzleStagesOf(found.node).length} stages)</span>`
+      : `${escapeHtml(id)} <span class="muted">(not found)</span>`;
+    return `<li><span>${label}</span><button type="button" class="small f-requirement-remove" data-id="${escapeAttr(id)}" title="No longer required">×</button></li>`;
+  }).join('');
+
+  const options = groups.map(({ page, nodes }) => {
+    const available = nodes.filter((candidate) => candidate.id !== node.id && !chosen.includes(candidate.id));
+    if (available.length === 0) return '';
+    return `<optgroup label="${escapeAttr(pageName(page))}">${available.map((candidate) =>
+      `<option value="${escapeAttr(candidate.id)}">${escapeHtml(candidate.card.headingText || candidate.id)}</option>`).join('')}</optgroup>`;
+  }).join('');
+
+  return `
+    <fieldset>
+      <legend>Requirements</legend>
+      ${chosen.length > 0 ? `<ul id="f-requirements">${list}</ul>` : ''}
+      <div class="field">
+        <select id="f-requirement-add" ${options ? '' : 'disabled'}>
+          <option value="">Add requirement…</option>
+          ${options}
+        </select>
+      </div>
+      <div class="field-hint">${chosen.length > 0
+        ? 'Locked in the game until every puzzle in these is solved, parts included.'
+        : 'Open from the start. Choose locations whose puzzles have to be solved first.'}</div>
+    </fieldset>
+  `;
 }
 
 // Mirrors the game: only a track with album art has a Track Focus screen to play a puzzle on - see

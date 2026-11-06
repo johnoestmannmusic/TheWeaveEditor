@@ -87,6 +87,43 @@ public class ProjectValidatorTests
         Assert.Equal(["Drawing 'blank' (Wall) has nothing drawn, so anything using it is invisible."], problems);
     }
 
+    private static Node PlayableTrack(string id, params string[] requirements) => new()
+    {
+        Id = id,
+        Card = new Card { HeadingText = id, CoverImagePath = $"img/{id}.png", Audio = new AudioRef { Url = $"{id}.ogg" } },
+        Puzzle = new Puzzle { PaletteSource = $"img/{id}.png", Objects = { new PuzzleObject { Kind = PuzzleObjectKind.Finish } }, Textures = { ["wall"] = new PuzzleTexture() } },
+        Requirements = requirements.Length > 0 ? requirements.ToList() : null,
+    };
+
+    private static List<string> RequirementProblems(params Node[] nodes)
+    {
+        var project = new WeaveProject { Pages = { MakePage("ouros", nodes) } };
+        return ProjectValidator.Validate(project).Select(i => i.Message).Where(m => m.StartsWith("Location ")).ToList();
+    }
+
+    [Fact]
+    public void Requirements_ThatArentThere_OrHaveNoPuzzles_AreReported()
+    {
+        var problems = RequirementProblems(PlayableTrack("a", "missing", "plain"), new Node { Id = "plain" });
+
+        Assert.Equal(
+        [
+            "Location 'a' requires 'missing', which isn't a location on any map, so it's ignored.",
+            "Location 'a' requires 'plain', which has no puzzles to complete, so it's ignored.",
+        ], problems);
+    }
+
+    [Fact]
+    public void Requirements_ThatLoopBack_AreReported_AndOnesThatDont_Arent()
+    {
+        var problems = RequirementProblems(PlayableTrack("a", "b"), PlayableTrack("b", "c"), PlayableTrack("c", "a"), PlayableTrack("d", "a"), PlayableTrack("e", "e"));
+
+        Assert.Contains("Location 'a' requires itself, by way of its requirements, so it can never be unlocked.", problems);
+        Assert.Contains("Location 'c' requires itself, by way of its requirements, so it can never be unlocked.", problems);
+        Assert.Contains("Location 'e' requires itself, by way of its requirements, so it can never be unlocked.", problems);
+        Assert.DoesNotContain(problems, p => p.StartsWith("Location 'd'"));
+    }
+
     private static PuzzleObject Finish => new() { Kind = PuzzleObjectKind.Finish };
 
     private static PuzzleObject Block(PuzzleSymbol symbol, int col, int row) => new() { Kind = PuzzleObjectKind.PushBlock, Symbol = symbol, Col = col, Row = row };

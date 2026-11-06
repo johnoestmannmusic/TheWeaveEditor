@@ -31,4 +31,11 @@ public sealed class Node
     /// <summary>This track's Sokoban puzzle, if it has one. Left out of the project file when it doesn't.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Puzzle? Puzzle { get; set; }
+
+    /// <summary>
+    /// The ids of other top-level locations, on any page, whose stages (see PuzzleStages) all have to be solved before
+    /// this one opens. Top-level locations only. Left out of the project file when there are none.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<string>? Requirements { get; set; }
 }

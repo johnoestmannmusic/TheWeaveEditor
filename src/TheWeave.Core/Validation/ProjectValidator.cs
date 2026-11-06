@@ -55,6 +55,8 @@ public static class ProjectValidator
                 CheckEffect(page, effect, assetBasePath, issues);
         }
 
+        CheckRequirements(project, issues);
+
         foreach (var drawing in project.PuzzleDrawings ?? [])
         {
             // An open Gate drawn as nothing is fine: it's simply out of the way.
@@ -69,6 +71,56 @@ public static class ProjectValidator
         }
 
         return issues;
+    }
+
+    // A location's requirements (see Node.Requirements) each have to exist and have stages to complete, and can't lead
+    // round in a loop back to it, which would leave it locked for good.
+    private static void CheckRequirements(WeaveProject project, List<ValidationIssue> issues)
+    {
+        var topLevel = project.Pages.SelectMany(p => p.Nodes.Select(n => (Page: p, Node: n))).ToList();
+        var byId = new Dictionary<string, Node>();
+        foreach (var (_, node) in topLevel)
+            byId.TryAdd(node.Id, node);
+
+        foreach (var (page, node) in topLevel)
+        {
+            void Warn(string problem) => issues.Add(new ValidationIssue
+            {
+                Severity = ValidationSeverity.Warning,
+                Message = $"Location '{node.Id}' {problem}",
+                PageId = page.Id,
+                NodeId = node.Id,
+            });
+
+            foreach (var id in node.Requirements ?? [])
+            {
+                if (!byId.TryGetValue(id, out var required))
+                    Warn($"requires '{id}', which isn't a location on any map, so it's ignored.");
+                else if (PuzzleStages.Of(required).Count == 0)
+                    Warn($"requires '{id}', which has no puzzles to complete, so it's ignored.");
+            }
+
+            if (RequiresItself(node, byId))
+                Warn("requires itself, by way of its requirements, so it can never be unlocked.");
+        }
+    }
+
+    // Whether following a location's requirements, and theirs, ever leads back to it.
+    private static bool RequiresItself(Node node, Dictionary<string, Node> byId)
+    {
+        var seen = new HashSet<string>();
+        var queue = new Queue<string>(node.Requirements ?? []);
+        while (queue.Count > 0)
+        {
+            var id = queue.Dequeue();
+            if (id == node.Id)
+                return true;
+            if (!seen.Add(id) || !byId.TryGetValue(id, out var next))
+                continue;
+            foreach (var further in next.Requirements ?? [])
+                queue.Enqueue(further);
+        }
+        return false;
     }
 
     private static void CollectNodeIds(string pageId, IEnumerable<Node> nodes, List<(string, string)> into)

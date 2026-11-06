@@ -123,6 +123,13 @@ Neocities, replacing hand-authoring HTML per location.
   it can't be played or heard. Reaching a Finish remembers that in the visitor's browser and moves straight
   on to the next part's puzzle, or back to Track Focus if it doesn't have one. A part with no puzzle, or
   one with no Finish, never locks anything.
+- Locations that unlock by completing others. In the Editor, a location's Requirements pick other locations
+  with puzzles, on any planet. Until every puzzle in each of them is solved, parts included, the location's
+  icon is grey and see-through, on the minimap too, and its card says only Locked, which location to
+  complete (and on which planet, if it's another one), and how many of its stages are done. It can't be
+  heard, entered or travelled through. It unlocks the moment the last stage is solved. A location with
+  every stage solved turns its icon green. Renaming or deleting a location updates the requirements that
+  name it.
 - Black fog over a planet's unexplored squares, with a checkered pixel edge. It clears in a circle 3 squares
   around the ship and stays cleared, saved in the visitor's browser. The minimap is fogged too. The Weave isn't.
 - Static screens instead of a follow camera: each map splits into 10x5-square screens (4 per map, 8

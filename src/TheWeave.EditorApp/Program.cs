@@ -222,7 +222,11 @@ public static class Program
                 case "delete-page":
                     RequireProject();
                     var pageToDelete = RequirePage(message.PageId);
-                    ApplyMutation(window, () => _project!.Pages.Remove(pageToDelete));
+                    ApplyMutation(window, () =>
+                    {
+                        _project!.Pages.Remove(pageToDelete);
+                        ProjectEditing.DropMissingRequirements(_project);
+                    });
                     break;
 
                 case "add-node":
@@ -298,6 +302,7 @@ public static class Program
                     {
                         if (!ProjectEditing.RemoveNode(pageForDelete.Nodes, message.NodeId ?? ""))
                             throw new InvalidOperationException($"Node '{message.NodeId}' not found.");
+                        ProjectEditing.DropMissingRequirements(_project!);
                     });
                     break;
 
@@ -706,6 +711,7 @@ public static class Program
 
         var oldId = node.Id;
         node.Id = newId;
+        ProjectEditing.RenameRequirements(_project!, oldId, newId);
 
         if (_contentRoot is not null)
         {
