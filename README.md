@@ -114,6 +114,10 @@ Neocities, replacing hand-authoring HTML per location.
   Lantern revealed is hidden again. A sweep crosses the board from the top-left corner to the bottom-right,
   fading each object out where it was and back in where it started, over 100ms each. The board holds still until
   it's done. They're a pad with two arrows chasing each other round anticlockwise.
+- Pipes are floor tiles the ship and objects can only move into, through and out of along them: across while
+  they lie flat, up and down while they stand up. They look like a Wall's top and bottom edges with the middle
+  hollowed out. Stepping on a Pipe Switch turns every Pipe a quarter turn anticlockwise, swinging round over
+  200ms, and again each second the ship stays on it. A Reset Switch turns them back as they started.
 - Rotator Tiles work like Streams, but only move what's on them, once per second, while the ship is on a
   Rotator Switch, which turns clockwise while it's stood on, and the ship can walk over them freely. Any object but Finish can start out Invisible,
   behaving exactly the same but unseen until the ship lights a Lantern within reach of it. A lit Lantern

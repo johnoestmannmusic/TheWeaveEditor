@@ -362,7 +362,7 @@ internal static class ProjectEditing
     }
 
     private static bool IsFloorTile(PuzzleObject obj) =>
-        obj.Kind is PuzzleObjectKind.Stream or PuzzleObjectKind.RotatorTile;
+        obj.Kind is PuzzleObjectKind.Stream or PuzzleObjectKind.RotatorTile or PuzzleObjectKind.Pipe;
 
     /// <summary>
     /// Replaces the project's whole library of drawings, and its sets of them unless sets is null. Anything drawn

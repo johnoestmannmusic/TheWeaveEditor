@@ -232,6 +232,10 @@ public static class ProjectValidator
         if (hasRotatorSwitch && !hasRotatorTiles)
             Warn("it has a Rotator Switch but no Rotator tiles, so it does nothing.");
 
+        var hasPipes = puzzle.Objects.Any(o => o.Kind == PuzzleObjectKind.Pipe);
+        if (puzzle.Objects.Any(o => o.Kind == PuzzleObjectKind.PipeSwitch) && !hasPipes)
+            Warn("it has a Pipe Switch but no Pipes, so it does nothing.");
+
         if (puzzle.Objects.Any(o => o.Invisible) && puzzle.Objects.All(o => o.Kind != PuzzleObjectKind.Lantern))
             Warn("it has invisible objects but no Lantern, so they can never be seen.");
 
@@ -290,7 +294,7 @@ public static class ProjectValidator
         var rotatorTiles = puzzle.Objects.Where(o => o.Kind == PuzzleObjectKind.RotatorTile).Select(o => (o.Col, o.Row)).ToHashSet();
         foreach (var obj in puzzle.Objects)
         {
-            if (obj.Kind != PuzzleObjectKind.RotatorTile)
+            if (obj.Kind is not (PuzzleObjectKind.RotatorTile or PuzzleObjectKind.Pipe))
                 (obj.Kind == PuzzleObjectKind.Stream ? streams : objects).TryAdd((obj.Col, obj.Row), obj);
         }
 

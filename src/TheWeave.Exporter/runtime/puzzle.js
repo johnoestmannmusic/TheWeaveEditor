@@ -30,7 +30,7 @@
 
   // A tile things sit on, rather than a thing itself. A square holds one of these plus one object.
   function isFloor(object){
-    return object.kind === 'Stream' || object.kind === 'RotatorTile';
+    return object.kind === 'Stream' || object.kind === 'RotatorTile' || object.kind === 'Pipe';
   }
 
   // ---------- placing objects ----------
@@ -138,12 +138,18 @@
   function createPuzzleGame(puzzle) {
     let streams = new Map();
     let rotators = new Map();
+    // Each Pipe's floor tile by its square, its direction changing as Pipe Switches turn it.
+    let pipes = new Map();
     let floors = [];
     let start = { col: DEFAULT_START.col, row: DEFAULT_START.row };
 
     for (const object of puzzle.objects) {
       if (object.kind === 'Start') {
         start = { col: object.col, row: object.row };
+      } else if (object.kind === 'Pipe') {
+        let pipe = { ...object, revealed: false, startDirection: object.direction };
+        pipes.set(cellKey(object), pipe);
+        floors.push(pipe);
       } else if (isFloor(object)) {
         (object.kind === 'Stream' ? streams : rotators).set(cellKey(object), object.direction);
         floors.push({ ...object, revealed: false });
@@ -180,6 +186,23 @@
       return object.kind === 'Wall' || object.kind === 'PushBlock' || (object.kind === 'Gate' && !object.open);
     }
 
+    // Whether moving along a direction is along a square's Pipe, if it has one: across a Pipe lying Left or Right, or up
+    // and down one standing Up or Down. Anywhere without a Pipe allows any direction.
+    function pipeAllows(cell, direction){
+      let pipe = pipes.get(cellKey(cell));
+      if (!pipe) return true;
+      let across = (d) => d === 'Left' || d === 'Right';
+      return across(pipe.direction) === across(direction);
+    }
+
+    // Every Pipe a quarter turn anticlockwise, which also turns it from lying across to standing up, or back.
+    const ANTICLOCKWISE = { Right: 'Up', Up: 'Left', Left: 'Down', Down: 'Right' };
+    function turnPipes(){
+      if (pipes.size === 0) return null;
+      for (const pipe of pipes.values()) pipe.direction = ANTICLOCKWISE[pipe.direction] ?? 'Up';
+      return { pipesTurned: true };
+    }
+
     function onBoard(cell){
       return cell.col >= 0 && cell.col < BOARD_SIZE && cell.row >= 0 && cell.row < BOARD_SIZE;
     }
@@ -189,6 +212,7 @@
     function pushedTo(block, direction){
       let to = nextCell(block, direction);
       if (!onBoard(to) || objectAt(to) || streams.get(cellKey(to)) === OPPOSITES[direction]) return null;
+      if (!pipeAllows(block, direction) || !pipeAllows(to, direction)) return null;
       return to;
     }
 
@@ -215,7 +239,7 @@
       for (const distance of [2, 1]) {
         let to = { col: tile.col + delta.x * distance, row: tile.row + delta.y * distance };
         let there = objectAt(to);
-        if (onBoard(to) && !(there && isSolid(there))) return to;
+        if (onBoard(to) && !(there && isSolid(there)) && pipeAllows(to, tile.direction)) return to;
       }
       return null;
     }
@@ -237,7 +261,8 @@
     }
 
     // What standing on a square does to the board, and where that leaves the ship: null, or
-    // { teleportTo }, { jumpTo }, { finished } or { reset } (with the objects as they were) for the caller to act on. jumped says the ship landed here from a
+    // { teleportTo }, { jumpTo }, { finished }, { reset } (with the objects as they were) or { pipesTurned } for the
+    // caller to act on. jumped says the ship landed here from a
     // Jump Tile, rather than walking or being carried.
     function arriveAt(cell, { jumped = false } = {}){
       shipCell = cell;
@@ -281,8 +306,12 @@
           let before = objects;
           objects = startingObjects();
           for (const floor of floors) floor.revealed = false;
+          for (const pipe of pipes.values()) pipe.direction = pipe.startDirection;
           return { reset: before };
         }
+
+        case 'PipeSwitch':
+          return turnPipes();
 
         case 'JumpTile': {
           let landing = jumpFrom(object);
@@ -361,6 +390,9 @@
       get switchesActive(){ return switchesActive(); },
       // Whether the ship is on a Rotator Loop Switch, which is what makes Rotator tiles move.
       get onRotatorSwitch(){ return objectAt(shipCell)?.kind === 'RotatorSwitch'; },
+      // Whether the ship is on a Pipe Switch, which turns the Pipes again each second it stays there.
+      get onPipeSwitch(){ return objectAt(shipCell)?.kind === 'PipeSwitch'; },
+      turnPipes,
       floors,
 
       // For sokoban.js's canEnter. A Stream holds a ship until it pushes it off: the only way to leave
@@ -370,6 +402,7 @@
         let holding = streams.get(cellKey(from));
         if (holding && holding !== direction) return false;
         if (streams.get(cellKey(to)) === OPPOSITES[direction]) return false;
+        if (!pipeAllows(from, direction) || !pipeAllows(to, direction)) return false;
         let object = objectAt(to);
         if (object?.kind === 'PushBlock') return !!pushedTo(object, direction);
         return !(object && isSolid(object));
@@ -550,6 +583,7 @@
     let block = choose((group) => -vividnessOf(group) * 0.5 - Math.abs(lightnessOf(group) - 95) + Math.min(...chosen.map(other => colorDistance(group, other))) * 0.25 + Math.min(colorDistance(group, light), 150) * 0.3);
     let jump = choose(different);
     let reset = choose(different);
+    let pipe = choose(different);
 
     return {
       wall: toHex(wall),
@@ -565,6 +599,7 @@
       block: toHex(block),
       jump: toHex(jump),
       reset: toHex(reset),
+      pipe: toHex(pipe),
       outline: toHex(outline),
       light: toHex(light),
     };
@@ -577,7 +612,7 @@
   const ART_PX = TILE_PX * BOARD_SIZE;
 
   // Every role that has a texture of its own. A Switch shares its Gate's, as it does its colour.
-  const TEXTURE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'block', 'jump', 'reset'];
+  const TEXTURE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'block', 'jump', 'reset', 'pipe'];
   // The 4 shades of a role's colour, darkest first: how far each is aimed from the main colour in lightness,
   // and how much of an object it covers unless a drawing's mix says otherwise. A shade the art has nothing
   // like is filled in by its neighbour towards the main colour.
@@ -872,7 +907,7 @@
   };
 
   const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
-  const SPRITE_ROLES = { Wall: 'wall', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset' };
+  const SPRITE_ROLES = { Wall: 'wall', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe' };
 
   function maskOf(test){
     let mask = [];
@@ -919,10 +954,10 @@
   const ANIMATED_KINDS = ['Stream', 'RotatorTile'];
 
   // Objects with a direction, drawn pointing right and turned the way they point, as animated tiles are.
-  const TURNED_KINDS = ['JumpTile'];
+  const TURNED_KINDS = ['JumpTile', 'Pipe'];
 
   // Every kind of object drawn from a drawing.
-  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'PushBlock', ...TURNED_KINDS, 'ResetSwitch', ...ANIMATED_KINDS];
+  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'PushBlock', ...TURNED_KINDS, 'ResetSwitch', 'PipeSwitch', ...ANIMATED_KINDS];
 
   const standardDrawings = new Map();
 
@@ -945,6 +980,8 @@
       else if (kind === 'PushBlock') drawing = { id: kind, kind, name: 'Standard', pixels: standardPushBlockPixels(), mix: standardMix('block') };
       else if (kind === 'JumpTile') drawing = { id: kind, kind, name: 'Standard', pixels: standardJumpTilePixels(), mix: standardMix('jump') };
       else if (kind === 'ResetSwitch') drawing = { id: kind, kind, name: 'Standard', pixels: standardResetSwitchPixels(), mix: standardMix('reset') };
+      else if (kind === 'Pipe') drawing = { id: kind, kind, name: 'Standard', pixels: standardPipePixels(), mix: standardMix('wall') };
+      else if (kind === 'PipeSwitch') drawing = { id: kind, kind, name: 'Standard', pixels: standardPipeSwitchPixels(), mix: standardMix('pipe') };
       else {
         let body = SHAPES[SPRITE_SHAPES[kind]];
         drawing = { id: kind, kind, name: 'Standard', pixels: pixelsOf(body), mix: standardMix(SPRITE_ROLES[kind]) };
@@ -1071,6 +1108,32 @@
       if (!onPad(u - 1, v) || !onPad(u + 1, v) || !onPad(u, v - 1) || !onPad(u, v + 1)) return PAINTS.outline;
       if (onArrow(u, v)) return '4';
       if (onArrow(u, v - 1)) return '1';
+      return '2';
+    });
+  }
+
+  // A Pipe's Standard drawing, lying across: a Wall's top and bottom edges with the middle hollowed out, running
+  // right across the square so that a line of them joins up. Turned to stand up.
+  function standardPipePixels(){
+    return layerOf((u, v) => {
+      if (v === 2 || v === 6 || v === 17 || v === 21) return PAINTS.outline;
+      if (v === 3) return '4';
+      if (v === 20) return '1';
+      if ((v > 3 && v < 6) || (v > 17 && v < 20)) return PAINTS.grain;
+      return PAINTS.clear;
+    });
+  }
+
+  // A Pipe Switch's Standard drawing: a Reset Switch's pad, with two lines across it in place of its arrows, each
+  // with a darker edge below.
+  function standardPipeSwitchPixels(){
+    let onPad = (u, v) => u >= 0 && v >= 0 && u < TILE_PX && v < TILE_PX && SHAPES.roundedSquare(u + 0.5 - TILE_PX / 2, v + 0.5 - TILE_PX / 2);
+    let onLine = (u, v) => u >= 6 && u <= 17 && (v === 8 || v === 9 || v === 14 || v === 15);
+    return layerOf((u, v) => {
+      if (!onPad(u, v)) return PAINTS.clear;
+      if (!onPad(u - 1, v) || !onPad(u + 1, v) || !onPad(u, v - 1) || !onPad(u, v + 1)) return PAINTS.outline;
+      if (onLine(u, v)) return '4';
+      if (onLine(u, v - 1)) return '1';
       return '2';
     });
   }
@@ -1565,6 +1628,6 @@
   }
 
   return { BOARD_SIZE, DEFAULT_START, LETTERS, TILE_PX, ART_PX, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, pickPalette, pickTextures, renderBoard, hasFinish, createPuzzleGame,
-    RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, spinAt,
+    RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, spinAt, SPIN_STEPS,
     PAINTS, DRAWN_KINDS, ANIMATED_KINDS, TURNED_KINDS, SYMBOLS, SPRITE_ROLES, TEXTURE_SHADES, standardDrawing, standardMix, mixTexture, renderDrawingLayer, RAISED_PX };
 });
