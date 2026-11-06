@@ -48,6 +48,15 @@ public enum PuzzleObjectKind
 
     /// <summary>Stepping on this puts every object but Walls back as the puzzle started, leaving the ship where it is.</summary>
     ResetSwitch,
+
+    /// <summary>
+    /// A floor tile the ship and objects can only move into, through and out of along it: across while it lies Left or
+    /// Right, and up and down while it stands Up or Down.
+    /// </summary>
+    Pipe,
+
+    /// <summary>Stepping on this turns every Pipe a quarter turn anticlockwise, and again each second the ship stays on it.</summary>
+    PipeSwitch,
 }
 
 /// <summary>A Push Block's symbol, drawn on it as a hollow outline - see runtime/puzzle.js's SYMBOLS.</summary>
@@ -70,7 +79,7 @@ public enum PuzzleDirection
     Right,
 }
 
-/// <summary>One thing on a puzzle's board. A square holds one object, plus optionally a floor tile (a Stream or RotatorTile) under it.</summary>
+/// <summary>One thing on a puzzle's board. A square holds one object, plus optionally a floor tile (a Stream, RotatorTile or Pipe) under it.</summary>
 public sealed class PuzzleObject
 {
     public PuzzleObjectKind Kind { get; set; }
@@ -80,7 +89,7 @@ public sealed class PuzzleObject
     /// <summary>Gate, Switch and Teleporter only. Gates and Switches pair up by letter, and Teleporters do separately.</summary>
     public string? Letter { get; set; }
 
-    /// <summary>Stream, RotatorTile and JumpTile only.</summary>
+    /// <summary>Stream, RotatorTile, JumpTile and Pipe only.</summary>
     public PuzzleDirection? Direction { get; set; }
 
     /// <summary>PushBlock only.</summary>
@@ -196,7 +205,7 @@ public static class PuzzleDrawings
     /// </summary>
     public const string Paints = ".OHG1234";
 
-    public static readonly IReadOnlyList<string> Roles = ["wall", "finish", "gate", "teleporter", "stream", "key", "rotator", "lantern", "block", "jump", "reset", "outline", "light"];
+    public static readonly IReadOnlyList<string> Roles = ["wall", "finish", "gate", "teleporter", "stream", "key", "rotator", "lantern", "block", "jump", "reset", "pipe", "outline", "light"];
 
     /// <summary>Every kind drawn from a drawing.</summary>
     public static readonly IReadOnlySet<PuzzleObjectKind> DrawnKinds = new HashSet<PuzzleObjectKind>
@@ -204,7 +213,7 @@ public static class PuzzleDrawings
         PuzzleObjectKind.Wall, PuzzleObjectKind.Finish, PuzzleObjectKind.Gate, PuzzleObjectKind.Switch,
         PuzzleObjectKind.Teleporter, PuzzleObjectKind.Key, PuzzleObjectKind.RotatorSwitch, PuzzleObjectKind.Lantern,
         PuzzleObjectKind.Stream, PuzzleObjectKind.RotatorTile, PuzzleObjectKind.PushBlock, PuzzleObjectKind.JumpTile,
-        PuzzleObjectKind.ResetSwitch,
+        PuzzleObjectKind.ResetSwitch, PuzzleObjectKind.Pipe, PuzzleObjectKind.PipeSwitch,
     };
 
     /// <summary>The kinds animated as they flow: a Still layer, and a Flow layer that moves along it.</summary>
@@ -343,5 +352,5 @@ public static class PuzzleConnection
     /// <summary>Whatever on the board is in the way of the ship coming in at a square - anything but a floor tile or Start.</summary>
     public static PuzzleObject? BlockingEntrance(Puzzle puzzle, (int Col, int Row) entrance) =>
         puzzle.Objects.FirstOrDefault(o => o.Col == entrance.Col && o.Row == entrance.Row
-            && o.Kind is not (PuzzleObjectKind.Start or PuzzleObjectKind.Stream or PuzzleObjectKind.RotatorTile));
+            && o.Kind is not (PuzzleObjectKind.Start or PuzzleObjectKind.Stream or PuzzleObjectKind.RotatorTile or PuzzleObjectKind.Pipe));
 }

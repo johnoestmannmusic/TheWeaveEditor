@@ -61,6 +61,10 @@ let boardJump = null;
 // A Reset Switch's sweep across the board: the objects as they were before it, how far through, and how long it
 // takes, or null - see onBoardEvent and puzzle.js's resetSweepAt.
 let boardReset = null;
+// How long the ship has been stopped on a Pipe Switch since the Pipes last turned, and how long ago they did, for
+// swinging them round, or null - see updateBoardPipes.
+let boardPipeActiveMs = 0;
+let boardPipeTurnMs = null;
 // While one part's board scrolls across to the next's: the two slide layers, the edge it's crossing, and how
 // far through - see startBoardScroll.
 let boardScroll = null;
@@ -2148,6 +2152,8 @@ function buildBoardGame(facing, visit){
   boardSinking = [];
   boardJump = null;
   boardReset = null;
+  boardPipeActiveMs = 0;
+  boardPipeTurnMs = null;
   boardRotatorActiveMs = 0;
   boardRotatorGlideMs = BOARD_ROTATOR_TICK_MS;
   boardRotatorClockMs = 0;
@@ -2213,6 +2219,10 @@ function onBoardEvent(event){
   let glideMs = Math.max(0, ...(event.sank ?? []).map(glideOf));
   for (const object of event.sank ?? []) boardSinking.push({ object, ms: 0, glideMs });
   if (event.jumpTo) startBoardJump(event.jumpTo);
+  if (event.pipesTurned) {
+    boardPipeTurnMs = 0;
+    boardPipeActiveMs = 0;
+  }
   // Everything put back by a Reset Switch: whatever was sinking is back too, so it stops.
   if (event.reset) {
     boardSinking = [];
@@ -2490,11 +2500,29 @@ function updateBoardGame(dtMs){
     }
 
     updateBoardRotators(dtMs);
+    updateBoardPipes(dtMs);
   }
 
   renderBoardShip();
   updateBoardContrails(dtMs);
   drawBoardObjects();
+}
+
+// Pipes turn as the ship arrives on a Pipe Switch (see puzzle.js's arriveAt), then again each second it stays there.
+const BOARD_PIPE_TICK_MS = 1000;
+// How long Pipes take to swing round a quarter turn.
+const BOARD_PIPE_TURN_MS = 200;
+
+function updateBoardPipes(dtMs){
+  if (boardPipeTurnMs !== null) boardPipeTurnMs += dtMs;
+
+  if (boardMover.isMoving || !boardGame.onPipeSwitch) {
+    boardPipeActiveMs = 0;
+    return;
+  }
+
+  boardPipeActiveMs += dtMs;
+  if (boardPipeActiveMs >= BOARD_PIPE_TICK_MS && boardSolvedMs === null) onBoardEvent(boardGame.turnPipes());
 }
 
 // Rotator tiles only move while the ship is stopped on their Switch, once it's been there a whole tick. A
@@ -2546,7 +2574,14 @@ function drawBoardObjects(){
     let spin = WeavePuzzle.spinAt(boardRotatorClockMs);
     objects = objects.map(object => object.kind === 'RotatorSwitch' && object.col === cell.col && object.row === cell.row ? { ...object, spin } : object);
   }
-  WeavePuzzle.renderBoard(boardObjectsImage, [...boardGame.floors, ...objects, ...sinking], puzzle, {
+  // Pipes that have just turned swing round anticlockwise into place: drawn as they are now, turned back clockwise
+  // by however much of the quarter turn is still to go.
+  let floors = boardGame.floors;
+  if (boardPipeTurnMs !== null && boardPipeTurnMs < BOARD_PIPE_TURN_MS) {
+    let spin = Math.round((1 - boardPipeTurnMs / BOARD_PIPE_TURN_MS) * WeavePuzzle.SPIN_STEPS / 4);
+    floors = floors.map(floor => floor.kind === 'Pipe' && spin > 0 ? { ...floor, spin } : floor);
+  }
+  WeavePuzzle.renderBoard(boardObjectsImage, [...floors, ...objects, ...sinking], puzzle, {
     timeMs: performance.now(),
     rotatorTimeMs: boardRotatorClockMs,
     switchesActive: boardGame.switchesActive,
