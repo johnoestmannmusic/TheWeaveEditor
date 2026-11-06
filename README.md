@@ -121,7 +121,9 @@ Neocities, replacing hand-authoring HTML per location.
 - Rotator Tiles work like Streams, but only move what's on them, once per second, while the ship is on a
   Rotator Switch, which turns clockwise while it's stood on, and the ship can walk over them freely. Any object but Finish can start out Invisible,
   behaving exactly the same but unseen until the ship lights a Lantern within reach of it. A lit Lantern
-  stays lit, and reveals a circle reaching 3 squares in every direction.
+  stays lit and glows, and sends a pulse out across a circle reaching 3 squares in every direction, revealing
+  whatever's invisible as it reaches it.
+- The ship starts each puzzle facing into the board, away from whichever edge it starts on.
 - A location's puzzle boards connect edge to edge, like the map's screens: a part that leads on to another
   puzzle has one Finish, on an edge, and the next part's ship comes in directly across from it, its Start set
   to match automatically. Finishing scrolls the album art and board across to the next. Pushing off the edge
