@@ -261,8 +261,8 @@
     }
 
     // What standing on a square does to the board, and where that leaves the ship: null, or
-    // { teleportTo }, { jumpTo }, { finished }, { reset } (with the objects as they were) or { pipesTurned } for the
-    // caller to act on. jumped says the ship landed here from a
+    // { teleportTo }, { jumpTo }, { finished }, { reset } (with the objects as they were), { pipesTurned } or { lit,
+    // revealed } for the caller to act on. jumped says the ship landed here from a
     // Jump Tile, rather than walking or being carried.
     function arriveAt(cell, { jumped = false } = {}){
       shipCell = cell;
@@ -295,10 +295,15 @@
           solved = true;
           return { finished: true };
 
-        case 'Lantern':
+        // Lighting one says where, and what it brought into view, for its pulse to reveal as it spreads - see
+        // renderBoard's pulses. One already lit does nothing more.
+        case 'Lantern': {
+          if (object.lit) return null;
+          let hidden = [...floors, ...objects].filter(thing => !thing.revealed);
           object.lit = true;
           revealLitAreas();
-          return null;
+          return { lit: { col: object.col, row: object.row }, revealed: hidden.filter(thing => thing.revealed) };
+        }
 
         // Everything back as it started, but the ship: moved objects return, sunk blocks and collected Keys come
         // back, Gates close or open again, Lanterns go out, and what they revealed is hidden again.
@@ -1176,7 +1181,7 @@
     let light = hexToColor(look.palette.light);
 
     let isOpenGate = object.kind === 'Gate' && object.open;
-    let isDim = (object.kind === 'Switch' && !switchesActive) || (object.kind === 'Lantern' && !object.lit);
+    let isDim = object.kind === 'Switch' && !switchesActive;
 
     let drawing = drawingFor(look, object);
     let paints = isOpenGate ? drawing.openPixels ?? standardDrawing('Gate').openPixels : drawing.pixels;
@@ -1213,11 +1218,30 @@
       drawSymbol(sprite, object.symbol, tooLight ? outline : light, tooLight || lightest === fill ? null : lightest);
     }
 
+    // A lit Lantern glows: a halo of the light colour just outside it, and a fainter, dithered one beyond that.
+    if (object.kind === 'Lantern' && object.lit) sprite = glowing(sprite, light);
+
     // Turned before its depth is added, so that its raised edge stays at the bottom whichever way round it is.
     if (object.spin) sprite = spunBy(sprite, object.spin);
 
     let solid = object.kind === 'Wall' || object.kind === 'PushBlock' || (object.kind === 'Gate' && !isOpenGate);
     return addDepth(sprite, look, solid, mix, outline, light);
+  }
+
+  function glowing(sprite, light){
+    let drawn = (x, y) => x >= 0 && y >= 0 && x < TILE_PX && y < TILE_PX && !!sprite[y * TILE_PX + x];
+    let near = (x, y, reach) => {
+      for (let dy = -reach; dy <= reach; dy++) for (let dx = -reach; dx <= reach; dx++) if (Math.abs(dx) + Math.abs(dy) <= reach && drawn(x + dx, y + dy)) return true;
+      return false;
+    };
+    let glow = [...sprite];
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        if (drawn(x, y)) continue;
+        if (near(x, y, 1) || (near(x, y, 2) && (x + y) % 2 === 0)) glow[y * TILE_PX + x] = light;
+      }
+    }
+    return glow;
   }
 
   // A Rotator Switch turns clockwise while the ship stands on it, in SPIN_STEPS steps a turn, each one's sprite kept
@@ -1546,6 +1570,7 @@
   // - An object's own sink, from 0 to 1, is how far it's sunk into its square, after matching - see sinkMatches.
   // - An object's own spin is how far round clockwise it's turned, as a Rotator Switch does while stood on - see spinAt.
   // - An object's own fade, from 0 to 1, is how much of it shows, as a Reset Switch's sweep passes - see resetSweepAt.
+  // - pulses ([{ col, row, radius }]) draws each lit Lantern's pulse: a ring radius pixels out from its square's middle.
   // - pushHint ({ col, row, direction, bob }) shows that the Push Block on that square can be pushed: an arrow just
   //   past it, pointing the way it would go, bob pixels further out as it bobs.
   // - originY moves the whole board down by that many pixels, to leave room for objects rising above row 0.
@@ -1583,6 +1608,32 @@
     }
 
     if (options.pushHint) drawPushHint(image, options.pushHint, look, options.originY ?? 0);
+    for (const pulse of options.pulses ?? []) drawPulse(image, pulse, look, options.originY ?? 0);
+  }
+
+  // How far a lit Lantern's pulse spreads, in pixels: as far as it reaches.
+  const PULSE_REACH_PX = LANTERN_REACH * TILE_PX;
+
+  // A Lantern's pulse: a ring of the light colour around its square's middle, radius pixels out, fading as it spreads.
+  function drawPulse(image, pulse, look, originY){
+    let light = hexToColor(look.palette.light);
+    let { data, width, height } = image;
+    let middleX = (pulse.col + 0.5) * TILE_PX, middleY = (pulse.row + 0.5) * TILE_PX + originY;
+    let opacity = 0.85 * (1 - pulse.radius / PULSE_REACH_PX);
+    if (opacity <= 0) return;
+    let reach = Math.ceil(pulse.radius + 2);
+    for (let py = Math.max(0, Math.floor(middleY - reach)); py < Math.min(height, middleY + reach); py++) {
+      for (let px = Math.max(0, Math.floor(middleX - reach)); px < Math.min(width, middleX + reach); px++) {
+        if (Math.abs(Math.hypot(px + 0.5 - middleX, py + 0.5 - middleY) - pulse.radius) > 1) continue;
+        let i = (py * width + px) * 4;
+        let under = data[i + 3] / 255 * (1 - opacity);
+        let total = opacity + under;
+        data[i] = (light.r * opacity + data[i] * under) / total;
+        data[i + 1] = (light.g * opacity + data[i + 1] * under) / total;
+        data[i + 2] = (light.b * opacity + data[i + 2] * under) / total;
+        data[i + 3] = total * 255;
+      }
+    }
   }
 
   // An arrow pointing right, before it's turned the way a push would go.
@@ -1628,6 +1679,6 @@
   }
 
   return { BOARD_SIZE, DEFAULT_START, LETTERS, TILE_PX, ART_PX, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, pickPalette, pickTextures, renderBoard, hasFinish, createPuzzleGame,
-    RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, spinAt, SPIN_STEPS,
+    RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, spinAt, SPIN_STEPS, PULSE_REACH_PX,
     PAINTS, DRAWN_KINDS, ANIMATED_KINDS, TURNED_KINDS, SYMBOLS, SPRITE_ROLES, TEXTURE_SHADES, standardDrawing, standardMix, mixTexture, renderDrawingLayer, RAISED_PX };
 });

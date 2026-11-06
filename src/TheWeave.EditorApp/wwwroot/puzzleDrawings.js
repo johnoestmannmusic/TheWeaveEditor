@@ -114,7 +114,6 @@ function renderDrawingOnto(context, drawing, options = {}) {
         kind: drawing.kind,
         col,
         row,
-        lit: true,
         ...(isAnimatedKind(drawing.kind) || WeavePuzzle.TURNED_KINDS.includes(drawing.kind) ? { direction: 'Right' } : {}),
         ...(options.letter && drawing.kind === 'PushBlock' ? { symbol: 'Star' } : {}),
         ...(isStandardDrawing(drawing) ? {} : { variant: drawing.id }),

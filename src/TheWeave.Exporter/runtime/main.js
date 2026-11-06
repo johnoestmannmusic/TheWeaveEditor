@@ -65,6 +65,9 @@ let boardReset = null;
 // swinging them round, or null - see updateBoardPipes.
 let boardPipeActiveMs = 0;
 let boardPipeTurnMs = null;
+// Lit Lanterns' pulses spreading out: { col, row, ms, revealed }, revealed being what each brings into view as it
+// reaches it - see drawBoardObjects.
+let boardPulses = [];
 // While one part's board scrolls across to the next's: the two slide layers, the edge it's crossing, and how
 // far through - see startBoardScroll.
 let boardScroll = null;
@@ -2154,6 +2157,7 @@ function buildBoardGame(facing, visit){
   boardReset = null;
   boardPipeActiveMs = 0;
   boardPipeTurnMs = null;
+  boardPulses = [];
   boardRotatorActiveMs = 0;
   boardRotatorGlideMs = BOARD_ROTATOR_TICK_MS;
   boardRotatorClockMs = 0;
@@ -2170,7 +2174,7 @@ function buildBoardGame(facing, visit){
     {
       cell: visit?.cell ?? (boardGame ? boardGame.start : WeavePuzzle.DEFAULT_START),
       stepMs: BOARD_STEP_MS,
-      facing: facing ?? 'up',
+      facing: facing ?? facingInwards(visit?.cell ?? (boardGame ? boardGame.start : WeavePuzzle.DEFAULT_START)),
       canEnter: boardGame ? boardGame.canEnter : undefined,
       onArrive: boardGame ? (cell) => {
         boardGame.settlePushes();
@@ -2183,6 +2187,13 @@ function buildBoardGame(facing, visit){
     }
   );
   boardContrails = createContrails(BOARD_SHIP_WIDTH / 12, BOARD_TILE_PX, boardMover.position);
+}
+
+// The ship starts out facing into the board, away from whichever edge it starts on: up from the bottom edge, and so
+// on. Up anywhere else, or in a corner.
+function facingInwards(cell){
+  let edge = WeavePuzzle.exitDirectionOf(cell);
+  return { Up: 'down', Down: 'up', Left: 'right', Right: 'left' }[edge] ?? 'up';
 }
 
 function restartBoardGame(){
@@ -2219,6 +2230,7 @@ function onBoardEvent(event){
   let glideMs = Math.max(0, ...(event.sank ?? []).map(glideOf));
   for (const object of event.sank ?? []) boardSinking.push({ object, ms: 0, glideMs });
   if (event.jumpTo) startBoardJump(event.jumpTo);
+  if (event.lit) boardPulses.push({ ...event.lit, ms: 0, revealed: event.revealed ?? [] });
   if (event.pipesTurned) {
     boardPipeTurnMs = 0;
     boardPipeActiveMs = 0;
@@ -2442,6 +2454,8 @@ function updateBoardGame(dtMs){
   if (!boardMover) return;
 
   updateBoardSinking(dtMs);
+  for (const pulse of boardPulses) pulse.ms += dtMs;
+  boardPulses = boardPulses.filter(pulse => pulse.ms < BOARD_PULSE_MS);
 
   // Nothing else moves while the ship's in the air.
   if (boardJump && !focusTransition && !boardScroll) {
@@ -2507,6 +2521,9 @@ function updateBoardGame(dtMs){
   updateBoardContrails(dtMs);
   drawBoardObjects();
 }
+
+// How long a lit Lantern's pulse takes to spread as far as it reaches.
+const BOARD_PULSE_MS = 700;
 
 // Pipes turn as the ship arrives on a Pipe Switch (see puzzle.js's arriveAt), then again each second it stays there.
 const BOARD_PIPE_TICK_MS = 1000;
@@ -2581,6 +2598,17 @@ function drawBoardObjects(){
     let spin = Math.round((1 - boardPipeTurnMs / BOARD_PIPE_TURN_MS) * WeavePuzzle.SPIN_STEPS / 4);
     floors = floors.map(floor => floor.kind === 'Pipe' && spin > 0 ? { ...floor, spin } : floor);
   }
+  // Whatever a Lantern's pulse hasn't reached yet stays hidden until it does.
+  let pulses = boardPulses.map(pulse => ({ col: pulse.col, row: pulse.row, radius: pulse.ms / BOARD_PULSE_MS * WeavePuzzle.PULSE_REACH_PX }));
+  let unreached = new Set();
+  boardPulses.forEach((pulse, i) => {
+    for (const thing of pulse.revealed) {
+      if (Math.hypot(thing.col - pulse.col, thing.row - pulse.row) * WeavePuzzle.TILE_PX > pulses[i].radius) unreached.add(thing);
+    }
+  });
+  let hideUnreached = (list) => unreached.size === 0 ? list : list.map(thing => unreached.has(thing) ? { ...thing, revealed: false } : thing);
+  floors = hideUnreached(floors);
+  objects = hideUnreached(objects);
   WeavePuzzle.renderBoard(boardObjectsImage, [...floors, ...objects, ...sinking], puzzle, {
     timeMs: performance.now(),
     rotatorTimeMs: boardRotatorClockMs,
@@ -2589,6 +2617,7 @@ function drawBoardObjects(){
     rotatorAlong,
     pushAlong,
     pushHint: boardPushHint(),
+    pulses,
   });
   boardObjectsCanvas.getContext('2d').putImageData(boardObjectsImage, 0, 0);
 }
