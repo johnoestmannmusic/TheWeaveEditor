@@ -167,8 +167,10 @@ internal static class ProjectEditing
 
     public static void ApplyNodeEdit(WeaveProject project, Page page, Node node, NodeEditRequest edit)
     {
-        // Resolved before anything else changes, so a rejected square leaves the whole node untouched.
+        // Checked before anything else changes, so a rejected square or requirement leaves the whole node untouched.
+        var requirements = edit.Requirements is null ? node.Requirements : CheckRequirements(project, page, node, edit.Requirements);
         (node.X, node.Y) = ResolveNodePosition(project, page, node, edit.X, edit.Y);
+        node.Requirements = requirements is { Count: > 0 } ? requirements : null;
         node.Persistent = edit.Persistent;
         node.IconStyle = Enum.TryParse<IconStyle>(edit.IconStyle, out var iconStyle) ? iconStyle : IconStyle.Default;
 
@@ -190,6 +192,52 @@ internal static class ProjectEditing
             TravelSpawnY = edit.TravelSpawnY,
             TravelSkipTutorial = edit.TravelSkipTutorial,
         };
+    }
+
+    // A location's requirements, each a different top-level location, on any page, with stages to complete - see
+    // PuzzleStages. Only a top-level location can have any, since a location's parts are locked in turn already.
+    private static List<string> CheckRequirements(WeaveProject project, Page page, Node node, List<string> ids)
+    {
+        var distinct = ids.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct().ToList();
+        if (distinct.Count == 0)
+            return distinct;
+        if (!page.Nodes.Contains(node))
+            throw new InvalidOperationException("Only a location on the map can have requirements, not one of its parts.");
+
+        foreach (var id in distinct)
+        {
+            if (id == node.Id)
+                throw new InvalidOperationException("A location can't require itself.");
+            var required = project.Pages.SelectMany(p => p.Nodes).FirstOrDefault(n => n.Id == id)
+                ?? throw new InvalidOperationException($"There's no location '{id}' on any map to require.");
+            if (PuzzleStages.Of(required).Count == 0)
+                throw new InvalidOperationException($"'{required.Card.HeadingText}' has no puzzles to complete, so it can't be a requirement.");
+        }
+        return distinct;
+    }
+
+    /// <summary>Points every requirement on a location that's been renamed at its new id.</summary>
+    public static void RenameRequirements(WeaveProject project, string oldId, string newId)
+    {
+        foreach (var node in project.Pages.SelectMany(p => p.Nodes))
+        {
+            if (node.Requirements is null)
+                continue;
+            node.Requirements = node.Requirements.Select(id => id == oldId ? newId : id).Distinct().ToList();
+        }
+    }
+
+    /// <summary>Takes locations that are gone out of every requirement, leaving the rest.</summary>
+    public static void DropMissingRequirements(WeaveProject project)
+    {
+        var ids = project.Pages.SelectMany(p => p.Nodes).Select(n => n.Id).ToHashSet();
+        foreach (var node in project.Pages.SelectMany(p => p.Nodes))
+        {
+            if (node.Requirements is null)
+                continue;
+            var kept = node.Requirements.Where(ids.Contains).ToList();
+            node.Requirements = kept.Count > 0 ? kept : null;
+        }
     }
 
     /// <summary>

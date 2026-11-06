@@ -833,6 +833,93 @@ public class ProjectEditingTests
         Assert.Null(node.Card.Audio);
     }
 
+    // A track that can be played, with a puzzle that can be solved: a stage - see PuzzleStages.
+    private static Node Track(string id, params Node[] children) => new()
+    {
+        Id = id,
+        Card = new Card { HeadingText = id, CoverImagePath = $"img/{id}.png", Audio = new AudioRef { Url = $"{id}.ogg" } },
+        Puzzle = MakePuzzle(new PuzzleObject { Kind = PuzzleObjectKind.Finish }),
+        Children = children.ToList(),
+    };
+
+    // A page of its own for the location being edited, so that nothing else is on its square.
+    private static (WeaveProject Project, Page Page, Node Node) MakeRequirementsProject()
+    {
+        var node = new Node { Id = "locked" };
+        var page = new Page { Id = "pentura", Nodes = { node } };
+        var project = new WeaveProject
+        {
+            Pages =
+            {
+                page,
+                new Page { Id = "ouros", Nodes = { Track("gallery", Track("floor-i")), new Node { Id = "plain" } } },
+            },
+        };
+        return (project, page, node);
+    }
+
+    [Fact]
+    public void PuzzleStages_AreEveryPlayablePuzzleWithAFinish_ItsOwnAndItsParts()
+    {
+        var noFinish = Track("no-finish");
+        noFinish.Puzzle!.Objects.Clear();
+        var noArt = Track("no-art");
+        noArt.Card.CoverImagePath = null;
+        var root = Track("root", Track("part-1", Track("part-2")), noFinish, noArt);
+
+        Assert.Equal(["root", "part-1", "part-2"], PuzzleStages.Of(root));
+        Assert.Empty(PuzzleStages.Of(new Node { Id = "plain" }));
+    }
+
+    [Fact]
+    public void ApplyNodeEdit_SavesRequirements_OnAnyPage_WithoutRepeats()
+    {
+        var (project, page, node) = MakeRequirementsProject();
+
+        ProjectEditing.ApplyNodeEdit(project, page, node, new NodeEditRequest { X = node.X, Y = node.Y, Requirements = ["gallery", "gallery", " "] });
+        Assert.Equal(["gallery"], node.Requirements);
+
+        ProjectEditing.ApplyNodeEdit(project, page, node, new NodeEditRequest { X = node.X, Y = node.Y, Requirements = null });
+        Assert.Equal(["gallery"], node.Requirements);
+
+        ProjectEditing.ApplyNodeEdit(project, page, node, new NodeEditRequest { X = node.X, Y = node.Y, Requirements = [] });
+        Assert.Null(node.Requirements);
+    }
+
+    [Theory]
+    [InlineData("locked")]
+    [InlineData("missing")]
+    [InlineData("plain")]
+    [InlineData("floor-i")]
+    public void ApplyNodeEdit_RejectsARequirementThatCantBeOne_LeavingTheNodeAlone(string id)
+    {
+        var (project, page, node) = MakeRequirementsProject();
+        node.Card.HeadingText = "Before";
+
+        Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyNodeEdit(project, page, node, new NodeEditRequest { X = node.X, Y = node.Y, HeadingText = "After", Requirements = [id] }));
+
+        Assert.Equal("Before", node.Card.HeadingText);
+        Assert.Null(node.Requirements);
+    }
+
+    [Fact]
+    public void Requirements_FollowARenamedLocation_AndDropADeletedOne()
+    {
+        var (project, _, node) = MakeRequirementsProject();
+        node.Requirements = ["gallery"];
+
+        ProjectEditing.RenameRequirements(project, "gallery", "glass-gallery");
+        Assert.Equal(["glass-gallery"], node.Requirements);
+
+        project.Pages[1].Nodes[0].Id = "glass-gallery";
+        ProjectEditing.DropMissingRequirements(project);
+        Assert.Equal(["glass-gallery"], node.Requirements);
+
+        project.Pages[1].Nodes.RemoveAt(0);
+        ProjectEditing.DropMissingRequirements(project);
+        Assert.Null(node.Requirements);
+    }
+
     [Fact]
     public void ApplyNodeEdit_TopLevel_SnapsToTheCenterOfWhicheverSquareItLandsIn()
     {

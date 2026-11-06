@@ -85,6 +85,35 @@ public class PageRendererTests
     }
 
     [Fact]
+    public void RenderPage_ALocationCarriesItsStages_AndItsRequirements_NamingAnotherPlanet()
+    {
+        Node Track(string id, params Node[] children) => new()
+        {
+            Id = id,
+            Card = new Card { HeadingText = id == "lobby" ? "Glass Wall Gallery" : id, CoverImagePath = $"img/{id}.png", Audio = new AudioRef { Url = $"{id}.ogg" } },
+            Puzzle = new Puzzle { Objects = { new PuzzleObject { Kind = PuzzleObjectKind.Finish } } },
+            Children = children.ToList(),
+        };
+        var lobby = Track("lobby", Track("floor-i"));
+        var near = Track("near");
+        var locked = new Node { Id = "locked", Card = new Card { HeadingText = "Locked" }, Requirements = ["lobby", "near", "missing"] };
+        var project = new WeaveProject();
+        var pentura = new Page { Id = "pentura", Title = "Pentura - The Weave Explorer", Background = new ImageRef { ImagePath = "img/p.png" }, Nodes = { lobby } };
+        var ouros = new Page { Id = "ouros", Title = "Ouros - The Weave Explorer", Background = new ImageRef { ImagePath = "img/o.png" }, Nodes = { near, locked } };
+        project.Pages.Add(pentura);
+        project.Pages.Add(ouros);
+
+        var oursHtml = new PageRenderer(project).RenderPage(ouros);
+        var requires = System.Text.RegularExpressions.Regex.Match(oursHtml, "data-requires=\"([^\"]*)\"").Groups[1].Value;
+        Assert.Equal("[{\"name\":\"Glass Wall Gallery\",\"planet\":\"Pentura\",\"stages\":[\"lobby\",\"floor-i\"]},{\"name\":\"near\",\"stages\":[\"near\"]}]",
+            System.Net.WebUtility.HtmlDecode(requires));
+
+        var penturaHtml = new PageRenderer(project).RenderPage(pentura);
+        Assert.Contains("data-stages=\"[&quot;lobby&quot;,&quot;floor-i&quot;]\"", penturaHtml);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(penturaHtml, "data-stages="));
+    }
+
+    [Fact]
     public void RenderPage_LeavesOutAPuzzleThatCantBePlayed()
     {
         Assert.DoesNotContain("data-puzzle", RenderTrackWithPuzzle(new Card { CoverImagePath = "img/track.png" }));

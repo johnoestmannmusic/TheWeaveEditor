@@ -101,6 +101,12 @@ public sealed class NodeEditRequest
     public double? TravelSpawnX { get; set; }
     public double? TravelSpawnY { get; set; }
     public bool TravelSkipTutorial { get; set; }
+
+    /// <summary>
+    /// The ids of the locations this one requires (see Node.Requirements), or null to leave them as they are, as for
+    /// a nested node, which can't have any.
+    /// </summary>
+    public List<string>? Requirements { get; set; }
 }
 
 /// <summary>

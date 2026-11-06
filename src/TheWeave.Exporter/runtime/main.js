@@ -168,6 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
   buildMinimap();
   buildMapContrails();
   updateViewScale();
+  refreshNodeLocks();
   placePersistentCards();
   bindInput();
   claimOwnFocus();
@@ -318,6 +319,8 @@ function loadNodes() {
 
     let curImg = curNode.querySelector(".nodeImage");
     let curInfo = curNode.querySelector(".floatInfo");
+    // A race's icon is a different colour, so it takes a different turn to go green once completed - see main.css.
+    if (curImg?.getAttribute('src').includes('race')) curNode.classList.add('raceNode');
 
     // Tutorial / shrine intro cards stay open on load like before, and are
     // otherwise left alone by the proximity system (only the interact
@@ -372,6 +375,10 @@ function loadNodes() {
       // updateHubMusicSignal, which fades the shell's hub theme in as the ship approaches one.
       travelHome: curNode.dataset.travelHome === "true",
       puzzle: curNode.dataset.puzzle ? JSON.parse(curNode.dataset.puzzle) : null,
+      // A top-level location's own stages, and its requirements' - see refreshNodeLocks.
+      stages: curNode.dataset.stages ? JSON.parse(curNode.dataset.stages) : [],
+      requires: curNode.dataset.requires ? JSON.parse(curNode.dataset.requires) : [],
+      locked: false,
     });
 
     if (curAudio && !isModal) curAudio.volume = 0; // updateLocationAudio eases this up from silence
@@ -1148,6 +1155,8 @@ function buildMinimap(){
     icon.src = meta.img.getAttribute('src');
     el.appendChild(icon);
     nodes.push({ icon, center: weavePage.grid.centerOf(meta.cell) });
+    meta.minimapIcon = icon;
+    if (meta.img.getAttribute('src').includes('race')) icon.classList.add('raceNode');
   });
 
   // Over the minimap's locations, so an unexplored one stays hidden there too - see buildFog.
@@ -1447,6 +1456,8 @@ function updateLocationAudio(dt){
     }
 
     let activeMember = (node === activeRoot && activeNode) ? playableMember(activeNode) : node;
+    // A locked location keeps its music to itself.
+    if (meta.locked) activeMember = null;
 
     for (const member of meta.chain) {
       let memberMeta = nodeMeta.get(member);
@@ -1604,6 +1615,58 @@ function markPuzzleSolved(puzzle){
   } catch (e) {
     // storage unavailable - see above.
   }
+  refreshNodeLocks();
+}
+
+// Whether a stage has been solved, from its id alone, since it may be on another planet's page.
+function isStageSolved(id){
+  return isPuzzleSolved({ id });
+}
+
+// Which locations on the map are locked, waiting on their requirements (see Node.Requirements), and which are
+// fully completed, every one of their stages solved. Worked out on load and whenever a puzzle is solved, so that
+// finishing the last stage of one location opens another straight away. A locked one's icon is greyed out, and
+// its card only says what it's waiting for - see main.css's .node.locked.
+function refreshNodeLocks(){
+  nodeMeta.forEach((meta, node) => {
+    if (!meta.isTopLevel || meta.isModal) return;
+
+    let waitingOn = meta.requires
+      .map(requirement => ({ ...requirement, solved: requirement.stages.filter(isStageSolved).length }))
+      .filter(requirement => requirement.solved < requirement.stages.length);
+    meta.locked = waitingOn.length > 0;
+    let completed = meta.stages.length > 0 && meta.stages.every(isStageSolved);
+
+    node.classList.toggle('locked', meta.locked);
+    node.classList.toggle('completed', completed && !meta.locked);
+    meta.minimapIcon?.classList.toggle('locked', meta.locked);
+    meta.minimapIcon?.classList.toggle('completed', completed && !meta.locked);
+
+    meta.info.querySelector(':scope > .lockedPanel')?.remove();
+    if (meta.locked) meta.info.prepend(buildLockedPanel(waitingOn));
+  });
+}
+
+// What a locked location's card says instead of anything about it: what it's waiting for, and how far along each
+// is, in stages.
+function buildLockedPanel(waitingOn){
+  let panel = document.createElement('div');
+  panel.className = 'lockedPanel';
+  let heading = document.createElement('h3');
+  heading.textContent = 'Locked';
+  panel.appendChild(heading);
+  for (const requirement of waitingOn) {
+    let line = document.createElement('div');
+    line.className = 'lockedRequirement';
+    let name = document.createElement('div');
+    name.textContent = 'Complete ' + requirement.name + (requirement.planet ? ', on ' + requirement.planet : '');
+    let progress = document.createElement('div');
+    progress.className = 'lockedProgress';
+    progress.textContent = requirement.solved + ' / ' + requirement.stages.length + ' stages complete';
+    line.append(name, progress);
+    panel.appendChild(line);
+  }
+  return panel;
 }
 
 // X (keyboard) / X (gamepad): restarts the puzzle on the board, otherwise steps through a location's parts.
@@ -1652,6 +1715,8 @@ function onInteract(){
   if (!activeNode) return;
 
   let meta = nodeMeta.get(activeNode);
+  // A locked location can't be entered or travelled through, and its card stays as it is.
+  if (nodeMeta.get(activeRoot)?.locked) return;
   let travelLink = meta.info.querySelector('.poetry-travel a');
 
   if (travelLink) {
@@ -1674,7 +1739,7 @@ function onInteract(){
 // Appended to <html>, not <body>, for the same reason as #modalBackdrop - see #screenFrame's
 // comment in buildScreenFrame.
 function openTrackFocus(){
-  if (trackFocusEl || !activeNode || focusTransition) return;
+  if (trackFocusEl || !activeNode || focusTransition || nodeMeta.get(activeRoot)?.locked) return;
 
   // The card's own cover on the map, which grows into Track Focus's art. Its art is already loaded, so there's
   // nothing to wait for.

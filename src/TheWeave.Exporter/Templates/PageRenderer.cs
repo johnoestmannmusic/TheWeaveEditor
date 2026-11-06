@@ -130,7 +130,7 @@ public sealed class PageRenderer
                 : "";
 
         sb.AppendLine($"{pad}<!-- {SafeComment(node.Card.HeadingText)} -->");
-        sb.AppendLine($"{pad}<div class=\"node\"{persistentAttr}{modalAttr}{travelHomeAttr}{BuildPuzzleAttr(node, _project.PuzzleDrawings)} style=\"left: {Px(left)}px; top: {Px(top)}px;\">");
+        sb.AppendLine($"{pad}<div class=\"node\"{persistentAttr}{modalAttr}{travelHomeAttr}{BuildPuzzleAttr(node, _project.PuzzleDrawings)}{(isNested ? "" : BuildStagesAttr(sourcePage, node))} style=\"left: {Px(left)}px; top: {Px(top)}px;\">");
         sb.AppendLine($"{pad}  <img class=\"nodeImage\" src=\"{iconSrc}\">");
 
         sb.AppendLine();
@@ -258,8 +258,54 @@ public sealed class PageRenderer
         return $" data-puzzle=\"{EscapeAttr(json)}\"";
     }
 
-    private static bool OpensTrackFocus(Card card) =>
-        card.Audio is not null && card.Action.Kind != ActionKind.Travel && card.Size != CardSize.Modal;
+    private static bool OpensTrackFocus(Card card) => PuzzleStages.OpensTrackFocus(card);
+
+    // What main.js needs to tell whether a location on the map is locked or completed: its own stages (see
+    // PuzzleStages), and each of its requirements', which may be on another planet - see refreshNodeLocks. Ids again
+    // appear in the HTML here, for the same reason as a puzzle's: they're what solved puzzles are remembered by.
+    private string BuildStagesAttr(Page page, Node node)
+    {
+        var sb = new StringBuilder();
+
+        var stages = PuzzleStages.Of(node);
+        if (stages.Count > 0)
+            sb.Append($" data-stages=\"{EscapeAttr(JsonSerializer.Serialize(stages))}\"");
+
+        var requires = (node.Requirements ?? [])
+            .Select(id => FindTopLevelNode(id))
+            .Where(found => found is not null && found.Value.Node != node)
+            .Select(found => new
+            {
+                name = found!.Value.Node.Card.HeadingText,
+                planet = found.Value.Page == page ? null : PlanetName(found.Value.Page),
+                stages = PuzzleStages.Of(found.Value.Node),
+            })
+            .Where(requirement => requirement.stages.Count > 0)
+            .ToList();
+        if (requires.Count > 0)
+            sb.Append($" data-requires=\"{EscapeAttr(JsonSerializer.Serialize(requires, PuzzleJsonOptions))}\"");
+
+        return sb.ToString();
+    }
+
+    private (Page Page, Node Node)? FindTopLevelNode(string id)
+    {
+        foreach (var page in _project.Pages)
+        {
+            var node = page.Nodes.FirstOrDefault(n => n.Id == id);
+            if (node is not null)
+                return (page, node);
+        }
+        return null;
+    }
+
+    // A page's title is its planet's name, then " - " and the site's.
+    private static string PlanetName(Page page)
+    {
+        var title = page.Title ?? "";
+        var dash = title.IndexOf(" - ", StringComparison.Ordinal);
+        return dash > 0 ? title[..dash] : (title.Length > 0 ? title : page.Id);
+    }
 
     // The click handler lives in main.js, bound to this class.
     private static void RenderFocusAction(StringBuilder sb, Card card, string pad)
