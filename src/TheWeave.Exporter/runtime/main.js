@@ -2540,6 +2540,12 @@ function drawBoardObjects(){
     };
   });
   let objects = boardReset ? WeavePuzzle.resetSweepAt(boardReset.before, boardGame.objects, boardReset.ms) : boardGame.objects;
+  // The Rotator Switch the ship's standing on turns clockwise, for as long as the Rotator tiles are moving.
+  if (boardGame.onRotatorSwitch && !boardMover.isMoving) {
+    let cell = boardMover.cell;
+    let spin = WeavePuzzle.spinAt(boardRotatorClockMs);
+    objects = objects.map(object => object.kind === 'RotatorSwitch' && object.col === cell.col && object.row === cell.row ? { ...object, spin } : object);
+  }
   WeavePuzzle.renderBoard(boardObjectsImage, [...boardGame.floors, ...objects, ...sinking], puzzle, {
     timeMs: performance.now(),
     rotatorTimeMs: boardRotatorClockMs,
