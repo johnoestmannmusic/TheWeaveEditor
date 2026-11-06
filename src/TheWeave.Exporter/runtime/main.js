@@ -58,6 +58,9 @@ let boardVisits = new Map();
 let boardSinking = [];
 // The ship in mid-air, launched by a Jump Tile: { from, to, ms, durationMs }, or null - see startBoardJump.
 let boardJump = null;
+// A Reset Switch's sweep across the board: the objects as they were before it, how far through, and how long it
+// takes, or null - see onBoardEvent and puzzle.js's resetSweepAt.
+let boardReset = null;
 // While one part's board scrolls across to the next's: the two slide layers, the edge it's crossing, and how
 // far through - see startBoardScroll.
 let boardScroll = null;
@@ -2144,6 +2147,7 @@ function buildBoardGame(facing, visit){
   boardStreamMs = 0;
   boardSinking = [];
   boardJump = null;
+  boardReset = null;
   boardRotatorActiveMs = 0;
   boardRotatorGlideMs = BOARD_ROTATOR_TICK_MS;
   boardRotatorClockMs = 0;
@@ -2209,6 +2213,11 @@ function onBoardEvent(event){
   let glideMs = Math.max(0, ...(event.sank ?? []).map(glideOf));
   for (const object of event.sank ?? []) boardSinking.push({ object, ms: 0, glideMs });
   if (event.jumpTo) startBoardJump(event.jumpTo);
+  // Everything put back by a Reset Switch: whatever was sinking is back too, so it stops.
+  if (event.reset) {
+    boardSinking = [];
+    boardReset = { before: event.reset, ms: 0, durationMs: WeavePuzzle.resetSweepMs(event.reset, boardGame.objects) };
+  }
   if (event.finished) {
     markPuzzleSolved(nodeMeta.get(activeNode).puzzle);
     releaseDirections();
@@ -2432,6 +2441,17 @@ function updateBoardGame(dtMs){
     return;
   }
 
+  // Nothing else moves while a Reset Switch's sweep crosses the board, so that everything's back in place, and
+  // seen to be, before the ship can carry on.
+  if (boardReset && !focusTransition && !boardScroll) {
+    boardReset.ms += dtMs;
+    if (boardReset.ms >= boardReset.durationMs) boardReset = null;
+    renderBoardShip();
+    updateBoardContrails(dtMs);
+    drawBoardObjects();
+    return;
+  }
+
   // Nothing moves while the board's still flipping in, though it's drawn as it turns.
   if (focusTransition) {
     drawBoardObjects();
@@ -2519,7 +2539,8 @@ function drawBoardObjects(){
       sink: Math.max(0, Math.min(1, (ms - glideMs) / BOARD_SINK_MS)),
     };
   });
-  WeavePuzzle.renderBoard(boardObjectsImage, [...boardGame.floors, ...boardGame.objects, ...sinking], puzzle, {
+  let objects = boardReset ? WeavePuzzle.resetSweepAt(boardReset.before, boardGame.objects, boardReset.ms) : boardGame.objects;
+  WeavePuzzle.renderBoard(boardObjectsImage, [...boardGame.floors, ...objects, ...sinking], puzzle, {
     timeMs: performance.now(),
     rotatorTimeMs: boardRotatorClockMs,
     switchesActive: boardGame.switchesActive,
@@ -2549,7 +2570,7 @@ function updateBoardContrails(dtMs){
 const BOARD_PUSH_HINT_BOB_MS = 300;
 
 function boardPushHint(){
-  if (!boardGame || boardMover.isMoving || boardJump || boardScroll || focusTransition || boardSolvedMs !== null) return null;
+  if (!boardGame || boardMover.isMoving || boardJump || boardReset || boardScroll || focusTransition || boardSolvedMs !== null) return null;
   let delta = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[boardMover.facing];
   let ahead = { col: boardMover.cell.col + delta[0], row: boardMover.cell.row + delta[1] };
   if (!boardGame.canPush(ahead, boardMover.facing)) return null;

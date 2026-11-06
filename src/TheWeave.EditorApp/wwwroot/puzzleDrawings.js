@@ -19,7 +19,7 @@ const DRAWING_PAINTS = [
 const DRAWING_SHADES = ['Darkest', 'Dark', 'Main', 'Light'];
 const DRAWING_ROLE_LABELS = {
   wall: 'Wall', finish: 'Finish', gate: 'Gate + Switch', teleporter: 'Teleporter', stream: 'Stream',
-  key: 'Key', rotator: 'Rotator', lantern: 'Lantern', block: 'Push Block', jump: 'Jump Tile', outline: 'Outline', light: 'Light',
+  key: 'Key', rotator: 'Rotator', lantern: 'Lantern', block: 'Push Block', jump: 'Jump Tile', reset: 'Reset Switch', outline: 'Outline', light: 'Light',
 };
 const DRAWING_MAX_MIX = 4;
 const DRAWING_LETTERED = ['Gate', 'Switch', 'Teleporter'];

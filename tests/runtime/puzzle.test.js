@@ -1263,3 +1263,106 @@ test('the push hint is an arrow just past the block, pointing the way it would g
   assert.ok(hasLightIn(draw('Up'), 4 * 24, 4 * 24 - 12, 5 * 24, 4 * 24));
   assert.notEqual(draw('Right', 0).data.join(), draw('Right', 1).data.join());
 });
+
+// ---------- Reset Switches ----------
+
+const { resetSweepAt, resetSweepMs, RESET_FADE_MS, RESET_SWEEP_STEP_MS } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+
+const reset = (col, row) => obj('ResetSwitch', col, row);
+
+test('a Reset Switch puts every object back as it started, and leaves the ship where it is', () => {
+  let g = game(obj('Start', 1, 5), block(2, 5, 'Star'), block(4, 5, 'Star'), block(6, 2, 'Circle'),
+    obj('Key', 8, 8), obj('Switch', 7, 7, { letter: 'A' }), obj('Gate', 0, 0, { letter: 'A' }), obj('Gate', 0, 1, { letter: 'B', open: true }),
+    obj('Lantern', 3, 3), obj('Wall', 4, 3, { invisible: true }), obj('Stream', 3, 4, { direction: 'Down', invisible: true }), reset(9, 9));
+
+  g.pushFrom(at(1, 5), at(2, 5), 'right'); // the Stars meet and sink
+  g.pushFrom(at(5, 2), at(6, 2), 'right'); // the Circle moves along
+  g.shipArrivedAt(at(8, 8)); // the Key's collected
+  g.shipArrivedAt(at(7, 7)); // so the Switch opens Gate A
+  g.shipArrivedAt(at(3, 3)); // the Lantern reveals the Wall and Stream
+  assert.deepEqual(blocksIn(g), ['Circle@7,2']);
+  assert.equal(g.objects.find(o => o.letter === 'A' && o.kind === 'Gate').open, true);
+  assert.equal(find(g, 'Wall').revealed, true);
+
+  let event = g.shipArrivedAt(at(9, 9));
+  assert.deepEqual(blocksIn(g), ['Circle@6,2', 'Star@2,5', 'Star@4,5']);
+  assert.ok(find(g, 'Key'), 'the Key is back');
+  assert.equal(g.switchesActive, false, 'so Switches wait for it again');
+  assert.equal(g.objects.find(o => o.letter === 'A' && o.kind === 'Gate').open, false);
+  assert.equal(g.objects.find(o => o.letter === 'B').open, true, 'a Gate that started open is open again');
+  assert.equal(find(g, 'Lantern').lit, false);
+  assert.equal(find(g, 'Wall').revealed, false, 'and what it revealed is hidden again');
+  assert.equal(g.floors[0].revealed, false);
+  assert.deepEqual(g.shipCell, at(9, 9));
+  assert.deepEqual(event.reset.filter(o => o.kind === 'PushBlock').map(o => `${o.symbol}@${o.col},${o.row}`), ['Circle@7,2'], 'and it says what was there before');
+});
+
+test('it works whatever Keys are left, and each object keeps its own index, before and after', () => {
+  let g = game(obj('Key', 2, 2), block(4, 4), reset(6, 6));
+  g.pushFrom(at(3, 4), at(4, 4), 'right');
+  let before = g.objects.map(o => o.index);
+  let event = g.shipArrivedAt(at(6, 6));
+  assert.ok(event.reset);
+  assert.deepEqual(g.objects.map(o => o.index), before);
+  assert.deepEqual([find(g, 'PushBlock').col, find(g, 'PushBlock').fromCol], [4, 4], 'back where it started, not gliding');
+});
+
+test('the sweep goes from the top-left corner to the bottom-right, each object fading out and then back in', () => {
+  let before = [{ ...obj('Key', 0, 0), index: 0 }, { ...obj('Key', 9, 9), index: 1 }, { ...obj('Wall', 5, 5), index: 2 }];
+  let after = before.map(o => ({ ...o }));
+  // Whichever's showing: the one leaving comes first, and the one arriving last.
+  let fadeOf = (ms, col, leaving) => { let showing = resetSweepAt(before, after, ms).filter(o => o.col === col && o.kind === 'Key'); return showing.at(leaving ? 0 : -1)?.fade; };
+  let corner = 18 * RESET_SWEEP_STEP_MS;
+
+  assert.equal(fadeOf(RESET_FADE_MS / 2, 0, true), 0.5, 'the top-left one is half gone');
+  assert.equal(fadeOf(RESET_FADE_MS / 2, 9, true), 1, 'while the bottom-right one is untouched');
+  assert.equal(fadeOf(RESET_FADE_MS * 1.5, 0, false), 0.5, 'then the top-left one is half back');
+  assert.equal(fadeOf(corner + RESET_FADE_MS / 2, 9, true), 0.5, 'the sweep reaches the bottom-right last');
+  assert.equal(resetSweepMs(before, after), corner + 2 * RESET_FADE_MS);
+  for (const ms of [0, 50, corner, corner + 150]) assert.deepEqual(resetSweepAt(before, after, ms).filter(o => o.kind === 'Wall').map(o => o.fade), [undefined], 'Walls just stay');
+  assert.deepEqual(resetSweepAt(before, after, resetSweepMs(before, after)).map(o => o.fade ?? 1), [1, 1, 1], 'and at the end it\'s just the board as it starts');
+});
+
+test('something going back fades in once the sweep reaches where it starts, and it\'s faded out from where it was', () => {
+  let moved = { ...block(8, 8), index: 0 };
+  let started = { ...block(1, 1), index: 0 };
+  let sunk = { ...obj('Key', 0, 1), index: 1 };
+  let atMs = (ms) => resetSweepAt([moved], [started, sunk], ms);
+  let fadingIn = (ms) => atMs(ms).find(o => o.col === 1 && o.row === 1)?.fade ?? 0;
+  assert.equal(fadingIn(16 * RESET_SWEEP_STEP_MS + RESET_FADE_MS - 1), 0, 'not before it\'s gone from where it was');
+  assert.ok(fadingIn(16 * RESET_SWEEP_STEP_MS + RESET_FADE_MS + 50) > 0);
+  assert.ok(atMs(RESET_SWEEP_STEP_MS + RESET_FADE_MS + 50).some(o => o.kind === 'Key' && o.fade > 0), 'and one that was gone just fades in');
+});
+
+test('a faded object is laid over what\'s under it, partly see-through', () => {
+  let { look } = artLook();
+  let full = blank(), half = blank(), none = blank();
+  let floor = obj('Stream', 2, 2, { direction: 'Right' });
+  renderBoard(full, [obj('ResetSwitch', 2, 2)], look);
+  renderBoard(half, [floor, obj('ResetSwitch', 2, 2, { fade: 0.5 })], look);
+  renderBoard(none, [floor, obj('ResetSwitch', 2, 2, { fade: 0 })], look);
+  let onStream = blank();
+  renderBoard(onStream, [floor], look);
+  let x = 2 * 24 + 12, y = 2 * 24 + 4;
+  assert.deepEqual(pixelAt(none, x, y), pixelAt(onStream, x, y), 'nothing of it at 0');
+  let [r] = pixelAt(half, x, y), [fullR] = pixelAt(full, x, y), [streamR] = pixelAt(onStream, x, y);
+  assert.ok(Math.abs(r - (fullR + streamR) / 2) <= 1, `halfway between, at 0.5: ${r} from ${fullR} and ${streamR}`);
+  let alone = blank();
+  renderBoard(alone, [obj('ResetSwitch', 2, 2, { fade: 0.5 })], look);
+  assert.equal(pixelAt(alone, x, y)[3], 128, 'and half see-through over nothing');
+  assert.deepEqual(pixelAt(alone, x, y).slice(0, 3), pixelAt(full, x, y).slice(0, 3));
+});
+
+test('a Reset Switch gets its own palette colour, and is a pad with arrows, unlike a Jump Tile', () => {
+  let { art, look } = artLook();
+  assert.ok(colorsIn(art).has(toRgb(look.palette.reset).join(',')));
+  assert.equal(look.textures.reset.ramp.length, 4);
+  let drawing = standardDrawing('ResetSwitch');
+  assert.equal(drawing.pixels.length, 24 * 24);
+  assert.equal(drawing.mix[0].role, 'reset');
+  assert.notEqual(drawing.pixels, standardDrawing('JumpTile').pixels);
+  // Turned half round it's the same arrows, since they chase each other round. Its darker edges are left out,
+  // since those are always below.
+  let shape = drawing.pixels.replace(/1/g, '2');
+  assert.equal([...shape].reverse().join(''), shape);
+});

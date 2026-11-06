@@ -19,6 +19,7 @@ const PUZZLE_TOOLS = [
   { kind: 'Lantern', label: 'Lantern', hint: 'Stepping on this lights it for good, revealing invisible things within 3 squares, in a circle.', canHide: true },
   { kind: 'PushBlock', label: 'Push Block', hint: 'Walking into it pushes it a square, onto anything but another object. Two or more with the same symbol, side by side, sink into the ground.', symbol: true, canHide: true },
   { kind: 'JumpTile', label: 'Jump Tile', hint: 'Stepping on it launches the ship 2 squares the way it points, over anything in between, or 1 if it can\'t land that far.', direction: true, canHide: true },
+  { kind: 'ResetSwitch', label: 'Reset Switch', hint: 'Stepping on this puts every object but Walls back as the puzzle started: moved ones return, sunk blocks and Keys come back, and Gates and Lanterns are as they began. The ship stays put.', canHide: true },
   { kind: 'Start', label: 'Start', hint: 'Where the ship begins. There\'s only one.' },
   { kind: 'Erase', label: 'Erase', hint: 'Removes the top thing on a square. Drag to paint.', paints: true },
 ];
@@ -35,7 +36,7 @@ const PUZZLE_TILE_PX = WeavePuzzle.TILE_PX;
 // img/ui/pilot-ship.png's own size, which is what the ship is drawn at against the art.
 const PUZZLE_SHIP_WIDTH = 12;
 const PUZZLE_SHIP_HEIGHT = 16;
-const PUZZLE_PALETTE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'block', 'jump', 'outline', 'light'];
+const PUZZLE_PALETTE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'block', 'jump', 'reset', 'outline', 'light'];
 
 // A Push Block's symbols, with a character to show each on its button - see puzzle.js's SYMBOLS.
 const PUZZLE_SYMBOLS = [
