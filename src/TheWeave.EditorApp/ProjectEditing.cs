@@ -324,7 +324,7 @@ internal static class ProjectEditing
             if (!usesLetter)
                 obj.Letter = null;
 
-            var pointsSomewhere = IsFloorTile(obj) || obj.Kind == PuzzleObjectKind.JumpTile;
+            var pointsSomewhere = IsFloorTile(obj) || obj.Kind is PuzzleObjectKind.JumpTile or PuzzleObjectKind.Archeton;
             if (pointsSomewhere && obj.Direction is null)
                 throw new InvalidOperationException($"A {obj.Kind} needs a direction.");
             if (!pointsSomewhere)
@@ -335,13 +335,19 @@ internal static class ProjectEditing
             if (obj.Kind != PuzzleObjectKind.PushBlock)
                 obj.Symbol = null;
 
+            if (obj.Kind == PuzzleObjectKind.Archeton && string.IsNullOrWhiteSpace(obj.Archeton))
+                throw new InvalidOperationException("An Archeton needs to say which one it is.");
+            if (obj.Kind != PuzzleObjectKind.Archeton)
+                obj.Archeton = null;
+
             if (obj.Kind is PuzzleObjectKind.Finish or PuzzleObjectKind.Start)
                 obj.Invisible = false;
 
             if (obj.Kind != PuzzleObjectKind.Gate)
                 obj.Open = false;
 
-            if (!PuzzleDrawings.DrawnKinds.Contains(obj.Kind) || string.IsNullOrEmpty(obj.Variant))
+            // An Archeton is drawn with its definition's drawing, so it never has one of its own.
+            if (!PuzzleDrawings.DrawnKinds.Contains(obj.Kind) || string.IsNullOrEmpty(obj.Variant) || obj.Kind == PuzzleObjectKind.Archeton)
                 obj.Variant = null;
         }
 
@@ -386,7 +392,88 @@ internal static class ProjectEditing
             if (obj.Variant is not null && !drawings.Any(d => d.Id == obj.Variant && d.Kind == obj.Kind))
                 obj.Variant = null;
         }
+
+        // An Archeton whose drawing's gone goes back to the Standard one.
+        foreach (var definition in project.Archetons ?? [])
+        {
+            if (definition.Drawing is not null && !drawings.Any(d => d.Id == definition.Drawing && d.Kind == PuzzleObjectKind.Archeton))
+                definition.Drawing = null;
+        }
     }
+
+    /// <summary>Adds Sentribeam to a project that's never had Archetons, so there's always one to start from.</summary>
+    public static void SeedArchetons(WeaveProject project)
+    {
+        project.Archetons ??= [ArchetonDefinitions.Sentribeam()];
+    }
+
+    /// <summary>
+    /// Replaces the project's whole library of Archetons. Each needs an id of its own, a name, and parts with sensible
+    /// settings, drawn with an Archeton drawing that exists. One still placed on a board can't be removed.
+    /// </summary>
+    public static void ApplyArchetonsEdit(WeaveProject project, List<ArchetonDefinition> archetons)
+    {
+        ValidateArchetons(archetons, project.PuzzleDrawings);
+
+        var kept = archetons.Select(a => a.Id).ToHashSet();
+        foreach (var page in project.Pages)
+        {
+            foreach (var node in NodesIn(page.Nodes))
+            {
+                var used = node.Puzzle?.Objects.FirstOrDefault(o => o.Kind == PuzzleObjectKind.Archeton && o.Archeton is not null && !kept.Contains(o.Archeton));
+                if (used is not null)
+                    throw new InvalidOperationException($"'{project.Archetons?.FirstOrDefault(a => a.Id == used.Archeton)?.Name ?? used.Archeton}' is still on the board of '{node.Card.HeadingText}', so it can't be deleted.");
+            }
+        }
+
+        project.Archetons = archetons;
+    }
+
+    /// <summary>Adds the Archetons a puzzle file brought with it, leaving any already there alone.</summary>
+    public static void AddArchetons(WeaveProject project, List<ArchetonDefinition> archetons)
+    {
+        var library = project.Archetons ?? [];
+        var combined = library.Concat(archetons.Where(a => library.All(existing => existing.Id != a.Id))).ToList();
+        ValidateArchetons(combined, project.PuzzleDrawings);
+        project.Archetons = combined;
+    }
+
+    public static void ValidateArchetons(List<ArchetonDefinition> archetons, List<PuzzleDrawing>? drawings)
+    {
+        foreach (var archeton in archetons)
+        {
+            if (string.IsNullOrWhiteSpace(archeton.Id))
+                throw new InvalidOperationException("An Archeton needs an id.");
+            archeton.Name = archeton.Name.Trim();
+            if (archeton.Name.Length == 0)
+                throw new InvalidOperationException("An Archeton needs a name.");
+            if (archeton.Drawing is not null && !(drawings ?? []).Any(d => d.Id == archeton.Drawing && d.Kind == PuzzleObjectKind.Archeton))
+                throw new InvalidOperationException($"'{archeton.Name}' is drawn with a drawing that isn't one of the Archeton drawings.");
+
+            foreach (var part in archeton.Parts)
+            {
+                if (part.Kind == ArchetonPartKind.Beam)
+                {
+                    if (part.Range is not { } range || range < 1 || range > ArchetonDefinitions.MaxRange)
+                        throw new InvalidOperationException($"'{archeton.Name}''s Beam needs a range from 1 to {ArchetonDefinitions.MaxRange}.");
+                    part.Look ??= ArchetonLook.AllWays;
+                    part.BlockedByBlocks ??= true;
+                }
+                else
+                {
+                    part.Range = null;
+                    part.Look = null;
+                    part.BlockedByBlocks = null;
+                }
+            }
+        }
+
+        if (archetons.GroupBy(a => a.Id).FirstOrDefault(g => g.Count() > 1) is { } repeated)
+            throw new InvalidOperationException($"More than one Archeton has the id '{repeated.Key}'.");
+    }
+
+    private static IEnumerable<Node> NodesIn(IEnumerable<Node> nodes) =>
+        nodes.SelectMany(n => new[] { n }.Concat(NodesIn(n.Children)));
 
     public static void ValidatePuzzleDrawingSets(List<PuzzleDrawingSet> sets)
     {

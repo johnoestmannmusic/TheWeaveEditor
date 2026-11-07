@@ -19,7 +19,7 @@ const DRAWING_PAINTS = [
 const DRAWING_SHADES = ['Darkest', 'Dark', 'Main', 'Light'];
 const DRAWING_ROLE_LABELS = {
   wall: 'Wall', finish: 'Finish', gate: 'Gate + Switch', teleporter: 'Teleporter', stream: 'Stream',
-  key: 'Key', rotator: 'Rotator', lantern: 'Lantern', block: 'Push Block', jump: 'Jump Tile', reset: 'Reset Switch', pipe: 'Pipe Switch', outline: 'Outline', light: 'Light',
+  key: 'Key', rotator: 'Rotator', lantern: 'Lantern', block: 'Push Block', jump: 'Jump Tile', reset: 'Reset Switch', pipe: 'Pipe Switch', archeton: 'Archeton', outline: 'Outline', light: 'Light',
 };
 const DRAWING_MAX_MIX = 4;
 const DRAWING_LETTERED = ['Gate', 'Switch', 'Teleporter'];
@@ -38,6 +38,9 @@ const DRAWING_FRAMES = {
   ],
   JumpTile: [
     { frame: 'drawing', label: 'Drawing', field: 'pixels', hint: 'Drawn pointing right, and turned whichever way a Jump Tile points.' },
+  ],
+  Archeton: [
+    { frame: 'drawing', label: 'Drawing', field: 'pixels', hint: 'Drawn looking right, and turned whichever way it faces. Choose it for an Archeton in the Archetons window.' },
   ],
   Pipe: [
     { frame: 'drawing', label: 'Drawing', field: 'pixels', hint: 'Drawn lying across, and turned to stand up. Run it right across the square, so that a line of them joins up.' },

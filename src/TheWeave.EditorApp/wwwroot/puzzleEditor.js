@@ -22,6 +22,7 @@ const PUZZLE_TOOLS = [
   { kind: 'ResetSwitch', label: 'Reset Switch', hint: 'Stepping on this puts every object but Walls back as the puzzle started: moved ones return, sunk blocks and Keys come back, and Gates and Lanterns are as they began. The ship stays put.', canHide: true },
   { kind: 'Pipe', label: 'Pipe', hint: 'The ship and objects can only go into and through it along it: across while it points left or right, up and down while it points up or down. Drag to paint.', paints: true, direction: true, canHide: true },
   { kind: 'PipeSwitch', label: 'Pipe Switch', hint: 'Stepping on this turns every Pipe a quarter turn anticlockwise, and again each second the ship stays on it.', canHide: true },
+  { kind: 'Archeton', label: 'Archeton…', hint: 'A mechanical enemy, built from parts. Opens the Archetons, to choose one to place or make a new one. Placed facing a direction, which matters for Beams that look the way it faces.', direction: true, canHide: true, archeton: true },
   { kind: 'Start', label: 'Start', hint: 'Where the ship begins. There\'s only one.' },
   { kind: 'Erase', label: 'Erase', hint: 'Removes the top thing on a square. Drag to paint.', paints: true },
 ];
@@ -38,7 +39,7 @@ const PUZZLE_TILE_PX = WeavePuzzle.TILE_PX;
 // img/ui/pilot-ship.png's own size, which is what the ship is drawn at against the art.
 const PUZZLE_SHIP_WIDTH = 12;
 const PUZZLE_SHIP_HEIGHT = 16;
-const PUZZLE_PALETTE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'block', 'jump', 'reset', 'pipe', 'outline', 'light'];
+const PUZZLE_PALETTE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'block', 'jump', 'reset', 'pipe', 'archeton', 'outline', 'light'];
 
 // A Push Block's symbols, with a character to show each on its button - see puzzle.js's SYMBOLS.
 const PUZZLE_SYMBOLS = [
@@ -97,6 +98,8 @@ function openPuzzleEditor(pageId, nodeId) {
     drawings: null, // the Drawings view's state while it's open - see puzzleDrawings.js
     image: null, // the art-sized pixels drawn onto the board's canvas - see drawPuzzleBoard
     playtest: null, // the playthrough underway while playtesting - see puzzlePlaytest.js
+    archeton: null, // the id of the Archeton placed with the Archeton tool - see archetons.js
+    reachesFor: null, // what archetonReaches last worked out, and from what
     painting: null, // { erasing, last } during a drag
     tile: PUZZLE_TILE_PX,
     shipImage: null,
@@ -119,6 +122,7 @@ function openPuzzleEditor(pageId, nodeId) {
 
 function closePuzzleEditor() {
   stopPlaytest();
+  if (typeof closeArchetons === 'function' && archetonsView) closeArchetons();
   if (puzzleEditor?.drawings) closeDrawings();
   puzzleEditor = null;
   document.getElementById('puzzle-editor').hidden = true;
@@ -135,6 +139,9 @@ function syncPuzzleEditor() {
     closePuzzleEditor();
     return;
   }
+  // The Archetons window keeps up with the project, after a save or an undo.
+  if (typeof renderArchetons === 'function') renderArchetons();
+
   // An undo or redo while playtesting changes what's being played, so it goes back to editing.
   if (puzzleEditor.playtest && JSON.stringify(node.puzzle?.objects) !== JSON.stringify(puzzleEditor.playtest.objects)) {
     stopPlaytest();
@@ -230,14 +237,15 @@ function puzzleLook() {
   if (!palette) return null;
 
   const library = project?.puzzleDrawings ?? [];
+  const archetons = project?.archetons ?? [];
   const working = puzzleEditor.drawings?.working ?? null;
   const last = puzzleEditor.lookFor;
-  if (last && last.palette === palette && last.textures === textures && last.library === library && last.working === working)
+  if (last && last.palette === palette && last.textures === textures && last.library === library && last.working === working && last.archetons === archetons)
     return last.look;
 
   const drawings = working ? [...library.filter((drawing) => drawing.id !== working.id), working] : library;
-  const look = { palette, textures, drawings };
-  puzzleEditor.lookFor = { palette, textures, library, working, look };
+  const look = { palette, textures, drawings, archetons };
+  puzzleEditor.lookFor = { palette, textures, library, working, archetons, look };
   return look;
 }
 
@@ -341,6 +349,11 @@ function renderPuzzleTools() {
 
 function choosePuzzleTool(kind) {
   if (kind === 'Start' && puzzleEditor.neighbours?.entrance) return;
+  // Which Archeton is chosen in its own window, which then picks the tool - see archetons.js.
+  if (kind === 'Archeton') {
+    openArchetons();
+    return;
+  }
   puzzleEditor.tool = kind;
   puzzleEditor.letterChosen = false;
   updateSuggestedLetter();
@@ -367,6 +380,10 @@ function showPuzzleTool() {
     button.disabled = fixed;
     button.title = fixed ? `The ship comes in here from '${previous.card.headingText}'.` : '';
   }
+  // The Archeton tool says which one it places.
+  const archetonButton = document.querySelector('#pe-tool-buttons button[data-tool="Archeton"]');
+  const chosen = (project?.archetons ?? []).find((archeton) => archeton.id === puzzleEditor.archeton);
+  if (archetonButton) archetonButton.textContent = chosen ? `Archeton: ${chosen.name}` : 'Archeton…';
   for (const button of document.querySelectorAll('#pe-directions button'))
     button.classList.toggle('active', button.dataset.direction === puzzleEditor.direction);
   for (const button of document.querySelectorAll('#pe-symbols button'))
@@ -420,7 +437,7 @@ puzzleToolTray.id = 'pe-tray';
 
 function renderToolTray() {
   const kind = puzzleEditor.tool;
-  const sets = WeavePuzzle.DRAWN_KINDS.includes(kind) ? placeableSets(kind) : [];
+  const sets = WeavePuzzle.DRAWN_KINDS.includes(kind) && kind !== 'Archeton' ? placeableSets(kind) : [];
   const tray = puzzleToolTray;
 
   tray.hidden = sets.length === 0;
@@ -541,6 +558,7 @@ function drawPuzzleBoard(timeMs) {
       rotatorTimeMs: timeMs,
       switchesActive: !objects.some((object) => object.kind === 'Key'),
       showInvisible: true,
+      reaches: archetonReaches(objects),
     });
     context.putImageData(puzzleEditor.image, 0, 0);
 
@@ -560,6 +578,19 @@ function drawPuzzleBoard(timeMs) {
   requestAnimationFrame(drawPuzzleBoard);
 }
 
+// Where the Archetons' Beams reach as the puzzle starts, outlined while editing as they are in the game. Worked out
+// again only when the layout or the Archetons change.
+function archetonReaches(objects) {
+  const archetons = project?.archetons ?? [];
+  const last = puzzleEditor.reachesFor;
+  if (last && last.objects === objects && last.archetons === archetons) return last.reaches;
+  const reaches = objects.some((object) => object.kind === 'Archeton')
+    ? WeavePuzzle.createPuzzleGame({ objects, archetons }).reaches
+    : [];
+  puzzleEditor.reachesFor = { objects, archetons, reaches };
+  return reaches;
+}
+
 function puzzleCellAt(e) {
   const box = document.getElementById('pe-canvas').getBoundingClientRect();
   const col = Math.floor((e.clientX - box.left) / puzzleEditor.tile);
@@ -570,12 +601,14 @@ function puzzleCellAt(e) {
 
 function buildPuzzleObject(cell) {
   const tool = currentPuzzleTool();
-  const variant = WeavePuzzle.DRAWN_KINDS.includes(tool.kind) ? variantToPlace(tool.kind) : tool.kind;
+  // An Archeton is drawn with its definition's drawing, so it's placed as whichever one's chosen instead.
+  const variant = WeavePuzzle.DRAWN_KINDS.includes(tool.kind) && !tool.archeton ? variantToPlace(tool.kind) : tool.kind;
   return {
     kind: tool.kind,
     col: cell.col,
     row: cell.row,
     ...(variant !== tool.kind ? { variant } : {}),
+    ...(tool.archeton ? { archeton: puzzleEditor.archeton } : {}),
     ...(tool.letter ? { letter: puzzleEditor.letter } : {}),
     ...(tool.direction ? { direction: puzzleEditor.direction } : {}),
     ...(tool.symbol ? { symbol: puzzleEditor.symbol } : {}),

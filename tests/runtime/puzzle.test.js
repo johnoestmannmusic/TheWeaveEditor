@@ -1366,3 +1366,63 @@ test('a Reset Switch gets its own palette colour, and is a pad with arrows, unli
   let shape = drawing.pixels.replace(/1/g, '2');
   assert.equal([...shape].reverse().join(''), shape);
 });
+
+// ---------- Archetons ----------
+
+const SENTRIBEAM = { id: 'sentribeam', name: 'Sentribeam', parts: [{ kind: 'Beam', range: 2, look: 'AllWays', blockedByBlocks: true }, { kind: 'Push' }] };
+const withArchetons = (archetons, ...objects) => createPuzzleGame({ objects, palette: {}, archetons });
+const eye = (col, row, extra = {}) => obj('Archeton', col, row, { archeton: 'sentribeam', direction: 'Right', ...extra });
+
+test('a Sentribeam pushes the ship away along its beam, any of 4 ways, up to 2 squares', () => {
+  let g = withArchetons([SENTRIBEAM], eye(5, 5), obj('Start', 5, 7));
+  assert.equal(g.carryDirection(at(5, 7)), 'down', '2 squares below, pushed down');
+  assert.deepEqual(g.beams, [{ from: at(5, 5), to: at(5, 7) }]);
+  g.placeShip(at(5, 8));
+  assert.equal(g.carryDirection(at(5, 8)), null, 'out of reach at 3');
+  assert.deepEqual(g.beams, []);
+  g.placeShip(at(4, 5));
+  assert.equal(g.carryDirection(at(4, 5)), 'left');
+  g.placeShip(at(5, 3));
+  assert.equal(g.carryDirection(at(5, 3)), 'up');
+  g.placeShip(at(6, 6));
+  assert.equal(g.carryDirection(at(6, 6)), null, 'not diagonally');
+});
+
+test('Walls, closed Gates and Push Blocks stop the beam, and it can\'t push into anything solid', () => {
+  for (const blocker of [obj('Wall', 5, 6), obj('Gate', 5, 6, { letter: 'A' }), block(5, 6)]) {
+    let g = withArchetons([SENTRIBEAM], eye(5, 5), blocker);
+    g.placeShip(at(5, 7));
+    assert.equal(g.carryDirection(at(5, 7)), null, blocker.kind);
+  }
+  let open = withArchetons([SENTRIBEAM], eye(5, 5), obj('Gate', 5, 6, { letter: 'A', open: true }));
+  open.placeShip(at(5, 7));
+  assert.equal(open.carryDirection(at(5, 7)), 'down', 'but not an open Gate');
+  let notBlocks = withArchetons([{ ...SENTRIBEAM, parts: [{ kind: 'Beam', range: 2, look: 'AllWays', blockedByBlocks: false }, { kind: 'Push' }] }], eye(5, 5), block(5, 6));
+  notBlocks.placeShip(at(5, 7));
+  assert.equal(notBlocks.carryDirection(at(5, 7)), 'down', 'unless it says Push Blocks don\'t');
+  let wallBehind = withArchetons([SENTRIBEAM], eye(5, 5), obj('Wall', 5, 8));
+  wallBehind.placeShip(at(5, 7));
+  assert.equal(wallBehind.carryDirection(at(5, 7)), null, 'nowhere to be pushed');
+  assert.equal(wallBehind.beams.length, 1, 'though the laser still hits');
+});
+
+test('an Archeton is solid, one looking the way it faces only looks that way, and one with no Push only sees', () => {
+  let g = withArchetons([SENTRIBEAM], eye(5, 5));
+  assert.equal(g.canEnter(at(4, 5), at(5, 5), 'right'), false);
+  let facing = withArchetons([{ ...SENTRIBEAM, parts: [{ kind: 'Beam', range: 3, look: 'Facing' }, { kind: 'Push' }] }], eye(5, 5, { direction: 'Up' }));
+  facing.placeShip(at(5, 2));
+  assert.equal(facing.carryDirection(at(5, 2)), 'up');
+  facing.placeShip(at(5, 7));
+  assert.equal(facing.carryDirection(at(5, 7)), null);
+  let watcher = withArchetons([{ ...SENTRIBEAM, parts: [{ kind: 'Beam', range: 2, look: 'AllWays' }] }], eye(5, 5));
+  watcher.placeShip(at(5, 6));
+  assert.equal(watcher.carryDirection(at(5, 6)), null);
+  assert.equal(watcher.beams.length, 1);
+});
+
+test('a Sentribeam\'s reach is every square its beam gets to, stopping at whatever blocks it', () => {
+  let g = withArchetons([SENTRIBEAM], eye(5, 5), obj('Wall', 5, 6), block(4, 5));
+  g.placeShip(at(0, 0));
+  let reached = g.reaches.map(c => `${c.col},${c.row}`).sort();
+  assert.deepEqual(reached, ['5,3', '5,4', '6,5', '7,5']);
+});

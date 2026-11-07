@@ -153,6 +153,7 @@ public static class Program
 
                 case "new-project":
                     _project = new WeaveProject { Title = "Untitled Project" };
+                    ProjectEditing.SeedArchetons(_project);
                     _projectPath = null;
                     _contentRoot = null;
                     _undoHistory = new UndoHistory();
@@ -255,12 +256,19 @@ public static class Program
                     if (message.Puzzle is not null)
                         ProjectEditing.ApplyPuzzleEdit(CopyForCheck(nodeForPuzzle), CopyForCheck(message.Puzzle));
                     var addedDrawings = message.Drawings ?? [];
-                    if (addedDrawings.Count > 0)
-                        ProjectEditing.AddPuzzleDrawings(CopyForCheck(_project!), CopyForCheck(addedDrawings));
+                    var addedArchetons = message.Archetons ?? [];
+                    if (addedDrawings.Count > 0 || addedArchetons.Count > 0)
+                    {
+                        var check = CopyForCheck(_project!);
+                        ProjectEditing.AddPuzzleDrawings(check, CopyForCheck(addedDrawings));
+                        ProjectEditing.AddArchetons(check, CopyForCheck(addedArchetons));
+                    }
                     ApplyMutation(window, () =>
                     {
                         if (addedDrawings.Count > 0)
                             ProjectEditing.AddPuzzleDrawings(_project!, addedDrawings);
+                        if (addedArchetons.Count > 0)
+                            ProjectEditing.AddArchetons(_project!, addedArchetons);
                         ProjectEditing.ApplyPuzzleEdit(nodeForPuzzle, message.Puzzle, pageForPuzzle);
                     });
                     break;
@@ -270,6 +278,13 @@ public static class Program
                     var drawings = message.Drawings ?? [];
                     ProjectEditing.ApplyPuzzleDrawingsEdit(CopyForCheck(_project!), CopyForCheck(drawings), message.DrawingSets is null ? null : CopyForCheck(message.DrawingSets));
                     ApplyMutation(window, () => ProjectEditing.ApplyPuzzleDrawingsEdit(_project!, drawings, message.DrawingSets));
+                    break;
+
+                case "update-archetons":
+                    RequireProject();
+                    var archetons = message.Archetons ?? [];
+                    ProjectEditing.ApplyArchetonsEdit(CopyForCheck(_project!), CopyForCheck(archetons));
+                    ApplyMutation(window, () => ProjectEditing.ApplyArchetonsEdit(_project!, archetons));
                     break;
 
                 case "load-puzzle-art":
@@ -377,6 +392,7 @@ public static class Program
     {
         var savedVersion = WeaveProjectSerializer.ReadSchemaVersion(path);
         _project = WeaveProjectSerializer.LoadFromFile(path, out var upgradeNotes);
+        ProjectEditing.SeedArchetons(_project);
         _projectPath = path;
         _contentRoot = Path.GetDirectoryName(Path.GetFullPath(path));
         _undoHistory = UndoHistory.Load(path);
@@ -609,7 +625,7 @@ public static class Program
         if (!Path.HasExtension(path))
             path += ".json";
 
-        File.WriteAllText(path, PuzzleFile.Serialize(node.Puzzle, _project!.PuzzleDrawings));
+        File.WriteAllText(path, PuzzleFile.Serialize(node.Puzzle, _project!.PuzzleDrawings, _project.Archetons));
         SendStatus(window, $"Exported puzzle to {path}.");
     }
 
@@ -622,12 +638,19 @@ public static class Program
         if (paths.Length == 0)
             return;
 
-        var (objects, fileDrawings) = PuzzleFile.Parse(File.ReadAllText(paths[0]));
+        var (objects, fileDrawings, fileArchetons) = PuzzleFile.Parse(File.ReadAllText(paths[0]));
         var drawings = PuzzleDrawings.Merge(_project!.PuzzleDrawings, fileDrawings, objects);
+        // Archeton drawings are named by their definitions rather than by objects, so they're added as they are,
+        // unless the library already has one by that id.
+        drawings.AddRange(fileDrawings.Where(d => d.Kind == PuzzleObjectKind.Archeton
+            && drawings.All(added => added.Id != d.Id) && (_project.PuzzleDrawings ?? []).All(existing => existing.Id != d.Id)));
+        var archetons = fileArchetons.Where(a => (_project.Archetons ?? []).All(existing => existing.Id != a.Id)).ToList();
         ProjectEditing.ValidatePuzzle(new Puzzle { Objects = objects });
-        ProjectEditing.AddPuzzleDrawings(CopyForCheck(_project), CopyForCheck(drawings));
+        var check = CopyForCheck(_project);
+        ProjectEditing.AddPuzzleDrawings(check, CopyForCheck(drawings));
+        ProjectEditing.AddArchetons(check, CopyForCheck(archetons));
 
-        window.SendWebMessage(JsonSerializer.Serialize(new { type = "puzzle-imported", nodeId = node.Id, objects, drawings }, OutboundOptions));
+        window.SendWebMessage(JsonSerializer.Serialize(new { type = "puzzle-imported", nodeId = node.Id, objects, drawings, archetons }, OutboundOptions));
     }
 
     // An object drawing as a PNG, for drawing in other art software. The page draws and reads the image itself (see

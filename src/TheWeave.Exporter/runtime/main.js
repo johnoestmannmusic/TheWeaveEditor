@@ -2618,6 +2618,8 @@ function drawBoardObjects(){
     pushAlong,
     pushHint: boardPushHint(),
     pulses,
+    beams: boardGame.beams,
+    reaches: boardGame.reaches,
   });
   boardObjectsCanvas.getContext('2d').putImageData(boardObjectsImage, 0, 0);
 }

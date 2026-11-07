@@ -21,9 +21,10 @@ public static class PuzzleFile
         public int Version { get; set; }
         public List<PuzzleObject>? Objects { get; set; }
         public List<PuzzleDrawing>? Drawings { get; set; }
+        public List<ArchetonDefinition>? Archetons { get; set; }
     }
 
-    public sealed record Layout(List<PuzzleObject> Objects, List<PuzzleDrawing> Drawings);
+    public sealed record Layout(List<PuzzleObject> Objects, List<PuzzleDrawing> Drawings, List<ArchetonDefinition> Archetons);
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -33,15 +34,19 @@ public static class PuzzleFile
     };
 
     /// <param name="library">The project's drawings, for the ones the puzzle's objects use.</param>
-    public static string Serialize(Puzzle puzzle, IEnumerable<PuzzleDrawing>? library = null)
+    /// <param name="archetonLibrary">The project's Archetons, for the ones on the puzzle's board.</param>
+    public static string Serialize(Puzzle puzzle, IEnumerable<PuzzleDrawing>? library = null, IEnumerable<ArchetonDefinition>? archetonLibrary = null)
     {
-        var drawings = PuzzleDrawings.UsedBy(puzzle, library, includeStandard: false);
+        var archetons = ArchetonDefinitions.UsedBy(puzzle, archetonLibrary);
+        var drawings = PuzzleDrawings.UsedBy(puzzle, library, includeStandard: false)
+            .Concat(ArchetonDefinitions.DrawingsOf(archetons, library)).DistinctBy(d => d.Id).ToList();
         return JsonSerializer.Serialize(new Contents
         {
             Format = FormatName,
             Version = CurrentVersion,
             Objects = puzzle.Objects,
             Drawings = drawings.Count > 0 ? drawings : null,
+            Archetons = archetons.Count > 0 ? archetons : null,
         }, Options);
     }
 
@@ -64,6 +69,6 @@ public static class PuzzleFile
         if (contents.Version > CurrentVersion)
             throw new InvalidDataException("This puzzle file was made by a newer version of the Editor.");
 
-        return new Layout(contents.Objects ?? new List<PuzzleObject>(), contents.Drawings ?? new List<PuzzleDrawing>());
+        return new Layout(contents.Objects ?? new List<PuzzleObject>(), contents.Drawings ?? new List<PuzzleDrawing>(), contents.Archetons ?? new List<ArchetonDefinition>());
     }
 }

@@ -23,7 +23,7 @@ public class WeaveProjectSerializerTests
     [Fact]
     public void PuzzleFile_RoundTripsTheLayout()
     {
-        var (objects, drawings) = PuzzleFile.Parse(PuzzleFile.Serialize(MakeFilePuzzle()));
+        var (objects, drawings, _) = PuzzleFile.Parse(PuzzleFile.Serialize(MakeFilePuzzle()));
 
         Assert.Empty(drawings);
         Assert.Equal(3, objects.Count);
@@ -85,7 +85,7 @@ public class WeaveProjectSerializerTests
         puzzle.Objects[2].Variant = "mossy";
         var library = new List<PuzzleDrawing> { MakeDrawing("mossy"), MakeDrawing("unused"), MakeDrawing("Wall"), MakeDrawing("mossy-key", PuzzleObjectKind.Key) };
 
-        var (objects, drawings) = PuzzleFile.Parse(PuzzleFile.Serialize(puzzle, library));
+        var (objects, drawings, _) = PuzzleFile.Parse(PuzzleFile.Serialize(puzzle, library));
 
         Assert.Equal("mossy", objects[2].Variant);
         Assert.Equal(["mossy"], drawings.Select(d => d.Id));
