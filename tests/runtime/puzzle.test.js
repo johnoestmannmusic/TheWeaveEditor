@@ -1426,3 +1426,21 @@ test('a Sentribeam\'s reach is every square its beam gets to, stopping at whatev
   let reached = g.reaches.map(c => `${c.col},${c.row}`).sort();
   assert.deepEqual(reached, ['5,3', '5,4', '6,5', '7,5']);
 });
+
+test('a Beam with a Block keeps the ship out of its reach, showing its laser once the ship is one square off it', () => {
+  let blocker = { id: 'sentribeam', name: 'Sentribeam', parts: [{ kind: 'Beam', range: 2, look: 'AllWays', blockedByBlocks: true }, { kind: 'Block' }] };
+  let g = withArchetons([blocker], eye(5, 5));
+  g.placeShip(at(5, 8));
+  assert.deepEqual(g.beams, [{ from: at(5, 5), to: at(5, 7) }], 'one off its reach, the laser shows across it');
+  assert.equal(g.canEnter(at(5, 8), at(5, 7), 'up'), false, 'and the ship can\'t step in');
+  assert.equal(g.carryDirection(at(5, 8)), null, 'nor is it pushed');
+  g.placeShip(at(2, 8));
+  assert.deepEqual(g.beams, [], 'further off, it doesn\'t show');
+  assert.equal(g.canEnter(at(4, 8), at(4, 7), 'up'), true, 'and squares beside the reach are fine');
+});
+
+test('a Beam\'s reach is only outlined if it says so', () => {
+  let unmarked = { id: 'sentribeam', name: 'Sentribeam', parts: [{ kind: 'Beam', range: 2, look: 'AllWays', showReach: false }, { kind: 'Block' }] };
+  let g = withArchetons([unmarked], eye(5, 5));
+  assert.deepEqual(g.reaches, []);
+});

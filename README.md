@@ -129,12 +129,17 @@ Neocities, replacing hand-authoring HTML per location.
 - The ship starts each puzzle facing into the board, away from whichever edge it starts on.
 - Archetons: mechanical enemies to get around rather than defeat, each built in the Editor from a drawing and
   parts, not programmed one by one. The Puzzle Editor's Archeton tool opens a window of every Archeton as a card,
-  to choose one to place, or make, edit, duplicate or delete them. Parts so far: a Beam, which sees the ship in a
-  straight line up to its range, all 4 ways or just the way it faces, stopped by Walls, closed Gates, other
-  Archetons and, if it says so, Push Blocks; and a Push, which pushes the ship away along the Beam, a square at a
-  time, until it's out of reach, firing a laser at it while it does. Every square a Beam reaches is outlined, so
-  it's clear where it's dangerous to be. Archetons are solid, and drawn in the Drawings view under Archeton.
-  Sentribeam, an eye reaching 2 squares all 4 ways, comes with every project.
+  to choose one to place, or make, edit, duplicate or delete them. Parts so far:
+  - a Beam, which sees in a straight line up to its range, all 4 ways or just the way it faces, stopped by Walls,
+    closed Gates, other Archetons and, if it says so, Push Blocks. Every square it reaches can be outlined on the
+    board, so it's clear where it's dangerous to be.
+  - a Block: the ship can't step anywhere a Beam reaches, and the laser shows across it once the ship is one square
+    off it, or in it.
+  - a Push: the ship is pushed away along the Beam, a square at a time, until it's out of reach, with a laser at it
+    while it does.
+
+  Archetons are solid, and drawn in the Drawings view under Archeton. Sentribeam, an eye whose outlined Beam
+  reaches 2 squares all 4 ways, with a Block, comes with every project.
 - A Finish on the board's edge has chevrons running across its pad towards that edge, round and round, so it
   reads at a glance as the way out.
 - A location's puzzle boards connect edge to edge, like the map's screens: a part that leads on to another

@@ -154,11 +154,11 @@ public static class ProjectValidator
         foreach (var archeton in library)
         {
             var sees = archeton.Parts.Any(p => p.Kind == ArchetonPartKind.Beam);
-            var acts = archeton.Parts.Any(p => p.Kind == ArchetonPartKind.Push);
+            var acts = archeton.Parts.Any(p => p.Kind is ArchetonPartKind.Push or ArchetonPartKind.Block);
             if (!sees)
                 Warn($"Archeton '{archeton.Name}' has no Beam to see the ship with, so it does nothing.");
             else if (!acts)
-                Warn($"Archeton '{archeton.Name}' sees the ship, but has nothing like a Push to do about it.");
+                Warn($"Archeton '{archeton.Name}' sees the ship, but has nothing like a Block or a Push to do about it.");
         }
     }
 

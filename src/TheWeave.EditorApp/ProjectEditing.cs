@@ -405,6 +405,7 @@ internal static class ProjectEditing
     public static void SeedArchetons(WeaveProject project)
     {
         project.Archetons ??= [ArchetonDefinitions.Sentribeam()];
+        ArchetonDefinitions.UpgradeFirstSentribeam(project.Archetons);
     }
 
     /// <summary>
@@ -458,12 +459,14 @@ internal static class ProjectEditing
                         throw new InvalidOperationException($"'{archeton.Name}''s Beam needs a range from 1 to {ArchetonDefinitions.MaxRange}.");
                     part.Look ??= ArchetonLook.AllWays;
                     part.BlockedByBlocks ??= true;
+                    part.ShowReach ??= true;
                 }
                 else
                 {
                     part.Range = null;
                     part.Look = null;
                     part.BlockedByBlocks = null;
+                    part.ShowReach = null;
                 }
             }
         }

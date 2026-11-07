@@ -201,15 +201,16 @@
       return isSolid(there);
     }
 
-    // Every way each Archeton's Beams look right now: { archeton, part, direction, pushes, cells }, cells being the
-    // squares it reaches, walking out as far as its range until something stops it. It ends at the ship, if it
-    // reaches it.
-    function beamPaths(){
+    // Every way each Archeton's Beams look right now: { archeton, part, direction, pushes, blocks, cells }, cells being
+    // the squares it reaches, walking out as far as its range until something stops it. It ends at the ship, if it
+    // reaches it, unless throughShip, for where it would reach with the ship out of the way.
+    function beamPaths(throughShip = false){
       let paths = [];
       for (const archeton of objects) {
         if (archeton.kind !== 'Archeton') continue;
         let parts = archetonDefinitions.get(archeton.archeton)?.parts ?? [];
         let pushes = parts.some(part => part.kind === 'Push');
+        let blocks = parts.some(part => part.kind === 'Block');
         for (const part of parts) {
           if (part.kind !== 'Beam') continue;
           let ways = part.look === 'Facing' ? [archeton.direction ?? 'Right'] : ALL_WAYS;
@@ -220,13 +221,23 @@
               cell = nextCell(cell, direction);
               if (!onBoard(cell) || stopsBeam(cell, part)) break;
               cells.push(cell);
-              if (isAt(shipCell, cell)) break;
+              if (!throughShip && isAt(shipCell, cell)) break;
             }
-            paths.push({ archeton, part, direction, pushes, cells });
+            paths.push({ archeton, part, direction, pushes, blocks, cells });
           }
         }
       }
       return paths;
+    }
+
+    // Whether an Archeton with a Block keeps the ship from stepping onto a square, by a Beam reaching it.
+    function blockedByBeam(cell){
+      return beamPaths(true).some(path => path.blocks && path.cells.some(reached => isAt(reached, cell)));
+    }
+
+    // Whether the ship is in a Beam's reach, or one square off it.
+    function nearPath(path){
+      return path.cells.some(cell => Math.abs(cell.col - shipCell.col) + Math.abs(cell.row - shipCell.row) <= 1);
     }
 
     // Every Beam that reaches the ship right now: { archeton, part, from, to, direction, pushes }.
@@ -254,6 +265,7 @@
       if (holding && holding !== direction) return false;
       if (streams.get(cellKey(to)) === OPPOSITES[direction]) return false;
       if (!pipeAllows(from, direction) || !pipeAllows(to, direction)) return false;
+      if (blockedByBeam(to)) return false;
       let object = objectAt(to);
       if (object?.kind === 'PushBlock') return !!pushedTo(object, direction);
       return !(object && isSolid(object));
@@ -476,11 +488,21 @@
       canEnter,
 
       // The Archetons' Beams reaching the ship right now, { from, to }, for drawing their lasers.
-      get beams(){ return beamsOnShip().map(hit => ({ from: hit.from, to: hit.to })); },
+      // A Beam that blocks shows its laser across its whole reach while the ship is in it or one square off it, and
+      // any other shows it from its eye to the ship while it reaches the ship.
+      get beams(){
+        let blocking = beamPaths(true).filter(path => path.blocks && path.cells.length > 0 && nearPath(path))
+          .map(path => ({ from: { col: path.archeton.col, row: path.archeton.row }, to: path.cells[path.cells.length - 1] }));
+        let hitting = beamsOnShip().filter(hit => !hit.blocks).map(hit => ({ from: hit.from, to: hit.to }));
+        return [...blocking, ...hitting];
+      },
       // Every square an Archeton's Beam reaches right now, { col, row }, for outlining where it's dangerous to be.
       get reaches(){
         let seen = new Map();
-        for (const path of beamPaths()) for (const cell of path.cells) seen.set(cellKey(cell), cell);
+        for (const path of beamPaths(true)) {
+          if (path.part.showReach === false) continue;
+          for (const cell of path.cells) seen.set(cellKey(cell), cell);
+        }
         return [...seen.values()];
       },
 

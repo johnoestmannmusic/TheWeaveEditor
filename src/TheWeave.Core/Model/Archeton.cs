@@ -15,6 +15,12 @@ public enum ArchetonPartKind
 
     /// <summary>An effect: pushes the ship away along whichever beam sees it, a square at a time, until it's out of reach.</summary>
     Push,
+
+    /// <summary>
+    /// An effect: the ship can't step into anywhere a Beam reaches, and the laser shows across it while the ship is one
+    /// square off it, or in it.
+    /// </summary>
+    Block,
 }
 
 /// <summary>Which ways a Beam looks.</summary>
@@ -44,6 +50,10 @@ public sealed class ArchetonPart
     /// <summary>Beam only: whether Push Blocks stop it, as Walls, closed Gates and other Archetons always do.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? BlockedByBlocks { get; set; }
+
+    /// <summary>Beam only: whether every square it reaches is outlined on the board, so the player can see where.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? ShowReach { get; set; }
 }
 
 /// <summary>One kind of Archeton: its name, what it's drawn with, and the parts that make it work.</summary>
@@ -63,17 +73,33 @@ public static class ArchetonDefinitions
 {
     public const int MaxRange = 9;
 
-    /// <summary>The first Archeton: an eye that fires a laser at the ship within 2 squares, any way, pushing it back out of reach.</summary>
+    /// <summary>The first Archeton: an eye whose lasers reach 2 squares any way, blocking the ship from crossing them.</summary>
     public static ArchetonDefinition Sentribeam() => new()
     {
         Id = "sentribeam",
         Name = "Sentribeam",
         Parts =
         [
-            new ArchetonPart { Kind = ArchetonPartKind.Beam, Range = 2, Look = ArchetonLook.AllWays, BlockedByBlocks = true },
-            new ArchetonPart { Kind = ArchetonPartKind.Push },
+            new ArchetonPart { Kind = ArchetonPartKind.Beam, Range = 2, Look = ArchetonLook.AllWays, BlockedByBlocks = true, ShowReach = true },
+            new ArchetonPart { Kind = ArchetonPartKind.Block },
         ],
     };
+
+    /// <summary>
+    /// Sentribeam first pushed the ship back rather than blocking it. A project still with that first version, untouched,
+    /// gets the new one's Block in place of its Push. One that's been changed is left as it is.
+    /// </summary>
+    public static void UpgradeFirstSentribeam(List<ArchetonDefinition>? archetons)
+    {
+        var first = archetons?.FirstOrDefault(a => a.Id == "sentribeam" && a.Name == "Sentribeam" && a.Drawing is null);
+        if (first is not { Parts.Count: 2 })
+            return;
+        var beam = first.Parts[0];
+        var unchanged = beam is { Kind: ArchetonPartKind.Beam, Range: 2, Look: ArchetonLook.AllWays, BlockedByBlocks: true }
+            && first.Parts[1].Kind == ArchetonPartKind.Push;
+        if (unchanged)
+            first.Parts[1] = new ArchetonPart { Kind = ArchetonPartKind.Block };
+    }
 
     /// <summary>The definitions a puzzle's Archetons are, from a library.</summary>
     public static List<ArchetonDefinition> UsedBy(Puzzle puzzle, IEnumerable<ArchetonDefinition>? library)
