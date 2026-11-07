@@ -374,7 +374,7 @@ public static class Program
 
     private static void OpenProject(PhotinoWindow window)
     {
-        var paths = window.ShowOpenFile(title: "Open Weave Project", filters: ProjectFileFilter);
+        var paths = FileDialogs.ShowOpenFile(window, "Open Weave Project", ProjectFileFilter);
         if (paths.Length == 0)
             return;
 
@@ -469,7 +469,7 @@ public static class Program
 
         if (_projectPath is null)
         {
-            var path = window.ShowSaveFile(title: "Save Weave Project", filters: ProjectFileFilter);
+            var path = FileDialogs.ShowSaveFile(window, "Save Weave Project", ProjectFileFilter);
             if (string.IsNullOrEmpty(path))
                 return;
 
@@ -496,7 +496,7 @@ public static class Program
 
     private static async Task ImportLegacySite(PhotinoWindow window)
     {
-        var folders = window.ShowOpenFolder(title: "Select the site folder to import");
+        var folders = FileDialogs.ShowOpenFolder(window, "Select the site folder to import");
         if (folders.Length == 0)
             return;
 
@@ -524,7 +524,7 @@ public static class Program
         var exportPath = _project.ExportPath;
         if (exportPath is null || !Directory.Exists(exportPath))
         {
-            var folders = window.ShowOpenFolder(title: "Select the export destination folder");
+            var folders = FileDialogs.ShowOpenFolder(window, "Select the export destination folder");
             if (folders.Length == 0)
                 return;
 
@@ -545,7 +545,7 @@ public static class Program
             return;
         }
 
-        var folders = window.ShowOpenFolder(title: "Select the export destination folder");
+        var folders = FileDialogs.ShowOpenFolder(window, "Select the export destination folder");
         if (folders.Length == 0)
             return;
 
@@ -562,7 +562,7 @@ public static class Program
             return;
         }
 
-        var paths = window.ShowOpenFile(title: "Select cover image", filters: ImageFileFilter);
+        var paths = FileDialogs.ShowOpenFile(window, "Select cover image", ImageFileFilter);
         if (paths.Length == 0)
             return;
 
@@ -618,7 +618,7 @@ public static class Program
         if (node.Puzzle is null)
             throw new InvalidOperationException("This track has no puzzle to export yet.");
 
-        var path = window.ShowSaveFile(title: "Export Sokoban Puzzle", filters: PuzzleFileFilter);
+        var path = FileDialogs.ShowSaveFile(window, "Export Sokoban Puzzle", PuzzleFileFilter);
         if (string.IsNullOrEmpty(path))
             return;
 
@@ -634,7 +634,7 @@ public static class Program
     // puzzleEditor.js's receiveImportedPuzzle.
     private static void ImportPuzzle(PhotinoWindow window, Node node)
     {
-        var paths = window.ShowOpenFile(title: "Import Sokoban Puzzle", filters: PuzzleFileFilter);
+        var paths = FileDialogs.ShowOpenFile(window, "Import Sokoban Puzzle", PuzzleFileFilter);
         if (paths.Length == 0)
             return;
 
@@ -659,7 +659,7 @@ public static class Program
     {
         var bytes = DrawingPng.FromDataUrl(dataUrl);
 
-        var path = window.ShowSaveFile(title: $"Export Drawing{(string.IsNullOrWhiteSpace(fileName) ? "" : $" '{fileName}'")}", filters: PngFileFilter);
+        var path = FileDialogs.ShowSaveFile(window, $"Export Drawing{(string.IsNullOrWhiteSpace(fileName) ? "" : $" '{fileName}'")}", PngFileFilter);
         if (string.IsNullOrEmpty(path))
             return;
 
@@ -672,7 +672,7 @@ public static class Program
 
     private static void ImportDrawingPng(PhotinoWindow window)
     {
-        var paths = window.ShowOpenFile(title: "Import Drawing", filters: PngFileFilter);
+        var paths = FileDialogs.ShowOpenFile(window, "Import Drawing", PngFileFilter);
         if (paths.Length == 0)
             return;
 
@@ -688,7 +688,7 @@ public static class Program
             return;
         }
 
-        var paths = window.ShowOpenFile(title: "Select background music", filters: AudioFileFilter);
+        var paths = FileDialogs.ShowOpenFile(window, "Select background music", AudioFileFilter);
         if (paths.Length == 0)
             return;
 
