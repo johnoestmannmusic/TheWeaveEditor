@@ -272,9 +272,10 @@
       return direction;
     }
 
-    // What's hurting the ship on a square, as the ways away from it, or undefined if nothing is: a Slide Bug that's
-    // slid into it, or a Block's laser reaching it.
+    // What's hurting the ship on a square, as the ways away from it, or undefined if nothing is: a Gate that's closed
+    // on it, a Slide Bug that's slid into it, or a Block's laser reaching it.
     function hurtAwayFrom(cell){
+      if (objects.some(object => object.kind === 'Gate' && !object.open && isAt(object, cell))) return [];
       let bug = objects.find(object => object.kind === 'Archeton' && isAt(object, cell));
       if (bug) return bug.glide === 'slide' && bug.fromCol !== undefined
         ? [bug.col > bug.fromCol ? 'Right' : bug.col < bug.fromCol ? 'Left' : bug.row > bug.fromRow ? 'Down' : 'Up']
@@ -404,24 +405,18 @@
     // there - see shipArrives and slideBugs. An event for the caller, or null.
     function trigger(object){
       switch (object.kind) {
-        // A Gate that closes on a Push Block sitting in it sends the block back to the square it was pushed from, if
-        // that's still clear. If it isn't, the block stays, and the square stays solid either way.
+        // A Gate that closes on anything sitting in it - a Push Block, a Slide Bug - passes it back the way it came: to
+        // the last square it was on that's clear, past any that now have a closed Gate in them too. With nowhere clear
+        // behind it, it stays, and the square stays solid either way. All the Switch's Gates change before any of it.
         case 'Switch': {
           if (!switchesActive()) return null;
+          let gates = objects.filter(gate => gate.kind === 'Gate' && gate.letter === object.letter);
+          for (const gate of gates) gate.open = !gate.open;
           let returned = [];
-          for (const gate of objects) {
-            if (gate.kind !== 'Gate' || gate.letter !== object.letter) continue;
-            gate.open = !gate.open;
-            if (gate.open) continue;
-            let block = objects.find(other => other.kind === 'PushBlock' && isAt(other, gate));
-            let back = block?.cameFrom;
-            if (!back || !onBoard(back) || objectAt(back) || isAt(shipCell, back)) continue;
-            block.fromCol = block.col;
-            block.fromRow = block.row;
-            block.col = back.col;
-            block.row = back.row;
-            block.glide = 'return';
-            returned.push(block);
+          for (const gate of gates.filter(gate => !gate.open)) {
+            for (const caught of objects.filter(other => other.kind !== 'Gate' && isAt(other, gate))) {
+              if (passBack(caught)) returned.push(caught);
+            }
           }
           if (returned.length === 0) return null;
           revealLitAreas();
@@ -500,6 +495,33 @@
       return null;
     }
 
+    // Notes the square an object's leaving, for a closing Gate to pass it back along - see passBack. Only the last
+    // few are kept.
+    function leaving(object){
+      (object.trail ??= []).push({ col: object.col, row: object.row });
+      if (object.trail.length > 24) object.trail.shift();
+    }
+
+    // Moves an object caught in a closing Gate back along the squares it came through, to the last one that's clear,
+    // passing over any with a closed Gate in them. Whether it moved.
+    function passBack(object){
+      let trail = object.trail ?? [];
+      for (let i = trail.length - 1; i >= 0; i--) {
+        let back = trail[i];
+        let other = objects.find(o => o !== object && o.kind !== 'Gate' && isAt(o, back));
+        if (!onBoard(back) || other || isAt(shipCell, back)) return false;
+        if (objects.some(o => o.kind === 'Gate' && !o.open && isAt(o, back))) continue;
+        trail.length = i;
+        object.fromCol = object.col;
+        object.fromRow = object.row;
+        object.col = back.col;
+        object.row = back.row;
+        object.glide = 'return';
+        return true;
+      }
+      return false;
+    }
+
     // Whether the ship, on its square, could be sent back to where it came from, or on along a direction, without going
     // through anything - see hurtBack.
     function canBeSentBack(cell, onwards){
@@ -531,6 +553,7 @@
         // Sliding into the ship hurts it, sending it back where it came from - only if it can go somewhere.
         if (isAt(shipCell, to) && !canBeSentBack(to, direction)) continue;
 
+        leaving(bug);
         bug.fromCol = bug.col;
         bug.fromRow = bug.row;
         bug.col = to.col;
@@ -611,6 +634,7 @@
       let moves = resolveMoves(track, occupied);
       if (moves.size > 0) version++;
       for (const [object, to] of moves) {
+        leaving(object);
         object.col = to.col;
         object.row = to.row;
       }
@@ -671,7 +695,7 @@
         if (block?.kind !== 'PushBlock') return null;
         let next = pushedTo(block, PUZZLE_DIRECTIONS[moverDirection]);
         if (!next) return null;
-        block.cameFrom = { col: block.col, row: block.row };
+        leaving(block);
         block.fromCol = block.col;
         block.fromRow = block.row;
         block.glide = 'push';

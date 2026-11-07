@@ -1563,3 +1563,23 @@ test('a Slide Bug won\'t hurt a ship that couldn\'t be sent anywhere', () => {
   boxed.shipArrivedAt(at(5, 3));
   assert.deepEqual(bugsIn(boxed), ['6,3'], 'boxed in, the bug waits beside it');
 });
+
+test('a Gate closing on a Slide Bug passes it back the way it came, past any other Gates closing with it', () => {
+  // Two open Gates in the bug's row, with the ship's Switch down below, ahead of where the bug will be.
+  let g = withArchetons([SLIDE_BUG], bug(1, 3), obj('Gate', 2, 3, { letter: 'A', open: true }), obj('Gate', 3, 3, { letter: 'A', open: true }), obj('Switch', 6, 8, { letter: 'A' }));
+  g.shipArrivedAt(at(6, 7));
+  g.shipArrivedAt(at(6, 7));
+  assert.deepEqual(bugsIn(g), ['3,3'], 'the bug slides into the second Gate');
+  let event = g.shipArrivedAt(at(6, 8)); // the Switch closes both
+  assert.deepEqual(bugsIn(g), ['1,3'], 'back past both closed Gates, to where it was before them');
+  assert.ok(event.returned.some(o => o.archeton === 'slide-bug'));
+  assert.equal(g.objects.find(o => o.archeton === 'slide-bug').glide, 'return');
+});
+
+test('a Gate a Slide Bug closes on the ship sends the ship back, as being hurt does', () => {
+  let g = withArchetons([SLIDE_BUG], bug(1, 3), obj('Switch', 2, 3, { letter: 'A' }), obj('Gate', 6, 5, { letter: 'A', open: true }));
+  g.placeShip(at(6, 6));
+  g.shipArrivedAt(at(6, 5)); // into the open Gate, as the bug slides onto the Switch
+  assert.equal(find(g, 'Gate').open, false);
+  assert.equal(g.carryDirection(at(6, 5)), 'down', 'back where it came from');
+});
