@@ -8,6 +8,7 @@ const ARCHETON_PARTS = [
   { kind: 'Beam', label: 'Beam', hint: 'Sees the ship in a straight line, as far as its range, unless a Wall, closed Gate or another Archeton is in the way.' },
   { kind: 'Block', label: 'Block', hint: 'The ship can\'t step anywhere a Beam reaches. The laser shows across it while the ship is one square off it, or in it.' },
   { kind: 'Push', label: 'Push', hint: 'Pushes the ship away along whichever Beam sees it, a square at a time, until it\'s out of reach.' },
+  { kind: 'Slide', label: 'Slide', hint: 'Each step the ship takes, slides a square along its line towards the ship: its row when placed facing left or right, its column facing up or down. Anything solid stops it, and it sets off Switches, Lanterns, Pipe Switches and Reset Switches it lands on.' },
 ];
 const ARCHETON_LOOKS = [
   { name: 'AllWays', label: 'All 4 ways' },

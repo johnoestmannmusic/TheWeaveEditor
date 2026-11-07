@@ -363,7 +363,9 @@
   function drawingFor(look, object){
     let find = (id) => look.drawings?.find(drawing => drawing.id === id && drawing.kind === object.kind);
     let definition = object.kind === 'Archeton' || object.kind === 'Laser' ? look.archetons?.find(d => d.id === object.archeton) : null;
-    let variant = object.kind === 'Archeton' ? definition?.drawing : object.kind === 'Laser' ? definition?.laserDrawing : object.variant;
+    // One drawn on its own, like a thumbnail or in the Drawings view, has no definition, so it's its own variant.
+    let fromDefinition = object.kind === 'Archeton' ? definition?.drawing : object.kind === 'Laser' ? definition?.laserDrawing : null;
+    let variant = fromDefinition ?? object.variant;
     return (variant && find(variant)) || find(object.kind) || standardDrawing(object.kind);
   }
 
@@ -776,7 +778,7 @@
   //   ones in play, depending on which kind of tile moved them. They move in whole pixels, like everything else.
   // - showInvisible draws anything invisible and unrevealed as a ghost, rather than leaving it out.
   // - pushAlong is how far a Push Block being pushed is through its glide, along with the ship, and returnAlong how far
-  //   one a closing Gate is sending back is through its glide.
+  //   one a closing Gate is sending back is through its glide, and slideAlong how far a Slide Bug is through its slide.
   // - An object's own sink, from 0 to 1, is how far it's sunk into its square, after matching - see sinkMatches.
   // - An object's own spin is how far round clockwise it's turned, as a Rotator Switch does while stood on - see spinAt.
   // - An object's own fade, from 0 to 1, is how much of it shows, as a Reset Switch's sweep passes - see resetSweepAt.
@@ -800,7 +802,7 @@
     let switchesActive = options.switchesActive ?? true;
 
     let alongFor = (object) => (object.glide === 'rotator' ? options.rotatorAlong : object.glide === 'push' ? options.pushAlong
-      : object.glide === 'return' ? options.returnAlong : options.along) ?? 1;
+      : object.glide === 'return' ? options.returnAlong : object.glide === 'slide' ? options.slideAlong : options.along) ?? 1;
     let drawnRow = (object) => object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * alongFor(object);
     let floorsFirst = objects
       .filter(object => object.kind !== 'Start')

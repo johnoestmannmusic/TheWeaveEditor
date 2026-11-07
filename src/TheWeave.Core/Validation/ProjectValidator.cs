@@ -154,9 +154,10 @@ public static class ProjectValidator
         {
             var sees = archeton.Parts.Any(p => p.Kind == ArchetonPartKind.Beam);
             var acts = archeton.Parts.Any(p => p.Kind is ArchetonPartKind.Push or ArchetonPartKind.Block);
-            if (!sees)
-                Warn($"Archeton '{archeton.Name}' has no Beam to see the ship with, so it does nothing.");
-            else if (!acts)
+            var moves = archeton.Parts.Any(p => p.Kind == ArchetonPartKind.Slide);
+            if (!sees && !moves)
+                Warn($"Archeton '{archeton.Name}' has no Beam to see the ship with, nor a Slide to follow it, so it does nothing.");
+            else if (sees && !acts)
                 Warn($"Archeton '{archeton.Name}' sees the ship, but has nothing like a Block or a Push to do about it.");
         }
     }

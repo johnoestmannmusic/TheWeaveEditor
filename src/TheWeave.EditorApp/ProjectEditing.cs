@@ -404,9 +404,30 @@ internal static class ProjectEditing
     }
 
     /// <summary>Adds Sentribeam to a project that's never had Archetons, so there's always one to start from.</summary>
+    /// <summary>
+    /// Offers a project each ready-made Archeton it hasn't been offered yet (see ArchetonDefinitions.ReadyMade), with any
+    /// drawing it's drawn with, so there's always something to start from. One that's since been deleted isn't offered
+    /// again. A project that had Archetons before this was kept track of had already been offered Sentribeam.
+    /// </summary>
     public static void SeedArchetons(WeaveProject project)
     {
-        project.Archetons ??= [ArchetonDefinitions.Sentribeam()];
+        project.ArchetonsOffered ??= project.Archetons is null ? [] : ["sentribeam"];
+        project.Archetons ??= [];
+
+        foreach (var make in ArchetonDefinitions.ReadyMade)
+        {
+            var archeton = make();
+            if (project.ArchetonsOffered.Contains(archeton.Id))
+                continue;
+            project.ArchetonsOffered.Add(archeton.Id);
+            if (project.Archetons.Any(a => a.Id == archeton.Id))
+                continue;
+
+            if (archeton.Drawing == ArchetonDefinitions.SlideBugDrawingId && (project.PuzzleDrawings ?? []).All(d => d.Id != archeton.Drawing))
+                project.PuzzleDrawings = [.. project.PuzzleDrawings ?? [], ArchetonDefinitions.SlideBugDrawing()];
+            project.Archetons.Add(archeton);
+        }
+
         ArchetonDefinitions.UpgradeFirstSentribeam(project.Archetons);
     }
 

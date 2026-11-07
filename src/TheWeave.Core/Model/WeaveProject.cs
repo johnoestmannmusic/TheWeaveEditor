@@ -65,6 +65,13 @@ public sealed class WeaveProject
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<ArchetonDefinition>? Archetons { get; set; }
 
+    /// <summary>
+    /// The ids of the ready-made Archetons this project has been offered (see ArchetonDefinitions.ReadyMade), so each is
+    /// only added the once, and one that's deleted stays deleted.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<string>? ArchetonsOffered { get; set; }
+
     /// <summary>Every location on every page, each followed by its parts, theirs included.</summary>
     public IEnumerable<Node> AllNodes() => Pages.SelectMany(p => Node.WithParts(p.Nodes));
 

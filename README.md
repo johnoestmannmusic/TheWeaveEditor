@@ -107,8 +107,10 @@ Neocities, replacing hand-authoring HTML per location.
   Teleporters jump to their partner. Streams carry the ship and any objects on them, and hold the ship
   until they push it onto a non-Stream square. X restarts the puzzle.
 - Push Blocks, marked with a circle, X, triangle, square or star: walking into one pushes it a square, onto
-  anything but another object, though it can go into an open Gate, and sit in it. If the Gate closes on it,
-  it glides back to the square it was pushed from, unless that's been taken. Two or more with the same symbol side by side, pushed or carried there, sink into
+  anything but another object, though it can go into an open Gate, and sit in it. A Gate that closes on
+  anything in it - a Push Block, a Slide Bug - passes it back the way it came, to the last square it was on that's
+  clear, past any other Gates that have closed too. With nowhere clear behind it, it stays. One that closes on the
+  ship hurts it, sending it back to the square it came from. Two or more with the same symbol side by side, pushed or carried there, sink into
   the ground and disappear. Standing still facing one that can be pushed shows a small bobbing arrow past it.
   They're metal plates by default, with their symbol as a glowing hollow outline.
 - Jump Tiles launch the ship 2 squares the way they point, over anything in between, or 1 if it can't land that
@@ -139,11 +141,19 @@ Neocities, replacing hand-authoring HTML per location.
     the way, the laser sends it back to the square it came from.
   - a Push: the ship is pushed away along the Beam, a square at a time, until it's out of reach, with a laser at it
     while it does.
+  - a Slide: each step the ship takes, it slides a square along its line towards the ship - its row when placed
+    facing left or right, its column facing up or down. Anything solid stops it, and it sets off the Switches,
+    Lanterns, Pipe Switches and Reset Switches it slides onto. Sliding into the ship hurts it.
+
+  Being hurt by an Archeton - a Slide Bug sliding into the ship, or the ship ending up where a Block's laser
+  reaches - always sends the ship back to the square it just came from, and it isn't followed straight away as it
+  gets there.
 
   Lasers are drawn a little see-through, from a Laser drawing each Archeton chooses: one square of beam, running
   right, repeated along it and turned the way it runs. Archetons are solid, and drawn in the Drawings view under
-  Archeton, and their lasers under Laser. Sentribeam, an eye whose outlined Beam
-  reaches 2 squares all 4 ways, with a Block, comes with every project.
+  Archeton, and their lasers under Laser. Two come with every project, each added
+  the once, so one that's deleted stays deleted: Sentribeam, an eye whose outlined Beam reaches 2 squares all 4
+  ways, with a Block, and Slide Bug, a mechanical woodlouse on 6 wheels with a Slide, keeping in the ship's way.
 - A Finish on the board's edge has chevrons running across its pad towards that edge, round and round, so it
   reads at a glance as the way out.
 - A location's puzzle boards connect edge to edge, like the map's screens: a part that leads on to another
