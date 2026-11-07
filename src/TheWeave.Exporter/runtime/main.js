@@ -68,6 +68,8 @@ let boardPipeTurnMs = null;
 // Lit Lanterns' pulses spreading out: { col, row, ms, revealed }, revealed being what each brings into view as it
 // reaches it - see drawBoardObjects.
 let boardPulses = [];
+// How long ago a closing Gate sent Push Blocks back to where they were pushed from, for their glide, or null.
+let boardReturnMs = null;
 // While one part's board scrolls across to the next's: the two slide layers, the edge it's crossing, and how
 // far through - see startBoardScroll.
 let boardScroll = null;
@@ -2158,6 +2160,7 @@ function buildBoardGame(facing, visit){
   boardPipeActiveMs = 0;
   boardPipeTurnMs = null;
   boardPulses = [];
+  boardReturnMs = null;
   boardRotatorActiveMs = 0;
   boardRotatorGlideMs = BOARD_ROTATOR_TICK_MS;
   boardRotatorClockMs = 0;
@@ -2230,6 +2233,7 @@ function onBoardEvent(event){
   let glideMs = Math.max(0, ...(event.sank ?? []).map(glideOf));
   for (const object of event.sank ?? []) boardSinking.push({ object, ms: 0, glideMs });
   if (event.jumpTo) startBoardJump(event.jumpTo);
+  if (event.returned) boardReturnMs = 0;
   if (event.lit) boardPulses.push({ ...event.lit, ms: 0, revealed: event.revealed ?? [] });
   if (event.pipesTurned) {
     boardPipeTurnMs = 0;
@@ -2455,6 +2459,7 @@ function updateBoardGame(dtMs){
 
   updateBoardSinking(dtMs);
   for (const pulse of boardPulses) pulse.ms += dtMs;
+  if (boardReturnMs !== null) boardReturnMs += dtMs;
   boardPulses = boardPulses.filter(pulse => pulse.ms < BOARD_PULSE_MS);
 
   // Nothing else moves while the ship's in the air.
@@ -2619,6 +2624,7 @@ function drawBoardObjects(){
     pushHint: boardPushHint(),
     pulses,
     beams: boardGame.beams,
+    returnAlong: boardReturnMs === null ? 1 : Math.min(1, boardReturnMs / BOARD_STEP_MS),
     reaches: boardGame.reaches,
   });
   boardObjectsCanvas.getContext('2d').putImageData(boardObjectsImage, 0, 0);

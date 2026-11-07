@@ -63,6 +63,7 @@ function buildPlaytest() {
     pipeTurnMs: null,
     sinking: [],
     pulses: [],
+    returnMs: null,
     jump: null,
     reset: null,
     solved: false,
@@ -124,6 +125,7 @@ function onPlaytestEvent(play, event) {
     play.pipeTurnMs = 0;
     play.pipeActiveMs = 0;
   }
+  if (event.returned) play.returnMs = 0;
   if (event.lit) play.pulses.push({ ...event.lit, ms: 0, revealed: event.revealed ?? [] });
   if (event.finished) {
     play.solved = true;
@@ -141,6 +143,7 @@ function updatePlaytest(play, dtMs) {
   for (const pulse of play.pulses) pulse.ms += dtMs;
   play.pulses = play.pulses.filter((pulse) => pulse.ms < timing.pulseMs);
   if (play.pipeTurnMs !== null) play.pipeTurnMs += dtMs;
+  if (play.returnMs !== null) play.returnMs += dtMs;
   if (play.solved) return;
 
   // Nothing else moves while the ship's in the air, or while a Reset Switch's sweep crosses the board.
@@ -243,6 +246,7 @@ function drawPlaytest(context, look, timeMs) {
     pushAlong: mover.progress,
     pulses,
     beams: game.beams,
+    returnAlong: play.returnMs === null ? 1 : Math.min(1, play.returnMs / timing.stepMs),
     reaches: game.reaches,
   });
   context.putImageData(puzzleEditor.image, 0, 0);

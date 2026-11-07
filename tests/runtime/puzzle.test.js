@@ -1464,3 +1464,37 @@ test('pushing a shielding block out of a Block\'s beam sends the ship back to th
   assert.equal(g.carryDirection(at(6, 5)), 'down', 'with the block gone, the laser sends it back');
   assert.equal(find(g, 'PushBlock').row, 4, 'and the block stays where it was pushed');
 });
+
+test('a Push Block can be pushed onto an open Gate, sits in it, and can be pushed on out', () => {
+  let g = game(block(2, 5), obj('Gate', 3, 5, { letter: 'A', open: true }), obj('Gate', 3, 7, { letter: 'B' }), block(2, 7), obj('Wall', 3, 6));
+  assert.equal(g.canPush(at(2, 5), 'right'), true, 'onto an open Gate');
+  assert.equal(g.canPush(at(2, 7), 'right'), false, 'but not a closed one');
+  g.pushFrom(at(1, 5), at(2, 5), 'right');
+  g.settlePushes();
+  assert.deepEqual(blocksIn(g), ['Circle@2,7', 'Circle@3,5']);
+  assert.equal(g.canEnter(at(2, 5), at(3, 5), 'right'), true, 'the ship pushes it on from there');
+  assert.equal(g.canEnter(at(3, 4), at(3, 5), 'down'), false, 'and it\'s solid, even in the open Gate, where it can\'t be pushed');
+  g.pushFrom(at(2, 5), at(3, 5), 'right');
+  assert.deepEqual(blocksIn(g), ['Circle@2,7', 'Circle@4,5']);
+});
+
+test('a Gate closing on a Push Block sends it back to the square it was pushed from, unless that\'s taken', () => {
+  let g = game(block(2, 5), obj('Gate', 3, 5, { letter: 'A', open: true }), obj('Switch', 3, 8, { letter: 'A' }));
+  g.pushFrom(at(1, 5), at(2, 5), 'right');
+  g.settlePushes();
+  let event = g.shipArrivedAt(at(3, 8));
+  assert.deepEqual(blocksIn(g), ['Circle@2,5'], 'back where it came from');
+  assert.equal(event.returned.length, 1);
+  assert.equal(find(g, 'PushBlock').glide, 'return');
+  assert.equal(find(g, 'Gate').open, false);
+
+  let taken = game(block(2, 5), obj('Gate', 3, 5, { letter: 'A', open: true }), obj('Switch', 3, 8, { letter: 'A' }), block(2, 3, 'Star'));
+  taken.pushFrom(at(1, 5), at(2, 5), 'right');
+  taken.settlePushes();
+  taken.pushFrom(at(2, 2), at(2, 3), 'down'); // the Star into (2, 4)
+  taken.settlePushes();
+  taken.pushFrom(at(2, 3), at(2, 4), 'down'); // and on into (2, 5), where the Circle came from
+  taken.settlePushes();
+  assert.equal(taken.shipArrivedAt(at(3, 8)), null);
+  assert.deepEqual(blocksIn(taken), ['Circle@3,5', 'Star@2,5'], 'with its square taken, it stays in the closed Gate');
+});
