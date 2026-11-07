@@ -1498,3 +1498,49 @@ test('a Gate closing on a Push Block sends it back to the square it was pushed f
   assert.equal(taken.shipArrivedAt(at(3, 8)), null);
   assert.deepEqual(blocksIn(taken), ['Circle@3,5', 'Star@2,5'], 'with its square taken, it stays in the closed Gate');
 });
+
+// ---------- Slide Bugs ----------
+
+const SLIDE_BUG = { id: 'slide-bug', name: 'Slide Bug', parts: [{ kind: 'Slide' }] };
+const bug = (col, row, direction = 'Right') => obj('Archeton', col, row, { archeton: 'slide-bug', direction });
+const bugsIn = (g) => g.objects.filter(o => o.archeton === 'slide-bug').map(o => `${o.col},${o.row}`);
+
+test('a Slide Bug follows the ship along its row a square for each step, and a turned one along its column', () => {
+  let g = withArchetons([SLIDE_BUG], bug(1, 3), bug(7, 1, 'Up'));
+  let event = g.shipArrivedAt(at(5, 6));
+  assert.deepEqual(bugsIn(g), ['2,3', '7,2'], 'one square each, towards the ship\'s column and row');
+  assert.equal(event.slid.length, 2);
+  assert.equal(g.objects.find(o => o.direction === 'Right').glide, 'slide');
+  for (let i = 0; i < 5; i++) g.shipArrivedAt(at(5, 6));
+  assert.deepEqual(bugsIn(g), ['5,3', '7,6'], 'and waits in line with it');
+});
+
+test('anything solid stops a Slide Bug, and so does the board\'s edge, and it\'s solid itself', () => {
+  let g = withArchetons([SLIDE_BUG], bug(1, 3), obj('Wall', 3, 3), bug(8, 5), block(6, 5));
+  for (let i = 0; i < 4; i++) g.shipArrivedAt(at(4, 8));
+  assert.deepEqual(bugsIn(g), ['2,3', '7,5'], 'up against the Wall and the Push Block');
+  let edge = withArchetons([SLIDE_BUG], bug(8, 2));
+  edge.shipArrivedAt(at(9, 9));
+  edge.shipArrivedAt(at(9, 9));
+  assert.deepEqual(bugsIn(edge), ['9,2']);
+  assert.equal(edge.canEnter(at(9, 3), at(9, 2), 'up'), false, 'the ship can\'t step into it');
+});
+
+test('a Slide Bug passes over a Switch, flipping its Gates, and lights a Lantern, and is what counts on that square', () => {
+  let g = withArchetons([SLIDE_BUG], bug(1, 3), obj('Switch', 2, 3, { letter: 'A' }), obj('Gate', 0, 0, { letter: 'A' }), obj('Lantern', 3, 3), obj('Wall', 3, 6, { invisible: true }));
+  g.shipArrivedAt(at(6, 8));
+  assert.equal(find(g, 'Gate').open, true, 'the Switch it slid onto');
+  assert.equal(g.canEnter(at(2, 4), at(2, 3), 'up'), false, 'and on the Switch, it\'s the bug that\'s in the way');
+  let event = g.shipArrivedAt(at(6, 8));
+  assert.equal(find(g, 'Lantern').lit, true);
+  assert.ok(event.lit, 'with its pulse');
+});
+
+test('a Reset puts a Slide Bug back where it started', () => {
+  let g = withArchetons([SLIDE_BUG], bug(1, 3), obj('ResetSwitch', 6, 8));
+  g.shipArrivedAt(at(6, 7));
+  g.shipArrivedAt(at(6, 7));
+  assert.deepEqual(bugsIn(g), ['3,3']);
+  g.shipArrivedAt(at(6, 8));
+  assert.deepEqual(bugsIn(g), ['1,3'], 'reset by the ship, then not moved again till its next step');
+});

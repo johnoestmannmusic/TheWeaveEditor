@@ -1196,4 +1196,31 @@ public class ProjectEditingTests
         projectNoModal.Pages.Add(page);
         Assert.Null(ProjectEditing.FindTutorialModalNode(projectNoModal));
     }
+
+    [Fact]
+    public void SeedArchetons_NewProject_GetsEveryReadyMadeArcheton_WithSlideBugsDrawing()
+    {
+        var project = new WeaveProject();
+        ProjectEditing.SeedArchetons(project);
+
+        Assert.Equal(["sentribeam", "slide-bug"], project.Archetons!.Select(a => a.Id));
+        Assert.Equal(["sentribeam", "slide-bug"], project.ArchetonsOffered);
+        var drawing = Assert.Single(project.PuzzleDrawings!);
+        Assert.Equal(PuzzleObjectKind.Archeton, drawing.Kind);
+        Assert.Equal(576, drawing.Pixels.Length);
+        ProjectEditing.ValidateArchetons(project.Archetons!, project.PuzzleDrawings);
+    }
+
+    [Fact]
+    public void SeedArchetons_ProjectThatAlreadyHadSentribeam_GetsSlideBugOnce_AndDeletedOnesStayDeleted()
+    {
+        var project = new WeaveProject { Archetons = [ArchetonDefinitions.Sentribeam()] };
+        ProjectEditing.SeedArchetons(project);
+        Assert.Equal(["sentribeam", "slide-bug"], project.Archetons!.Select(a => a.Id));
+
+        project.Archetons = [];
+        ProjectEditing.SeedArchetons(project);
+        Assert.Empty(project.Archetons);
+        Assert.Single(project.PuzzleDrawings!);
+    }
 }

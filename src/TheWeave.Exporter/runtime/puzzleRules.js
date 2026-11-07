@@ -181,8 +181,11 @@
 
     // What's on a square. A Push Block can sit in an open Gate, sharing its square, and then it's the block that
     // counts: that's what's in the way, gets pushed, or stops a beam.
+    // What's on a square. Two can share one: a Push Block in an open Gate, or a Slide Bug sliding over a Switch, say.
+    // Then it's the solid one that counts - what's in the way, gets pushed, or stops a beam - then anything but a Gate.
     function objectAt(cell){
-      return objects.find(object => isAt(object, cell) && object.kind !== 'Gate')
+      return objects.find(object => isAt(object, cell) && isSolid(object))
+        ?? objects.find(object => isAt(object, cell) && object.kind !== 'Gate')
         ?? objects.find(object => isAt(object, cell))
         ?? null;
     }
@@ -383,19 +386,10 @@
     // { teleportTo }, { jumpTo }, { finished }, { reset } (with the objects as they were), { pipesTurned } or { lit,
     // revealed } for the caller to act on. jumped says the ship landed here from a
     // Jump Tile, rather than walking or being carried.
-    function arriveAt(cell, { jumped = false } = {}){
-      version++;
-      if (!isAt(shipCell, cell)) previousShipCell = shipCell;
-      shipCell = cell;
-      if (!jumped) jumpsInARow = 0;
-      let object = objectAt(cell);
-      if (!object) return null;
-
+    // What landing on a Switch, Lantern, Reset Switch or Pipe Switch does, whether it's the ship or a Slide Bug landing
+    // there - see shipArrives and slideBugs. An event for the caller, or null.
+    function trigger(object){
       switch (object.kind) {
-        case 'Key':
-          objects.splice(objects.indexOf(object), 1);
-          return null;
-
         // A Gate that closes on a Push Block sitting in it sends the block back to the square it was pushed from, if
         // that's still clear. If it isn't, the block stays, and the square stays solid either way.
         case 'Switch': {
@@ -421,19 +415,6 @@
           return sank ? { returned, sank } : { returned };
         }
 
-        case 'Teleporter': {
-          let partners = objects.filter(other => other.kind === 'Teleporter' && other.letter === object.letter);
-          if (partners.length !== 2) return null;
-          let partner = partners.find(other => other !== object);
-          let destination = { col: partner.col, row: partner.row };
-          shipCell = destination;
-          return { teleportTo: destination };
-        }
-
-        case 'Finish':
-          solved = true;
-          return { finished: true };
-
         // Lighting one says where, and what it brought into view, for its pulse to reveal as it spreads - see
         // renderBoard's pulses. One already lit does nothing more.
         case 'Lantern': {
@@ -454,6 +435,42 @@
           return { reset: before };
         }
 
+      }
+      return null;
+    }
+
+    function shipArrives(cell, { jumped = false } = {}){
+      version++;
+      if (!isAt(shipCell, cell)) previousShipCell = shipCell;
+      shipCell = cell;
+      if (!jumped) jumpsInARow = 0;
+      let object = objectAt(cell);
+      if (!object) return null;
+
+      switch (object.kind) {
+        case 'Switch':
+        case 'Lantern':
+        case 'ResetSwitch':
+        case 'PipeSwitch':
+          return trigger(object);
+
+        case 'Key':
+          objects.splice(objects.indexOf(object), 1);
+          return null;
+
+        case 'Teleporter': {
+          let partners = objects.filter(other => other.kind === 'Teleporter' && other.letter === object.letter);
+          if (partners.length !== 2) return null;
+          let partner = partners.find(other => other !== object);
+          let destination = { col: partner.col, row: partner.row };
+          shipCell = destination;
+          return { teleportTo: destination };
+        }
+
+        case 'Finish':
+          solved = true;
+          return { finished: true };
+
         case 'PipeSwitch':
           return turnPipes();
 
@@ -468,6 +485,50 @@
 
       return null;
     }
+
+    // Every Slide Bug takes its step, after the ship has: a square along its line towards the ship's column, or row -
+    // its row when it faces Left or Right, its column facing Up or Down. Stopped by the board's edge, anything solid,
+    // the ship itself, or a Pipe across its line, it waits there. Landing on a Switch, Lantern, Reset Switch or Pipe
+    // Switch triggers it, as the ship would. { slid } and whatever they set off, or null if none moved.
+    function slideBugs(){
+      let slid = [];
+      let set = {};
+      for (const bug of objects.filter(object => object.kind === 'Archeton' && archetonDefinitions.get(object.archeton)?.parts?.some(part => part.kind === 'Slide'))) {
+        let across = bug.direction !== 'Up' && bug.direction !== 'Down';
+        let target = across ? shipCell.col : shipCell.row;
+        let at = across ? bug.col : bug.row;
+        if (target === at) continue;
+        let direction = across ? (target > at ? 'Right' : 'Left') : (target > at ? 'Down' : 'Up');
+        let to = nextCell(bug, direction);
+        let there = onBoard(to) ? objectAt(to) : null;
+        if (!onBoard(to) || isAt(shipCell, to) || (there && isSolid(there)) || !pipeAllows(bug, direction) || !pipeAllows(to, direction)) continue;
+
+        bug.fromCol = bug.col;
+        bug.fromRow = bug.row;
+        bug.col = to.col;
+        bug.row = to.row;
+        bug.glide = 'slide';
+        slid.push(bug);
+        if (there) Object.assign(set, trigger(there) ?? {});
+        // A Reset Switch puts every Slide Bug back where it started, so none of the rest move now.
+        if (set.reset) break;
+      }
+      if (slid.length === 0) return null;
+      version++;
+      revealLitAreas();
+      return { ...set, slid };
+    }
+
+    // The ship arriving on a square, then every Slide Bug following it a step - except when it's finished the board,
+    // is about to land from a jump, when the bugs wait for it to land, or has reset the board, which put them back.
+    function arriveAt(cell, options){
+      let event = shipArrives(cell, options);
+      if (event?.finished || event?.jumpTo || event?.reset) return event;
+      let slid = slideBugs();
+      if (!slid) return event;
+      return event ? { ...slid, ...event } : slid;
+    }
+
 
     // Which objects on a set of floor tiles can move this tick, all at once, so a full loop keeps
     // circulating. Starts from everything that might, then takes out whatever turns out to be blocked,

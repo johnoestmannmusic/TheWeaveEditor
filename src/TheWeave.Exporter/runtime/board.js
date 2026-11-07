@@ -51,6 +51,7 @@
       pipeActiveMs: 0,
       pipeTurnMs: null,
       returnMs: null,
+      slideMs: null, // how long ago Slide Bugs last slid, for their glide
       sinking: [],
       pulses: [],
     };
@@ -81,6 +82,7 @@
         hooks.onJump?.(from, event.jumpTo);
       }
       if (event.returned) play.returnMs = 0;
+      if (event.slid) play.slideMs = 0;
       if (event.lit) play.pulses.push({ ...event.lit, ms: 0, revealed: event.revealed ?? [] });
       if (event.pipesTurned) {
         play.pipeTurnMs = 0;
@@ -125,6 +127,7 @@
       play.pulses = play.pulses.filter(pulse => pulse.ms < TIMING.pulseMs);
       if (play.pipeTurnMs !== null) play.pipeTurnMs += dtMs;
       if (play.returnMs !== null) play.returnMs += dtMs;
+      if (play.slideMs !== null) play.slideMs += dtMs;
     };
 
     // The board being played: the ship moving, and everything that moves by itself. Nothing else moves while the
@@ -248,6 +251,7 @@
         rotatorAlong: play.rotatorGlideMs / TIMING.rotatorTickMs,
         pushAlong: mover.progress,
         returnAlong: play.returnMs === null ? 1 : Math.min(1, play.returnMs / TIMING.stepMs),
+        slideAlong: play.slideMs === null ? 1 : Math.min(1, play.slideMs / TIMING.stepMs),
         pulses,
         beams: game.beams,
         reaches: game.reaches,
@@ -257,7 +261,7 @@
       // Only what's actually moving or animating goes into the key: anything gliding, in whole pixels, and the
       // phase of any animation the board has.
       let gliding = (glide) => game.objects.some(o => o.glide === glide && o.fromCol !== undefined && (o.fromCol !== o.col || o.fromRow !== o.row));
-      for (const [glide, along] of [['stream', options.along], ['rotator', options.rotatorAlong], ['push', options.pushAlong], ['return', options.returnAlong]]) {
+      for (const [glide, along] of [['stream', options.along], ['rotator', options.rotatorAlong], ['push', options.pushAlong], ['return', options.returnAlong], ['slide', options.slideAlong]]) {
         if (gliding(glide)) key.push(glide, Math.round(Math.min(1, along) * TILE_PX));
       }
       let phase = (ms, cycle) => Math.floor((((ms ?? 0) % cycle) / cycle) * TILE_PX);

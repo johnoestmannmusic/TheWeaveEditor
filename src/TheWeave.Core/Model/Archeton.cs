@@ -21,6 +21,13 @@ public enum ArchetonPartKind
     /// square off it, or in it.
     /// </summary>
     Block,
+
+    /// <summary>
+    /// A movement: each time the ship takes a step, slides a square along its line towards the ship's column, or row -
+    /// its row when it's placed facing Left or Right, its column facing Up or Down. Anything solid stops it, and it
+    /// triggers what it lands on, as the ship would: Switches, Lanterns, Pipe Switches and Reset Switches.
+    /// </summary>
+    Slide,
 }
 
 /// <summary>Which ways a Beam looks.</summary>
@@ -88,6 +95,60 @@ public static class ArchetonDefinitions
             new ArchetonPart { Kind = ArchetonPartKind.Block },
         ],
     };
+
+    /// <summary>The second Archeton: a mechanical woodlouse on 6 wheels, sliding along its line to keep in the ship's way.</summary>
+    public static ArchetonDefinition SlideBug() => new()
+    {
+        Id = "slide-bug",
+        Name = "Slide Bug",
+        Drawing = SlideBugDrawingId,
+        Parts = [new ArchetonPart { Kind = ArchetonPartKind.Slide }],
+    };
+
+    public const string SlideBugDrawingId = "slide-bug";
+
+    /// <summary>Slide Bug's drawing, facing right: plated segments, a head with two eyes, and 3 wheels either side.</summary>
+    public static PuzzleDrawing SlideBugDrawing() => new()
+    {
+        Id = SlideBugDrawingId,
+        Kind = PuzzleObjectKind.Archeton,
+        Name = "Slide Bug",
+        Pixels =
+        "........................" +
+        "......O....OO....O......" +
+        ".....O1O..O11O..O1O....." +
+        "....O1H1O.OHHO.O1H1O...." +
+        "....O111O.O11O.O111O...." +
+        ".....OOO..OOOO..OOO....." +
+        ".......OOO2333OOO......." +
+        ".....OO3332333233OO....." +
+        "....O32333233323344O...." +
+        "...OGG2GGG2GGG2GG4O4O..." +
+        "...OGG2GGG2GGG2GG444O..." +
+        "...OGG2GGG2GGG2GG444O..." +
+        "...OGG2GGG2GGG2GG444O..." +
+        "...OGG2GGG2GGG2GG444O..." +
+        "...OGG2GGG2GGG2GG4O4O..." +
+        "....OG2GGG2GGG2GG44O...." +
+        ".....OOGGG2GGG2GGOO....." +
+        ".......OOO2GGGOOO......." +
+        ".....OOO..OOOO..OOO....." +
+        "....O111O.O11O.O111O...." +
+        "....O1H1O.OHHO.O1H1O...." +
+        ".....O1O..O11O..O1O....." +
+        "......O....OO....O......" +
+        "........................",
+        Mix =
+        [
+            new PuzzleMixColour { Role = "archeton", Shade = 0, Percent = 15 },
+            new PuzzleMixColour { Role = "archeton", Shade = 1, Percent = 25 },
+            new PuzzleMixColour { Role = "archeton", Shade = 2, Percent = 45 },
+            new PuzzleMixColour { Role = "archeton", Shade = 3, Percent = 15 },
+        ],
+    };
+
+    /// <summary>The ready-made Archetons, each offered to a project once - see WeaveProject.ArchetonsOffered.</summary>
+    public static IReadOnlyList<Func<ArchetonDefinition>> ReadyMade { get; } = [Sentribeam, SlideBug];
 
     /// <summary>
     /// Sentribeam first pushed the ship back rather than blocking it. A project still with that first version, untouched,

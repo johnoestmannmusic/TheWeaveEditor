@@ -601,4 +601,21 @@ public class ProjectValidatorTests
 
         Assert.Empty(ProjectValidator.Validate(project));
     }
+
+    [Fact]
+    public void Validate_ArchetonWithOnlyASlide_DoesSomething_ButOneWithNoParts_IsWarnedAbout()
+    {
+        var project = new WeaveProject
+        {
+            Archetons =
+            [
+                new ArchetonDefinition { Id = "bug", Name = "Bug", Parts = [new ArchetonPart { Kind = ArchetonPartKind.Slide }] },
+                new ArchetonDefinition { Id = "idle", Name = "Idle" },
+            ],
+        };
+
+        var messages = ProjectValidator.Validate(project, null).Select(i => i.Message).ToList();
+        Assert.DoesNotContain(messages, m => m.Contains("'Bug'"));
+        Assert.Contains(messages, m => m.Contains("'Idle'") && m.Contains("does nothing"));
+    }
 }
