@@ -13,6 +13,9 @@
   <ItemGroup>
     <Content Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" />
     <!-- Shared with the exported site, so that a puzzle looks the same in both. -->
+    <Content Include="..\TheWeave.Exporter\runtime\puzzleRules.js" Link="wwwroot\puzzleRules.js" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\TheWeave.Exporter\runtime\puzzleColours.js" Link="wwwroot\puzzleColours.js" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\TheWeave.Exporter\runtime\puzzleDrawing.js" Link="wwwroot\puzzleDrawing.js" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\TheWeave.Exporter\runtime\puzzle.js" Link="wwwroot\puzzle.js" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\TheWeave.Exporter\runtime\sokoban.js" Link="wwwroot\sokoban.js" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\TheWeave.Exporter\runtime\board.js" Link="wwwroot\board.js" CopyToOutputDirectory="PreserveNewest" />

@@ -178,9 +178,18 @@ public class PageRendererTests
               <title>The Weave Explorer</title>
               <link href="css/main.css?v={{RuntimeAssets.Version}}" rel="stylesheet">
               <script src="jsx/sokoban.js?v={{RuntimeAssets.Version}}"></script>
+              <script src="jsx/puzzleRules.js?v={{RuntimeAssets.Version}}"></script>
+              <script src="jsx/puzzleColours.js?v={{RuntimeAssets.Version}}"></script>
+              <script src="jsx/puzzleDrawing.js?v={{RuntimeAssets.Version}}"></script>
               <script src="jsx/puzzle.js?v={{RuntimeAssets.Version}}"></script>
               <script src="jsx/board.js?v={{RuntimeAssets.Version}}"></script>
               <script src="jsx/main.js?v={{RuntimeAssets.Version}}"></script>
+              <script src="jsx/loading.js?v={{RuntimeAssets.Version}}"></script>
+              <script src="jsx/cards.js?v={{RuntimeAssets.Version}}"></script>
+              <script src="jsx/map.js?v={{RuntimeAssets.Version}}"></script>
+              <script src="jsx/audio.js?v={{RuntimeAssets.Version}}"></script>
+              <script src="jsx/trackFocus.js?v={{RuntimeAssets.Version}}"></script>
+              <script src="jsx/effects.js?v={{RuntimeAssets.Version}}"></script>
 
               <script>
                 window.__weavePage = {"id":"tutorial-only","globeEffect":true,"worldWidth":3000,"worldHeight":1686,"defaultSpawnX":null,"defaultSpawnY":null,"isHomePage":false,"grid":{{ExactGridJson}},"screen":{{ExactScreenJson}}};

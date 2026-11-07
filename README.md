@@ -190,9 +190,16 @@ Neocities, replacing hand-authoring HTML per location.
 - `src/TheWeave.Core` — the project file schema, serialization, and validation. No UI or I/O
   framework dependencies beyond the .NET BCL, so it's fully unit-testable in isolation.
 - `src/TheWeave.Exporter` — renders a project to a static HTML/CSS/JS site. Also owns the
-  canonical shared runtime (`runtime/main.css`, `runtime/main.js`, `runtime/sokoban.js`, `runtime/puzzle.js`,
-  `runtime/board.js`, `runtime/shell.js`) embedded in the assembly. `board.js` plays a puzzle board, shared by the
-  game's Track Focus and the Puzzle Editor's playtest.
+  canonical shared runtime embedded in the assembly, every file in `runtime/`, split by concern:
+  - `main.js`, the page's state, setup and frame loop, followed by `loading.js`, `cards.js`, `map.js`, `audio.js`,
+    `trackFocus.js` and `effects.js`, all sharing one set of page-wide names.
+  - `sokoban.js`, grid movement.
+  - `puzzle.js`, which brings together `puzzleRules.js` (placing and playing), `puzzleColours.js` (palettes and
+    textures from the album art) and `puzzleDrawing.js` (sprites and `renderBoard`).
+  - `board.js`, a puzzle board being played, shared by the game's Track Focus and the Puzzle Editor's playtest.
+  - `main.css`, and `shell.js` for the persistent shell.
+
+  The puzzle, sokoban and board files know nothing about the page, so the Editor links them in too.
 - `src/TheWeave.Importer` — parses an existing hand-authored site into a project file, for
   one-time migration. Built on [AngleSharp](https://anglesharp.github.io/).
 - `src/TheWeave.EditorApp` — the desktop editor shell, built on

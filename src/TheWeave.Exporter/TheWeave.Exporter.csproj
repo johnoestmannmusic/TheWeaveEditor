@@ -10,11 +10,9 @@
 
   <ItemGroup>
     <EmbeddedResource Include="runtime\main.css" />
-    <EmbeddedResource Include="runtime\main.js" />
-    <EmbeddedResource Include="runtime\sokoban.js" />
-    <EmbeddedResource Include="runtime\puzzle.js" />
-    <EmbeddedResource Include="runtime\board.js" />
-    <EmbeddedResource Include="runtime\shell.js" />
+    <!-- Every runtime script: main.js and the page script's parts, sokoban.js, puzzle.js and its parts, board.js and
+         shell.js - see RuntimeAssets. -->
+    <EmbeddedResource Include="runtime\*.js" />
     <!-- Repo-root disclosure statement and changelog (see DisclosurePageRenderer/
          UpdateLogPageRenderer) - kept at the root, next to README.md/LICENSE, rather than copied
          into this project's own directory, so they stay the single editable source of truth. -->

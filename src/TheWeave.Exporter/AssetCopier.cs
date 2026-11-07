@@ -15,7 +15,18 @@ public static class AssetCopier
         WriteFile(Path.Combine(outputDir, project.Assets.PuzzleJsPath), RuntimeAssets.ReadPuzzleJs());
         WriteFile(Path.Combine(outputDir, project.Assets.BoardJsPath), RuntimeAssets.ReadBoardJs());
         WriteFile(Path.Combine(outputDir, project.Assets.ShellJsPath), RuntimeAssets.ReadShellJs());
-        return new[] { Normalize(project.Assets.CssPath), Normalize(project.Assets.JsPath), Normalize(project.Assets.SokobanJsPath), Normalize(project.Assets.PuzzleJsPath), Normalize(project.Assets.BoardJsPath), Normalize(project.Assets.ShellJsPath) };
+
+        // The parts puzzle.js and main.js are split into, beside them.
+        var parts = RuntimeAssets.PuzzleScriptParts.Select(name => RuntimeAssets.Beside(project.Assets.PuzzleJsPath, name))
+            .Zip(RuntimeAssets.PuzzleScriptParts)
+            .Concat(RuntimeAssets.PageScriptParts.Select(name => RuntimeAssets.Beside(project.Assets.JsPath, name)).Zip(RuntimeAssets.PageScriptParts))
+            .ToList();
+        foreach (var (path, name) in parts)
+            WriteFile(Path.Combine(outputDir, path), RuntimeAssets.ReadScriptPart(name));
+
+        return new[] { Normalize(project.Assets.CssPath), Normalize(project.Assets.JsPath), Normalize(project.Assets.SokobanJsPath), Normalize(project.Assets.PuzzleJsPath), Normalize(project.Assets.BoardJsPath), Normalize(project.Assets.ShellJsPath) }
+            .Concat(parts.Select(part => Normalize(part.Item1)))
+            .ToArray();
     }
 
     /// <summary>
