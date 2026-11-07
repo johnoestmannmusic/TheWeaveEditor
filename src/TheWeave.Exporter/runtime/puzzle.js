@@ -1513,6 +1513,22 @@
     }
   }
 
+  // ---------- timing ----------
+
+  // How long things take on a board, shared by the game (main.js) and the Puzzle Editor's playtest, so that a puzzle
+  // plays the same in both: a step, a Stream's and a Rotator tile's tick, a Pipe Switch's tick and the Pipes' swing,
+  // a jump per square, a matched block sinking, and a lit Lantern's pulse spreading.
+  const BOARD_TIMING = {
+    stepMs: 180,
+    streamTickMs: 360,
+    rotatorTickMs: 1000,
+    pipeTickMs: 1000,
+    pipeTurnMs: 200,
+    jumpMsPerSquare: 175,
+    sinkMs: 500,
+    pulseMs: 700,
+  };
+
   // ---------- resetting ----------
 
   // A Reset Switch's sweep across the board, from the top-left corner to the bottom-right: as it passes each
@@ -1679,6 +1695,6 @@
   }
 
   return { BOARD_SIZE, DEFAULT_START, LETTERS, TILE_PX, ART_PX, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, pickPalette, pickTextures, renderBoard, hasFinish, createPuzzleGame,
-    RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, spinAt, SPIN_STEPS, PULSE_REACH_PX,
+    RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, spinAt, SPIN_STEPS, PULSE_REACH_PX, BOARD_TIMING,
     PAINTS, DRAWN_KINDS, ANIMATED_KINDS, TURNED_KINDS, SYMBOLS, SPRITE_ROLES, TEXTURE_SHADES, standardDrawing, standardMix, mixTexture, renderDrawingLayer, RAISED_PX };
 });

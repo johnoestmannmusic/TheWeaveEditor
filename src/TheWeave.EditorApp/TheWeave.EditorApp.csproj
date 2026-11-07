@@ -14,6 +14,7 @@
     <Content Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" />
     <!-- Shared with the exported site, so that a puzzle looks the same in both. -->
     <Content Include="..\TheWeave.Exporter\runtime\puzzle.js" Link="wwwroot\puzzle.js" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\TheWeave.Exporter\runtime\sokoban.js" Link="wwwroot\sokoban.js" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <PropertyGroup>

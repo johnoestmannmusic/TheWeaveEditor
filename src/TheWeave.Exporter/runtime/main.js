@@ -2118,14 +2118,14 @@ function updateTrackFocusScale(){
 // as the map (see sokoban.js). Everything is measured in the art's own pixels, then multiplied up by
 // trackFocusScale to draw, so a window resize mid-game has nothing to rebuild and the ship always
 // matches the art's pixel size. A track with a puzzle adds its rules to that - see buildBoardGame.
-const BOARD_STEP_MS = 180;
+const BOARD_STEP_MS = WeavePuzzle.BOARD_TIMING.stepMs;
 // How long something on a Stream or Rotator tile takes to move a square, and how long a solved puzzle stays
 // on screen. One that leads on to the next part's board only rests a moment before scrolling across to it.
-const BOARD_STREAM_TICK_MS = 360;
+const BOARD_STREAM_TICK_MS = WeavePuzzle.BOARD_TIMING.streamTickMs;
 const BOARD_SCROLL_DELAY_MS = 150;
 const BOARD_SCROLL_MS = 600;
 const BOARD_SCROLL_DELTAS = { Up: { x: 0, y: -1 }, Down: { x: 0, y: 1 }, Left: { x: -1, y: 0 }, Right: { x: 1, y: 0 } };
-const BOARD_ROTATOR_TICK_MS = 1000;
+const BOARD_ROTATOR_TICK_MS = WeavePuzzle.BOARD_TIMING.rotatorTickMs;
 const BOARD_SOLVED_PAUSE_MS = 800;
 // img/ui/pilot-ship.png's own size.
 const BOARD_SHIP_WIDTH = 12;
@@ -2418,11 +2418,11 @@ function buildBoardShip(){
 
 // The ship leaps from a Jump Tile to where it lands, over whatever's between, nothing else moving meanwhile, and
 // arrives there as if it had walked.
-const BOARD_JUMP_MS_PER_SQUARE = 175;
+const BOARD_JUMP_MS_PER_SQUARE = WeavePuzzle.BOARD_TIMING.jumpMsPerSquare;
 // How much bigger the ship looks at the top of its leap.
 const BOARD_JUMP_RISE = 0.4;
 // How long a matched Push Block takes to sink into the ground.
-const BOARD_SINK_MS = 500;
+const BOARD_SINK_MS = WeavePuzzle.BOARD_TIMING.sinkMs;
 
 function startBoardJump(to){
   let from = boardMover.cell;
@@ -2523,12 +2523,12 @@ function updateBoardGame(dtMs){
 }
 
 // How long a lit Lantern's pulse takes to spread as far as it reaches.
-const BOARD_PULSE_MS = 700;
+const BOARD_PULSE_MS = WeavePuzzle.BOARD_TIMING.pulseMs;
 
 // Pipes turn as the ship arrives on a Pipe Switch (see puzzle.js's arriveAt), then again each second it stays there.
-const BOARD_PIPE_TICK_MS = 1000;
+const BOARD_PIPE_TICK_MS = WeavePuzzle.BOARD_TIMING.pipeTickMs;
 // How long Pipes take to swing round a quarter turn.
-const BOARD_PIPE_TURN_MS = 200;
+const BOARD_PIPE_TURN_MS = WeavePuzzle.BOARD_TIMING.pipeTurnMs;
 
 function updateBoardPipes(dtMs){
   if (boardPipeTurnMs !== null) boardPipeTurnMs += dtMs;
