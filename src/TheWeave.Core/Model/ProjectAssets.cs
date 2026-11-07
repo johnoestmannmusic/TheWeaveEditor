@@ -12,6 +12,9 @@ public sealed class ProjectAssets
     /// <summary>Sokoban puzzles (see runtime/puzzle.js) - every page loads it just before JsPath.</summary>
     public string PuzzleJsPath { get; set; } = "jsx/puzzle.js";
 
+    /// <summary>A puzzle board being played (see runtime/board.js) - every page loads it after PuzzleJsPath, just before JsPath.</summary>
+    public string BoardJsPath { get; set; } = "jsx/board.js";
+
     public string ImgRoot { get; set; } = "img";
     public string FntRoot { get; set; } = "fnt";
     public string MusRoot { get; set; } = "mus";

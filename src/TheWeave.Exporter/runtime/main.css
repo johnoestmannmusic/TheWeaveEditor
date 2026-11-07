@@ -497,18 +497,16 @@ h3 {
   -webkit-backdrop-filter: blur(8px);
 }
 
-/* The art again, blown up to fill the screen and heavily blurred, just to lend everything its
-   palette. Overshoots the screen's edges by more than the blur's radius, which would otherwise
-   fade out into a visible soft border. */
+/* The art again, blown up to fill the screen, just to lend everything its palette: a canvas only a few
+   pixels across, smoothed as it's stretched, which looks like a heavy blur without the cost of one - see
+   main.js's buildFocusBackdrop. Overshoots the screen's edges a little, so its smoothed edge doesn't show. */
 #trackFocusBackdrop {
   position: absolute;
   top: -80px;
   left: -80px;
   width: calc(100% + 160px);
   height: calc(100% + 160px);
-  object-fit: cover;
   image-rendering: auto;
-  filter: blur(40px);
   opacity: 0.25;
 }
 

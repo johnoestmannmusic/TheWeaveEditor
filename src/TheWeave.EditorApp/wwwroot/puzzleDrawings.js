@@ -187,6 +187,7 @@ function closeDrawings() {
   const { kind, setId } = puzzleEditor.drawings;
   if (setId) puzzleEditor.choices[kind] = setId;
   puzzleEditor.drawings = null;
+  puzzleEditor.drawnBoard = null; // the board's drawn afresh now it's back - see drawPuzzleBoard
 
   document.getElementById('pe-main').classList.remove('drawing-mode');
   document.getElementById('pe-drawings').hidden = true;

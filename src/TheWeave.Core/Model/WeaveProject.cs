@@ -64,4 +64,10 @@ public sealed class WeaveProject
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<ArchetonDefinition>? Archetons { get; set; }
+
+    /// <summary>Every location on every page, each followed by its parts, theirs included.</summary>
+    public IEnumerable<Node> AllNodes() => Pages.SelectMany(p => Node.WithParts(p.Nodes));
+
+    /// <summary>Every location's puzzle, parts' included.</summary>
+    public IEnumerable<Puzzle> AllPuzzles() => AllNodes().Where(n => n.Puzzle is not null).Select(n => n.Puzzle!);
 }

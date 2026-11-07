@@ -540,9 +540,8 @@ function drawPuzzleBoard(timeMs) {
 
   const canvas = document.getElementById('pe-canvas');
   const context = canvas.getContext('2d');
-  context.clearRect(0, 0, canvas.width, canvas.height);
-
   const look = puzzleLook();
+  // A playtest draws the board itself, and only when it changes - see puzzlePlaytest.js.
   if (look && puzzleEditor.playtest) {
     drawPlaytest(context, look, timeMs);
     requestAnimationFrame(drawPuzzleBoard);
@@ -550,9 +549,20 @@ function drawPuzzleBoard(timeMs) {
   }
   // A Stream or Rotator tile's preview flows, so it's kept moving.
   if (puzzleEditor.drawings && !puzzleEditor.drawings.stroke && isAnimatedKind(puzzleEditor.drawings.kind)) drawDrawingPreview(timeMs);
-  if (look && !puzzleEditor.drawings) {
+  // Only drawn again when it would look any different: a change to the layout or how it's drawn, or the next step
+  // of an animation on it. An open Puzzle Editor left alone costs next to nothing.
+  const objects = puzzleEditor.objects;
+  const drawnKey = puzzleBoardKey(objects, look, timeMs);
+  const last = puzzleEditor.drawnBoard;
+  const unchanged = last && last.objects === objects && last.look === look && last.key === drawnKey && last.shipImage === puzzleEditor.shipImage;
+  if (unchanged || puzzleEditor.drawings) {
+    requestAnimationFrame(drawPuzzleBoard);
+    return;
+  }
+  puzzleEditor.drawnBoard = { objects, look, key: drawnKey, shipImage: puzzleEditor.shipImage };
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  if (look) {
     puzzleEditor.image ??= context.createImageData(PUZZLE_ART_PX, PUZZLE_ART_PX);
-    const objects = puzzleEditor.objects;
     WeavePuzzle.renderBoard(puzzleEditor.image, objects, look, {
       timeMs,
       rotatorTimeMs: timeMs,
@@ -589,6 +599,17 @@ function archetonReaches(objects) {
     : [];
   puzzleEditor.reachesFor = { objects, archetons, reaches };
   return reaches;
+}
+
+// The step each animation on a board is at, for only the animations it has, so that a board with none never needs
+// drawing again until it changes - see drawPuzzleBoard. The same cycles as puzzle.js's renderBoard.
+function puzzleBoardKey(objects, look, timeMs) {
+  const phase = (cycle) => Math.floor(((timeMs % cycle) / cycle) * PUZZLE_TILE_PX);
+  const key = [];
+  if (objects.some((object) => object.kind === 'Stream')) key.push('S', phase(900));
+  if (objects.some((object) => object.kind === 'RotatorTile')) key.push('R', phase(1000));
+  if (objects.some((object) => object.kind === 'Finish' && WeavePuzzle.exitDirectionOf(object))) key.push('F', phase(1200) % 8);
+  return key.join(',');
 }
 
 function puzzleCellAt(e) {

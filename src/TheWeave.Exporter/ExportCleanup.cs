@@ -37,6 +37,7 @@ public static class ExportCleanup
                 TopSegment(project.Assets.JsPath),
                 TopSegment(project.Assets.SokobanJsPath),
                 TopSegment(project.Assets.PuzzleJsPath),
+                TopSegment(project.Assets.BoardJsPath),
                 TopSegment(project.Assets.ShellJsPath),
             }
             .Where(d => !string.IsNullOrEmpty(d))

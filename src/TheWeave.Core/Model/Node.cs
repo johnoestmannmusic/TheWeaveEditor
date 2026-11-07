@@ -17,6 +17,9 @@ public enum IconStyle
 /// </summary>
 public sealed class Node
 {
+    /// <summary>Each of these locations followed by its parts, and theirs, in order.</summary>
+    public static IEnumerable<Node> WithParts(IEnumerable<Node> nodes) => nodes.SelectMany(n => new[] { n }.Concat(WithParts(n.Children)));
+
     public string Id { get; set; } = "";
     public double X { get; set; }
     public double Y { get; set; }

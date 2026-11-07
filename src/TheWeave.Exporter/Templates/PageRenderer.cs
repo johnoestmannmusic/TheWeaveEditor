@@ -63,6 +63,7 @@ public sealed class PageRenderer
         sb.AppendLine($"  <link href=\"{EscapeAttr(_project.Assets.CssPath)}?v={RuntimeAssets.Version}\" rel=\"stylesheet\">");
         sb.AppendLine($"  <script src=\"{EscapeAttr(_project.Assets.SokobanJsPath)}?v={RuntimeAssets.Version}\"></script>");
         sb.AppendLine($"  <script src=\"{EscapeAttr(_project.Assets.PuzzleJsPath)}?v={RuntimeAssets.Version}\"></script>");
+        sb.AppendLine($"  <script src=\"{EscapeAttr(_project.Assets.BoardJsPath)}?v={RuntimeAssets.Version}\"></script>");
         sb.AppendLine($"  <script src=\"{EscapeAttr(_project.Assets.JsPath)}?v={RuntimeAssets.Version}\"></script>");
         sb.AppendLine();
         sb.AppendLine(PageConfigScriptRenderer.Render(page, _project));
