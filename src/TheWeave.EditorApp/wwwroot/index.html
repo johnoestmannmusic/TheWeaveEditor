@@ -85,6 +85,7 @@
     <header id="pe-header">
       <strong id="pe-title"></strong>
       <div class="spacer"></div>
+      <button id="pe-playtest" title="Play this puzzle as it's laid out now: arrows or WASD to move, X to restart, Esc to stop">Playtest</button>
       <button id="pe-drawings-toggle" title="Pixel art for the objects, shared by every puzzle">Drawings</button>
       <button id="pe-import" title="Replaces this track's puzzle with one from a file">Import…</button>
       <button id="pe-export" title="Saves this puzzle's layout to a file">Export…</button>
@@ -128,7 +129,9 @@
             <div class="pe-edge" style="right: 0; top: var(--pe-tile); bottom: var(--pe-tile); width: var(--pe-tile);"></div>
           </div>
           <canvas id="pe-canvas" width="240" height="240"></canvas>
+          <div id="pe-playtest-solved" hidden>Solved</div>
         </div>
+        <div id="pe-playtest-hint" hidden>Playtesting: arrows or WASD to move, X to restart, Esc to stop</div>
       </div>
       <aside id="pe-side">
         <h3>Colours</h3>
@@ -245,7 +248,9 @@
   <script src="app://dynamic.js"></script>
   <script src="puzzle.js"></script>
   <script src="app.js"></script>
+  <script src="sokoban.js"></script>
   <script src="puzzleEditor.js"></script>
+  <script src="puzzlePlaytest.js"></script>
   <script src="grainPatterns.js"></script>
   <script src="drawingPng.js"></script>
   <script src="puzzleDrawings.js"></script>

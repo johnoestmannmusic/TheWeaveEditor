@@ -18,6 +18,9 @@ Neocities, replacing hand-authoring HTML per location.
   listed as you go. A puzzle's layout can be exported to a JSON file and imported onto another track,
   where it takes on that track's colours and textures. What the objects look like and how they're placed lives in `runtime/puzzle.js`,
   shared with the exported site.
+- A Playtest button in the Puzzle Editor, which turns its board into a playable one, to try the puzzle as it's
+  laid out: arrows or WASD to move, X to restart, Esc to stop. It plays by the game's own rules and timings, from
+  `runtime/puzzle.js` and `runtime/sokoban.js`, and never changes the project. Reaching the Finish shows Solved.
 - Drawings for the puzzles' objects, painted pixel by pixel in the Puzzle Editor's Drawings view and
   shared by every puzzle in the project. Each kind of object can have as many as you like, besides its
   Standard drawing, which can be redrawn too. Drawings can be grouped into named Drawing Sets, such as one

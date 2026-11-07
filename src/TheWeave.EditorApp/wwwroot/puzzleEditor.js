@@ -96,6 +96,7 @@ function openPuzzleEditor(pageId, nodeId) {
     lookFor: null, // what puzzleLook last made its look from, and that look
     drawings: null, // the Drawings view's state while it's open - see puzzleDrawings.js
     image: null, // the art-sized pixels drawn onto the board's canvas - see drawPuzzleBoard
+    playtest: null, // the playthrough underway while playtesting - see puzzlePlaytest.js
     painting: null, // { erasing, last } during a drag
     tile: PUZZLE_TILE_PX,
     shipImage: null,
@@ -117,6 +118,7 @@ function openPuzzleEditor(pageId, nodeId) {
 }
 
 function closePuzzleEditor() {
+  stopPlaytest();
   if (puzzleEditor?.drawings) closeDrawings();
   puzzleEditor = null;
   document.getElementById('puzzle-editor').hidden = true;
@@ -132,6 +134,10 @@ function syncPuzzleEditor() {
   if (!node) {
     closePuzzleEditor();
     return;
+  }
+  // An undo or redo while playtesting changes what's being played, so it goes back to editing.
+  if (puzzleEditor.playtest && JSON.stringify(node.puzzle?.objects) !== JSON.stringify(puzzleEditor.playtest.objects)) {
+    stopPlaytest();
   }
 
   // A new puzzle shows its ship where it'll begin, which is saved along with the first edit to it.
@@ -149,6 +155,7 @@ function syncPuzzleEditor() {
   syncDrawings();
   renderPuzzleProblems();
   document.getElementById('pe-export').disabled = !node.puzzle;
+  document.getElementById('pe-playtest').disabled = !node.puzzle;
 
   // A Gate keeps its letter, since several sharing one is common. The others look for what they need next.
   if (puzzleEditor.tool !== 'Gate') updateSuggestedLetter();
@@ -519,6 +526,11 @@ function drawPuzzleBoard(timeMs) {
   context.clearRect(0, 0, canvas.width, canvas.height);
 
   const look = puzzleLook();
+  if (look && puzzleEditor.playtest) {
+    drawPlaytest(context, look, timeMs);
+    requestAnimationFrame(drawPuzzleBoard);
+    return;
+  }
   // A Stream or Rotator tile's preview flows, so it's kept moving.
   if (puzzleEditor.drawings && !puzzleEditor.drawings.stroke && isAnimatedKind(puzzleEditor.drawings.kind)) drawDrawingPreview(timeMs);
   if (look && !puzzleEditor.drawings) {
@@ -594,6 +606,7 @@ const puzzleCanvas = document.getElementById('pe-canvas');
 puzzleCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 puzzleCanvas.addEventListener('pointerdown', (e) => {
+  if (puzzleEditor?.playtest) return;
   const cell = puzzleCellAt(e);
   if (!puzzleEditor || !cell || (e.button !== 0 && e.button !== 2)) return;
 
@@ -638,6 +651,7 @@ document.getElementById('pe-export').addEventListener('click', () => {
 });
 
 document.getElementById('pe-clear').addEventListener('click', () => {
+  if (puzzleEditor?.playtest) return;
   const { pageId, nodeId } = puzzleEditor;
   puzzleEditor.painting = null;
   if (findNode(pageId, nodeId)?.puzzle) send('update-puzzle', { pageId, nodeId, puzzle: null });
@@ -645,7 +659,8 @@ document.getElementById('pe-clear').addEventListener('click', () => {
 
 document.addEventListener('keydown', (e) => {
   if (!puzzleEditor || e.key !== 'Escape') return;
-  if (puzzleEditor.drawings) escapeDrawings();
+  if (puzzleEditor.playtest) stopPlaytest();
+  else if (puzzleEditor.drawings) escapeDrawings();
   else closePuzzleEditor();
 });
 
