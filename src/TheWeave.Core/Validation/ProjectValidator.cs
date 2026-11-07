@@ -56,6 +56,7 @@ public static class ProjectValidator
         }
 
         CheckRequirements(project, issues);
+        CheckArchetons(project, issues);
 
         foreach (var drawing in project.PuzzleDrawings ?? [])
         {
@@ -133,6 +134,34 @@ public static class ProjectValidator
     }
 
     // previous is the part played just before this one, if any - see CheckPuzzle.
+    // An Archeton on a board that names one the library doesn't have isn't drawn or played, and one without a sensor,
+    // or with a sensor but nothing for it to do, never does anything.
+    private static void CheckArchetons(WeaveProject project, List<ValidationIssue> issues)
+    {
+        void Warn(string message) => issues.Add(new ValidationIssue { Severity = ValidationSeverity.Warning, Message = message });
+        var library = project.Archetons ?? [];
+
+        IEnumerable<Node> NodesIn(IEnumerable<Node> nodes) => nodes.SelectMany(n => new[] { n }.Concat(NodesIn(n.Children)));
+        foreach (var node in project.Pages.SelectMany(p => NodesIn(p.Nodes)))
+        {
+            foreach (var obj in node.Puzzle?.Objects.Where(o => o.Kind == PuzzleObjectKind.Archeton) ?? [])
+            {
+                if (library.All(a => a.Id != obj.Archeton))
+                    Warn($"Location '{node.Id}''s puzzle has an Archeton at column {obj.Col + 1}, row {obj.Row + 1} that isn't in the project's Archetons ('{obj.Archeton}'), so it's left out.");
+            }
+        }
+
+        foreach (var archeton in library)
+        {
+            var sees = archeton.Parts.Any(p => p.Kind == ArchetonPartKind.Beam);
+            var acts = archeton.Parts.Any(p => p.Kind == ArchetonPartKind.Push);
+            if (!sees)
+                Warn($"Archeton '{archeton.Name}' has no Beam to see the ship with, so it does nothing.");
+            else if (!acts)
+                Warn($"Archeton '{archeton.Name}' sees the ship, but has nothing like a Push to do about it.");
+        }
+    }
+
     private static void CheckNode(Page page, Node node, Node? previous, HashSet<string> pageIds, string? assetBasePath, List<PuzzleDrawing>? drawings, List<ValidationIssue> issues)
     {
         if (node.Card.Action.Kind == ActionKind.Travel)

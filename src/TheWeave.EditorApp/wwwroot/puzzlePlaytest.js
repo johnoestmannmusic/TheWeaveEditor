@@ -46,7 +46,7 @@ function restartPlaytest() {
 function buildPlaytest() {
   const objects = puzzleEditor.objects;
   const timing = WeavePuzzle.BOARD_TIMING;
-  const game = WeavePuzzle.createPuzzleGame({ objects });
+  const game = WeavePuzzle.createPuzzleGame({ objects, archetons: project.archetons ?? [] });
   const edge = WeavePuzzle.exitDirectionOf(game.start);
   const facing = { Up: 'down', Down: 'up', Left: 'right', Right: 'left' }[edge] ?? 'up';
 
@@ -242,6 +242,8 @@ function drawPlaytest(context, look, timeMs) {
     rotatorAlong: play.rotatorGlideMs / timing.rotatorTickMs,
     pushAlong: mover.progress,
     pulses,
+    beams: game.beams,
+    reaches: game.reaches,
   });
   context.putImageData(puzzleEditor.image, 0, 0);
 

@@ -57,6 +57,9 @@ public enum PuzzleObjectKind
 
     /// <summary>Stepping on this turns every Pipe a quarter turn anticlockwise, and again each second the ship stays on it.</summary>
     PipeSwitch,
+
+    /// <summary>A mechanical enemy, built from parts - see ArchetonDefinition. Its Archeton says which one.</summary>
+    Archeton,
 }
 
 /// <summary>A Push Block's symbol, drawn on it as a hollow outline - see runtime/puzzle.js's SYMBOLS.</summary>
@@ -89,8 +92,12 @@ public sealed class PuzzleObject
     /// <summary>Gate, Switch and Teleporter only. Gates and Switches pair up by letter, and Teleporters do separately.</summary>
     public string? Letter { get; set; }
 
-    /// <summary>Stream, RotatorTile, JumpTile and Pipe only.</summary>
+    /// <summary>Stream, RotatorTile, JumpTile, Pipe and Archeton only.</summary>
     public PuzzleDirection? Direction { get; set; }
+
+    /// <summary>Archeton only: the id of its ArchetonDefinition in WeaveProject.Archetons.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Archeton { get; set; }
 
     /// <summary>PushBlock only.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -205,7 +212,7 @@ public static class PuzzleDrawings
     /// </summary>
     public const string Paints = ".OHG1234";
 
-    public static readonly IReadOnlyList<string> Roles = ["wall", "finish", "gate", "teleporter", "stream", "key", "rotator", "lantern", "block", "jump", "reset", "pipe", "outline", "light"];
+    public static readonly IReadOnlyList<string> Roles = ["wall", "finish", "gate", "teleporter", "stream", "key", "rotator", "lantern", "block", "jump", "reset", "pipe", "archeton", "outline", "light"];
 
     /// <summary>Every kind drawn from a drawing.</summary>
     public static readonly IReadOnlySet<PuzzleObjectKind> DrawnKinds = new HashSet<PuzzleObjectKind>
@@ -214,6 +221,7 @@ public static class PuzzleDrawings
         PuzzleObjectKind.Teleporter, PuzzleObjectKind.Key, PuzzleObjectKind.RotatorSwitch, PuzzleObjectKind.Lantern,
         PuzzleObjectKind.Stream, PuzzleObjectKind.RotatorTile, PuzzleObjectKind.PushBlock, PuzzleObjectKind.JumpTile,
         PuzzleObjectKind.ResetSwitch, PuzzleObjectKind.Pipe, PuzzleObjectKind.PipeSwitch,
+        PuzzleObjectKind.Archeton,
     };
 
     /// <summary>The kinds animated as they flow: a Still layer, and a Flow layer that moves along it.</summary>

@@ -130,7 +130,7 @@ public sealed class PageRenderer
                 : "";
 
         sb.AppendLine($"{pad}<!-- {SafeComment(node.Card.HeadingText)} -->");
-        sb.AppendLine($"{pad}<div class=\"node\"{persistentAttr}{modalAttr}{travelHomeAttr}{BuildPuzzleAttr(node, _project.PuzzleDrawings)}{(isNested ? "" : BuildStagesAttr(sourcePage, node))} style=\"left: {Px(left)}px; top: {Px(top)}px;\">");
+        sb.AppendLine($"{pad}<div class=\"node\"{persistentAttr}{modalAttr}{travelHomeAttr}{BuildPuzzleAttr(node, _project.PuzzleDrawings, _project.Archetons)}{(isNested ? "" : BuildStagesAttr(sourcePage, node))} style=\"left: {Px(left)}px; top: {Px(top)}px;\">");
         sb.AppendLine($"{pad}  <img class=\"nodeImage\" src=\"{iconSrc}\">");
 
         sb.AppendLine();
@@ -240,13 +240,15 @@ public sealed class PageRenderer
     // board needs Track Focus and the art. The id is another exception to Node.Id staying out of the
     // HTML, for the same reason as a modal's: main.js remembers across visits which were solved. Only the
     // drawings from the project's library that this puzzle uses come along.
-    private static string BuildPuzzleAttr(Node node, List<PuzzleDrawing>? library)
+    private static string BuildPuzzleAttr(Node node, List<PuzzleDrawing>? library, List<ArchetonDefinition>? archetonLibrary = null)
     {
         var puzzle = node.Puzzle;
         if (puzzle is null || !OpensTrackFocus(node.Card) || string.IsNullOrEmpty(node.Card.CoverImagePath))
             return "";
 
-        var drawings = PuzzleDrawings.UsedBy(puzzle, library);
+        // Its Archetons come along too, with the drawings they're drawn with.
+        var archetons = ArchetonDefinitions.UsedBy(puzzle, archetonLibrary);
+        var drawings = PuzzleDrawings.UsedBy(puzzle, library).Concat(ArchetonDefinitions.DrawingsOf(archetons, library)).DistinctBy(d => d.Id).ToList();
         var json = JsonSerializer.Serialize(new
         {
             id = node.Id,
@@ -254,6 +256,7 @@ public sealed class PageRenderer
             palette = puzzle.Palette,
             textures = puzzle.Textures,
             drawings = drawings.Count > 0 ? drawings : null,
+            archetons = archetons.Count > 0 ? archetons : null,
         }, PuzzleJsonOptions);
         return $" data-puzzle=\"{EscapeAttr(json)}\"";
     }

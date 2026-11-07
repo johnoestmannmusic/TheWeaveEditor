@@ -57,4 +57,11 @@ public sealed class WeaveProject
     /// <summary>Groups of those drawings to place from - see PuzzleDrawingSet. Null rather than empty while there are none.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<PuzzleDrawingSet>? PuzzleDrawingSets { get; set; }
+
+    /// <summary>
+    /// The project's Archetons, shared by every puzzle - see ArchetonDefinition. Null until the Editor first opens the
+    /// project and adds Sentribeam, and empty, not null, if every one is then deleted, so it isn't added back.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ArchetonDefinition>? Archetons { get; set; }
 }
