@@ -134,7 +134,8 @@ Neocities, replacing hand-authoring HTML per location.
     closed Gates, other Archetons and, if it says so, Push Blocks. Every square it reaches can be outlined on the
     board, so it's clear where it's dangerous to be.
   - a Block: the ship can't step anywhere a Beam reaches, and the laser shows across it once the ship is one square
-    off it, or in it.
+    off it, or in it. If the ship ends up in its reach anyway, by pushing a Push Block that was shielding it out of
+    the way, the laser sends it back to the square it came from.
   - a Push: the ship is pushed away along the Beam, a square at a time, until it's out of reach, with a laser at it
     while it does.
 

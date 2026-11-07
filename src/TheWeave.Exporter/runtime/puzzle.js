@@ -166,6 +166,8 @@
     let objects = startingObjects();
 
     let shipCell = start;
+    // The square the ship last arrived from, for a Block's laser to send it back to - see sentBackByBeam.
+    let previousShipCell = null;
     let solved = false;
     // How many Jump Tiles in a row the ship has been launched from, so two facing each other can't go on forever.
     let jumpsInARow = 0;
@@ -233,6 +235,23 @@
     // Whether an Archeton with a Block keeps the ship from stepping onto a square, by a Beam reaching it.
     function blockedByBeam(cell){
       return beamPaths(true).some(path => path.blocks && path.cells.some(reached => isAt(reached, cell)));
+    }
+
+    // Which way a Block's laser sends the ship, if it's somehow ended up in its reach - pushing a Push Block that was
+    // shielding it out of the way, say: back to the square it just came from, or failing that, away from the
+    // Archeton along the beam. Null if it isn't in one, or can't go either way.
+    function sentBackByBeam(cell){
+      if (!isAt(shipCell, cell) || !blockedByBeam(cell)) return null;
+      let back = previousShipCell;
+      if (back && Math.abs(back.col - cell.col) + Math.abs(back.row - cell.row) === 1) {
+        let direction = back.col > cell.col ? 'Right' : back.col < cell.col ? 'Left' : back.row > cell.row ? 'Down' : 'Up';
+        if (canEnter(cell, back, MOVER_DIRECTIONS[direction])) return direction;
+      }
+      for (const path of beamPaths(true)) {
+        if (!path.blocks || !path.cells.some(reached => isAt(reached, cell))) continue;
+        if (canEnter(cell, nextCell(cell, path.direction), MOVER_DIRECTIONS[path.direction])) return path.direction;
+      }
+      return null;
     }
 
     // Whether the ship is in a Beam's reach, or one square off it.
@@ -350,6 +369,7 @@
     // revealed } for the caller to act on. jumped says the ship landed here from a
     // Jump Tile, rather than walking or being carried.
     function arriveAt(cell, { jumped = false } = {}){
+      if (!isAt(shipCell, cell)) previousShipCell = shipCell;
       shipCell = cell;
       if (!jumped) jumpsInARow = 0;
       let object = objectAt(cell);
@@ -546,10 +566,11 @@
       },
 
       // Which way a Stream is carrying a ship on this square, as sokoban.js's direction, or null.
-      // A Stream comes first, and otherwise an Archeton's Beam pushing it away, as long as it can go - see
-      // pushedByBeam. Either way the caller moves the ship along, a square at a time.
+      // A Stream comes first, and otherwise an Archeton's Beam pushing it away, or a Block's laser sending it back
+      // out of its reach, as long as it can go - see pushedByBeam and sentBackByBeam. Either way the caller moves the
+      // ship along, a square at a time.
       carryDirection(cell){
-        let direction = streams.get(cellKey(cell)) ?? pushedByBeam(cell);
+        let direction = streams.get(cellKey(cell)) ?? pushedByBeam(cell) ?? sentBackByBeam(cell);
         return direction ? MOVER_DIRECTIONS[direction] : null;
       },
 

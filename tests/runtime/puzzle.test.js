@@ -1453,3 +1453,14 @@ test('a laser is drawn a little see-through, from its own drawing, a square at a
   for (const x of [2 * 24 + 5, 3 * 24 + 18]) assert.ok(pixelAt(image, x, row)[3] > 150 && pixelAt(image, x, row)[3] < 255, `see-through at ${x}`);
   assert.equal(pixelAt(image, 24 + 12, row)[3], 0, 'not over the Archeton\'s own square');
 });
+
+test('pushing a shielding block out of a Block\'s beam sends the ship back to the square it came from', () => {
+  let blocker = { id: 'sentribeam', name: 'Sentribeam', parts: [{ kind: 'Beam', range: 2, look: 'AllWays', blockedByBlocks: true }, { kind: 'Block' }] };
+  let g = withArchetons([blocker], eye(5, 5), block(6, 5), obj('Start', 6, 6));
+  assert.equal(g.canEnter(at(6, 6), at(6, 5), 'up'), true, 'the block shields the square, so the ship can push it');
+  g.pushFrom(at(6, 6), at(6, 5), 'up');
+  g.settlePushes();
+  g.shipArrivedAt(at(6, 5));
+  assert.equal(g.carryDirection(at(6, 5)), 'down', 'with the block gone, the laser sends it back');
+  assert.equal(find(g, 'PushBlock').row, 4, 'and the block stays where it was pushed');
+});
