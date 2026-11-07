@@ -1460,20 +1460,71 @@
     return `${object.kind}|${object.variant ?? ''}|${object.letter ?? ''}|${object.symbol ?? ''}|${object.direction ?? ''}|${object.kind === 'Gate' && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}|${object.spin ?? 0}`;
   }
 
-  function spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams){
+  function spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase = 0){
     let cache = spriteCaches.get(look);
     if (!cache) spriteCaches.set(look, cache = new Map());
 
     let joins = object.kind === 'Stream' ? streamJoins(object, streams) : null;
-    let key = spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins);
+    // A Finish on an edge has arrows running towards it - see withFinishArrows.
+    let exit = object.kind === 'Finish' ? exitDirectionOf({ col: Math.round(object.col), row: Math.round(object.row) }) : null;
+    let arrowPhase = exit ? finishPhase % FINISH_ARROW_SPACING : 0;
+    let key = spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins) + (exit ? `|${exit}|${arrowPhase}` : '');
     let sprite = cache.get(key);
     if (!sprite) {
       if (object.kind === 'Stream') sprite = buildAnimatedSprite(object, look, streamPhase, joins);
       else if (object.kind === 'RotatorTile') sprite = buildAnimatedSprite(object, look, rotatorPhase);
       else sprite = buildSprite(object, look, switchesActive);
+      if (exit) sprite = withFinishArrows(sprite, look, exit, arrowPhase);
       cache.set(key, sprite);
     }
     return sprite;
+  }
+
+  // A Finish on the board's edge is where the ship leaves, so chevrons run across its pad towards that edge, round
+  // and round like a carousel, to say so at a glance. They're FINISH_ARROW_SPACING pixels apart, moving a pixel
+  // at a time, and kept inside the pad, never over its outline. In whichever of the light and outline colours stands
+  // out more from the pad.
+  const FINISH_ARROW_SPACING = 8;
+  const FINISH_ARROW_CYCLE_MS = 1200;
+
+  function withFinishArrows(sprite, look, exit, phase){
+    let outline = hexToColor(look.palette.outline);
+    let light = hexToColor(look.palette.light);
+    let rise = sprite.rise ?? 0;
+    let same = (a, b) => a && b && a.r === b.r && a.g === b.g && a.b === b.b;
+    let at = (x, y) => x >= 0 && y >= 0 && x < TILE_PX && y < TILE_PX + rise ? sprite[y * TILE_PX + x] : null;
+    // Inside the pad: drawn, not outline, and with the same all round it.
+    let inside = (x, y) => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => {
+      let color = at(x + dx, y + dy);
+      return color && !same(color, outline);
+    });
+
+    let padColors = [];
+    for (let y = rise; y < TILE_PX + rise; y++) for (let x = 0; x < TILE_PX; x++) if (inside(x, y)) padColors.push(at(x, y));
+    if (padColors.length === 0) return sprite;
+    let padLightness = padColors.reduce((sum, color) => sum + lightnessOf(color), 0) / padColors.length;
+    let color = Math.abs(padLightness - lightnessOf(light)) >= Math.abs(padLightness - lightnessOf(outline)) ? light : outline;
+
+    // A chevron pointing right, 2 pixels thick, every FINISH_ARROW_SPACING pixels along, moved on by phase.
+    let middle = (TILE_PX - 1) / 2;
+    let onChevron = (u, v) => {
+      let across = Math.abs(v - middle);
+      if (across > 4) return false;
+      let along = ((u - phase + Math.floor(across)) % FINISH_ARROW_SPACING + FINISH_ARROW_SPACING) % FINISH_ARROW_SPACING;
+      return along < 2;
+    };
+    let turn = FLOW_TURNS[exit];
+
+    let arrowed = [...sprite];
+    arrowed.rise = rise;
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        if (!inside(x, y + rise)) continue;
+        let [u, v] = turn(x, y);
+        if (onChevron(u, v)) arrowed[(y + rise) * TILE_PX + x] = color;
+      }
+    }
+    return arrowed;
   }
 
   // For the Editor, where something invisible still has to be seen: every other pixel of it, see-through.
@@ -1598,6 +1649,7 @@
     let phaseOf = (timeMs, cycle) => Math.floor(((timeMs ?? 0) % cycle) / cycle * TILE_PX);
     let streamPhase = phaseOf(options.timeMs, STREAM_CYCLE_MS);
     let rotatorPhase = phaseOf(options.rotatorTimeMs, ROTATOR_CYCLE_MS);
+    let finishPhase = phaseOf(options.timeMs, FINISH_ARROW_CYCLE_MS);
     // Where every Stream is, and which way it flows, for how they join up - see streamJoins.
     let streams = new Map(objects.filter(object => object.kind === 'Stream').map(object => [object.col + ',' + object.row, object.direction]));
     let switchesActive = options.switchesActive ?? true;
@@ -1615,7 +1667,7 @@
       let along = alongFor(object);
       let col = object.fromCol === undefined ? object.col : object.fromCol + (object.col - object.fromCol) * along;
       let row = object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * along;
-      let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams);
+      let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase);
       let top = Math.round(row * TILE_PX) + (options.originY ?? 0);
       let sunk = Math.round((object.sink ?? 0) * TILE_PX);
       let opacity = object.fade ?? 1;

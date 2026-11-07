@@ -127,6 +127,8 @@ Neocities, replacing hand-authoring HTML per location.
   stays lit and glows, and sends a pulse out across a circle reaching 3 squares in every direction, revealing
   whatever's invisible as it reaches it.
 - The ship starts each puzzle facing into the board, away from whichever edge it starts on.
+- A Finish on the board's edge has chevrons running across its pad towards that edge, round and round, so it
+  reads at a glance as the way out.
 - A location's puzzle boards connect edge to edge, like the map's screens: a part that leads on to another
   puzzle has one Finish, on an edge, and the next part's ship comes in directly across from it, its Start set
   to match automatically. Finishing scrolls the album art and board across to the next. Pushing off the edge
