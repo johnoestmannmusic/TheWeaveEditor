@@ -1,4 +1,29 @@
 :root {
+  /* Light, the default. Dark is below, chosen with the toolbar's theme button - see app.js's applyTheme. Telling the
+     browser which one is in use is what keeps native controls, like a dropdown's list, readable in each. */
+  color-scheme: light;
+  --bg: #f4f1ec;
+  --panel: #ffffff;
+  --panel-alt: #faf8f4;
+  --border: #d6d0c4;
+  --text: #2a2622;
+  --muted: #6f685c;
+  --accent: #a8823f;
+  --error: #b8483a;
+  --button: #efebe4;
+  --button-hover: #e4ded3;
+  --button-danger: #f6dcd6;
+  --selected: #efe2c8;
+  --highlight-text: #6b4f1f;
+  --toast: #dcefdc;
+  --toast-text: #1f4a26;
+  --toast-border: #8fbf96;
+  --toast-error: #f6dcd6;
+  --toast-error-text: #6b2219;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
   --bg: #1c1b1a;
   --panel: #262524;
   --panel-alt: #201f1e;
@@ -7,6 +32,22 @@
   --muted: #9c968a;
   --accent: #d4bc93;
   --error: #d97a6c;
+  --button: #34322f;
+  --button-hover: #403d39;
+  --button-danger: #4a2e29;
+  --selected: #45392b;
+  --highlight-text: #f0d79c;
+  --toast: #2f4a34;
+  --toast-text: #d9f0da;
+  --toast-border: #4d7a55;
+  --toast-error: #4a2e29;
+  --toast-error-text: #f5d6cf;
+}
+
+/* A dropdown's list is drawn by the system, so it's given the theme's colours outright. */
+select, option {
+  background: var(--panel-alt);
+  color: var(--text);
 }
 
 * {
@@ -39,7 +80,7 @@ body {
 }
 
 button {
-  background: #34322f;
+  background: var(--button);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -49,7 +90,7 @@ button {
 }
 
 button:hover {
-  background: #403d39;
+  background: var(--button-hover);
   border-color: var(--accent);
 }
 
@@ -59,7 +100,7 @@ button.small {
 }
 
 button.danger:hover {
-  background: #4a2e29;
+  background: var(--button-danger);
   border-color: var(--error);
 }
 
@@ -69,7 +110,7 @@ button:disabled {
 }
 
 button:disabled:hover {
-  background: #34322f;
+  background: var(--button);
   border-color: var(--border);
 }
 
@@ -139,11 +180,11 @@ main {
 }
 
 .tree-row:hover {
-  background: #34322f;
+  background: var(--button);
 }
 
 .tree-row.selected {
-  background: #45392b;
+  background: var(--selected);
   color: var(--accent);
 }
 
@@ -561,9 +602,9 @@ legend {
   left: 50%;
   bottom: 44px;
   transform: translate(-50%, 12px);
-  background: #2f4a34;
-  color: #d9f0da;
-  border: 1px solid #4d7a55;
+  background: var(--toast);
+  color: var(--toast-text);
+  border: 1px solid var(--toast-border);
   border-radius: 6px;
   padding: 10px 18px;
   font-size: 13px;
@@ -575,8 +616,8 @@ legend {
 }
 
 #toast.error {
-  background: #4a2e29;
-  color: #f5d6cf;
+  background: var(--toast-error);
+  color: var(--toast-error-text);
   border-color: var(--error);
 }
 
@@ -655,7 +696,7 @@ main.behind-puzzle-editor {
 
 #puzzle-editor button.active {
   border-color: var(--accent);
-  background: #4a4338;
+  background: var(--selected);
 }
 
 #pe-directions, #pe-gate-states, #pe-visibilities, #pe-letters, #pe-symbols {
@@ -1218,8 +1259,8 @@ main.behind-puzzle-editor {
 }
 
 #puzzle-editor.playtesting #pe-playtest {
-  border-color: #c9a35c;
-  color: #f0d79c;
+  border-color: var(--accent);
+  color: var(--highlight-text);
 }
 
 #puzzle-editor.playtesting #pe-edge-ring {
@@ -1233,7 +1274,7 @@ main.behind-puzzle-editor {
   bottom: 2px;
   text-align: center;
   font-size: 12px;
-  color: #c8bfae;
+  color: var(--muted);
 }
 
 #pe-playtest-solved {
@@ -1274,8 +1315,8 @@ main.behind-puzzle-editor {
   height: min(600px, 88%);
   display: flex;
   flex-direction: column;
-  background: #2a2622;
-  border: 1px solid #4a4338;
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 6px;
 }
 
@@ -1284,7 +1325,7 @@ main.behind-puzzle-editor {
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  border-bottom: 1px solid #4a4338;
+  border-bottom: 1px solid var(--border);
 }
 
 #archetons header .spacer {
@@ -1317,13 +1358,13 @@ main.behind-puzzle-editor {
 }
 
 #archetons .ar-card.active {
-  border-color: #c9a35c;
-  background: #4a4338;
+  border-color: var(--accent);
+  background: var(--selected);
 }
 
 #archetons .ar-card span {
   font-size: 11px;
-  color: #b8ae9c;
+  color: var(--muted);
 }
 
 #archetons .pd-thumb {
@@ -1336,7 +1377,7 @@ main.behind-puzzle-editor {
   width: 300px;
   overflow-y: auto;
   padding: 12px;
-  border-left: 1px solid #4a4338;
+  border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1348,7 +1389,7 @@ main.behind-puzzle-editor {
   align-items: center;
   gap: 6px;
   padding: 8px;
-  border: 1px solid #4a4338;
+  border: 1px solid var(--border);
   border-radius: 4px;
 }
 
@@ -1366,5 +1407,10 @@ main.behind-puzzle-editor {
 }
 
 #archetons button.primary {
-  border-color: #c9a35c;
+  border-color: var(--accent);
+}
+
+/* The toolbar's theme button - see app.js's applyTheme. */
+#theme-toggle {
+  min-width: 92px;
 }

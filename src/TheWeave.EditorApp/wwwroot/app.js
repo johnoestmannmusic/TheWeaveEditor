@@ -46,6 +46,37 @@ document.getElementById('btn-problems').addEventListener('click', () => {
 // Ctrl+Z / Ctrl+Shift+Z (or Ctrl+Y) for undo/redo - skipped while a text field has focus so
 // the browser's own per-field undo (reverting the user's last keystrokes, not a project-level
 // change) still works there instead of being shadowed by this.
+// Light or dark: light unless dark's been chosen, which is remembered on this computer. Light is the default
+// because some desktops draw a dropdown's list light whatever the page asks, which dark text suits - see app.css.
+const THEME_KEY = 'weave-editor-theme';
+
+function applyTheme(theme) {
+  const dark = theme === 'dark';
+  if (dark) document.documentElement.dataset.theme = 'dark';
+  else delete document.documentElement.dataset.theme;
+  const toggle = document.getElementById('theme-toggle');
+  if (toggle) toggle.textContent = dark ? 'Light mode' : 'Dark mode';
+}
+
+function savedTheme() {
+  try {
+    return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
+}
+
+applyTheme(savedTheme());
+document.getElementById('theme-toggle')?.addEventListener('click', () => {
+  const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch {
+    // Not remembered, but still switched for now.
+  }
+  applyTheme(theme);
+});
+
 document.addEventListener('keydown', (e) => {
   if (!e.ctrlKey && !e.metaKey) return;
   const tag = document.activeElement?.tagName;
