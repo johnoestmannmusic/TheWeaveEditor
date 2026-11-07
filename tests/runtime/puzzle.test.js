@@ -1544,3 +1544,22 @@ test('a Reset puts a Slide Bug back where it started', () => {
   g.shipArrivedAt(at(6, 8));
   assert.deepEqual(bugsIn(g), ['1,3'], 'reset by the ship, then not moved again till its next step');
 });
+
+test('a Slide Bug sliding into the ship hurts it, sending it back to the square it came from', () => {
+  let g = withArchetons([SLIDE_BUG], bug(6, 3));
+  g.placeShip(at(4, 4));
+  g.shipArrivedAt(at(5, 4)); // beside its row, so the bug comes alongside
+  g.shipArrivedAt(at(5, 3)); // then into its row, right in front of it
+  assert.deepEqual(bugsIn(g), ['5,3'], 'it slides into the ship');
+  assert.equal(g.carryDirection(at(5, 3)), 'down', 'and the ship is sent back down, where it came from');
+  g.shipArrivedAt(at(5, 4));
+  assert.deepEqual(bugsIn(g), ['5,3'], 'and isn\'t followed straight away as it gets back');
+  g.shipArrivedAt(at(4, 4));
+  assert.deepEqual(bugsIn(g), ['4,3'], 'then the bug carries on as before');
+});
+
+test('a Slide Bug won\'t hurt a ship that couldn\'t be sent anywhere', () => {
+  let boxed = withArchetons([SLIDE_BUG], bug(6, 3), obj('Wall', 4, 3), obj('Wall', 5, 2), obj('Wall', 5, 4));
+  boxed.shipArrivedAt(at(5, 3));
+  assert.deepEqual(bugsIn(boxed), ['6,3'], 'boxed in, the bug waits beside it');
+});

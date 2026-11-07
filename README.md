@@ -141,7 +141,11 @@ Neocities, replacing hand-authoring HTML per location.
     while it does.
   - a Slide: each step the ship takes, it slides a square along its line towards the ship - its row when placed
     facing left or right, its column facing up or down. Anything solid stops it, and it sets off the Switches,
-    Lanterns, Pipe Switches and Reset Switches it slides onto.
+    Lanterns, Pipe Switches and Reset Switches it slides onto. Sliding into the ship hurts it.
+
+  Being hurt by an Archeton - a Slide Bug sliding into the ship, or the ship ending up where a Block's laser
+  reaches - always sends the ship back to the square it just came from, and it isn't followed straight away as it
+  gets there.
 
   Lasers are drawn a little see-through, from a Laser drawing each Archeton chooses: one square of beam, running
   right, repeated along it and turned the way it runs. Archetons are solid, and drawn in the Drawings view under

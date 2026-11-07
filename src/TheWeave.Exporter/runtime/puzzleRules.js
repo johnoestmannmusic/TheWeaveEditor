@@ -169,8 +169,10 @@
     // be kept until it does - see beamPaths, and board.js's frame.
     let version = 0;
     let beamCache = new Map();
-    // The square the ship last arrived from, for a Block's laser to send it back to - see sentBackByBeam.
+    // The square the ship last arrived from, for an Archeton that hurts it to send it back to - see hurtBack.
     let previousShipCell = null;
+    // Whether the ship's on its way back from being hurt, when the Slide Bugs let it get there - see arriveAt.
+    let recovering = false;
     let solved = false;
     // How many Jump Tiles in a row the ship has been launched from, so two facing each other can't go on forever.
     let jumpsInARow = 0;
@@ -252,21 +254,33 @@
       return beamPaths(true).some(path => path.blocks && path.cells.some(reached => isAt(reached, cell)));
     }
 
-    // Which way a Block's laser sends the ship, if it's somehow ended up in its reach - pushing a Push Block that was
-    // shielding it out of the way, say: back to the square it just came from, or failing that, away from the
-    // Archeton along the beam. Null if it isn't in one, or can't go either way.
-    function sentBackByBeam(cell){
-      if (!isAt(shipCell, cell) || !blockedByBeam(cell)) return null;
+    // Being hurt by an Archeton always sends the ship back to the square it just came from: standing where a Block's
+    // laser reaches (pushing a Push Block that was shielding it out of the way, say), or a Slide Bug sliding into it.
+    // Failing that, it's sent on away from whatever hurt it. Which way, or null if it isn't hurt, or can't go either way.
+    function hurtBack(cell){
+      if (!isAt(shipCell, cell)) return null;
+      let away = hurtAwayFrom(cell);
+      if (away === undefined) return null;
       let back = previousShipCell;
+      let direction = null;
       if (back && Math.abs(back.col - cell.col) + Math.abs(back.row - cell.row) === 1) {
-        let direction = back.col > cell.col ? 'Right' : back.col < cell.col ? 'Left' : back.row > cell.row ? 'Down' : 'Up';
-        if (canEnter(cell, back, MOVER_DIRECTIONS[direction])) return direction;
+        let towardsBack = back.col > cell.col ? 'Right' : back.col < cell.col ? 'Left' : back.row > cell.row ? 'Down' : 'Up';
+        if (canEnter(cell, back, MOVER_DIRECTIONS[towardsBack])) direction = towardsBack;
       }
-      for (const path of beamPaths(true)) {
-        if (!path.blocks || !path.cells.some(reached => isAt(reached, cell))) continue;
-        if (canEnter(cell, nextCell(cell, path.direction), MOVER_DIRECTIONS[path.direction])) return path.direction;
-      }
-      return null;
+      if (!direction) direction = away.find(way => canEnter(cell, nextCell(cell, way), MOVER_DIRECTIONS[way])) ?? null;
+      if (direction) recovering = true;
+      return direction;
+    }
+
+    // What's hurting the ship on a square, as the ways away from it, or undefined if nothing is: a Slide Bug that's
+    // slid into it, or a Block's laser reaching it.
+    function hurtAwayFrom(cell){
+      let bug = objects.find(object => object.kind === 'Archeton' && isAt(object, cell));
+      if (bug) return bug.glide === 'slide' && bug.fromCol !== undefined
+        ? [bug.col > bug.fromCol ? 'Right' : bug.col < bug.fromCol ? 'Left' : bug.row > bug.fromRow ? 'Down' : 'Up']
+        : [];
+      if (!blockedByBeam(cell)) return undefined;
+      return beamPaths(true).filter(path => path.blocks && path.cells.some(reached => isAt(reached, cell))).map(path => path.direction);
     }
 
     // Whether the ship is in a Beam's reach, or one square off it.
@@ -486,9 +500,21 @@
       return null;
     }
 
+    // Whether the ship, on its square, could be sent back to where it came from, or on along a direction, without going
+    // through anything - see hurtBack.
+    function canBeSentBack(cell, onwards){
+      let back = previousShipCell;
+      let canGo = (to, way) => onBoard(to) && canEnter(cell, to, MOVER_DIRECTIONS[way]);
+      if (back && Math.abs(back.col - cell.col) + Math.abs(back.row - cell.row) === 1) {
+        let towardsBack = back.col > cell.col ? 'Right' : back.col < cell.col ? 'Left' : back.row > cell.row ? 'Down' : 'Up';
+        if (canGo(back, towardsBack)) return true;
+      }
+      return canGo(nextCell(cell, onwards), onwards);
+    }
+
     // Every Slide Bug takes its step, after the ship has: a square along its line towards the ship's column, or row -
-    // its row when it faces Left or Right, its column facing Up or Down. Stopped by the board's edge, anything solid,
-    // the ship itself, or a Pipe across its line, it waits there. Landing on a Switch, Lantern, Reset Switch or Pipe
+    // its row when it faces Left or Right, its column facing Up or Down. Stopped by the board's edge, anything solid, or
+    // a Pipe across its line, it waits there. Sliding into the ship hurts it - see hurtBack. Landing on a Switch, Lantern, Reset Switch or Pipe
     // Switch triggers it, as the ship would. { slid } and whatever they set off, or null if none moved.
     function slideBugs(){
       let slid = [];
@@ -501,7 +527,9 @@
         let direction = across ? (target > at ? 'Right' : 'Left') : (target > at ? 'Down' : 'Up');
         let to = nextCell(bug, direction);
         let there = onBoard(to) ? objectAt(to) : null;
-        if (!onBoard(to) || isAt(shipCell, to) || (there && isSolid(there)) || !pipeAllows(bug, direction) || !pipeAllows(to, direction)) continue;
+        if (!onBoard(to) || (there && isSolid(there)) || !pipeAllows(bug, direction) || !pipeAllows(to, direction)) continue;
+        // Sliding into the ship hurts it, sending it back where it came from - only if it can go somewhere.
+        if (isAt(shipCell, to) && !canBeSentBack(to, direction)) continue;
 
         bug.fromCol = bug.col;
         bug.fromRow = bug.row;
@@ -521,8 +549,14 @@
 
     // The ship arriving on a square, then every Slide Bug following it a step - except when it's finished the board,
     // is about to land from a jump, when the bugs wait for it to land, or has reset the board, which put them back.
+    // A ship arriving back from being hurt isn't followed, so it has a moment to get its bearings rather than being hurt
+    // again straight away.
     function arriveAt(cell, options){
       let event = shipArrives(cell, options);
+      if (recovering) {
+        recovering = false;
+        return event;
+      }
       if (event?.finished || event?.jumpTo || event?.reset) return event;
       let slid = slideBugs();
       if (!slid) return event;
@@ -667,10 +701,10 @@
 
       // Which way a Stream is carrying a ship on this square, as sokoban.js's direction, or null.
       // A Stream comes first, and otherwise an Archeton's Beam pushing it away, or a Block's laser sending it back
-      // out of its reach, as long as it can go - see pushedByBeam and sentBackByBeam. Either way the caller moves the
+      // out of its reach, as long as it can go - see pushedByBeam and hurtBack. Either way the caller moves the
       // ship along, a square at a time.
       carryDirection(cell){
-        let direction = streams.get(cellKey(cell)) ?? pushedByBeam(cell) ?? sentBackByBeam(cell);
+        let direction = streams.get(cellKey(cell)) ?? pushedByBeam(cell) ?? hurtBack(cell);
         return direction ? MOVER_DIRECTIONS[direction] : null;
       },
 
