@@ -166,6 +166,10 @@
     let objects = startingObjects();
 
     let shipCell = start;
+    // Goes up whenever anything on the board changes, so that whatever's worked out from it, or drawn from it, can
+    // be kept until it does - see beamPaths, and board.js's frame.
+    let version = 0;
+    let beamCache = new Map();
     // The square the ship last arrived from, for a Block's laser to send it back to - see sentBackByBeam.
     let previousShipCell = null;
     let solved = false;
@@ -211,6 +215,10 @@
     // the squares it reaches, walking out as far as its range until something stops it. It ends at the ship, if it
     // reaches it, unless throughShip, for where it would reach with the ship out of the way.
     function beamPaths(throughShip = false){
+      // Worked out once for each state of the board, however often it's asked - see version.
+      let cacheKey = version + (throughShip ? '+' : '-');
+      if (beamCache.has(cacheKey)) return beamCache.get(cacheKey);
+      if (beamCache.size > 4) beamCache.clear();
       let paths = [];
       for (const archeton of objects) {
         if (archeton.kind !== 'Archeton') continue;
@@ -233,6 +241,7 @@
           }
         }
       }
+      beamCache.set(cacheKey, paths);
       return paths;
     }
 
@@ -307,6 +316,7 @@
     const ANTICLOCKWISE = { Right: 'Up', Up: 'Left', Left: 'Down', Down: 'Right' };
     function turnPipes(){
       if (pipes.size === 0) return null;
+      version++;
       for (const pipe of pipes.values()) pipe.direction = ANTICLOCKWISE[pipe.direction] ?? 'Up';
       return { pipesTurned: true };
     }
@@ -375,6 +385,7 @@
     // revealed } for the caller to act on. jumped says the ship landed here from a
     // Jump Tile, rather than walking or being carried.
     function arriveAt(cell, { jumped = false } = {}){
+      version++;
       if (!isAt(shipCell, cell)) previousShipCell = shipCell;
       shipCell = cell;
       if (!jumped) jumpsInARow = 0;
@@ -504,6 +515,7 @@
 
       let occupied = shipHeadingTo ? [shipCell, shipHeadingTo] : [shipCell];
       let moves = resolveMoves(track, occupied);
+      if (moves.size > 0) version++;
       for (const [object, to] of moves) {
         object.col = to.col;
         object.row = to.row;
@@ -520,6 +532,7 @@
       start,
       get objects(){ return objects; },
       get shipCell(){ return shipCell; },
+      get version(){ return version; },
       get isSolved(){ return solved; },
       get switchesActive(){ return switchesActive(); },
       // Whether the ship is on a Rotator Loop Switch, which is what makes Rotator tiles move.
@@ -559,6 +572,7 @@
       // For sokoban.js's onStepStart: the ship stepping into a Push Block pushes it on ahead, gliding along with
       // the ship - see renderBoard's pushAlong. Returns { sank } if that brought matching blocks together.
       pushFrom(from, to, moverDirection){
+        version++;
         let block = objectAt(to);
         if (block?.kind !== 'PushBlock') return null;
         let next = pushedTo(block, PUZZLE_DIRECTIONS[moverDirection]);
@@ -587,6 +601,7 @@
 
       // Puts the ship on a square without anything there happening, for coming back onto a board where it was.
       placeShip(cell){
+        version++;
         shipCell = cell;
       },
 
@@ -1895,7 +1910,7 @@
   function drawBeam(image, beam, look, originY){
     let dCol = Math.sign(beam.to.col - beam.from.col), dRow = Math.sign(beam.to.row - beam.from.row);
     let direction = dCol > 0 ? 'Right' : dCol < 0 ? 'Left' : dRow > 0 ? 'Down' : 'Up';
-    let sprite = buildSprite({ kind: 'Laser', direction, archeton: beam.archeton }, look, true);
+    let sprite = spriteFor({ kind: 'Laser', direction, archeton: beam.archeton }, look, true, 0, 0, null);
     let col = beam.from.col, row = beam.from.row;
     while (col !== beam.to.col || row !== beam.to.row) {
       col += dCol;

@@ -44,32 +44,14 @@ let boardGame = null;
 let boardPuzzle = null;
 let boardObjectsCanvas = null;
 let boardObjectsImage = null; // the art-sized pixels drawn onto that canvas - see drawBoardObjects
-let boardStreamMs = 0;
-// A Rotator tile's clocks: how long the ship has been on its Switch since things last moved, how long since
-// they last moved at all, for their glide, and the total it's been active, for its animation.
-let boardRotatorActiveMs = 0;
-let boardRotatorGlideMs = 0;
-let boardRotatorClockMs = 0;
+// The board being played - see board.js. boardGame and boardMover are its game and its ship's mover.
+let boardPlay = null;
+// What was drawn last, so that a board that looks just as it did isn't drawn again - see drawBoardObjects.
+let boardDrawnKey = null;
 let boardSolvedMs = null; // how long ago it was solved, while pausing there before returning to Track Focus
 // Each part's board as it was last left, while crossing between connected boards: part -> { game, cell }.
 // Forgotten on leaving the board - see crossBoard.
 let boardVisits = new Map();
-// Push Blocks sinking into the ground, after matching: { object, ms, glideMs } - see onBoardEvent.
-let boardSinking = [];
-// The ship in mid-air, launched by a Jump Tile: { from, to, ms, durationMs }, or null - see startBoardJump.
-let boardJump = null;
-// A Reset Switch's sweep across the board: the objects as they were before it, how far through, and how long it
-// takes, or null - see onBoardEvent and puzzle.js's resetSweepAt.
-let boardReset = null;
-// How long the ship has been stopped on a Pipe Switch since the Pipes last turned, and how long ago they did, for
-// swinging them round, or null - see updateBoardPipes.
-let boardPipeActiveMs = 0;
-let boardPipeTurnMs = null;
-// Lit Lanterns' pulses spreading out: { col, row, ms, revealed }, revealed being what each brings into view as it
-// reaches it - see drawBoardObjects.
-let boardPulses = [];
-// How long ago a closing Gate sent Push Blocks back to where they were pushed from, for their glide, or null.
-let boardReturnMs = null;
 // While one part's board scrolls across to the next's: the two slide layers, the edge it's crossing, and how
 // far through - see startBoardScroll.
 let boardScroll = null;
@@ -317,6 +299,9 @@ function initShip() {
   shipEl.id = 'playerShip';
   shipEl.className = 'playerShip';
   shipEl.src = 'img/ui/pilot-ship.png';
+  // Moved by its transform alone, which the browser can do without laying the page out again - see renderShip.
+  shipEl.style.left = "0px";
+  shipEl.style.top = "0px";
   document.body.appendChild(shipEl);
 
   renderShip();
@@ -861,11 +846,13 @@ function renderShip(){
   // Deliberately *not* rounded: rounding would make a steady glide visibly alternate between
   // neighboring whole pixel steps, which is its own kind of shake - a single small sprite sitting at
   // a sub-pixel offset is far less noticeable than that.
-  shipEl.style.left = (ship.x - SHIP_WIDTH / 2) + "px";
-  shipEl.style.top = (ship.y - SHIP_HEIGHT / 2) + "px";
-  // Sprite's forward points "up" (angle -90deg) at rest, so offset by +90deg
-  shipEl.style.transform = "rotate(" + (ship.angle + Math.PI / 2) + "rad)";
+  // Sprite's forward points "up" (angle -90deg) at rest, so offset by +90deg. Only written when it's changed.
+  let transform = "translate(" + (ship.x - SHIP_WIDTH / 2) + "px, " + (ship.y - SHIP_HEIGHT / 2) + "px) rotate(" + (ship.angle + Math.PI / 2) + "rad)";
+  if (transform === renderedShipTransform) return;
+  renderedShipTransform = transform;
+  shipEl.style.transform = transform;
 }
+let renderedShipTransform = null;
 
 // The map is split into static screens (see GridLayout.ScreenColumns) rather than following the ship:
 // the view only moves when the ship walks onto a new one, then slides there over SCREEN_SLIDE_MS. The
@@ -894,7 +881,11 @@ function updateView(dtMs){
 
   let x = Math.round(view.offsetX - view.position.x * view.scale);
   let y = Math.round(view.offsetY - view.position.y * view.scale);
-  document.body.style.transform = "translate(" + x + "px, " + y + "px) scale(" + view.scale + ")";
+  let transform = "translate(" + x + "px, " + y + "px) scale(" + view.scale + ")";
+  if (transform !== view.transform) {
+    view.transform = transform;
+    document.body.style.transform = transform;
+  }
   view.translateX = x;
   view.translateY = y;
 }
@@ -977,6 +968,8 @@ function buildMapContrails(){
 
 // Exactly the size of the picture on screen, once the body's transform has scaled it.
 function layoutMapContrails(pictureWidth, pictureHeight){
+  mapContrails.bounds = null; // resizing clears it
+  mapContrails.left = null;
   mapContrails.canvas.width = pictureWidth;
   mapContrails.canvas.height = pictureHeight;
   mapContrails.canvas.style.width = (pictureWidth / view.scale) + "px";
@@ -986,9 +979,16 @@ function layoutMapContrails(pictureWidth, pictureHeight){
 function updateMapContrails(dtMs){
   updateContrails(mapContrails, ship, playerMover.facing, dtMs);
 
-  // Exactly over the picture, whatever rounding the body's transform had this frame - see updateView.
-  mapContrails.canvas.style.left = ((view.offsetX - view.translateX) / view.scale) + "px";
-  mapContrails.canvas.style.top = ((view.offsetY - view.translateY) / view.scale) + "px";
+  // Exactly over the picture, whatever rounding the body's transform had this frame - see updateView. Only written
+  // when it moves, as writing it lays the page out again.
+  let left = ((view.offsetX - view.translateX) / view.scale) + "px";
+  let top = ((view.offsetY - view.translateY) / view.scale) + "px";
+  if (left !== mapContrails.left || top !== mapContrails.top) {
+    mapContrails.left = left;
+    mapContrails.top = top;
+    mapContrails.canvas.style.left = left;
+    mapContrails.canvas.style.top = top;
+  }
 
   drawContrails(mapContrails, view.scale, view.translateX - view.offsetX, view.translateY - view.offsetY);
 }
@@ -1088,7 +1088,14 @@ function drawContrails(trail, scale, originX, originY){
   if (!anything && !trail.drawn) return;
   trail.drawn = anything;
 
-  context.clearRect(0, 0, canvas.width, canvas.height);
+  // Only the part the trails cover, last frame and this one, is cleared, so that's all the browser repaints.
+  let bounds = contrailBounds(trail, scale, originX, originY);
+  let last = trail.bounds;
+  trail.bounds = bounds;
+  let clear = last && bounds
+    ? { left: Math.min(last.left, bounds.left), top: Math.min(last.top, bounds.top), right: Math.max(last.right, bounds.right), bottom: Math.max(last.bottom, bounds.bottom) }
+    : last ?? bounds;
+  if (clear) context.clearRect(clear.left, clear.top, clear.right - clear.left, clear.bottom - clear.top);
   context.strokeStyle = look.color;
   context.lineJoin = 'round';
   context.lineWidth = Math.max(1, Math.round(CONTRAIL_WIDTH * trail.shipPixel * scale));
@@ -1118,6 +1125,24 @@ function withStretchToShip(trail, rail){
 
 // One opacity per stroke, so each run of points that have faded the same amount is drawn as one line:
 // overlapping strokes would show as darker beads along it, with the line being see-through.
+// The part of its canvas a trail's points cover this frame, with room for the line's width, or null if none.
+function contrailBounds(trail, scale, originX, originY){
+  let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+  for (const rail of trail.rails) {
+    if (rail.points.length === 0) continue;
+    for (const point of withStretchToShip(trail, rail)) {
+      let x = originX + point.x * scale, y = originY + point.y * scale;
+      if (x < left) left = x;
+      if (x > right) right = x;
+      if (y < top) top = y;
+      if (y > bottom) bottom = y;
+    }
+  }
+  if (right < left) return null;
+  let margin = CONTRAIL_WIDTH * trail.shipPixel * scale + 4;
+  return { left: Math.floor(left - margin), top: Math.floor(top - margin), right: Math.ceil(right + margin), bottom: Math.ceil(bottom + margin) };
+}
+
 function drawContrail(trail, points, scale, originX, originY){
   let context = trail.context;
 
@@ -1180,7 +1205,7 @@ function buildMinimap(){
     fogCanvas.height = fog.canvas.height;
     el.appendChild(fogCanvas);
     fog.minimapCanvas = fogCanvas;
-    drawFog();
+    fogCanvas.getContext('2d').drawImage(fog.canvas, 0, 0);
   }
 
   let screen = document.createElement('div');
@@ -1222,19 +1247,29 @@ function buildFog(){
   canvas.style.height = weavePage.worldHeight + "px";
   document.body.appendChild(canvas);
 
-  // Which square each column and row of the fog's pixels is over. Past the grid's own edges, the nearest one.
+  // Which pixels of the fog each column and row of squares covers, worked out once, so that a redraw only has to
+  // touch the squares whose fog has changed. Past the grid's own edges, the nearest square's.
   let grid = weavePage.grid;
-  let colOf = Array.from({ length: canvas.width }, (_, x) => grid.cellAt((x + 0.5) * pixel, 0).col);
-  let rowOf = Array.from({ length: canvas.height }, (_, y) => grid.cellAt(0, (y + 0.5) * pixel).row);
+  let spansOf = (count, length, cellOf) => {
+    let spans = Array.from({ length: count }, () => ({ from: Infinity, to: -1 }));
+    for (let i = 0; i < length; i++) {
+      let span = spans[cellOf(i)];
+      span.from = Math.min(span.from, i);
+      span.to = Math.max(span.to, i);
+    }
+    return spans;
+  };
 
   fog = {
     canvas,
     minimapCanvas: null, // see buildMinimap
     image: canvas.getContext('2d').createImageData(canvas.width, canvas.height),
-    colOf,
-    rowOf,
+    colSpans: spansOf(grid.columns, canvas.width, (x) => grid.cellAt((x + 0.5) * pixel, 0).col),
+    rowSpans: spansOf(grid.rows, canvas.height, (y) => grid.cellAt(0, (y + 0.5) * pixel).row),
     explored: loadExplored(),
+    edge: null, // the unexplored squares bordering the explored, worked out again only when more are revealed
     fading: new Map(), // "col,row" -> { left, wasEdge }, for squares just revealed
+    drawn: new Map(), // "col,row" -> how its fog was last drawn, so that only changes are redrawn - see drawFog
     at: null, // the square last revealed around
   };
 
@@ -1261,7 +1296,7 @@ function saveExplored(){
 // Reveals everything within reach of a square. Returns whether that was anything new.
 function revealAround(cell, fade){
   fog.at = cell;
-  let edge = fade ? WeaveSokoban.edgeOf(weavePage.grid, fog.explored) : null;
+  let edge = fog.edge ?? WeaveSokoban.edgeOf(weavePage.grid, fog.explored);
   let revealed = false;
 
   for (const near of WeaveSokoban.cellsWithin(weavePage.grid, cell, FOG_REACH)) {
@@ -1271,6 +1306,7 @@ function revealAround(cell, fade){
     if (fade) fog.fading.set(key, { left: FOG_FADE_MS, wasEdge: edge.has(key) });
     revealed = true;
   }
+  if (revealed || !fog.edge) fog.edge = WeaveSokoban.edgeOf(weavePage.grid, fog.explored);
   return revealed;
 }
 
@@ -1297,33 +1333,55 @@ function updateFog(dtMs){
 }
 
 // Unexplored squares solid, the ones bordering what's explored checkered, and anything just revealed fading
-// out from whichever of those it was.
+// out from whichever of those it was. Only the squares whose fog looks different from last time are redrawn, and
+// only the part of the picture they cover is sent to the canvas.
 function drawFog(){
-  let { image, colOf, rowOf, explored, fading } = fog;
-  let edge = WeaveSokoban.edgeOf(weavePage.grid, explored);
+  let { image, colSpans, rowSpans, explored, fading, drawn, edge } = fog;
   let [r, g, b] = FOG_COLOR;
   let data = image.data;
+  let width = image.width;
+  let left = Infinity, top = Infinity, right = -1, bottom = -1;
 
-  for (let y = 0; y < image.height; y++) {
-    for (let x = 0; x < image.width; x++) {
-      let key = colOf[x] + "," + rowOf[y];
-      let checker = (x + y) % 2 === 0;
-      let alpha;
-      if (!explored.has(key)) alpha = !edge.has(key) || checker ? 255 : 0;
-      else if (fading.has(key)) {
-        let { left, wasEdge } = fading.get(key);
-        alpha = !wasEdge || checker ? Math.round(255 * left / FOG_FADE_MS) : 0;
-      } else alpha = 0;
+  for (let row = 0; row < rowSpans.length; row++) {
+    for (let col = 0; col < colSpans.length; col++) {
+      let key = col + "," + row;
+      // How it looks: its opacity, and whether it's only every other pixel, as the checkered edge is.
+      let alpha, checkered;
+      if (!explored.has(key)) {
+        alpha = 255;
+        checkered = edge.has(key);
+      } else if (fading.has(key)) {
+        let { left: msLeft, wasEdge } = fading.get(key);
+        alpha = Math.round(255 * msLeft / FOG_FADE_MS);
+        checkered = wasEdge;
+      } else {
+        alpha = 0;
+        checkered = false;
+      }
+      let look = alpha * 2 + (checkered ? 1 : 0);
+      if (drawn.get(key) === look) continue;
+      drawn.set(key, look);
 
-      let i = (y * image.width + x) * 4;
-      data[i] = r;
-      data[i + 1] = g;
-      data[i + 2] = b;
-      data[i + 3] = alpha;
+      let xs = colSpans[col], ys = rowSpans[row];
+      if (xs.to < 0 || ys.to < 0) continue;
+      for (let y = ys.from; y <= ys.to; y++) {
+        for (let x = xs.from; x <= xs.to; x++) {
+          let i = (y * width + x) * 4;
+          data[i] = r;
+          data[i + 1] = g;
+          data[i + 2] = b;
+          data[i + 3] = !checkered || (x + y) % 2 === 0 ? alpha : 0;
+        }
+      }
+      left = Math.min(left, xs.from);
+      right = Math.max(right, xs.to);
+      top = Math.min(top, ys.from);
+      bottom = Math.max(bottom, ys.to);
     }
   }
+  if (right < 0) return;
 
-  fog.canvas.getContext('2d').putImageData(image, 0, 0);
+  fog.canvas.getContext('2d').putImageData(image, 0, 0, left, top, right - left + 1, bottom - top + 1);
   if (fog.minimapCanvas) {
     let context = fog.minimapCanvas.getContext('2d');
     context.clearRect(0, 0, fog.minimapCanvas.width, fog.minimapCanvas.height);
@@ -1365,6 +1423,9 @@ function layoutMinimap(pictureWidth){
 
   minimap.screen.style.width = (screen.width * minimap.scale) + "px";
   minimap.screen.style.height = (screen.height * minimap.scale) + "px";
+  // Measured again when it's next needed, and the overlap checked again, now that it's somewhere new.
+  minimap.box = null;
+  minimap.lastKey = null;
 
   let square = width / weavePage.grid.columns;
   let nodeSize = Math.max(3, Math.round(square * MINIMAP_NODE_SQUARES));
@@ -1376,17 +1437,29 @@ function layoutMinimap(pictureWidth){
   }
 }
 
+// Only does anything when something it depends on has moved: the view, the ship, or which card is open. Writing
+// styles and then measuring the page every frame would make the browser lay it out again every frame.
 function updateMinimap(){
+  let key = `${view.position.x},${view.position.y},${Math.round(ship.x)},${Math.round(ship.y)},${view.scale}`;
+  if (key === minimap.lastKey && activeRoot === minimap.lastRoot) return;
+  minimap.lastKey = key;
+  minimap.lastRoot = activeRoot;
+
   minimap.screen.style.left = (view.position.x * minimap.scale) + "px";
   minimap.screen.style.top = ((view.position.y - minimap.top) * minimap.scale) + "px";
 
-  minimap.el.classList.toggle('minimapFaded', isMinimapInTheWay());
+  let faded = isMinimapInTheWay();
+  if (faded !== minimap.faded) {
+    minimap.faded = faded;
+    minimap.el.classList.toggle('minimapFaded', faded);
+  }
 }
 
 // The corner it sits in is still part of the map. Whenever the ship, a location, or an open card is
 // underneath it, it fades back rather than hiding them.
 function isMinimapInTheWay(){
-  let box = minimap.el.getBoundingClientRect();
+  // Where it sits only changes with the window's size - see layoutMinimap.
+  let box = minimap.box ??= minimap.el.getBoundingClientRect();
 
   let overlaps = (left, top, right, bottom) =>
     right > box.left && left < box.right && bottom > box.top && top < box.bottom;
@@ -1476,9 +1549,13 @@ function updateLocationAudio(dt){
       let audio = memberMeta.audio;
       if (!audio) continue;
 
+      // Only touched while it's still easing towards where it's headed, then set there exactly.
       let target = (squaresAway === 0 && member === activeMember) ? 1 : 0;
-      audio.volume += (target - audio.volume) * ease;
-      if (audio.volume < 0.004) audio.volume = 0;
+      if (audio.volume !== target) {
+        let volume = audio.volume + (target - audio.volume) * ease;
+        if (volume < 0.004 || Math.abs(target - volume) < 0.004) volume = target;
+        audio.volume = volume;
+      }
 
       if (audio.volume > 0) {
         if (audio.paused) audio.play().catch(() => {});
@@ -1784,10 +1861,7 @@ function renderTrackFocus(){
   content.id = 'trackFocusContent';
 
   if (cover) {
-    let backdrop = document.createElement('img');
-    backdrop.id = 'trackFocusBackdrop';
-    backdrop.src = cover.src;
-    trackFocusEl.appendChild(backdrop);
+    trackFocusEl.appendChild(buildFocusBackdrop(cover));
 
     // The art and its board go together in one layer, which slides out of the frame when moving on to the
     // next part's board - see startBoardScroll. Styled by class rather than id, because the layer sliding
@@ -1812,6 +1886,7 @@ function renderTrackFocus(){
     if (boardMover) {
       if (boardGame) {
         boardObjectsCanvas = document.createElement('canvas');
+        boardDrawnKey = null; // a new canvas has nothing drawn on it yet
         boardObjectsCanvas.id = 'trackFocusBoardObjects';
         boardObjectsCanvas.className = 'trackFocusBoardObjects';
         boardObjectsCanvas.width = WeavePuzzle.ART_PX;
@@ -1962,6 +2037,26 @@ async function runFocusTransition(transition){
     focusTransition = false;
     releaseDirections();
   }
+}
+
+// The art again, behind everything, just to lend Track Focus its palette: drawn once into a canvas only a few pixels
+// across, which the browser smooths as it stretches it over the screen. That looks like a heavy blur of the art,
+// without the cost of blurring the whole screen every frame.
+const FOCUS_BACKDROP_PX = 12;
+
+function buildFocusBackdrop(cover){
+  let canvas = document.createElement('canvas');
+  canvas.id = 'trackFocusBackdrop';
+  canvas.width = FOCUS_BACKDROP_PX;
+  canvas.height = FOCUS_BACKDROP_PX;
+  let draw = () => {
+    let context = canvas.getContext('2d');
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(cover, 0, 0, FOCUS_BACKDROP_PX, FOCUS_BACKDROP_PX);
+  };
+  if (cover.complete && cover.naturalWidth) draw();
+  else cover.addEventListener('load', draw, { once: true });
+  return canvas;
 }
 
 // A card's cover on the map growing into Track Focus's art while everything else fades in, or the other way
@@ -2120,14 +2215,11 @@ function updateTrackFocusScale(){
 // as the map (see sokoban.js). Everything is measured in the art's own pixels, then multiplied up by
 // trackFocusScale to draw, so a window resize mid-game has nothing to rebuild and the ship always
 // matches the art's pixel size. A track with a puzzle adds its rules to that - see buildBoardGame.
-const BOARD_STEP_MS = WeavePuzzle.BOARD_TIMING.stepMs;
-// How long something on a Stream or Rotator tile takes to move a square, and how long a solved puzzle stays
-// on screen. One that leads on to the next part's board only rests a moment before scrolling across to it.
-const BOARD_STREAM_TICK_MS = WeavePuzzle.BOARD_TIMING.streamTickMs;
+// How long a solved puzzle stays on screen. One that leads on to the next part's board only rests a moment before
+// scrolling across to it. The board's own timings are puzzle.js's BOARD_TIMING - see board.js.
 const BOARD_SCROLL_DELAY_MS = 150;
 const BOARD_SCROLL_MS = 600;
 const BOARD_SCROLL_DELTAS = { Up: { x: 0, y: -1 }, Down: { x: 0, y: 1 }, Left: { x: -1, y: 0 }, Right: { x: 1, y: 0 } };
-const BOARD_ROTATOR_TICK_MS = WeavePuzzle.BOARD_TIMING.rotatorTickMs;
 const BOARD_SOLVED_PAUSE_MS = 800;
 // img/ui/pilot-ship.png's own size.
 const BOARD_SHIP_WIDTH = 12;
@@ -2151,53 +2243,33 @@ function startBoardGame(){
 function buildBoardGame(facing, visit){
   let puzzle = nodeMeta.get(activeNode).puzzle;
   boardPuzzle = puzzle;
-  boardGame = visit?.game ?? (puzzle ? WeavePuzzle.createPuzzleGame(puzzle) : null);
-  if (visit) boardGame?.placeShip(visit.cell);
-  boardStreamMs = 0;
-  boardSinking = [];
-  boardJump = null;
-  boardReset = null;
-  boardPipeActiveMs = 0;
-  boardPipeTurnMs = null;
-  boardPulses = [];
-  boardReturnMs = null;
-  boardRotatorActiveMs = 0;
-  boardRotatorGlideMs = BOARD_ROTATOR_TICK_MS;
-  boardRotatorClockMs = 0;
   boardSolvedMs = null;
   boardScroll = null;
+  boardDrawnKey = null;
 
-  boardMover = WeaveSokoban.createMover(
-    WeaveSokoban.createGrid({
-      columns: TRACK_FOCUS_BOARD_SQUARES,
-      rows: TRACK_FOCUS_BOARD_SQUARES,
-      cellWidth: BOARD_TILE_PX,
-      cellHeight: BOARD_TILE_PX,
-    }),
-    {
-      cell: visit?.cell ?? (boardGame ? boardGame.start : WeavePuzzle.DEFAULT_START),
-      stepMs: BOARD_STEP_MS,
-      facing: facing ?? facingInwards(visit?.cell ?? (boardGame ? boardGame.start : WeavePuzzle.DEFAULT_START)),
-      canEnter: boardGame ? boardGame.canEnter : undefined,
-      onArrive: boardGame ? (cell) => {
-        boardGame.settlePushes();
-        onBoardEvent(boardGame.shipArrivedAt(cell));
-        carryBoardShip();
-      } : undefined,
-      // Walking into a Push Block pushes it on ahead, as the step begins.
-      onStepStart: boardGame ? (from, to, direction) => onBoardEvent(boardGame.pushFrom(from, to, direction)) : undefined,
+  boardPlay = WeaveBoard.createBoardPlay({
+    puzzle,
+    game: visit?.game ?? null,
+    cell: visit?.cell ?? null,
+    facing,
+    hooks: {
+      onEvent: onBoardEvent,
+      onJump: () => {
+        releaseDirections();
+        breakContrails(boardContrails, boardMover.position);
+      },
+      onLanded: () => {
+        breakContrails(boardContrails, boardMover.position);
+        releaseDirections();
+      },
       onBlocked: onBoardBlocked,
-    }
-  );
+    },
+  });
+  boardGame = boardPlay.game;
+  boardMover = boardPlay.mover;
   boardContrails = createContrails(BOARD_SHIP_WIDTH / 12, BOARD_TILE_PX, boardMover.position);
 }
 
-// The ship starts out facing into the board, away from whichever edge it starts on: up from the bottom edge, and so
-// on. Up anywhere else, or in a corner.
-function facingInwards(cell){
-  let edge = WeavePuzzle.exitDirectionOf(cell);
-  return { Up: 'down', Down: 'up', Left: 'right', Right: 'left' }[edge] ?? 'up';
-}
 
 function restartBoardGame(){
   if (!boardGame) return;
@@ -2209,41 +2281,10 @@ function restartBoardGame(){
   renderBoardShip();
 }
 
-// A Stream carries a ship on it, one square at a time, whatever's being pressed - see puzzle.js's canEnter.
-function carryBoardShip(){
-  if (!boardGame || boardSolvedMs !== null || boardJump) return;
 
-  let carry = boardGame.carryDirection(boardMover.cell);
-  if (carry) boardMover.queue(carry);
-}
-
-// Acts on what puzzle.js says just happened to the ship.
+// Acts on what's just happened on the board, once board.js has: the page's own part of it.
 function onBoardEvent(event){
-  if (!event) return;
-
-  if (event.teleportTo) {
-    boardMover.teleport(event.teleportTo);
-    breakContrails(boardContrails, boardMover.position);
-  }
-  // Push Blocks that matched sink together, once whichever of them is moving has finished gliding into place.
-  let glideOf = (object) => {
-    if (object.fromCol === undefined || (object.fromCol === object.col && object.fromRow === object.row)) return 0;
-    return object.glide === 'push' ? BOARD_STEP_MS : object.glide === 'rotator' ? BOARD_ROTATOR_TICK_MS : BOARD_STREAM_TICK_MS;
-  };
-  let glideMs = Math.max(0, ...(event.sank ?? []).map(glideOf));
-  for (const object of event.sank ?? []) boardSinking.push({ object, ms: 0, glideMs });
-  if (event.jumpTo) startBoardJump(event.jumpTo);
-  if (event.returned) boardReturnMs = 0;
-  if (event.lit) boardPulses.push({ ...event.lit, ms: 0, revealed: event.revealed ?? [] });
-  if (event.pipesTurned) {
-    boardPipeTurnMs = 0;
-    boardPipeActiveMs = 0;
-  }
-  // Everything put back by a Reset Switch: whatever was sinking is back too, so it stops.
-  if (event.reset) {
-    boardSinking = [];
-    boardReset = { before: event.reset, ms: 0, durationMs: WeavePuzzle.resetSweepMs(event.reset, boardGame.objects) };
-  }
+  if (event.teleportTo) breakContrails(boardContrails, boardMover.position);
   if (event.finished) {
     markPuzzleSolved(nodeMeta.get(activeNode).puzzle);
     releaseDirections();
@@ -2404,6 +2445,7 @@ function leaveBoardGame(){
     boardShipEl = null;
     boardContrails = null;
     boardGame = null;
+    boardPlay = null;
     boardPuzzle = null;
     boardObjectsCanvas = null;
     boardObjectsImage = null;
@@ -2420,66 +2462,16 @@ function buildBoardShip(){
   return boardShipEl;
 }
 
-// The ship leaps from a Jump Tile to where it lands, over whatever's between, nothing else moving meanwhile, and
-// arrives there as if it had walked.
-const BOARD_JUMP_MS_PER_SQUARE = WeavePuzzle.BOARD_TIMING.jumpMsPerSquare;
-// How much bigger the ship looks at the top of its leap.
+// How much bigger the ship looks at the top of a Jump Tile's leap - see board.js.
 const BOARD_JUMP_RISE = 0.4;
-// How long a matched Push Block takes to sink into the ground.
-const BOARD_SINK_MS = WeavePuzzle.BOARD_TIMING.sinkMs;
 
-function startBoardJump(to){
-  let from = boardMover.cell;
-  let squares = Math.abs(to.col - from.col) + Math.abs(to.row - from.row);
-  releaseDirections();
-  breakContrails(boardContrails, boardMover.position);
-  boardJump = { from, to, ms: 0, durationMs: squares * BOARD_JUMP_MS_PER_SQUARE };
-}
 
-function updateBoardJump(dtMs){
-  boardJump.ms += dtMs;
-  if (boardJump.ms < boardJump.durationMs) return;
 
-  let { to } = boardJump;
-  boardJump = null;
-  boardMover.teleport(to);
-  breakContrails(boardContrails, boardMover.position);
-  releaseDirections();
-  onBoardEvent(boardGame.shipArrivedAt(to, { jumped: true }));
-  carryBoardShip();
-}
-
-function updateBoardSinking(dtMs){
-  for (const sinking of boardSinking) sinking.ms += dtMs;
-  boardSinking = boardSinking.filter(sinking => sinking.ms < sinking.glideMs + BOARD_SINK_MS);
-}
 
 function updateBoardGame(dtMs){
-  if (!boardMover) return;
+  if (!boardPlay) return;
 
-  updateBoardSinking(dtMs);
-  for (const pulse of boardPulses) pulse.ms += dtMs;
-  if (boardReturnMs !== null) boardReturnMs += dtMs;
-  boardPulses = boardPulses.filter(pulse => pulse.ms < BOARD_PULSE_MS);
-
-  // Nothing else moves while the ship's in the air.
-  if (boardJump && !focusTransition && !boardScroll) {
-    updateBoardJump(dtMs);
-    renderBoardShip();
-    drawBoardObjects();
-    return;
-  }
-
-  // Nothing else moves while a Reset Switch's sweep crosses the board, so that everything's back in place, and
-  // seen to be, before the ship can carry on.
-  if (boardReset && !focusTransition && !boardScroll) {
-    boardReset.ms += dtMs;
-    if (boardReset.ms >= boardReset.durationMs) boardReset = null;
-    renderBoardShip();
-    updateBoardContrails(dtMs);
-    drawBoardObjects();
-    return;
-  }
+  boardPlay.animate(dtMs);
 
   // Nothing moves while the board's still flipping in, though it's drawn as it turns.
   if (focusTransition) {
@@ -2502,131 +2494,25 @@ function updateBoardGame(dtMs){
     return;
   }
 
-  boardMover.update(dtMs);
-
-  if (boardGame && boardSolvedMs === null) {
-    // For a ship that's come to rest on a Stream: pushing against something, say, or after a restart.
-    // Reaching one on the way is handled as it arrives, so that it never pauses - see carryBoardShip.
-    if (!boardMover.isMoving) {
-      let carry = boardGame.carryDirection(boardMover.cell);
-      if (carry) boardMover.queue(carry);
-    }
-
-    boardStreamMs += dtMs;
-    while (boardStreamMs >= BOARD_STREAM_TICK_MS && boardSolvedMs === null) {
-      boardStreamMs -= BOARD_STREAM_TICK_MS;
-      onBoardEvent(boardGame.tick(boardMover.isMoving ? boardMover.cell : null));
-    }
-
-    updateBoardRotators(dtMs);
-    updateBoardPipes(dtMs);
-  }
-
+  boardPlay.step(dtMs);
   renderBoardShip();
-  updateBoardContrails(dtMs);
+  if (!boardPlay.jump) updateBoardContrails(dtMs);
   drawBoardObjects();
 }
 
-// How long a lit Lantern's pulse takes to spread as far as it reaches.
-const BOARD_PULSE_MS = WeavePuzzle.BOARD_TIMING.pulseMs;
 
-// Pipes turn as the ship arrives on a Pipe Switch (see puzzle.js's arriveAt), then again each second it stays there.
-const BOARD_PIPE_TICK_MS = WeavePuzzle.BOARD_TIMING.pipeTickMs;
-// How long Pipes take to swing round a quarter turn.
-const BOARD_PIPE_TURN_MS = WeavePuzzle.BOARD_TIMING.pipeTurnMs;
 
-function updateBoardPipes(dtMs){
-  if (boardPipeTurnMs !== null) boardPipeTurnMs += dtMs;
 
-  if (boardMover.isMoving || !boardGame.onPipeSwitch) {
-    boardPipeActiveMs = 0;
-    return;
-  }
 
-  boardPipeActiveMs += dtMs;
-  if (boardPipeActiveMs >= BOARD_PIPE_TICK_MS && boardSolvedMs === null) onBoardEvent(boardGame.turnPipes());
-}
-
-// Rotator tiles only move while the ship is stopped on their Switch, once it's been there a whole tick. A
-// move underway when it leaves still finishes.
-function updateBoardRotators(dtMs){
-  boardRotatorGlideMs = Math.min(BOARD_ROTATOR_TICK_MS, boardRotatorGlideMs + dtMs);
-
-  if (boardMover.isMoving || !boardGame.onRotatorSwitch) {
-    boardRotatorActiveMs = 0;
-    return;
-  }
-
-  boardRotatorActiveMs += dtMs;
-  boardRotatorClockMs += dtMs;
-  if (boardRotatorActiveMs >= BOARD_ROTATOR_TICK_MS && boardSolvedMs === null) {
-    boardRotatorActiveMs -= BOARD_ROTATOR_TICK_MS;
-    boardRotatorGlideMs = 0;
-    onBoardEvent(boardGame.tickRotators(null));
-  }
-}
-
-// Everything on the board, at the art's own size, for CSS to scale up exactly as it does the art, so that
-// their pixels line up. Redrawn every frame, because Streams are always moving, and something on one glides
-// between its last square and its new one over a whole tick.
+// Everything on the board, at the art's own size, for CSS to scale up exactly as it does the art, so that their
+// pixels line up - see board.js's frame. Only drawn when it would look any different from last time.
 function drawBoardObjects(){
   if (!boardGame || !boardObjectsCanvas || !boardPuzzle) return;
 
-  let puzzle = boardPuzzle;
-  let along = boardStreamMs / BOARD_STREAM_TICK_MS;
-  let rotatorAlong = boardRotatorGlideMs / BOARD_ROTATOR_TICK_MS;
-  let pushAlong = boardMover.progress;
-  // Each sinking block finishes its glide first, from wherever it was gliding from, then sinks into its square.
-  let sinking = boardSinking.map(({ object, ms, glideMs }) => {
-    let glided = glideMs === 0 ? 1 : Math.min(1, ms / glideMs);
-    let fromCol = object.fromCol ?? object.col, fromRow = object.fromRow ?? object.row;
-    return {
-      ...object,
-      col: fromCol + (object.col - fromCol) * glided,
-      row: fromRow + (object.row - fromRow) * glided,
-      fromCol: undefined,
-      fromRow: undefined,
-      sink: Math.max(0, Math.min(1, (ms - glideMs) / BOARD_SINK_MS)),
-    };
-  });
-  let objects = boardReset ? WeavePuzzle.resetSweepAt(boardReset.before, boardGame.objects, boardReset.ms) : boardGame.objects;
-  // The Rotator Switch the ship's standing on turns clockwise, for as long as the Rotator tiles are moving.
-  if (boardGame.onRotatorSwitch && !boardMover.isMoving) {
-    let cell = boardMover.cell;
-    let spin = WeavePuzzle.spinAt(boardRotatorClockMs);
-    objects = objects.map(object => object.kind === 'RotatorSwitch' && object.col === cell.col && object.row === cell.row ? { ...object, spin } : object);
-  }
-  // Pipes that have just turned swing round anticlockwise into place: drawn as they are now, turned back clockwise
-  // by however much of the quarter turn is still to go.
-  let floors = boardGame.floors;
-  if (boardPipeTurnMs !== null && boardPipeTurnMs < BOARD_PIPE_TURN_MS) {
-    let spin = Math.round((1 - boardPipeTurnMs / BOARD_PIPE_TURN_MS) * WeavePuzzle.SPIN_STEPS / 4);
-    floors = floors.map(floor => floor.kind === 'Pipe' && spin > 0 ? { ...floor, spin } : floor);
-  }
-  // Whatever a Lantern's pulse hasn't reached yet stays hidden until it does.
-  let pulses = boardPulses.map(pulse => ({ col: pulse.col, row: pulse.row, radius: pulse.ms / BOARD_PULSE_MS * WeavePuzzle.PULSE_REACH_PX }));
-  let unreached = new Set();
-  boardPulses.forEach((pulse, i) => {
-    for (const thing of pulse.revealed) {
-      if (Math.hypot(thing.col - pulse.col, thing.row - pulse.row) * WeavePuzzle.TILE_PX > pulses[i].radius) unreached.add(thing);
-    }
-  });
-  let hideUnreached = (list) => unreached.size === 0 ? list : list.map(thing => unreached.has(thing) ? { ...thing, revealed: false } : thing);
-  floors = hideUnreached(floors);
-  objects = hideUnreached(objects);
-  WeavePuzzle.renderBoard(boardObjectsImage, [...floors, ...objects, ...sinking], puzzle, {
-    timeMs: performance.now(),
-    rotatorTimeMs: boardRotatorClockMs,
-    switchesActive: boardGame.switchesActive,
-    along,
-    rotatorAlong,
-    pushAlong,
-    pushHint: boardPushHint(),
-    pulses,
-    beams: boardGame.beams,
-    returnAlong: boardReturnMs === null ? 1 : Math.min(1, boardReturnMs / BOARD_STEP_MS),
-    reaches: boardGame.reaches,
-  });
+  let { list, options, key } = boardPlay.frame(performance.now(), { pushHint: boardPushHint() });
+  if (key === boardDrawnKey) return;
+  boardDrawnKey = key;
+  WeavePuzzle.renderBoard(boardObjectsImage, list, boardPuzzle, options);
   boardObjectsCanvas.getContext('2d').putImageData(boardObjectsImage, 0, 0);
 }
 
@@ -2637,6 +2523,7 @@ function updateBoardContrails(dtMs){
   let size = Math.round(TRACK_FOCUS_ART_PX * trackFocusScale);
   if (boardContrails.canvas.width !== size) {
     boardContrails.canvas.width = size;
+    boardContrails.bounds = null;
     boardContrails.canvas.height = size;
   }
 
@@ -2648,7 +2535,7 @@ function updateBoardContrails(dtMs){
 const BOARD_PUSH_HINT_BOB_MS = 300;
 
 function boardPushHint(){
-  if (!boardGame || boardMover.isMoving || boardJump || boardReset || boardScroll || focusTransition || boardSolvedMs !== null) return null;
+  if (!boardGame || boardMover.isMoving || boardPlay.jump || boardPlay.reset || boardScroll || focusTransition || boardSolvedMs !== null) return null;
   let delta = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[boardMover.facing];
   let ahead = { col: boardMover.cell.col + delta[0], row: boardMover.cell.row + delta[1] };
   if (!boardGame.canPush(ahead, boardMover.facing)) return null;
@@ -2656,16 +2543,10 @@ function boardPushHint(){
 }
 
 function renderBoardShip(){
-  let position = boardMover.position;
-  let leap = 1;
   // In mid-air from a Jump Tile: along a straight line between the squares, growing towards the middle of it.
-  if (boardJump) {
-    let t = Math.min(1, boardJump.ms / boardJump.durationMs);
-    let from = { x: (boardJump.from.col + 0.5) * BOARD_TILE_PX, y: (boardJump.from.row + 0.5) * BOARD_TILE_PX };
-    let to = { x: (boardJump.to.col + 0.5) * BOARD_TILE_PX, y: (boardJump.to.row + 0.5) * BOARD_TILE_PX };
-    position = { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t };
-    leap = 1 + BOARD_JUMP_RISE * Math.sin(Math.PI * t);
-  }
+  let { x, y, t } = boardPlay.shipPosition();
+  let position = { x, y };
+  let leap = t === null ? 1 : 1 + BOARD_JUMP_RISE * Math.sin(Math.PI * t);
   // Crossing the gap from the last board's Finish onto this one's entrance, while the boards scroll.
   if (boardScroll) {
     let delta = BOARD_SCROLL_DELTAS[boardScroll.exit];
@@ -2711,7 +2592,7 @@ function applyCrossfadeEffect(fx){
   let layer = document.getElementById('bgmap2');
   if (!layer) return;
 
-  layer.animate(
+  trackMapEffect(layer.animate(
     [{ opacity: fx.opacityFrom }, { opacity: fx.opacityTo }],
     {
       duration: fx.durationMs,
@@ -2719,7 +2600,7 @@ function applyCrossfadeEffect(fx){
       iterations: Infinity,
       easing: fx.easing || 'ease-in-out',
     }
-  );
+  ));
 }
 
 function applyDriftEffect(fx){
@@ -2737,7 +2618,7 @@ function applyDriftEffect(fx){
   document.body.appendChild(outer);
 
   if (fx.driftX) {
-    img.animate(
+    trackMapEffect(img.animate(
       { transform: "translateX(" + fx.driftX.toPx + "px)" },
       {
         duration: fx.driftX.durationMs,
@@ -2745,11 +2626,11 @@ function applyDriftEffect(fx){
         iterations: Infinity,
         easing: fx.driftX.easing || 'ease-in-out',
       }
-    );
+    ));
   }
 
   if (fx.driftY) {
-    outer.animate(
+    trackMapEffect(outer.animate(
       [
         { transform: "translateY(" + fx.driftY.fromPx + "px)" },
         { transform: "translateY(" + fx.driftY.toPx + "px)" },
@@ -2760,8 +2641,27 @@ function applyDriftEffect(fx){
         iterations: Infinity,
         easing: fx.driftY.easing || 'ease-in-out',
       }
-    );
+    ));
   }
+}
+
+// The map's drift and crossfade effects, which run forever. They're paused while the map is covered - see
+// updateMapCovered - since anything blurred over them would otherwise be blurred again every frame.
+let mapEffects = [];
+let mapCovered = false;
+
+function trackMapEffect(animation){
+  mapEffects.push(animation);
+  if (mapCovered) animation.pause();
+}
+
+// Whether the map is hidden behind something right now: Track Focus, once it's fully open, or an open card's
+// backdrop. While it is, its effects are paused and nothing on it needs redrawing.
+function updateMapCovered(){
+  let covered = (!!trackFocusEl && !focusTransition) || !!modalBackdrop;
+  if (covered === mapCovered) return;
+  mapCovered = covered;
+  for (const animation of mapEffects) covered ? animation.pause() : animation.play();
 }
 
 function loop(timestamp){
@@ -2774,11 +2674,14 @@ function loop(timestamp){
   lastFrameTime = timestamp;
 
   updateInput();
+  updateMapCovered();
   updateShip(dt);
-  updateFog(dt * MS_PER_FRAME);
-  updateView(dt * MS_PER_FRAME);
-  updateMapContrails(dt * MS_PER_FRAME);
-  updateMinimap();
+  if (!mapCovered) {
+    updateFog(dt * MS_PER_FRAME);
+    updateView(dt * MS_PER_FRAME);
+    updateMapContrails(dt * MS_PER_FRAME);
+    updateMinimap();
+  }
   updateBoardGame(dt * MS_PER_FRAME);
   updateNodeProximity();
   updateLocationAudio(dt);

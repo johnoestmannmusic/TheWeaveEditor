@@ -387,7 +387,7 @@ internal static class ProjectEditing
             set.Drawings = set.Drawings.Where(id => Exists(set.Kind, id)).Distinct().ToList();
         project.PuzzleDrawingSets = sets.Count > 0 ? sets : null;
 
-        foreach (var obj in PuzzlesIn(project.Pages.SelectMany(p => p.Nodes)).SelectMany(p => p.Objects))
+        foreach (var obj in project.AllPuzzles().SelectMany(p => p.Objects))
         {
             if (obj.Variant is not null && !drawings.Any(d => d.Id == obj.Variant && d.Kind == obj.Kind))
                 obj.Variant = null;
@@ -421,7 +421,7 @@ internal static class ProjectEditing
         var kept = archetons.Select(a => a.Id).ToHashSet();
         foreach (var page in project.Pages)
         {
-            foreach (var node in NodesIn(page.Nodes))
+            foreach (var node in Node.WithParts(page.Nodes))
             {
                 var used = node.Puzzle?.Objects.FirstOrDefault(o => o.Kind == PuzzleObjectKind.Archeton && o.Archeton is not null && !kept.Contains(o.Archeton));
                 if (used is not null)
@@ -479,8 +479,7 @@ internal static class ProjectEditing
             throw new InvalidOperationException($"More than one Archeton has the id '{repeated.Key}'.");
     }
 
-    private static IEnumerable<Node> NodesIn(IEnumerable<Node> nodes) =>
-        nodes.SelectMany(n => new[] { n }.Concat(NodesIn(n.Children)));
+
 
     public static void ValidatePuzzleDrawingSets(List<PuzzleDrawingSet> sets)
     {
@@ -509,8 +508,7 @@ internal static class ProjectEditing
         project.PuzzleDrawings = combined.Count > 0 ? combined : null;
     }
 
-    private static IEnumerable<Puzzle> PuzzlesIn(IEnumerable<Node> nodes) =>
-        nodes.SelectMany(n => (n.Puzzle is null ? [] : new[] { n.Puzzle }).Concat(PuzzlesIn(n.Children)));
+
 
     public static void ValidatePuzzleDrawings(List<PuzzleDrawing> drawings)
     {

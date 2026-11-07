@@ -20,7 +20,7 @@ Neocities, replacing hand-authoring HTML per location.
   shared with the exported site.
 - A Playtest button in the Puzzle Editor, which turns its board into a playable one, to try the puzzle as it's
   laid out: arrows or WASD to move, X to restart, Esc to stop. It plays by the game's own rules and timings, from
-  `runtime/puzzle.js` and `runtime/sokoban.js`, and never changes the project. Reaching the Finish shows Solved.
+  `runtime/puzzle.js`, `runtime/sokoban.js` and `runtime/board.js`, exactly as the game does, and never changes the project. Reaching the Finish shows Solved.
 - Drawings for the puzzles' objects, painted pixel by pixel in the Puzzle Editor's Drawings view and
   shared by every puzzle in the project. Each kind of object can have as many as you like, besides its
   Standard drawing, which can be redrawn too. Drawings can be grouped into named Drawing Sets, such as one
@@ -190,8 +190,9 @@ Neocities, replacing hand-authoring HTML per location.
 - `src/TheWeave.Core` — the project file schema, serialization, and validation. No UI or I/O
   framework dependencies beyond the .NET BCL, so it's fully unit-testable in isolation.
 - `src/TheWeave.Exporter` — renders a project to a static HTML/CSS/JS site. Also owns the
-  canonical shared runtime (`runtime/main.css`, `runtime/main.js`, `runtime/sokoban.js`,
-  `runtime/shell.js`) embedded in the assembly.
+  canonical shared runtime (`runtime/main.css`, `runtime/main.js`, `runtime/sokoban.js`, `runtime/puzzle.js`,
+  `runtime/board.js`, `runtime/shell.js`) embedded in the assembly. `board.js` plays a puzzle board, shared by the
+  game's Track Focus and the Puzzle Editor's playtest.
 - `src/TheWeave.Importer` — parses an existing hand-authored site into a project file, for
   one-time migration. Built on [AngleSharp](https://anglesharp.github.io/).
 - `src/TheWeave.EditorApp` — the desktop editor shell, built on

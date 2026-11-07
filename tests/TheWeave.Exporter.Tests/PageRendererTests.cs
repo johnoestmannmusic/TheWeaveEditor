@@ -179,6 +179,7 @@ public class PageRendererTests
               <link href="css/main.css?v={{RuntimeAssets.Version}}" rel="stylesheet">
               <script src="jsx/sokoban.js?v={{RuntimeAssets.Version}}"></script>
               <script src="jsx/puzzle.js?v={{RuntimeAssets.Version}}"></script>
+              <script src="jsx/board.js?v={{RuntimeAssets.Version}}"></script>
               <script src="jsx/main.js?v={{RuntimeAssets.Version}}"></script>
 
               <script>

@@ -141,8 +141,7 @@ public static class ProjectValidator
         void Warn(string message) => issues.Add(new ValidationIssue { Severity = ValidationSeverity.Warning, Message = message });
         var library = project.Archetons ?? [];
 
-        IEnumerable<Node> NodesIn(IEnumerable<Node> nodes) => nodes.SelectMany(n => new[] { n }.Concat(NodesIn(n.Children)));
-        foreach (var node in project.Pages.SelectMany(p => NodesIn(p.Nodes)))
+        foreach (var node in project.AllNodes())
         {
             foreach (var obj in node.Puzzle?.Objects.Where(o => o.Kind == PuzzleObjectKind.Archeton) ?? [])
             {
