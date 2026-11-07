@@ -61,10 +61,14 @@ public sealed class PageRenderer
         sb.AppendLine("  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\">");
         sb.AppendLine($"  <title>{EscapeText(page.Title)}</title>");
         sb.AppendLine($"  <link href=\"{EscapeAttr(_project.Assets.CssPath)}?v={RuntimeAssets.Version}\" rel=\"stylesheet\">");
-        sb.AppendLine($"  <script src=\"{EscapeAttr(_project.Assets.SokobanJsPath)}?v={RuntimeAssets.Version}\"></script>");
-        sb.AppendLine($"  <script src=\"{EscapeAttr(_project.Assets.PuzzleJsPath)}?v={RuntimeAssets.Version}\"></script>");
-        sb.AppendLine($"  <script src=\"{EscapeAttr(_project.Assets.BoardJsPath)}?v={RuntimeAssets.Version}\"></script>");
-        sb.AppendLine($"  <script src=\"{EscapeAttr(_project.Assets.JsPath)}?v={RuntimeAssets.Version}\"></script>");
+        // In the order they have to load: the puzzle's parts before puzzle.js, which brings them together, then board.js,
+        // then main.js before the rest of the page script's parts - see RuntimeAssets.
+        var scripts = new[] { _project.Assets.SokobanJsPath }
+            .Concat(RuntimeAssets.PuzzleScriptParts.Select(name => RuntimeAssets.Beside(_project.Assets.PuzzleJsPath, name)))
+            .Concat([_project.Assets.PuzzleJsPath, _project.Assets.BoardJsPath, _project.Assets.JsPath])
+            .Concat(RuntimeAssets.PageScriptParts.Select(name => RuntimeAssets.Beside(_project.Assets.JsPath, name)));
+        foreach (var script in scripts)
+            sb.AppendLine($"  <script src=\"{EscapeAttr(script)}?v={RuntimeAssets.Version}\"></script>");
         sb.AppendLine();
         sb.AppendLine(PageConfigScriptRenderer.Render(page, _project));
         sb.AppendLine("  </head>");

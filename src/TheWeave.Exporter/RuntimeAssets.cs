@@ -24,6 +24,28 @@ public static class RuntimeAssets
     /// <summary>A puzzle board being played, loaded after puzzle.js - see runtime/board.js.</summary>
     public static string ReadBoardJs() => ReadEmbedded("runtime.board.js");
 
+    /// <summary>
+    /// The parts puzzle.js brings together, in the order they load, just before it and in the same folder - see
+    /// runtime/puzzle.js.
+    /// </summary>
+    public static readonly IReadOnlyList<string> PuzzleScriptParts = ["puzzleRules.js", "puzzleColours.js", "puzzleDrawing.js"];
+
+    /// <summary>
+    /// The rest of the page script, split from main.js by concern, in the order they load, just after it and in the same
+    /// folder - see runtime/main.js.
+    /// </summary>
+    public static readonly IReadOnlyList<string> PageScriptParts = ["loading.js", "cards.js", "map.js", "audio.js", "trackFocus.js", "effects.js"];
+
+    /// <summary>Where a script part goes: in the same folder as the file it belongs with, like "jsx/main.js".</summary>
+    public static string Beside(string path, string fileName)
+    {
+        var slash = path.Replace('\\', '/').LastIndexOf('/');
+        return slash < 0 ? fileName : path[..(slash + 1)] + fileName;
+    }
+
+    /// <summary>One of the runtime's script parts, by its file name - see PuzzleScriptParts and PageScriptParts.</summary>
+    public static string ReadScriptPart(string fileName) => ReadEmbedded("runtime." + fileName);
+
     /// <summary>The persistent shell's own script - see ShellRenderer.</summary>
     public static string ReadShellJs() => ReadEmbedded("runtime.shell.js");
 
@@ -45,7 +67,8 @@ public static class RuntimeAssets
 
     private static string ComputeVersion()
     {
-        var combined = ReadMainCss() + ReadMainJs() + ReadSokobanJs() + ReadPuzzleJs() + ReadBoardJs() + ReadShellJs();
+        var combined = ReadMainCss() + ReadMainJs() + ReadSokobanJs() + ReadPuzzleJs() + ReadBoardJs() + ReadShellJs()
+            + string.Concat(PuzzleScriptParts.Concat(PageScriptParts).Select(ReadScriptPart));
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(combined));
         return Convert.ToHexString(hash)[..8].ToLowerInvariant();
     }
