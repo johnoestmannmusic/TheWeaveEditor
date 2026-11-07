@@ -1599,3 +1599,13 @@ test('an open Gate is drawn half see-through, and a closed one solid', () => {
   assert.deepEqual(alphas(draw(false)), [255]);
   assert.deepEqual(alphas(draw(true)), [128]);
 });
+
+test('a Slide Bug that\'s got where it\'s going stays still, however another bug keeps sliding', () => {
+  let g = withArchetons([SLIDE_BUG], bug(4, 3), bug(0, 1));
+  g.shipArrivedAt(at(5, 7));
+  for (let i = 0; i < 3; i++) {
+    g.shipArrivedAt(at(5, i % 2 ? 7 : 6)); // up and down, across their lines
+    let still = g.objects.find(o => o.archeton === 'slide-bug' && o.row === 3);
+    assert.deepEqual([still.col, still.fromCol], [5, 5], 'not drawn sliding into its square again');
+  }
+});

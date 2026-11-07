@@ -410,6 +410,7 @@
         // behind it, it stays, and the square stays solid either way. All the Switch's Gates change before any of it.
         case 'Switch': {
           if (!switchesActive()) return null;
+          settle('return');
           let gates = objects.filter(gate => gate.kind === 'Gate' && gate.letter === object.letter);
           for (const gate of gates) gate.open = !gate.open;
           let returned = [];
@@ -495,6 +496,16 @@
       return null;
     }
 
+    // Everything that last moved in a way that's had time to finish - a slide, or being passed back from a Gate - is
+    // simply where it is now, so it isn't drawn moving there again the next time something else moves that way.
+    function settle(glide){
+      for (const object of objects) {
+        if (object.glide !== glide) continue;
+        object.fromCol = object.col;
+        object.fromRow = object.row;
+      }
+    }
+
     // Notes the square an object's leaving, for a closing Gate to pass it back along - see passBack. Only the last
     // few are kept.
     function leaving(object){
@@ -539,6 +550,9 @@
     // a Pipe across its line, it waits there. Sliding into the ship hurts it - see hurtBack. Landing on a Switch, Lantern, Reset Switch or Pipe
     // Switch triggers it, as the ship would. { slid } and whatever they set off, or null if none moved.
     function slideBugs(){
+      // Whatever slid last time has long since got there, so it's simply where it is now - otherwise it would be drawn
+      // sliding in again whenever another bug slides.
+      settle('slide');
       let slid = [];
       let set = {};
       for (const bug of objects.filter(object => object.kind === 'Archeton' && archetonDefinitions.get(object.archeton)?.parts?.some(part => part.kind === 'Slide'))) {
