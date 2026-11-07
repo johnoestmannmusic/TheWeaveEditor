@@ -60,6 +60,12 @@ public enum PuzzleObjectKind
 
     /// <summary>A mechanical enemy, built from parts - see ArchetonDefinition. Its Archeton says which one.</summary>
     Archeton,
+
+    /// <summary>
+    /// Not placed on a board: an Archeton's laser, one square of it drawn pointing right, repeated along the beam - see
+    /// ArchetonDefinition.LaserDrawing. A kind so that it can be drawn in the Drawings view like anything else.
+    /// </summary>
+    Laser,
 }
 
 /// <summary>A Push Block's symbol, drawn on it as a hollow outline - see runtime/puzzle.js's SYMBOLS.</summary>
@@ -221,7 +227,7 @@ public static class PuzzleDrawings
         PuzzleObjectKind.Teleporter, PuzzleObjectKind.Key, PuzzleObjectKind.RotatorSwitch, PuzzleObjectKind.Lantern,
         PuzzleObjectKind.Stream, PuzzleObjectKind.RotatorTile, PuzzleObjectKind.PushBlock, PuzzleObjectKind.JumpTile,
         PuzzleObjectKind.ResetSwitch, PuzzleObjectKind.Pipe, PuzzleObjectKind.PipeSwitch,
-        PuzzleObjectKind.Archeton,
+        PuzzleObjectKind.Archeton, PuzzleObjectKind.Laser,
     };
 
     /// <summary>The kinds animated as they flow: a Still layer, and a Flow layer that moves along it.</summary>

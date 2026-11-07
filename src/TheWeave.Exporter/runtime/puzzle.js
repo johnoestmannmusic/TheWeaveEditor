@@ -166,6 +166,8 @@
     let objects = startingObjects();
 
     let shipCell = start;
+    // The square the ship last arrived from, for a Block's laser to send it back to - see sentBackByBeam.
+    let previousShipCell = null;
     let solved = false;
     // How many Jump Tiles in a row the ship has been launched from, so two facing each other can't go on forever.
     let jumpsInARow = 0;
@@ -201,15 +203,16 @@
       return isSolid(there);
     }
 
-    // Every way each Archeton's Beams look right now: { archeton, part, direction, pushes, cells }, cells being the
-    // squares it reaches, walking out as far as its range until something stops it. It ends at the ship, if it
-    // reaches it.
-    function beamPaths(){
+    // Every way each Archeton's Beams look right now: { archeton, part, direction, pushes, blocks, cells }, cells being
+    // the squares it reaches, walking out as far as its range until something stops it. It ends at the ship, if it
+    // reaches it, unless throughShip, for where it would reach with the ship out of the way.
+    function beamPaths(throughShip = false){
       let paths = [];
       for (const archeton of objects) {
         if (archeton.kind !== 'Archeton') continue;
         let parts = archetonDefinitions.get(archeton.archeton)?.parts ?? [];
         let pushes = parts.some(part => part.kind === 'Push');
+        let blocks = parts.some(part => part.kind === 'Block');
         for (const part of parts) {
           if (part.kind !== 'Beam') continue;
           let ways = part.look === 'Facing' ? [archeton.direction ?? 'Right'] : ALL_WAYS;
@@ -220,13 +223,40 @@
               cell = nextCell(cell, direction);
               if (!onBoard(cell) || stopsBeam(cell, part)) break;
               cells.push(cell);
-              if (isAt(shipCell, cell)) break;
+              if (!throughShip && isAt(shipCell, cell)) break;
             }
-            paths.push({ archeton, part, direction, pushes, cells });
+            paths.push({ archeton, part, direction, pushes, blocks, cells });
           }
         }
       }
       return paths;
+    }
+
+    // Whether an Archeton with a Block keeps the ship from stepping onto a square, by a Beam reaching it.
+    function blockedByBeam(cell){
+      return beamPaths(true).some(path => path.blocks && path.cells.some(reached => isAt(reached, cell)));
+    }
+
+    // Which way a Block's laser sends the ship, if it's somehow ended up in its reach - pushing a Push Block that was
+    // shielding it out of the way, say: back to the square it just came from, or failing that, away from the
+    // Archeton along the beam. Null if it isn't in one, or can't go either way.
+    function sentBackByBeam(cell){
+      if (!isAt(shipCell, cell) || !blockedByBeam(cell)) return null;
+      let back = previousShipCell;
+      if (back && Math.abs(back.col - cell.col) + Math.abs(back.row - cell.row) === 1) {
+        let direction = back.col > cell.col ? 'Right' : back.col < cell.col ? 'Left' : back.row > cell.row ? 'Down' : 'Up';
+        if (canEnter(cell, back, MOVER_DIRECTIONS[direction])) return direction;
+      }
+      for (const path of beamPaths(true)) {
+        if (!path.blocks || !path.cells.some(reached => isAt(reached, cell))) continue;
+        if (canEnter(cell, nextCell(cell, path.direction), MOVER_DIRECTIONS[path.direction])) return path.direction;
+      }
+      return null;
+    }
+
+    // Whether the ship is in a Beam's reach, or one square off it.
+    function nearPath(path){
+      return path.cells.some(cell => Math.abs(cell.col - shipCell.col) + Math.abs(cell.row - shipCell.row) <= 1);
     }
 
     // Every Beam that reaches the ship right now: { archeton, part, from, to, direction, pushes }.
@@ -254,6 +284,7 @@
       if (holding && holding !== direction) return false;
       if (streams.get(cellKey(to)) === OPPOSITES[direction]) return false;
       if (!pipeAllows(from, direction) || !pipeAllows(to, direction)) return false;
+      if (blockedByBeam(to)) return false;
       let object = objectAt(to);
       if (object?.kind === 'PushBlock') return !!pushedTo(object, direction);
       return !(object && isSolid(object));
@@ -338,6 +369,7 @@
     // revealed } for the caller to act on. jumped says the ship landed here from a
     // Jump Tile, rather than walking or being carried.
     function arriveAt(cell, { jumped = false } = {}){
+      if (!isAt(shipCell, cell)) previousShipCell = shipCell;
       shipCell = cell;
       if (!jumped) jumpsInARow = 0;
       let object = objectAt(cell);
@@ -476,11 +508,21 @@
       canEnter,
 
       // The Archetons' Beams reaching the ship right now, { from, to }, for drawing their lasers.
-      get beams(){ return beamsOnShip().map(hit => ({ from: hit.from, to: hit.to })); },
+      // A Beam that blocks shows its laser across its whole reach while the ship is in it or one square off it, and
+      // any other shows it from its eye to the ship while it reaches the ship.
+      get beams(){
+        let blocking = beamPaths(true).filter(path => path.blocks && path.cells.length > 0 && nearPath(path))
+          .map(path => ({ from: { col: path.archeton.col, row: path.archeton.row }, to: path.cells[path.cells.length - 1], archeton: path.archeton.archeton }));
+        let hitting = beamsOnShip().filter(hit => !hit.blocks).map(hit => ({ from: hit.from, to: hit.to, archeton: hit.archeton.archeton }));
+        return [...blocking, ...hitting];
+      },
       // Every square an Archeton's Beam reaches right now, { col, row }, for outlining where it's dangerous to be.
       get reaches(){
         let seen = new Map();
-        for (const path of beamPaths()) for (const cell of path.cells) seen.set(cellKey(cell), cell);
+        for (const path of beamPaths(true)) {
+          if (path.part.showReach === false) continue;
+          for (const cell of path.cells) seen.set(cellKey(cell), cell);
+        }
         return [...seen.values()];
       },
 
@@ -524,10 +566,11 @@
       },
 
       // Which way a Stream is carrying a ship on this square, as sokoban.js's direction, or null.
-      // A Stream comes first, and otherwise an Archeton's Beam pushing it away, as long as it can go - see
-      // pushedByBeam. Either way the caller moves the ship along, a square at a time.
+      // A Stream comes first, and otherwise an Archeton's Beam pushing it away, or a Block's laser sending it back
+      // out of its reach, as long as it can go - see pushedByBeam and sentBackByBeam. Either way the caller moves the
+      // ship along, a square at a time.
       carryDirection(cell){
-        let direction = streams.get(cellKey(cell)) ?? pushedByBeam(cell);
+        let direction = streams.get(cellKey(cell)) ?? pushedByBeam(cell) ?? sentBackByBeam(cell);
         return direction ? MOVER_DIRECTIONS[direction] : null;
       },
 
@@ -987,7 +1030,7 @@
   };
 
   const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
-  const SPRITE_ROLES = { Wall: 'wall', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton' };
+  const SPRITE_ROLES = { Wall: 'wall', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton' };
 
   function maskOf(test){
     let mask = [];
@@ -1034,10 +1077,10 @@
   const ANIMATED_KINDS = ['Stream', 'RotatorTile'];
 
   // Objects with a direction, drawn pointing right and turned the way they point, as animated tiles are.
-  const TURNED_KINDS = ['JumpTile', 'Pipe', 'Archeton'];
+  const TURNED_KINDS = ['JumpTile', 'Pipe', 'Archeton', 'Laser'];
 
   // Every kind of object drawn from a drawing.
-  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'PushBlock', ...TURNED_KINDS, 'ResetSwitch', 'PipeSwitch', ...ANIMATED_KINDS];
+  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', ...ANIMATED_KINDS, 'Laser'];
 
   const standardDrawings = new Map();
 
@@ -1061,6 +1104,7 @@
       else if (kind === 'JumpTile') drawing = { id: kind, kind, name: 'Standard', pixels: standardJumpTilePixels(), mix: standardMix('jump') };
       else if (kind === 'ResetSwitch') drawing = { id: kind, kind, name: 'Standard', pixels: standardResetSwitchPixels(), mix: standardMix('reset') };
       else if (kind === 'Pipe') drawing = { id: kind, kind, name: 'Standard', pixels: standardPipePixels(), mix: standardMix('wall') };
+      else if (kind === 'Laser') drawing = { id: kind, kind, name: 'Standard', pixels: standardLaserPixels(), mix: standardMix('archeton') };
       else if (kind === 'Archeton') drawing = { id: kind, kind, name: 'Standard', pixels: standardArchetonPixels(), mix: standardMix('archeton') };
       else if (kind === 'PipeSwitch') drawing = { id: kind, kind, name: 'Standard', pixels: standardPipeSwitchPixels(), mix: standardMix('pipe') };
       else {
@@ -1223,6 +1267,16 @@
     });
   }
 
+  // A laser's Standard drawing, one square of it running right, and on across the next square: a band of the light
+  // colour with the Archeton's lightest shade either side of it.
+  function standardLaserPixels(){
+    return layerOf((u, v) => {
+      if (v === 11 || v === 12) return PAINTS.light;
+      if (v === 10 || v === 13) return '4';
+      return PAINTS.clear;
+    });
+  }
+
   // A Pipe Switch's Standard drawing: a Reset Switch's pad, with two lines across it in place of its arrows, each
   // with a darker edge below.
   function standardPipeSwitchPixels(){
@@ -1258,7 +1312,8 @@
   // An Archeton is drawn with whichever drawing its definition says (look.archetons), rather than one of its own.
   function drawingFor(look, object){
     let find = (id) => look.drawings?.find(drawing => drawing.id === id && drawing.kind === object.kind);
-    let variant = object.kind === 'Archeton' ? look.archetons?.find(definition => definition.id === object.archeton)?.drawing : object.variant;
+    let definition = object.kind === 'Archeton' || object.kind === 'Laser' ? look.archetons?.find(d => d.id === object.archeton) : null;
+    let variant = object.kind === 'Archeton' ? definition?.drawing : object.kind === 'Laser' ? definition?.laserDrawing : object.variant;
     return (variant && find(variant)) || find(object.kind) || standardDrawing(object.kind);
   }
 
@@ -1805,32 +1860,22 @@
     }
   }
 
-  // An Archeton's laser, from the edge of its eye to the middle of the ship's square: 2 pixels of the light colour,
-  // edged either side in the outline colour.
+  // An Archeton's laser: its Laser drawing, a square at a time from the square past the Archeton to the beam's end,
+  // turned the way it runs, and a little see-through, so what's under it still shows.
+  const LASER_OPACITY = 0.75;
+
   function drawBeam(image, beam, look, originY){
-    let light = hexToColor(look.palette.light);
-    let outline = hexToColor(look.palette.outline);
-    let { data, width, height } = image;
-    let half = TILE_PX / 2;
-    let across = beam.from.row === beam.to.row;
-    let fromX = beam.from.col * TILE_PX + half, fromY = beam.from.row * TILE_PX + half + originY;
-    let toX = beam.to.col * TILE_PX + half, toY = beam.to.row * TILE_PX + half + originY;
-    let step = Math.sign(across ? toX - fromX : toY - fromY);
-    let start = 8;
-    let length = Math.abs(across ? toX - fromX : toY - fromY);
-    let set = (x, y, color) => {
-      if (x < 0 || y < 0 || x >= width || y >= height) return;
-      let i = (y * width + x) * 4;
-      data[i] = color.r; data[i + 1] = color.g; data[i + 2] = color.b; data[i + 3] = 255;
-    };
-    for (let along = start; along <= length; along++) {
-      for (let side = -2; side <= 1; side++) {
-        let color = side === -2 || side === 1 ? outline : light;
-        if (across) set(fromX + step * along, fromY + side, color);
-        else set(fromX + side, fromY + step * along, color);
-      }
+    let dCol = Math.sign(beam.to.col - beam.from.col), dRow = Math.sign(beam.to.row - beam.from.row);
+    let direction = dCol > 0 ? 'Right' : dCol < 0 ? 'Left' : dRow > 0 ? 'Down' : 'Up';
+    let sprite = buildSprite({ kind: 'Laser', direction, archeton: beam.archeton }, look, true);
+    let col = beam.from.col, row = beam.from.row;
+    while (col !== beam.to.col || row !== beam.to.row) {
+      col += dCol;
+      row += dRow;
+      blit(image, sprite, col * TILE_PX, row * TILE_PX + originY, Infinity, LASER_OPACITY);
     }
   }
+
 
   // How far a lit Lantern's pulse spreads, in pixels: as far as it reaches.
   const PULSE_REACH_PX = LANTERN_REACH * TILE_PX;

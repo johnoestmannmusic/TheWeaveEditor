@@ -6,6 +6,7 @@
 
 const ARCHETON_PARTS = [
   { kind: 'Beam', label: 'Beam', hint: 'Sees the ship in a straight line, as far as its range, unless a Wall, closed Gate or another Archeton is in the way.' },
+  { kind: 'Block', label: 'Block', hint: 'The ship can\'t step anywhere a Beam reaches. The laser shows across it while the ship is one square off it, or in it.' },
   { kind: 'Push', label: 'Push', hint: 'Pushes the ship away along whichever Beam sees it, a square at a time, until it\'s out of reach.' },
 ];
 const ARCHETON_LOOKS = [
@@ -59,7 +60,7 @@ function archetonDrawing(archeton) {
 
 function describeArcheton(archeton) {
   return archeton.parts.map((part) => part.kind === 'Beam'
-    ? `Beam ${part.range} ${part.look === 'Facing' ? 'ahead' : 'all ways'}${part.blockedByBlocks === false ? ', through blocks' : ''}`
+    ? `Beam ${part.range} ${part.look === 'Facing' ? 'ahead' : 'all ways'}${part.blockedByBlocks === false ? ', through blocks' : ''}${part.showReach === false ? ', unmarked' : ''}`
     : part.kind).join(' + ') || 'No parts';
 }
 
@@ -110,7 +111,7 @@ function renderArchetonActions(side, selected) {
     side.append(element);
   };
   button('Place', () => placeArcheton(selected.id), !selected, 'primary');
-  button('New', () => editArcheton({ id: newArchetonId('Archeton'), name: 'New Archeton', drawing: null, parts: [{ kind: 'Beam', range: 2, look: 'AllWays', blockedByBlocks: true }, { kind: 'Push' }] }, true));
+  button('New', () => editArcheton({ id: newArchetonId('Archeton'), name: 'New Archeton', drawing: null, parts: [{ kind: 'Beam', range: 2, look: 'AllWays', blockedByBlocks: true, showReach: true }, { kind: 'Block' }] }, true));
   button('Edit', () => editArcheton(selected, false), !selected);
   button('Duplicate', () => editArcheton({ ...structuredClone(selected), id: newArchetonId(selected.name), name: `${selected.name} copy` }, true), !selected);
   button('Delete', () => {
@@ -119,7 +120,7 @@ function renderArchetonActions(side, selected) {
   }, !selected, 'danger');
   const hint = document.createElement('p');
   hint.className = 'field-hint';
-  hint.textContent = 'Double-click a card to place it. Draw new bodies in Drawings, under Archeton.';
+  hint.textContent = 'Double-click a card to place it. Draw new bodies in Drawings, under Archeton, and lasers under Laser.';
   side.append(hint);
 }
 
@@ -172,6 +173,14 @@ function renderArchetonEditor(side) {
   field('Drawing', drawing);
   side.append(drawingThumbnail(archetonDrawing(archeton)));
 
+  const laser = document.createElement('select');
+  const lasers = (project?.puzzleDrawings ?? []).filter((d) => d.kind === 'Laser' && d.id !== 'Laser');
+  laser.append(new Option('Standard', ''), ...lasers.map((d) => new Option(d.name, d.id)));
+  laser.value = archeton.laserDrawing ?? '';
+  laser.title = 'What its lasers look like. Draw them in Drawings, under Laser.';
+  laser.addEventListener('change', () => { archeton.laserDrawing = laser.value || null; });
+  field('Laser', laser);
+
   const parts = document.createElement('div');
   parts.className = 'ar-parts';
   archeton.parts.forEach((part, index) => {
@@ -205,9 +214,15 @@ function renderArchetonEditor(side) {
       blocksBox.checked = part.blockedByBlocks !== false;
       blocksBox.addEventListener('change', () => { part.blockedByBlocks = blocksBox.checked; });
       blocks.append(blocksBox, ' Push Blocks stop it');
+      const outline = document.createElement('label');
+      const outlineBox = document.createElement('input');
+      outlineBox.type = 'checkbox';
+      outlineBox.checked = part.showReach !== false;
+      outlineBox.addEventListener('change', () => { part.showReach = outlineBox.checked; });
+      outline.append(outlineBox, ' Outline its reach');
       const rangeLabel = document.createElement('label');
       rangeLabel.append('Range ', range);
-      row.append(rangeLabel, look, blocks);
+      row.append(rangeLabel, look, blocks, outline);
     }
     parts.append(row);
   });
@@ -218,7 +233,7 @@ function renderArchetonEditor(side) {
   add.title = ARCHETON_PARTS.map((part) => `${part.label}: ${part.hint}`).join('\n');
   add.addEventListener('change', () => {
     if (!add.value) return;
-    archeton.parts.push(add.value === 'Beam' ? { kind: 'Beam', range: 2, look: 'AllWays', blockedByBlocks: true } : { kind: add.value });
+    archeton.parts.push(add.value === 'Beam' ? { kind: 'Beam', range: 2, look: 'AllWays', blockedByBlocks: true, showReach: true } : { kind: add.value });
     renderArchetons();
   });
   side.append(add);
