@@ -819,7 +819,8 @@
       let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase);
       let top = Math.round(row * TILE_PX) + (options.originY ?? 0);
       let sunk = Math.round((object.sink ?? 0) * TILE_PX);
-      let opacity = object.fade ?? 1;
+      // An open Gate is half see-through, so it reads as something the ship can pass through.
+      let opacity = (object.fade ?? 1) * (object.kind === 'Gate' && object.open ? OPEN_GATE_OPACITY : 1);
       if (opacity <= 0) continue;
       blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX), top + sunk, object.sink ? top + TILE_PX : Infinity, opacity);
     }
@@ -872,6 +873,9 @@
     }
   }
 
+
+  // How much of an open Gate shows - see renderBoard.
+  const OPEN_GATE_OPACITY = 0.5;
 
   // How far a lit Lantern's pulse spreads, in pixels: as far as it reaches.
   const PULSE_REACH_PX = LANTERN_REACH * TILE_PX;
