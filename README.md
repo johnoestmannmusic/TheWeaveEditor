@@ -103,7 +103,7 @@ Neocities, replacing hand-authoring HTML per location.
   worked out from each drawing, so every drawing gets it.
 - Puzzles on that board, built in the Editor's Puzzle Editor, with objects drawn as pixel art lined up
   with the album art's own pixels, and textured from it. Walls block the way, Switches toggle Gates with
-  the same letter (which can start open or closed), Keys have to be collected before Switches work, and
+  the same letter (which can start open or closed, and are half see-through while open, as the ship can pass through), Keys have to be collected before Switches work, and
   Teleporters jump to their partner. Streams carry the ship and any objects on them, and hold the ship
   until they push it onto a non-Stream square. X restarts the puzzle.
 - Push Blocks, marked with a circle, X, triangle, square or star: walking into one pushes it a square, onto

@@ -469,8 +469,11 @@ test('the board has only exact colours and no see-through blends, so it stays pi
     obj('Switch', 4, 0, { letter: 'A' }), obj('Teleporter', 5, 0, { letter: 'W' }), obj('Key', 6, 0), obj('Stream', 7, 0, { direction: 'Up' }),
   ];
   renderBoard(image, objects, look, { timeMs: 300 });
+  // Only the open Gate is see-through, by half, so it reads as passable - in its own square, at (3, 0).
   for (let i = 0; i < image.data.length; i += 4) {
-    assert.ok(image.data[i + 3] === 0 || image.data[i + 3] === 255);
+    let x = (i / 4) % ART_PX, y = Math.floor(i / 4 / ART_PX);
+    let inOpenGate = x >= 3 * 24 && x < 4 * 24 && y < 24;
+    assert.ok([0, 255].includes(image.data[i + 3]) || (inOpenGate && image.data[i + 3] === 128));
   }
   for (const color of colorsIn(image.data)) assert.ok(allowed.has(color), color);
 });
@@ -1060,7 +1063,12 @@ test('raised and flat both draw only colours from the art, with no see-through b
   for (const depth of ['raised', 'flat']) {
     let image = blank();
     renderBoard(image, [obj('Wall', 1, 2), obj('Gate', 2, 2, { letter: 'A' }), obj('Gate', 3, 2, { letter: 'B', open: true }), obj('Switch', 4, 2, { letter: 'A' }), obj('Finish', 5, 2), obj('Key', 6, 2), obj('Lantern', 7, 2), obj('Teleporter', 8, 2, { letter: 'T' })], { ...look, depth }, { switchesActive: false });
-    for (let i = 0; i < image.data.length; i += 4) assert.ok(image.data[i + 3] === 0 || image.data[i + 3] === 255, depth);
+    // Only the open Gate, at (3, 2), is see-through, by half.
+    for (let i = 0; i < image.data.length; i += 4) {
+      let x = (i / 4) % ART_PX, y = Math.floor(i / 4 / ART_PX);
+      let inOpenGate = x >= 3 * 24 && x < 4 * 24 && y >= 2 * 24 && y < 3 * 24;
+      assert.ok([0, 255].includes(image.data[i + 3]) || (inOpenGate && image.data[i + 3] === 128), depth);
+    }
     for (const color of colorsIn(image.data)) assert.ok(allowed.has(color), `${depth}: ${color}`);
   }
 });
@@ -1582,4 +1590,12 @@ test('a Gate a Slide Bug closes on the ship sends the ship back, as being hurt d
   g.shipArrivedAt(at(6, 5)); // into the open Gate, as the bug slides onto the Switch
   assert.equal(find(g, 'Gate').open, false);
   assert.equal(g.carryDirection(at(6, 5)), 'down', 'back where it came from');
+});
+
+test('an open Gate is drawn half see-through, and a closed one solid', () => {
+  let { look } = artLook();
+  let draw = (open) => { let image = blank(); renderBoard(image, [obj('Gate', 2, 2, { letter: 'A', open })], look); return image; };
+  let alphas = (image) => { let set = new Set(); for (let y = 48; y < 72; y++) for (let x = 48; x < 72; x++) { let a = pixelAt(image, x, y)[3]; if (a) set.add(a); } return [...set]; };
+  assert.deepEqual(alphas(draw(false)), [255]);
+  assert.deepEqual(alphas(draw(true)), [128]);
 });
