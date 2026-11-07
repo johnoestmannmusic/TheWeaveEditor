@@ -107,7 +107,8 @@ Neocities, replacing hand-authoring HTML per location.
   Teleporters jump to their partner. Streams carry the ship and any objects on them, and hold the ship
   until they push it onto a non-Stream square. X restarts the puzzle.
 - Push Blocks, marked with a circle, X, triangle, square or star: walking into one pushes it a square, onto
-  anything but another object, though it can go into an open Gate, and sit in it. Two or more with the same symbol side by side, pushed or carried there, sink into
+  anything but another object, though it can go into an open Gate, and sit in it. If the Gate closes on it,
+  it glides back to the square it was pushed from, unless that's been taken. Two or more with the same symbol side by side, pushed or carried there, sink into
   the ground and disappear. Standing still facing one that can be pushed shows a small bobbing arrow past it.
   They're metal plates by default, with their symbol as a glowing hollow outline.
 - Jump Tiles launch the ship 2 squares the way they point, over anything in between, or 1 if it can't land that

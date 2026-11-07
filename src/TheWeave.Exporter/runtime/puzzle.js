@@ -386,12 +386,30 @@
           objects.splice(objects.indexOf(object), 1);
           return null;
 
-        case 'Switch':
+        // A Gate that closes on a Push Block sitting in it sends the block back to the square it was pushed from, if
+        // that's still clear. If it isn't, the block stays, and the square stays solid either way.
+        case 'Switch': {
           if (!switchesActive()) return null;
+          let returned = [];
           for (const gate of objects) {
-            if (gate.kind === 'Gate' && gate.letter === object.letter) gate.open = !gate.open;
+            if (gate.kind !== 'Gate' || gate.letter !== object.letter) continue;
+            gate.open = !gate.open;
+            if (gate.open) continue;
+            let block = objects.find(other => other.kind === 'PushBlock' && isAt(other, gate));
+            let back = block?.cameFrom;
+            if (!back || !onBoard(back) || objectAt(back) || isAt(shipCell, back)) continue;
+            block.fromCol = block.col;
+            block.fromRow = block.row;
+            block.col = back.col;
+            block.row = back.row;
+            block.glide = 'return';
+            returned.push(block);
           }
-          return null;
+          if (returned.length === 0) return null;
+          revealLitAreas();
+          let sank = sinkMatches();
+          return sank ? { returned, sank } : { returned };
+        }
 
         case 'Teleporter': {
           let partners = objects.filter(other => other.kind === 'Teleporter' && other.letter === object.letter);
@@ -545,6 +563,7 @@
         if (block?.kind !== 'PushBlock') return null;
         let next = pushedTo(block, PUZZLE_DIRECTIONS[moverDirection]);
         if (!next) return null;
+        block.cameFrom = { col: block.col, row: block.row };
         block.fromCol = block.col;
         block.fromRow = block.row;
         block.glide = 'push';
@@ -1790,7 +1809,8 @@
   // - along and rotatorAlong are how far objects are through moving from their fromCol and fromRow, for
   //   ones in play, depending on which kind of tile moved them. They move in whole pixels, like everything else.
   // - showInvisible draws anything invisible and unrevealed as a ghost, rather than leaving it out.
-  // - pushAlong is how far a Push Block being pushed is through its glide, along with the ship.
+  // - pushAlong is how far a Push Block being pushed is through its glide, along with the ship, and returnAlong how far
+  //   one a closing Gate is sending back is through its glide.
   // - An object's own sink, from 0 to 1, is how far it's sunk into its square, after matching - see sinkMatches.
   // - An object's own spin is how far round clockwise it's turned, as a Rotator Switch does while stood on - see spinAt.
   // - An object's own fade, from 0 to 1, is how much of it shows, as a Reset Switch's sweep passes - see resetSweepAt.
@@ -1813,7 +1833,8 @@
     let streams = new Map(objects.filter(object => object.kind === 'Stream').map(object => [object.col + ',' + object.row, object.direction]));
     let switchesActive = options.switchesActive ?? true;
 
-    let alongFor = (object) => (object.glide === 'rotator' ? options.rotatorAlong : object.glide === 'push' ? options.pushAlong : options.along) ?? 1;
+    let alongFor = (object) => (object.glide === 'rotator' ? options.rotatorAlong : object.glide === 'push' ? options.pushAlong
+      : object.glide === 'return' ? options.returnAlong : options.along) ?? 1;
     let drawnRow = (object) => object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * alongFor(object);
     let floorsFirst = objects
       .filter(object => object.kind !== 'Start')
