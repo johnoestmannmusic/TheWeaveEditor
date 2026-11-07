@@ -445,6 +445,9 @@
           return { reset: before };
         }
 
+        case 'PipeSwitch':
+          return turnPipes();
+
       }
       return null;
     }
@@ -480,9 +483,6 @@
         case 'Finish':
           solved = true;
           return { finished: true };
-
-        case 'PipeSwitch':
-          return turnPipes();
 
         case 'JumpTile': {
           let landing = jumpFrom(object);

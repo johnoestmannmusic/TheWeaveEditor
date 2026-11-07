@@ -1609,3 +1609,13 @@ test('a Slide Bug that\'s got where it\'s going stays still, however another bug
     assert.deepEqual([still.col, still.fromCol], [5, 5], 'not drawn sliding into its square again');
   }
 });
+
+test('stepping onto a Pipe Switch turns the Pipes straight away, and a Slide Bug sliding onto one does too', () => {
+  let g = game(obj('PipeSwitch', 2, 5), obj('Pipe', 5, 5, { direction: 'Right' }));
+  let event = g.shipArrivedAt(at(2, 5));
+  assert.deepEqual(event, { pipesTurned: true });
+  assert.equal(g.floors[0].direction, 'Up');
+  let slid = withArchetons([SLIDE_BUG], bug(1, 3), obj('PipeSwitch', 2, 3), obj('Pipe', 7, 7, { direction: 'Right' }));
+  assert.ok(slid.shipArrivedAt(at(6, 8)).pipesTurned);
+  assert.equal(slid.floors[0].direction, 'Up');
+});
