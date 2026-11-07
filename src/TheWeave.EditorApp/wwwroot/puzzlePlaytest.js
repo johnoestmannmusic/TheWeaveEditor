@@ -66,7 +66,7 @@ function drawPlaytest(context, look, timeMs) {
   play.animate(dtMs);
   play.step(dtMs);
 
-  const { list, options, key } = play.frame(timeMs);
+  const { list, options, key } = play.frame(timeMs, { pushHints: play.finished ? [] : play.pushHints(timeMs) });
   const ship = play.shipPosition();
   const drawnKey = `${key}|${Math.round(ship.x)},${Math.round(ship.y)},${play.mover.facing}|${look === playtest.look}`;
   if (drawnKey === playtest.drawnKey) return;

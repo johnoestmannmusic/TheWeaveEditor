@@ -698,7 +698,7 @@ function updateBoardGame(dtMs){
 function drawBoardObjects(){
   if (!boardGame || !boardObjectsCanvas || !boardPuzzle) return;
 
-  let { list, options, key } = boardPlay.frame(performance.now(), { pushHint: boardPushHint() });
+  let { list, options, key } = boardPlay.frame(performance.now(), { pushHints: boardPushHints() });
   if (key === boardDrawnKey) return;
   boardDrawnKey = key;
   WeavePuzzle.renderBoard(boardObjectsImage, list, boardPuzzle, options);
@@ -719,16 +719,11 @@ function updateBoardContrails(dtMs){
   drawContrails(boardContrails, trackFocusScale, 0, 0);
 }
 
-// When the ship's standing still facing a Push Block it could push, an arrow on the block's far side, bobbing,
-// says it can be.
-const BOARD_PUSH_HINT_BOB_MS = 300;
-
-function boardPushHint(){
-  if (!boardGame || boardMover.isMoving || boardPlay.jump || boardPlay.reset || boardScroll || focusTransition || boardSolvedMs !== null) return null;
-  let delta = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[boardMover.facing];
-  let ahead = { col: boardMover.cell.col + delta[0], row: boardMover.cell.row + delta[1] };
-  if (!boardGame.canPush(ahead, boardMover.facing)) return null;
-  return { ...ahead, direction: PUZZLE_DIRECTIONS[boardMover.facing], bob: Math.floor(performance.now() / BOARD_PUSH_HINT_BOB_MS) % 2 };
+// The arrows saying which Push Blocks next to the ship could be pushed - see board.js's pushHints - but not while the
+// board's flipping, scrolling to the next, or paused on being solved.
+function boardPushHints(){
+  if (!boardPlay || boardScroll || focusTransition || boardSolvedMs !== null) return [];
+  return boardPlay.pushHints(performance.now());
 }
 
 function renderBoardShip(){

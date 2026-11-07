@@ -77,3 +77,11 @@ test('a frame\'s key stays the same while nothing on the board changes, and chan
   let flowing = createBoardPlay({ puzzle: { objects: [obj('Start', 1, 5), obj('Stream', 7, 7, { direction: 'Up' })] } });
   assert.notEqual(flowing.frame(0).key, flowing.frame(450).key, 'a Stream keeps flowing');
 });
+
+test('every Push Block next to the ship that it could push gets an arrow, whichever way the ship faces', () => {
+  let play = createBoardPlay({ puzzle: { objects: [obj('Start', 4, 5), obj('PushBlock', 5, 5, { symbol: 'Circle' }), obj('PushBlock', 4, 4, { symbol: 'Star' }), obj('PushBlock', 3, 5, { symbol: 'Cross' }), obj('Wall', 2, 5)] } });
+  assert.equal(play.mover.facing, 'up');
+  let hints = play.pushHints(0).map(h => `${h.direction}@${h.col},${h.row}`).sort();
+  assert.deepEqual(hints, ['Right@5,5', 'Up@4,4'], 'the Circle and Star, but not the Cross, with a Wall behind it');
+  assert.notEqual(play.frame(0, { pushHints: play.pushHints(0) }).key, play.frame(0).key, 'and they\'re part of what\'s drawn');
+});

@@ -198,9 +198,25 @@
       return { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, t };
     };
 
+    // Whenever the ship's standing still next to a Push Block it could push, whichever way it's facing, an arrow on the
+    // block's far side, bobbing, says it can be pushed that way - one for each such block. Not while the ship's in the
+    // air, the board's being swept by a Reset, or it's finished.
+    const PUSH_HINT_BOB_MS = 300;
+    play.pushHints = (timeMs) => {
+      if (!game || play.mover.isMoving || play.jump || play.reset || play.finished) return [];
+      let bob = Math.floor(timeMs / PUSH_HINT_BOB_MS) % 2;
+      let at = play.mover.cell;
+      let hints = [];
+      for (const [direction, way, dc, dr] of [['up', 'Up', 0, -1], ['down', 'Down', 0, 1], ['left', 'Left', -1, 0], ['right', 'Right', 1, 0]]) {
+        let next = { col: at.col + dc, row: at.row + dr };
+        if (game.canPush(next, direction)) hints.push({ ...next, direction: way, bob });
+      }
+      return hints;
+    };
+
     // Everything to draw this frame, and the options to draw it with (see puzzle.js's renderBoard), plus a key that
     // only changes when the picture would - so a caller can skip drawing a board that looks just as it did. extra
-    // is any options of the caller's own, like a push hint, which go into the key too.
+    // is any options of the caller's own, like push hints, which go into the key too.
     play.frame = (timeMs, extra = {}) => {
       let objects = play.reset ? WeavePuzzle.resetSweepAt(play.reset.before, game.objects, play.reset.ms) : game.objects;
       let floors = game.floors;
@@ -268,7 +284,7 @@
       if (floors.some(f => f.kind === 'Stream')) key.push('S', phase(timeMs, STREAM_CYCLE_MS));
       if (floors.some(f => f.kind === 'RotatorTile')) key.push('R', phase(play.rotatorClockMs, ROTATOR_CYCLE_MS));
       if (game.objects.some(o => o.kind === 'Finish' && WeavePuzzle.exitDirectionOf(o))) key.push('F', phase(timeMs, FINISH_ARROW_CYCLE_MS) % 8);
-      if (extra.pushHint) key.push('h', extra.pushHint.col, extra.pushHint.row, extra.pushHint.direction, extra.pushHint.bob);
+      for (const hint of extra.pushHints ?? []) key.push('h', hint.col, hint.row, hint.direction, hint.bob);
 
       return { list: [...floors, ...objects, ...sinking], options, key: key.join(',') };
     };

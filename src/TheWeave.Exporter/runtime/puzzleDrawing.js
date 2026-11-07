@@ -785,7 +785,8 @@
   // - beams ([{ from, to }]) draws an Archeton's laser from one square to another - see createPuzzleGame's beams.
   // - reaches ([{ col, row }]) outlines each square an Archeton's Beam reaches - see createPuzzleGame's reaches.
   // - pulses ([{ col, row, radius }]) draws each lit Lantern's pulse: a ring radius pixels out from its square's middle.
-  // - pushHint ({ col, row, direction, bob }) shows that the Push Block on that square can be pushed: an arrow just
+  // - pushHints ([{ col, row, direction, bob }], or one as pushHint) show that the Push Block on each square can be
+  //   pushed: an arrow just
   //   past it, pointing the way it would go, bob pixels further out as it bobs.
   // - originY moves the whole board down by that many pixels, to leave room for objects rising above row 0.
   // Objects are drawn top row first, so that one rising into the square above it (see addDepth) is drawn over
@@ -825,7 +826,7 @@
       blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX), top + sunk, object.sink ? top + TILE_PX : Infinity, opacity);
     }
 
-    if (options.pushHint) drawPushHint(image, options.pushHint, look, options.originY ?? 0);
+    for (const hint of options.pushHints ?? (options.pushHint ? [options.pushHint] : [])) drawPushHint(image, hint, look, options.originY ?? 0);
     for (const pulse of options.pulses ?? []) drawPulse(image, pulse, look, options.originY ?? 0);
     for (const cell of options.reaches ?? []) drawReach(image, cell, look, options.originY ?? 0);
     for (const beam of options.beams ?? []) drawBeam(image, beam, look, options.originY ?? 0);

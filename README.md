@@ -111,7 +111,7 @@ Neocities, replacing hand-authoring HTML per location.
   anything in it - a Push Block, a Slide Bug - passes it back the way it came, to the last square it was on that's
   clear, past any other Gates that have closed too. With nowhere clear behind it, it stays. One that closes on the
   ship hurts it, sending it back to the square it came from. Two or more with the same symbol side by side, pushed or carried there, sink into
-  the ground and disappear. Standing still facing one that can be pushed shows a small bobbing arrow past it.
+  the ground and disappear. Standing still next to one that can be pushed, whichever way the ship faces, shows a small bobbing arrow past it.
   They're metal plates by default, with their symbol as a glowing hollow outline.
 - Jump Tiles launch the ship 2 squares the way they point, over anything in between, or 1 if it can't land that
   far. Landing works like arriving, so it can land on a Switch, a Key or another Jump Tile.
