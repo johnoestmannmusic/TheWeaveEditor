@@ -66,6 +66,10 @@ public sealed class ArchetonDefinition
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Drawing { get; set; }
 
+    /// <summary>The id of a Laser drawing in WeaveProject.PuzzleDrawings its lasers are drawn with, or null for the Standard one.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LaserDrawing { get; set; }
+
     public List<ArchetonPart> Parts { get; set; } = new();
 }
 
@@ -108,10 +112,15 @@ public static class ArchetonDefinitions
         return (library ?? []).Where(d => ids.Contains(d.Id)).ToList();
     }
 
-    /// <summary>The drawings a set of definitions are drawn with, from a library.</summary>
+    /// <summary>The drawings a set of definitions are drawn with, their lasers' included, from a library, and any redrawn Standard ones.</summary>
     public static List<PuzzleDrawing> DrawingsOf(IEnumerable<ArchetonDefinition> definitions, IEnumerable<PuzzleDrawing>? library)
     {
-        var ids = definitions.Where(d => d.Drawing is not null).Select(d => d.Drawing!).ToHashSet();
-        return (library ?? []).Where(d => d.Kind == PuzzleObjectKind.Archeton && ids.Contains(d.Id)).ToList();
+        var list = definitions.ToList();
+        var bodies = list.Where(d => d.Drawing is not null).Select(d => d.Drawing!).Append(nameof(PuzzleObjectKind.Archeton)).ToHashSet();
+        var lasers = list.Where(d => d.LaserDrawing is not null).Select(d => d.LaserDrawing!).Append(nameof(PuzzleObjectKind.Laser)).ToHashSet();
+        if (list.Count == 0)
+            return [];
+        return (library ?? []).Where(d => (d.Kind == PuzzleObjectKind.Archeton && bodies.Contains(d.Id))
+            || (d.Kind == PuzzleObjectKind.Laser && lasers.Contains(d.Id))).ToList();
     }
 }

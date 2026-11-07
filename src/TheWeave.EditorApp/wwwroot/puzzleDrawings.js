@@ -42,6 +42,9 @@ const DRAWING_FRAMES = {
   Archeton: [
     { frame: 'drawing', label: 'Drawing', field: 'pixels', hint: 'Drawn looking right, and turned whichever way it faces. Choose it for an Archeton in the Archetons window.' },
   ],
+  Laser: [
+    { frame: 'drawing', label: 'Drawing', field: 'pixels', hint: 'One square of an Archeton\'s laser, running right. It\'s repeated along the beam, turned the way it runs, and drawn a little see-through. Run it right across the square so the squares join up. Choose it for an Archeton in the Archetons window.' },
+  ],
   Pipe: [
     { frame: 'drawing', label: 'Drawing', field: 'pixels', hint: 'Drawn lying across, and turned to stand up. Run it right across the square, so that a line of them joins up.' },
   ],

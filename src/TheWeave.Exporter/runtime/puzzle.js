@@ -492,8 +492,8 @@
       // any other shows it from its eye to the ship while it reaches the ship.
       get beams(){
         let blocking = beamPaths(true).filter(path => path.blocks && path.cells.length > 0 && nearPath(path))
-          .map(path => ({ from: { col: path.archeton.col, row: path.archeton.row }, to: path.cells[path.cells.length - 1] }));
-        let hitting = beamsOnShip().filter(hit => !hit.blocks).map(hit => ({ from: hit.from, to: hit.to }));
+          .map(path => ({ from: { col: path.archeton.col, row: path.archeton.row }, to: path.cells[path.cells.length - 1], archeton: path.archeton.archeton }));
+        let hitting = beamsOnShip().filter(hit => !hit.blocks).map(hit => ({ from: hit.from, to: hit.to, archeton: hit.archeton.archeton }));
         return [...blocking, ...hitting];
       },
       // Every square an Archeton's Beam reaches right now, { col, row }, for outlining where it's dangerous to be.
@@ -1009,7 +1009,7 @@
   };
 
   const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
-  const SPRITE_ROLES = { Wall: 'wall', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton' };
+  const SPRITE_ROLES = { Wall: 'wall', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton' };
 
   function maskOf(test){
     let mask = [];
@@ -1056,10 +1056,10 @@
   const ANIMATED_KINDS = ['Stream', 'RotatorTile'];
 
   // Objects with a direction, drawn pointing right and turned the way they point, as animated tiles are.
-  const TURNED_KINDS = ['JumpTile', 'Pipe', 'Archeton'];
+  const TURNED_KINDS = ['JumpTile', 'Pipe', 'Archeton', 'Laser'];
 
   // Every kind of object drawn from a drawing.
-  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'PushBlock', ...TURNED_KINDS, 'ResetSwitch', 'PipeSwitch', ...ANIMATED_KINDS];
+  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', ...ANIMATED_KINDS, 'Laser'];
 
   const standardDrawings = new Map();
 
@@ -1083,6 +1083,7 @@
       else if (kind === 'JumpTile') drawing = { id: kind, kind, name: 'Standard', pixels: standardJumpTilePixels(), mix: standardMix('jump') };
       else if (kind === 'ResetSwitch') drawing = { id: kind, kind, name: 'Standard', pixels: standardResetSwitchPixels(), mix: standardMix('reset') };
       else if (kind === 'Pipe') drawing = { id: kind, kind, name: 'Standard', pixels: standardPipePixels(), mix: standardMix('wall') };
+      else if (kind === 'Laser') drawing = { id: kind, kind, name: 'Standard', pixels: standardLaserPixels(), mix: standardMix('archeton') };
       else if (kind === 'Archeton') drawing = { id: kind, kind, name: 'Standard', pixels: standardArchetonPixels(), mix: standardMix('archeton') };
       else if (kind === 'PipeSwitch') drawing = { id: kind, kind, name: 'Standard', pixels: standardPipeSwitchPixels(), mix: standardMix('pipe') };
       else {
@@ -1245,6 +1246,16 @@
     });
   }
 
+  // A laser's Standard drawing, one square of it running right, and on across the next square: a band of the light
+  // colour with the Archeton's lightest shade either side of it.
+  function standardLaserPixels(){
+    return layerOf((u, v) => {
+      if (v === 11 || v === 12) return PAINTS.light;
+      if (v === 10 || v === 13) return '4';
+      return PAINTS.clear;
+    });
+  }
+
   // A Pipe Switch's Standard drawing: a Reset Switch's pad, with two lines across it in place of its arrows, each
   // with a darker edge below.
   function standardPipeSwitchPixels(){
@@ -1280,7 +1291,8 @@
   // An Archeton is drawn with whichever drawing its definition says (look.archetons), rather than one of its own.
   function drawingFor(look, object){
     let find = (id) => look.drawings?.find(drawing => drawing.id === id && drawing.kind === object.kind);
-    let variant = object.kind === 'Archeton' ? look.archetons?.find(definition => definition.id === object.archeton)?.drawing : object.variant;
+    let definition = object.kind === 'Archeton' || object.kind === 'Laser' ? look.archetons?.find(d => d.id === object.archeton) : null;
+    let variant = object.kind === 'Archeton' ? definition?.drawing : object.kind === 'Laser' ? definition?.laserDrawing : object.variant;
     return (variant && find(variant)) || find(object.kind) || standardDrawing(object.kind);
   }
 
@@ -1827,32 +1839,22 @@
     }
   }
 
-  // An Archeton's laser, from the edge of its eye to the middle of the ship's square: 2 pixels of the light colour,
-  // edged either side in the outline colour.
+  // An Archeton's laser: its Laser drawing, a square at a time from the square past the Archeton to the beam's end,
+  // turned the way it runs, and a little see-through, so what's under it still shows.
+  const LASER_OPACITY = 0.75;
+
   function drawBeam(image, beam, look, originY){
-    let light = hexToColor(look.palette.light);
-    let outline = hexToColor(look.palette.outline);
-    let { data, width, height } = image;
-    let half = TILE_PX / 2;
-    let across = beam.from.row === beam.to.row;
-    let fromX = beam.from.col * TILE_PX + half, fromY = beam.from.row * TILE_PX + half + originY;
-    let toX = beam.to.col * TILE_PX + half, toY = beam.to.row * TILE_PX + half + originY;
-    let step = Math.sign(across ? toX - fromX : toY - fromY);
-    let start = 8;
-    let length = Math.abs(across ? toX - fromX : toY - fromY);
-    let set = (x, y, color) => {
-      if (x < 0 || y < 0 || x >= width || y >= height) return;
-      let i = (y * width + x) * 4;
-      data[i] = color.r; data[i + 1] = color.g; data[i + 2] = color.b; data[i + 3] = 255;
-    };
-    for (let along = start; along <= length; along++) {
-      for (let side = -2; side <= 1; side++) {
-        let color = side === -2 || side === 1 ? outline : light;
-        if (across) set(fromX + step * along, fromY + side, color);
-        else set(fromX + side, fromY + step * along, color);
-      }
+    let dCol = Math.sign(beam.to.col - beam.from.col), dRow = Math.sign(beam.to.row - beam.from.row);
+    let direction = dCol > 0 ? 'Right' : dCol < 0 ? 'Left' : dRow > 0 ? 'Down' : 'Up';
+    let sprite = buildSprite({ kind: 'Laser', direction, archeton: beam.archeton }, look, true);
+    let col = beam.from.col, row = beam.from.row;
+    while (col !== beam.to.col || row !== beam.to.row) {
+      col += dCol;
+      row += dRow;
+      blit(image, sprite, col * TILE_PX, row * TILE_PX + originY, Infinity, LASER_OPACITY);
     }
   }
+
 
   // How far a lit Lantern's pulse spreads, in pixels: as far as it reaches.
   const PULSE_REACH_PX = LANTERN_REACH * TILE_PX;

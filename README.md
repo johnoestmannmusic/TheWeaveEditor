@@ -138,7 +138,9 @@ Neocities, replacing hand-authoring HTML per location.
   - a Push: the ship is pushed away along the Beam, a square at a time, until it's out of reach, with a laser at it
     while it does.
 
-  Archetons are solid, and drawn in the Drawings view under Archeton. Sentribeam, an eye whose outlined Beam
+  Lasers are drawn a little see-through, from a Laser drawing each Archeton chooses: one square of beam, running
+  right, repeated along it and turned the way it runs. Archetons are solid, and drawn in the Drawings view under
+  Archeton, and their lasers under Laser. Sentribeam, an eye whose outlined Beam
   reaches 2 squares all 4 ways, with a Block, comes with every project.
 - A Finish on the board's edge has chevrons running across its pad towards that edge, round and round, so it
   reads at a glance as the way out.

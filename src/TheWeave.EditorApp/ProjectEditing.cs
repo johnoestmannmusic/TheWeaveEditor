@@ -398,6 +398,8 @@ internal static class ProjectEditing
         {
             if (definition.Drawing is not null && !drawings.Any(d => d.Id == definition.Drawing && d.Kind == PuzzleObjectKind.Archeton))
                 definition.Drawing = null;
+            if (definition.LaserDrawing is not null && !drawings.Any(d => d.Id == definition.LaserDrawing && d.Kind == PuzzleObjectKind.Laser))
+                definition.LaserDrawing = null;
         }
     }
 
@@ -450,6 +452,8 @@ internal static class ProjectEditing
                 throw new InvalidOperationException("An Archeton needs a name.");
             if (archeton.Drawing is not null && !(drawings ?? []).Any(d => d.Id == archeton.Drawing && d.Kind == PuzzleObjectKind.Archeton))
                 throw new InvalidOperationException($"'{archeton.Name}' is drawn with a drawing that isn't one of the Archeton drawings.");
+            if (archeton.LaserDrawing is not null && !(drawings ?? []).Any(d => d.Id == archeton.LaserDrawing && d.Kind == PuzzleObjectKind.Laser))
+                throw new InvalidOperationException($"'{archeton.Name}''s laser is drawn with a drawing that isn't one of the Laser drawings.");
 
             foreach (var part in archeton.Parts)
             {

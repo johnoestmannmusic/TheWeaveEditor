@@ -120,7 +120,7 @@ function renderArchetonActions(side, selected) {
   }, !selected, 'danger');
   const hint = document.createElement('p');
   hint.className = 'field-hint';
-  hint.textContent = 'Double-click a card to place it. Draw new bodies in Drawings, under Archeton.';
+  hint.textContent = 'Double-click a card to place it. Draw new bodies in Drawings, under Archeton, and lasers under Laser.';
   side.append(hint);
 }
 
@@ -172,6 +172,14 @@ function renderArchetonEditor(side) {
   drawing.addEventListener('change', () => { archeton.drawing = drawing.value || null; renderArchetons(); });
   field('Drawing', drawing);
   side.append(drawingThumbnail(archetonDrawing(archeton)));
+
+  const laser = document.createElement('select');
+  const lasers = (project?.puzzleDrawings ?? []).filter((d) => d.kind === 'Laser' && d.id !== 'Laser');
+  laser.append(new Option('Standard', ''), ...lasers.map((d) => new Option(d.name, d.id)));
+  laser.value = archeton.laserDrawing ?? '';
+  laser.title = 'What its lasers look like. Draw them in Drawings, under Laser.';
+  laser.addEventListener('change', () => { archeton.laserDrawing = laser.value || null; });
+  field('Laser', laser);
 
   const parts = document.createElement('div');
   parts.className = 'ar-parts';

@@ -1376,7 +1376,7 @@ const eye = (col, row, extra = {}) => obj('Archeton', col, row, { archeton: 'sen
 test('a Sentribeam pushes the ship away along its beam, any of 4 ways, up to 2 squares', () => {
   let g = withArchetons([SENTRIBEAM], eye(5, 5), obj('Start', 5, 7));
   assert.equal(g.carryDirection(at(5, 7)), 'down', '2 squares below, pushed down');
-  assert.deepEqual(g.beams, [{ from: at(5, 5), to: at(5, 7) }]);
+  assert.deepEqual(g.beams, [{ from: at(5, 5), to: at(5, 7), archeton: 'sentribeam' }]);
   g.placeShip(at(5, 8));
   assert.equal(g.carryDirection(at(5, 8)), null, 'out of reach at 3');
   assert.deepEqual(g.beams, []);
@@ -1431,7 +1431,7 @@ test('a Beam with a Block keeps the ship out of its reach, showing its laser onc
   let blocker = { id: 'sentribeam', name: 'Sentribeam', parts: [{ kind: 'Beam', range: 2, look: 'AllWays', blockedByBlocks: true }, { kind: 'Block' }] };
   let g = withArchetons([blocker], eye(5, 5));
   g.placeShip(at(5, 8));
-  assert.deepEqual(g.beams, [{ from: at(5, 5), to: at(5, 7) }], 'one off its reach, the laser shows across it');
+  assert.deepEqual(g.beams, [{ from: at(5, 5), to: at(5, 7), archeton: 'sentribeam' }], 'one off its reach, the laser shows across it');
   assert.equal(g.canEnter(at(5, 8), at(5, 7), 'up'), false, 'and the ship can\'t step in');
   assert.equal(g.carryDirection(at(5, 8)), null, 'nor is it pushed');
   g.placeShip(at(2, 8));
@@ -1443,4 +1443,13 @@ test('a Beam\'s reach is only outlined if it says so', () => {
   let unmarked = { id: 'sentribeam', name: 'Sentribeam', parts: [{ kind: 'Beam', range: 2, look: 'AllWays', showReach: false }, { kind: 'Block' }] };
   let g = withArchetons([unmarked], eye(5, 5));
   assert.deepEqual(g.reaches, []);
+});
+
+test('a laser is drawn a little see-through, from its own drawing, a square at a time along the beam', () => {
+  let { look } = artLook();
+  let image = blank();
+  renderBoard(image, [], { ...look, archetons: [] }, { beams: [{ from: at(1, 1), to: at(3, 1), archeton: 'sentribeam' }] });
+  let row = 24 + 11;
+  for (const x of [2 * 24 + 5, 3 * 24 + 18]) assert.ok(pixelAt(image, x, row)[3] > 150 && pixelAt(image, x, row)[3] < 255, `see-through at ${x}`);
+  assert.equal(pixelAt(image, 24 + 12, row)[3], 0, 'not over the Archeton\'s own square');
 });

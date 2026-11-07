@@ -642,7 +642,7 @@ public static class Program
         var drawings = PuzzleDrawings.Merge(_project!.PuzzleDrawings, fileDrawings, objects);
         // Archeton drawings are named by their definitions rather than by objects, so they're added as they are,
         // unless the library already has one by that id.
-        drawings.AddRange(fileDrawings.Where(d => d.Kind == PuzzleObjectKind.Archeton
+        drawings.AddRange(fileDrawings.Where(d => d.Kind is PuzzleObjectKind.Archeton or PuzzleObjectKind.Laser
             && drawings.All(added => added.Id != d.Id) && (_project.PuzzleDrawings ?? []).All(existing => existing.Id != d.Id)));
         var archetons = fileArchetons.Where(a => (_project.Archetons ?? []).All(existing => existing.Id != a.Id)).ToList();
         ProjectEditing.ValidatePuzzle(new Puzzle { Objects = objects });
