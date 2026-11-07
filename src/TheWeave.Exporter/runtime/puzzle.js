@@ -176,8 +176,12 @@
       return cell.col + "," + cell.row;
     }
 
+    // What's on a square. A Push Block can sit in an open Gate, sharing its square, and then it's the block that
+    // counts: that's what's in the way, gets pushed, or stops a beam.
     function objectAt(cell){
-      return objects.find(object => isAt(object, cell)) ?? null;
+      return objects.find(object => isAt(object, cell) && object.kind !== 'Gate')
+        ?? objects.find(object => isAt(object, cell))
+        ?? null;
     }
 
     function switchesActive(){
@@ -315,7 +319,9 @@
     // on it, and isn't a Stream flowing straight back at it. Otherwise null, and it can't be pushed.
     function pushedTo(block, direction){
       let to = nextCell(block, direction);
-      if (!onBoard(to) || objectAt(to) || streams.get(cellKey(to)) === OPPOSITES[direction]) return null;
+      let there = onBoard(to) ? objectAt(to) : null;
+      let openGate = there?.kind === 'Gate' && there.open;
+      if (!onBoard(to) || (there && !openGate) || streams.get(cellKey(to)) === OPPOSITES[direction]) return null;
       if (!pipeAllows(block, direction) || !pipeAllows(to, direction)) return null;
       return to;
     }
@@ -1811,7 +1817,8 @@
     let drawnRow = (object) => object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * alongFor(object);
     let floorsFirst = objects
       .filter(object => object.kind !== 'Start')
-      .sort((a, b) => isFloor(b) - isFloor(a) || drawnRow(a) - drawnRow(b));
+      // A Gate goes under a Push Block sitting in it.
+      .sort((a, b) => isFloor(b) - isFloor(a) || drawnRow(a) - drawnRow(b) || (b.kind === 'Gate') - (a.kind === 'Gate'));
 
     for (const object of floorsFirst) {
       let hidden = object.invisible && !object.revealed;
