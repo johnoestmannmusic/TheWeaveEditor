@@ -20,6 +20,10 @@
   --toast-border: #8fbf96;
   --toast-error: #f6dcd6;
   --toast-error-text: #6b2219;
+  --stage: #e3ddd2; /* behind the map, and labels and hints over it */
+  --stage-label: rgba(255, 255, 255, 0.9);
+  --checker-a: #e8e4dc; /* behind see-through pixels */
+  --checker-b: #d6d0c4;
 }
 
 :root[data-theme="dark"] {
@@ -42,6 +46,10 @@
   --toast-border: #4d7a55;
   --toast-error: #4a2e29;
   --toast-error-text: #f5d6cf;
+  --stage: #0f0e0d;
+  --stage-label: rgba(28, 27, 26, 0.88);
+  --checker-a: #2c2a28;
+  --checker-b: #3a3836;
 }
 
 /* A dropdown's list is drawn by the system, so it's given the theme's colours outright. */
@@ -250,7 +258,7 @@ main {
 #canvas-panel {
   position: relative;
   overflow: hidden;
-  background: #0f0e0d;
+  background: var(--stage);
 }
 
 #canvas-viewport {
@@ -333,7 +341,7 @@ main {
   transform: translateX(-50%);
   font-size: 11px;
   color: var(--text);
-  background: rgba(28, 27, 26, 0.85);
+  background: var(--stage-label);
   padding: 1px 5px;
   border-radius: 3px;
   white-space: nowrap;
@@ -400,7 +408,7 @@ main {
   bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(38, 37, 36, 0.9);
+  background: var(--stage-label);
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 6px 12px;
@@ -852,7 +860,7 @@ main.behind-puzzle-editor {
 
 /* See-through, as a Clear pixel is. */
 .pd-clear, #pd-board {
-  background: repeating-conic-gradient(#2c2a28 0% 25%, #3a3836 0% 50%) 0 0 / 8px 8px;
+  background: repeating-conic-gradient(var(--checker-a) 0% 25%, var(--checker-b) 0% 50%) 0 0 / 8px 8px;
 }
 
 #pe-main.drawing-mode > #pe-tools,
@@ -1110,7 +1118,7 @@ main.behind-puzzle-editor {
   width: 96px;
   height: 96px;
   image-rendering: pixelated;
-  background: repeating-conic-gradient(#2c2a28 0% 25%, #3a3836 0% 50%) 0 0 / 8px 8px;
+  background: repeating-conic-gradient(var(--checker-a) 0% 25%, var(--checker-b) 0% 50%) 0 0 / 8px 8px;
 }
 
 /* The tray under the chosen tool, of what it's placed with - see puzzleEditor.js's renderToolTray. */
