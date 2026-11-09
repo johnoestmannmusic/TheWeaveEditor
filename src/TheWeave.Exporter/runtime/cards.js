@@ -122,7 +122,7 @@ function hideLocation(root){
   let meta = nodeMeta.get(root);
   if (!meta.persistent) {
     setCardOpen(root, meta, false);
-    meta.img.src = 'img/node.png';
+    meta.img.src = restingIcon(meta);
   }
   activeNode = null;
 }
@@ -185,6 +185,30 @@ function isStageSolved(id){
 // fully completed, every one of their stages solved. Worked out on load and whenever a puzzle is solved, so that
 // finishing the last stage of one location opens another straight away. A locked one's icon is greyed out, and
 // its card only says what it's waiting for - see main.css's .node.locked.
+// The icon a location shows while the ship isn't on it: its own, or a locked one if it's waiting on requirements.
+function restingIcon(meta){
+  return meta.locked ? lockedIconSrc() : (meta.restingSrc ?? 'img/node.png');
+}
+
+// A locked location's icon: the location icon's own 8-pixel octagon, but in a dull red, and more solid, so it stands
+// out on any map. Drawn once, rather than recoloured from the icon's image, which a page opened from a file can't read.
+const LOCKED_ICON_ROWS = ['..####..', '.#oooo#.', '#oooooo#', '#oooooo#', '#oooooo#', '#oooooo#', '.#oooo#.', '..####..'];
+const LOCKED_ICON_COLOURS = { '#': 'rgba(104, 34, 30, 0.9)', 'o': 'rgba(150, 56, 48, 0.72)' };
+let lockedIcon = null;
+
+function lockedIconSrc(){
+  if (lockedIcon) return lockedIcon;
+  let canvas = document.createElement('canvas');
+  canvas.width = canvas.height = LOCKED_ICON_ROWS.length;
+  let context = canvas.getContext('2d');
+  LOCKED_ICON_ROWS.forEach((row, y) => [...row].forEach((paint, x) => {
+    if (!LOCKED_ICON_COLOURS[paint]) return;
+    context.fillStyle = LOCKED_ICON_COLOURS[paint];
+    context.fillRect(x, y, 1, 1);
+  }));
+  return lockedIcon = canvas.toDataURL();
+}
+
 function refreshNodeLocks(){
   nodeMeta.forEach((meta, node) => {
     if (!meta.isTopLevel || meta.isModal) return;
@@ -199,6 +223,11 @@ function refreshNodeLocks(){
     node.classList.toggle('completed', completed && !meta.locked);
     meta.minimapIcon?.classList.toggle('locked', meta.locked);
     meta.minimapIcon?.classList.toggle('completed', completed && !meta.locked);
+
+    // A locked location's icon is its own dull red one, unless the ship's standing on it - see restingIcon.
+    meta.restingSrc ??= meta.img.getAttribute('src');
+    if (!node.classList.contains('cardOpen')) meta.img.src = restingIcon(meta);
+    if (meta.minimapIcon) meta.minimapIcon.src = restingIcon(meta);
 
     meta.info.querySelector(':scope > .lockedPanel')?.remove();
     if (meta.locked) meta.info.prepend(buildLockedPanel(waitingOn));

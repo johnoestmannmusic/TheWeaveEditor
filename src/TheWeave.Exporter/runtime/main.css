@@ -153,12 +153,10 @@ h3 {
   cursor: pointer;
 }
 
-/* A location waiting on its requirements - see main.js's refreshNodeLocks. Its icon is greyed out, here and on the
+/* A location waiting on its requirements - see cards.js's refreshNodeLocks. Its icon is a dull red, here and on the
    minimap, and its card says only what it's waiting for. */
-.node.locked > .nodeImage, .minimapNode.locked {
-  filter: grayscale(1);
-  opacity: 0.45;
-}
+/* Its icon is its own dull red one, drawn in cards.js's lockedIconSrc, rather than the location icon recoloured here:
+   that icon is mostly see-through, so any tint of it comes out too faint to notice. */
 
 .node.locked > .floatInfo > :not(.lockedPanel) {
   display: none !important;
