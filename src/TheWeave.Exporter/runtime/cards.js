@@ -190,10 +190,11 @@ function restingIcon(meta){
   return meta.locked ? lockedIconSrc() : (meta.restingSrc ?? 'img/node.png');
 }
 
-// A locked location's icon: the location icon's own 8-pixel octagon, but in a dull red, and more solid, so it stands
-// out on any map. Drawn once, rather than recoloured from the icon's image, which a page opened from a file can't read.
+// A locked location's icon: the location icon's own 8-pixel octagon, but in a dull red, at 30% opacity, so it reads
+// as off-limits. Drawn once, rather than recoloured from the icon's image, which a page opened from a file can't read.
 const LOCKED_ICON_ROWS = ['..####..', '.#oooo#.', '#oooooo#', '#oooooo#', '#oooooo#', '#oooooo#', '.#oooo#.', '..####..'];
-const LOCKED_ICON_COLOURS = { '#': 'rgba(104, 34, 30, 0.9)', 'o': 'rgba(150, 56, 48, 0.72)' };
+const LOCKED_ICON_OPACITY = 0.3;
+const LOCKED_ICON_COLOURS = { '#': `rgba(104, 34, 30, ${LOCKED_ICON_OPACITY})`, 'o': `rgba(150, 56, 48, ${LOCKED_ICON_OPACITY})` };
 let lockedIcon = null;
 
 function lockedIconSrc(){
