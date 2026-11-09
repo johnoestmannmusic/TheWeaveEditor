@@ -15,6 +15,9 @@
 })(this, function (WeavePuzzle, WeaveSokoban) {
 
   const TIMING = WeavePuzzle.BOARD_TIMING;
+  // How long going from one Teleporter to the other takes: a moment, and a little more for each square it crosses.
+  const TELEPORT_MS = 220;
+  const TELEPORT_MS_PER_SQUARE = 30;
   const TILE_PX = WeavePuzzle.TILE_PX;
   // How long one cycle of each animation takes, as puzzle.js's renderBoard has them, for telling when a frame would
   // look any different from the last - see frame.
@@ -32,6 +35,7 @@
   // One playthrough of a puzzle. game is a board to carry on from as it was left, cell where to put the ship on it
   // (or on a fresh one), and facing which way it faces, if not inwards. hooks are told what's happened, for the
   // caller to act on: onEvent(event) after the board itself has, onJump(from, to) and onLanded(cell) around a jump,
+  // onTeleport(from, to) and onTeleported(cell) around a teleport,
   // and onBlocked(cell, direction) as sokoban.js's mover has it.
   function createBoardPlay({ puzzle, game = null, cell = null, facing = null, hooks = {} }){
     game ??= puzzle ? WeavePuzzle.createPuzzleGame(puzzle) : null;
@@ -43,6 +47,7 @@
       mover: null,
       finished: false,
       jump: null, // { from, to, ms, durationMs } while the ship's in the air
+      teleport: null, // { from, to, ms, durationMs } while it's going from one Teleporter to the other
       reset: null, // { before, ms, durationMs } while a Reset Switch's sweep crosses the board
       streamMs: 0,
       rotatorActiveMs: 0,
@@ -58,7 +63,7 @@
 
     // A Stream carries the ship along, whatever's being pressed, and an Archeton's laser can push or send it back.
     function carry(){
-      if (!game || play.finished || play.jump) return;
+      if (!game || play.finished || play.jump || play.teleport) return;
       let direction = game.carryDirection(play.mover.cell);
       if (direction) play.mover.queue(direction);
     }
@@ -66,7 +71,15 @@
     // Acts on what puzzle.js says just happened, then tells the caller.
     function onEvent(event){
       if (!event) return;
-      if (event.teleportTo) play.mover.teleport(event.teleportTo);
+      // Stepping onto a Teleporter sends the ship across to the other, spinning and fading as it goes, so it can be
+      // followed with the eye - see shipPosition. It only gets there once that's done.
+      if (event.teleportTo) {
+        let from = play.mover.cell;
+        let squares = Math.abs(event.teleportTo.col - from.col) + Math.abs(event.teleportTo.row - from.row);
+        play.mover.releaseAll();
+        play.teleport = { from, to: event.teleportTo, ms: 0, durationMs: TELEPORT_MS + squares * TELEPORT_MS_PER_SQUARE };
+        hooks.onTeleport?.(from, event.teleportTo);
+      }
       // Push Blocks that matched sink together, once whichever of them is moving has finished gliding into place.
       let glideOf = (object) => {
         if (object.fromCol === undefined || (object.fromCol === object.col && object.fromRow === object.row)) return 0;
@@ -134,6 +147,16 @@
     // ship's in the air, or while a Reset Switch's sweep crosses the board, so that everything's back in place, and
     // seen to be, before the ship can carry on. Nothing moves at all once it's finished.
     play.step = (dtMs) => {
+      if (play.teleport) {
+        play.teleport.ms += dtMs;
+        if (play.teleport.ms < play.teleport.durationMs) return;
+        let { to } = play.teleport;
+        play.teleport = null;
+        play.mover.teleport(to);
+        hooks.onTeleported?.(to);
+        carry();
+        return;
+      }
       if (play.jump) {
         play.jump.ms += dtMs;
         if (play.jump.ms < play.jump.durationMs) return;
@@ -191,11 +214,18 @@
     // Where the ship is drawn: gliding between squares, or in a jump, a straight line from where it left to where it
     // lands, with how far through the jump it is (t), for a caller that arcs it.
     play.shipPosition = () => {
-      if (!play.jump) return { ...play.mover.position, t: null };
+      if (play.teleport) {
+        let t = Math.min(1, play.teleport.ms / play.teleport.durationMs);
+        let centre = (c) => ({ x: (c.col + 0.5) * TILE_PX, y: (c.row + 0.5) * TILE_PX });
+        let from = centre(play.teleport.from), to = centre(play.teleport.to);
+        // One whole turn on the way, and three-quarters see-through at its middle.
+        return { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, t: null, spin: t * Math.PI * 2, opacity: 1 - 0.75 * Math.sin(Math.PI * t) };
+      }
+      if (!play.jump) return { ...play.mover.position, t: null, spin: 0, opacity: 1 };
       let t = Math.min(1, play.jump.ms / play.jump.durationMs);
       let centre = (c) => ({ x: (c.col + 0.5) * TILE_PX, y: (c.row + 0.5) * TILE_PX });
       let from = centre(play.jump.from), to = centre(play.jump.to);
-      return { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, t };
+      return { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, t, spin: 0, opacity: 1 };
     };
 
     // Whenever the ship's standing still next to a Push Block it could push, whichever way it's facing, an arrow on the
@@ -203,7 +233,7 @@
     // air, the board's being swept by a Reset, or it's finished.
     const PUSH_HINT_BOB_MS = 300;
     play.pushHints = (timeMs) => {
-      if (!game || play.mover.isMoving || play.jump || play.reset || play.finished) return [];
+      if (!game || play.mover.isMoving || play.jump || play.teleport || play.reset || play.finished) return [];
       let bob = Math.floor(timeMs / PUSH_HINT_BOB_MS) % 2;
       let at = play.mover.cell;
       let hints = [];
