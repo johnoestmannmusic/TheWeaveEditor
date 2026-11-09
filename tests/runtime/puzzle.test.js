@@ -1619,3 +1619,56 @@ test('stepping onto a Pipe Switch turns the Pipes straight away, and a Slide Bug
   assert.ok(slid.shipArrivedAt(at(6, 8)).pipesTurned);
   assert.equal(slid.floors[0].direction, 'Up');
 });
+
+// ---------- Jumpbugs ----------
+
+const JUMPBUG = { id: 'jumpbug-a', name: 'Jumpbug A', parts: [{ kind: 'Sequence', moves: ['Up', 'Down', 'Down', 'Up', 'Left', 'Right', 'Right', 'Left'] }, { kind: 'Sting' }] };
+const jumpbug = (col, row) => obj('Archeton', col, row, { archeton: 'jumpbug-a', direction: 'Right' });
+const jumpbugAt = (g) => g.objects.filter(o => o.archeton === 'jumpbug-a').map(o => `${o.col},${o.row}`)[0];
+
+test('a Jumpbug hops round its start, a square for each step the ship takes: up, down, down, up, left, right, right, left', () => {
+  let g = withArchetons([JUMPBUG], jumpbug(4, 4));
+  let seen = [];
+  for (let i = 0; i < 9; i++) {
+    let event = g.shipArrivedAt(at(9, i % 2 ? 9 : 8));
+    seen.push(jumpbugAt(g));
+    if (i === 0) assert.ok(event.hopped);
+  }
+  assert.deepEqual(seen, ['4,3', '4,4', '4,5', '4,4', '3,4', '4,4', '5,4', '4,4', '4,3'], 'and round again');
+  assert.equal(g.objects.find(o => o.archeton === 'jumpbug-a').glide, 'hop');
+});
+
+test('a Jumpbug stays put for a move that\'s blocked, and keeps its rhythm', () => {
+  let g = withArchetons([JUMPBUG], jumpbug(4, 4), obj('Wall', 4, 3));
+  let seen = [];
+  for (let i = 0; i < 4; i++) { g.shipArrivedAt(at(9, i % 2 ? 9 : 8)); seen.push(jumpbugAt(g)); }
+  assert.deepEqual(seen, ['4,4', '4,4', '4,5', '4,4'], 'up is a Wall, so it waits, then down, down, up as usual');
+});
+
+test('a Jumpbug is solid to blocks and beams, but the ship stepping into it is hurt, before it can hop away', () => {
+  let g = withArchetons([JUMPBUG], jumpbug(4, 4), block(2, 4));
+  assert.equal(g.canPush(at(2, 4), 'right'), true, 'room for the block');
+  assert.equal(g.canPush(at(3, 4), 'right'), false);
+  let walls = withArchetons([JUMPBUG], jumpbug(4, 4), block(3, 4));
+  assert.equal(walls.canPush(at(3, 4), 'right'), false, 'a block can\'t be pushed into it');
+  assert.equal(g.canEnter(at(5, 4), at(4, 4), 'left'), true, 'but the ship can step into it');
+  let beam = withArchetons([JUMPBUG, { id: 'sentribeam', name: 'S', parts: [{ kind: 'Beam', range: 3, look: 'AllWays' }, { kind: 'Block' }] }],
+    jumpbug(4, 4), obj('Archeton', 2, 4, { archeton: 'sentribeam', direction: 'Right' }));
+  assert.equal(beam.canEnter(at(5, 5), at(5, 4), 'up'), true, 'and it stops a Sentribeam\'s laser before the square past it');
+});
+
+test('stepping into a Jumpbug sends the ship back, and so does it landing on the ship', () => {
+  let into = withArchetons([JUMPBUG], jumpbug(4, 4));
+  into.shipArrivedAt(at(9, 9));
+  assert.equal(jumpbugAt(into), '4,3', 'its first hop, up');
+  into.placeShip(at(5, 3));
+  into.shipArrivedAt(at(4, 3)); // stepping into it from beside it
+  assert.equal(jumpbugAt(into), '4,3', 'it doesn\'t hop away first');
+  assert.equal(into.carryDirection(at(4, 3)), 'right', 'back where the ship came from');
+
+  let landed = withArchetons([JUMPBUG], jumpbug(4, 4));
+  landed.placeShip(at(5, 3));
+  landed.shipArrivedAt(at(4, 3)); // the bug's first hop is up, onto the ship
+  assert.equal(jumpbugAt(landed), '4,3');
+  assert.equal(landed.carryDirection(at(4, 3)), 'right', 'back to the square it came from');
+});

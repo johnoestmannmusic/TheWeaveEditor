@@ -1422,3 +1422,23 @@ main.behind-puzzle-editor {
 #theme-toggle {
   min-width: 92px;
 }
+
+#archetons .ar-moves {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  color: var(--muted);
+}
+
+#archetons .ar-move, #archetons .ar-move-adders button {
+  padding: 2px 7px;
+}
+
+#archetons .ar-move-adders {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+}

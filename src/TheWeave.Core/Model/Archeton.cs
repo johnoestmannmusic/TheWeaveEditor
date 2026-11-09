@@ -28,6 +28,18 @@ public enum ArchetonPartKind
     /// triggers what it lands on, as the ship would: Switches, Lanterns, Pipe Switches and Reset Switches.
     /// </summary>
     Slide,
+
+    /// <summary>
+    /// A movement: each time the ship takes a step, hops to the next square of its Moves, counted from the square it
+    /// started on, so it always comes back round. A move that's blocked, it stays put for, and carries on with the next.
+    /// </summary>
+    Sequence,
+
+    /// <summary>
+    /// Touching it hurts: the ship stepping into it, or it landing on the ship, sends the ship back to the square it
+    /// came from. It's still solid to everything else, so it stops beams, Slide Bugs and Push Blocks.
+    /// </summary>
+    Sting,
 }
 
 /// <summary>Which ways a Beam looks.</summary>
@@ -61,6 +73,10 @@ public sealed class ArchetonPart
     /// <summary>Beam only: whether every square it reaches is outlined on the board, so the player can see where.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? ShowReach { get; set; }
+
+    /// <summary>Sequence only: the moves it makes, one for each step the ship takes, over and over.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<PuzzleDirection>? Moves { get; set; }
 }
 
 /// <summary>One kind of Archeton: its name, what it's drawn with, and the parts that make it work.</summary>
@@ -148,7 +164,77 @@ public static class ArchetonDefinitions
     };
 
     /// <summary>The ready-made Archetons, each offered to a project once - see WeaveProject.ArchetonsOffered.</summary>
-    public static IReadOnlyList<Func<ArchetonDefinition>> ReadyMade { get; } = [Sentribeam, SlideBug];
+    /// <summary>The third Archeton: a spider that hops round its starting square, up, down, left and right, and stings.</summary>
+    public static ArchetonDefinition JumpbugA() => new()
+    {
+        Id = "jumpbug-a",
+        Name = "Jumpbug A",
+        Drawing = JumpbugDrawingId,
+        Parts =
+        [
+            new ArchetonPart
+            {
+                Kind = ArchetonPartKind.Sequence,
+                Moves = [PuzzleDirection.Up, PuzzleDirection.Down, PuzzleDirection.Down, PuzzleDirection.Up, PuzzleDirection.Left, PuzzleDirection.Right, PuzzleDirection.Right, PuzzleDirection.Left],
+            },
+            new ArchetonPart { Kind = ArchetonPartKind.Sting },
+        ],
+    };
+
+    public const string JumpbugDrawingId = "jumpbug";
+
+    /// <summary>Jumpbug's drawing: a round body with a head at the top, and 4 bent legs out to the sides.</summary>
+    public static PuzzleDrawing JumpbugDrawing() => new()
+    {
+        Id = JumpbugDrawingId,
+        Kind = PuzzleObjectKind.Archeton,
+        Name = "Jumpbug",
+        Pixels =
+        "........................" +
+        "........................" +
+        "........................" +
+        "........................" +
+        "..........OOOO.........." +
+        "..........O22O.........." +
+        "....O....OH22HO....O...." +
+        "...O3OO...O22O...OO3O..." +
+        "...O333O.O2222O.O333O..." +
+        "..O33O33OGGGGGGO33O33O.." +
+        "..O3O.OGG444GGGGGO.O3O.." +
+        "..OO...OG444GGGGO...OO.." +
+        ".O3O..OGGGGGGGGGGO..O3O." +
+        "..O...OGGGGGGGGGGO...O.." +
+        "......OGGGGGGGGGGO......" +
+        "....OO311111111113OO...." +
+        "...O3OOOO111111OOOO3O..." +
+        "...OO....OO11OO....OO..." +
+        "..O3O......OO......O3O.." +
+        "..O3O..............O3O.." +
+        "..OO................OO.." +
+        ".O3O................O3O." +
+        "..O..................O.." +
+        "........................",
+        Mix =
+        [
+            new PuzzleMixColour { Role = "archeton", Shade = 0, Percent = 15 },
+            new PuzzleMixColour { Role = "archeton", Shade = 1, Percent = 25 },
+            new PuzzleMixColour { Role = "archeton", Shade = 2, Percent = 45 },
+            new PuzzleMixColour { Role = "archeton", Shade = 3, Percent = 15 },
+        ],
+    };
+
+    /// <summary>How many moves a Sequence can have.</summary>
+    public const int MaxMoves = 32;
+
+    public static IReadOnlyList<Func<ArchetonDefinition>> ReadyMade { get; } = [Sentribeam, SlideBug, JumpbugA];
+
+    /// <summary>The drawing a ready-made Archeton comes with, by its id, or null.</summary>
+    public static PuzzleDrawing? ReadyMadeDrawing(string? id) => id switch
+    {
+        SlideBugDrawingId => SlideBugDrawing(),
+        JumpbugDrawingId => JumpbugDrawing(),
+        _ => null,
+    };
 
     /// <summary>
     /// Sentribeam first pushed the ship back rather than blocking it. A project still with that first version, untouched,

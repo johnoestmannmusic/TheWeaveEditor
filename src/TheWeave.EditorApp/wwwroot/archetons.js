@@ -9,6 +9,15 @@ const ARCHETON_PARTS = [
   { kind: 'Block', label: 'Block', hint: 'The ship can\'t step anywhere a Beam reaches. The laser shows across it while the ship is one square off it, or in it.' },
   { kind: 'Push', label: 'Push', hint: 'Pushes the ship away along whichever Beam sees it, a square at a time, until it\'s out of reach.' },
   { kind: 'Slide', label: 'Slide', hint: 'Each step the ship takes, slides a square along its line towards the ship: its row when placed facing left or right, its column facing up or down. Anything solid stops it, and it sets off Switches, Lanterns, Pipe Switches and Reset Switches it lands on.' },
+  { kind: 'Sequence', label: 'Move Sequence', hint: 'Each step the ship takes, hops to the next square of its moves, counted from where it started, so it always comes back round. A move that\'s blocked, it stays put for, and carries on with the next.' },
+  { kind: 'Sting', label: 'Sting', hint: 'Touching it hurts: the ship stepping into it, or it landing on the ship, sends the ship back to where it came from. Still solid to everything else, like beams and Push Blocks.' },
+];
+// The moves a Move Sequence can be given, and how each is shown.
+const ARCHETON_MOVES = [
+  { name: 'Up', label: '↑' },
+  { name: 'Left', label: '←' },
+  { name: 'Down', label: '↓' },
+  { name: 'Right', label: '→' },
 ];
 const ARCHETON_LOOKS = [
   { name: 'AllWays', label: 'All 4 ways' },
@@ -62,6 +71,7 @@ function archetonDrawing(archeton) {
 function describeArcheton(archeton) {
   return archeton.parts.map((part) => part.kind === 'Beam'
     ? `Beam ${part.range} ${part.look === 'Facing' ? 'ahead' : 'all ways'}${part.blockedByBlocks === false ? ', through blocks' : ''}${part.showReach === false ? ', unmarked' : ''}`
+    : part.kind === 'Sequence' ? (part.moves ?? []).map((move) => ARCHETON_MOVES.find((m) => m.name === move)?.label ?? move).join('')
     : part.kind).join(' + ') || 'No parts';
 }
 
@@ -224,6 +234,37 @@ function renderArchetonEditor(side) {
       const rangeLabel = document.createElement('label');
       rangeLabel.append('Range ', range);
       row.append(rangeLabel, look, blocks, outline);
+    } else if (part.kind === 'Sequence') {
+      // Its moves in order, each an arrow that removes it when clicked, then buttons adding one more of each.
+      part.moves ??= [];
+      const moves = document.createElement('div');
+      moves.className = 'ar-moves';
+      if (part.moves.length === 0) moves.append('No moves yet.');
+      part.moves.forEach((move, at) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'ar-move';
+        chip.textContent = ARCHETON_MOVES.find((m) => m.name === move)?.label ?? move;
+        chip.title = `${at + 1}: ${move}. Click to remove it.`;
+        chip.addEventListener('click', () => { part.moves.splice(at, 1); renderArchetons(); });
+        moves.append(chip);
+      });
+      const adders = document.createElement('div');
+      adders.className = 'ar-move-adders';
+      adders.append('Add ', ...ARCHETON_MOVES.map((move) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = move.label;
+        button.title = `Add a move ${move.name.toLowerCase()}`;
+        button.addEventListener('click', () => { part.moves.push(move.name); renderArchetons(); });
+        return button;
+      }));
+      const clear = document.createElement('button');
+      clear.type = 'button';
+      clear.textContent = 'Clear';
+      clear.addEventListener('click', () => { part.moves = []; renderArchetons(); });
+      adders.append(clear);
+      row.append(moves, adders);
     }
     parts.append(row);
   });
@@ -234,7 +275,9 @@ function renderArchetonEditor(side) {
   add.title = ARCHETON_PARTS.map((part) => `${part.label}: ${part.hint}`).join('\n');
   add.addEventListener('change', () => {
     if (!add.value) return;
-    archeton.parts.push(add.value === 'Beam' ? { kind: 'Beam', range: 2, look: 'AllWays', blockedByBlocks: true, showReach: true } : { kind: add.value });
+    archeton.parts.push(add.value === 'Beam' ? { kind: 'Beam', range: 2, look: 'AllWays', blockedByBlocks: true, showReach: true }
+      : add.value === 'Sequence' ? { kind: 'Sequence', moves: ['Up', 'Down'] }
+      : { kind: add.value });
     renderArchetons();
   });
   side.append(add);

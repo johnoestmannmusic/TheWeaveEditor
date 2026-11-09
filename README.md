@@ -144,6 +144,11 @@ Neocities, replacing hand-authoring HTML per location.
   - a Slide: each step the ship takes, it slides a square along its line towards the ship - its row when placed
     facing left or right, its column facing up or down. Anything solid stops it, and it sets off the Switches,
     Lanterns, Pipe Switches and Reset Switches it slides onto. Sliding into the ship hurts it.
+  - a Move Sequence: a list of moves, edited in the Archeton editor. Each step the ship takes, it hops to the next
+    square of them, counted from where it started, so it always comes back round. A move onto anything solid, it
+    stays put for, and carries on with the next.
+  - a Sting: touching it hurts. The ship can step into it, and it can land on the ship, either way sending the ship
+    back. It's still solid to everything else, so it stops beams, Slide Bugs and Push Blocks.
 
   Being hurt by an Archeton - a Slide Bug sliding into the ship, or the ship ending up where a Block's laser
   reaches - always sends the ship back to the square it just came from, and it isn't followed straight away as it
@@ -151,9 +156,10 @@ Neocities, replacing hand-authoring HTML per location.
 
   Lasers are drawn a little see-through, from a Laser drawing each Archeton chooses: one square of beam, running
   right, repeated along it and turned the way it runs. Archetons are solid, and drawn in the Drawings view under
-  Archeton, and their lasers under Laser. Two come with every project, each added
+  Archeton, and their lasers under Laser. Three come with every project, each added
   the once, so one that's deleted stays deleted: Sentribeam, an eye whose outlined Beam reaches 2 squares all 4
-  ways, with a Block, and Slide Bug, a mechanical woodlouse on 6 wheels with a Slide, keeping in the ship's way.
+  ways, with a Block; Slide Bug, a mechanical woodlouse on 6 wheels with a Slide, keeping in the ship's way; and
+  Jumpbug A, a 4-legged spider hopping up, down, down, up, left, right, right, left round its start, with a Sting.
 - A Finish on the board's edge has chevrons running across its pad towards that edge, round and round, so it
   reads at a glance as the way out.
 - A location's puzzle boards connect edge to edge, like the map's screens: a part that leads on to another

@@ -1198,29 +1198,44 @@ public class ProjectEditingTests
     }
 
     [Fact]
-    public void SeedArchetons_NewProject_GetsEveryReadyMadeArcheton_WithSlideBugsDrawing()
+    public void SeedArchetons_NewProject_GetsEveryReadyMadeArcheton_WithTheirDrawings()
     {
         var project = new WeaveProject();
         ProjectEditing.SeedArchetons(project);
 
-        Assert.Equal(["sentribeam", "slide-bug"], project.Archetons!.Select(a => a.Id));
-        Assert.Equal(["sentribeam", "slide-bug"], project.ArchetonsOffered);
-        var drawing = Assert.Single(project.PuzzleDrawings!);
-        Assert.Equal(PuzzleObjectKind.Archeton, drawing.Kind);
-        Assert.Equal(576, drawing.Pixels.Length);
+        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a"], project.Archetons!.Select(a => a.Id));
+        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a"], project.ArchetonsOffered);
+        Assert.Equal(["slide-bug", "jumpbug"], project.PuzzleDrawings!.Select(d => d.Id));
+        Assert.All(project.PuzzleDrawings!, drawing =>
+        {
+            Assert.Equal(PuzzleObjectKind.Archeton, drawing.Kind);
+            Assert.Equal(576, drawing.Pixels.Length);
+        });
+        Assert.Equal(8, project.Archetons!.Single(a => a.Id == "jumpbug-a").Parts[0].Moves!.Count);
         ProjectEditing.ValidateArchetons(project.Archetons!, project.PuzzleDrawings);
     }
 
     [Fact]
-    public void SeedArchetons_ProjectThatAlreadyHadSentribeam_GetsSlideBugOnce_AndDeletedOnesStayDeleted()
+    public void SeedArchetons_ProjectThatAlreadyHadSentribeam_GetsTheOthersOnce_AndDeletedOnesStayDeleted()
     {
         var project = new WeaveProject { Archetons = [ArchetonDefinitions.Sentribeam()] };
         ProjectEditing.SeedArchetons(project);
-        Assert.Equal(["sentribeam", "slide-bug"], project.Archetons!.Select(a => a.Id));
+        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a"], project.Archetons!.Select(a => a.Id));
 
         project.Archetons = [];
         ProjectEditing.SeedArchetons(project);
         Assert.Empty(project.Archetons);
-        Assert.Single(project.PuzzleDrawings!);
+        Assert.Equal(2, project.PuzzleDrawings!.Count);
+    }
+
+    [Fact]
+    public void ValidateArchetons_MoveSequenceNeedsMoves_AndOtherPartsLoseTheirs()
+    {
+        var empty = new ArchetonDefinition { Id = "a", Name = "A", Parts = [new ArchetonPart { Kind = ArchetonPartKind.Sequence, Moves = [] }] };
+        Assert.Throws<InvalidOperationException>(() => ProjectEditing.ValidateArchetons([empty], null));
+
+        var sting = new ArchetonPart { Kind = ArchetonPartKind.Sting, Moves = [PuzzleDirection.Up] };
+        ProjectEditing.ValidateArchetons([new ArchetonDefinition { Id = "b", Name = "B", Parts = [sting] }], null);
+        Assert.Null(sting.Moves);
     }
 }

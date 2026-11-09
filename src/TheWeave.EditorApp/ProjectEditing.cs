@@ -423,8 +423,8 @@ internal static class ProjectEditing
             if (project.Archetons.Any(a => a.Id == archeton.Id))
                 continue;
 
-            if (archeton.Drawing == ArchetonDefinitions.SlideBugDrawingId && (project.PuzzleDrawings ?? []).All(d => d.Id != archeton.Drawing))
-                project.PuzzleDrawings = [.. project.PuzzleDrawings ?? [], ArchetonDefinitions.SlideBugDrawing()];
+            if (ArchetonDefinitions.ReadyMadeDrawing(archeton.Drawing) is { } drawing && (project.PuzzleDrawings ?? []).All(d => d.Id != drawing.Id))
+                project.PuzzleDrawings = [.. project.PuzzleDrawings ?? [], drawing];
             project.Archetons.Add(archeton);
         }
 
@@ -492,6 +492,16 @@ internal static class ProjectEditing
                     part.Look = null;
                     part.BlockedByBlocks = null;
                     part.ShowReach = null;
+                }
+
+                if (part.Kind == ArchetonPartKind.Sequence)
+                {
+                    if (part.Moves is not { Count: > 0 } moves || moves.Count > ArchetonDefinitions.MaxMoves)
+                        throw new InvalidOperationException($"'{archeton.Name}''s Move Sequence needs from 1 to {ArchetonDefinitions.MaxMoves} moves.");
+                }
+                else
+                {
+                    part.Moves = null;
                 }
             }
         }
