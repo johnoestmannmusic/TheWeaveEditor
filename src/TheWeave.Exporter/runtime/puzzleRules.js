@@ -276,9 +276,10 @@
     // on it, a Slide Bug that's slid into it, or a Block's laser reaching it.
     function hurtAwayFrom(cell){
       if (objects.some(object => object.kind === 'Gate' && !object.open && isAt(object, cell))) return [];
+      // A bug that's moved onto the ship sends it on the way the bug was going; one it stepped into, nowhere else.
       let bug = objects.find(object => object.kind === 'Archeton' && isAt(object, cell));
-      if (bug) return bug.glide === 'slide' && bug.fromCol !== undefined
-        ? [bug.col > bug.fromCol ? 'Right' : bug.col < bug.fromCol ? 'Left' : bug.row > bug.fromRow ? 'Down' : 'Up']
+      if (bug) return (bug.glide === 'slide' || bug.glide === 'hop') && bug.fromCol !== undefined && (bug.fromCol !== bug.col || bug.fromRow !== bug.row)
+        ? [wayFrom({ col: bug.fromCol, row: bug.fromRow }, bug)]
         : [];
       if (!blockedByBeam(cell)) return undefined;
       return beamPaths(true).filter(path => path.blocks && path.cells.some(reached => isAt(reached, cell))).map(path => path.direction);
@@ -317,6 +318,8 @@
       if (blockedByBeam(to)) return false;
       let object = objectAt(to);
       if (object?.kind === 'PushBlock') return !!pushedTo(object, direction);
+      // An Archeton with a Sting is solid to everything but the ship, which can step into it - and is hurt.
+      if (object?.kind === 'Archeton' && hasPart(object, 'Sting')) return true;
       return !(object && isSolid(object));
     }
 
@@ -506,6 +509,17 @@
       }
     }
 
+    // Whether an Archeton has a part of a kind - see TheWeave.Core's ArchetonPartKind.
+    function hasPart(object, kind){
+      return !!archetonDefinitions.get(object.archeton)?.parts?.some(part => part.kind === kind);
+    }
+
+    // The way from one square to another, along whichever of across and down it goes further.
+    function wayFrom(from, to){
+      let dc = to.col - from.col, dr = to.row - from.row;
+      return Math.abs(dc) >= Math.abs(dr) ? (dc > 0 ? 'Right' : 'Left') : (dr > 0 ? 'Down' : 'Up');
+    }
+
     // Notes the square an object's leaving, for a closing Gate to pass it back along - see passBack. Only the last
     // few are kept.
     function leaving(object){
@@ -584,6 +598,46 @@
       return { ...set, slid };
     }
 
+    // Every Archeton with a Move Sequence hops to the next square of it, after the ship's step: its moves are counted
+    // from the square it started on, so it always comes back round. A move onto anything solid, or off the board, it
+    // stays put for, and carries on with the next. Landing on the ship hurts it, with a Sting, as long as the ship can
+    // be sent somewhere - otherwise it stays put for that one too. It sets off what it lands on, as a Slide Bug does.
+    // { hopped } and whatever they set off, or null if none moved.
+    function hopBugs(){
+      settle('hop');
+      let hopped = [];
+      let set = {};
+      for (const bug of objects.filter(object => object.kind === 'Archeton' && hasPart(object, 'Sequence'))) {
+        let moves = archetonDefinitions.get(bug.archeton).parts.find(part => part.kind === 'Sequence').moves ?? [];
+        if (moves.length === 0) continue;
+        bug.homeCol ??= bug.col;
+        bug.homeRow ??= bug.row;
+        let beat = bug.beat ?? 0;
+        bug.beat = (beat + 1) % moves.length;
+        let target = { col: bug.homeCol, row: bug.homeRow };
+        for (let i = 0; i <= beat; i++) target = nextCell(target, moves[i]);
+        if (isAt(bug, target) || !onBoard(target)) continue;
+        let there = objects.find(other => other !== bug && isAt(other, target) && isSolid(other));
+        if (there) continue;
+        if (isAt(shipCell, target) && !(hasPart(bug, 'Sting') && canBeSentBack(target, wayFrom(bug, target)))) continue;
+
+        leaving(bug);
+        bug.fromCol = bug.col;
+        bug.fromRow = bug.row;
+        bug.col = target.col;
+        bug.row = target.row;
+        bug.glide = 'hop';
+        hopped.push(bug);
+        let under = objects.find(other => other !== bug && isAt(other, target));
+        if (under) Object.assign(set, trigger(under) ?? {});
+        if (set.reset) break;
+      }
+      if (hopped.length === 0) return null;
+      version++;
+      revealLitAreas();
+      return { ...set, hopped };
+    }
+
     // The ship arriving on a square, then every Slide Bug following it a step - except when it's finished the board,
     // is about to land from a jump, when the bugs wait for it to land, or has reset the board, which put them back.
     // A ship arriving back from being hurt isn't followed, so it has a moment to get its bearings rather than being hurt
@@ -595,9 +649,14 @@
         return event;
       }
       if (event?.finished || event?.jumpTo || event?.reset) return event;
+      // Stepping into a stinging Archeton hurts the ship there and then, before it can move away.
+      if (objects.some(object => object.kind === 'Archeton' && isAt(object, cell) && hasPart(object, 'Sting'))) return event;
       let slid = slideBugs();
-      if (!slid) return event;
-      return event ? { ...slid, ...event } : slid;
+      let hopped = slid?.reset ? null : hopBugs();
+      let moved = slid || hopped ? { ...(hopped ?? {}), ...(slid ?? {}) } : null;
+      if (moved && slid && hopped) moved = { ...moved, slid: slid.slid, hopped: hopped.hopped };
+      if (!moved) return event;
+      return event ? { ...moved, ...event } : moved;
     }
 
 

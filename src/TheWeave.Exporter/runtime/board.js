@@ -57,6 +57,7 @@
       pipeTurnMs: null,
       returnMs: null,
       slideMs: null, // how long ago Slide Bugs last slid, for their glide
+      hopMs: null, // how long ago Archetons with a Move Sequence last hopped
       sinking: [],
       pulses: [],
     };
@@ -96,6 +97,7 @@
       }
       if (event.returned) play.returnMs = 0;
       if (event.slid) play.slideMs = 0;
+      if (event.hopped) play.hopMs = 0;
       if (event.lit) play.pulses.push({ ...event.lit, ms: 0, revealed: event.revealed ?? [] });
       if (event.pipesTurned) {
         play.pipeTurnMs = 0;
@@ -141,6 +143,7 @@
       if (play.pipeTurnMs !== null) play.pipeTurnMs += dtMs;
       if (play.returnMs !== null) play.returnMs += dtMs;
       if (play.slideMs !== null) play.slideMs += dtMs;
+      if (play.hopMs !== null) play.hopMs += dtMs;
     };
 
     // The board being played: the ship moving, and everything that moves by itself. Nothing else moves while the
@@ -298,6 +301,7 @@
         pushAlong: mover.progress,
         returnAlong: play.returnMs === null ? 1 : Math.min(1, play.returnMs / TIMING.stepMs),
         slideAlong: play.slideMs === null ? 1 : Math.min(1, play.slideMs / TIMING.stepMs),
+        hopAlong: play.hopMs === null ? 1 : Math.min(1, play.hopMs / TIMING.stepMs),
         pulses,
         beams: game.beams,
         reaches: game.reaches,
@@ -307,7 +311,7 @@
       // Only what's actually moving or animating goes into the key: anything gliding, in whole pixels, and the
       // phase of any animation the board has.
       let gliding = (glide) => game.objects.some(o => o.glide === glide && o.fromCol !== undefined && (o.fromCol !== o.col || o.fromRow !== o.row));
-      for (const [glide, along] of [['stream', options.along], ['rotator', options.rotatorAlong], ['push', options.pushAlong], ['return', options.returnAlong], ['slide', options.slideAlong]]) {
+      for (const [glide, along] of [['stream', options.along], ['rotator', options.rotatorAlong], ['push', options.pushAlong], ['return', options.returnAlong], ['slide', options.slideAlong], ['hop', options.hopAlong]]) {
         if (gliding(glide)) key.push(glide, Math.round(Math.min(1, along) * TILE_PX));
       }
       let phase = (ms, cycle) => Math.floor((((ms ?? 0) % cycle) / cycle) * TILE_PX);

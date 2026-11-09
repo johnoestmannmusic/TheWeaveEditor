@@ -778,7 +778,8 @@
   //   ones in play, depending on which kind of tile moved them. They move in whole pixels, like everything else.
   // - showInvisible draws anything invisible and unrevealed as a ghost, rather than leaving it out.
   // - pushAlong is how far a Push Block being pushed is through its glide, along with the ship, and returnAlong how far
-  //   one a closing Gate is sending back is through its glide, and slideAlong how far a Slide Bug is through its slide.
+  //   one a closing Gate is sending back is through its glide, and slideAlong how far a Slide Bug is through its slide, and hopAlong an Archeton
+  //   with a Move Sequence through its hop.
   // - An object's own sink, from 0 to 1, is how far it's sunk into its square, after matching - see sinkMatches.
   // - An object's own spin is how far round clockwise it's turned, as a Rotator Switch does while stood on - see spinAt.
   // - An object's own fade, from 0 to 1, is how much of it shows, as a Reset Switch's sweep passes - see resetSweepAt.
@@ -803,7 +804,8 @@
     let switchesActive = options.switchesActive ?? true;
 
     let alongFor = (object) => (object.glide === 'rotator' ? options.rotatorAlong : object.glide === 'push' ? options.pushAlong
-      : object.glide === 'return' ? options.returnAlong : object.glide === 'slide' ? options.slideAlong : options.along) ?? 1;
+      : object.glide === 'return' ? options.returnAlong : object.glide === 'slide' ? options.slideAlong
+      : object.glide === 'hop' ? options.hopAlong : options.along) ?? 1;
     let drawnRow = (object) => object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * alongFor(object);
     let floorsFirst = objects
       .filter(object => object.kind !== 'Start')
@@ -817,6 +819,8 @@
       let along = alongFor(object);
       let col = object.fromCol === undefined ? object.col : object.fromCol + (object.col - object.fromCol) * along;
       let row = object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * along;
+      // A hop rises a little on its way, as a jump does.
+      if (object.glide === 'hop' && along < 1 && (object.fromCol !== object.col || object.fromRow !== object.row)) row -= HOP_RISE * Math.sin(Math.PI * along);
       let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase);
       let top = Math.round(row * TILE_PX) + (options.originY ?? 0);
       let sunk = Math.round((object.sink ?? 0) * TILE_PX);
@@ -874,6 +878,9 @@
     }
   }
 
+
+  // How high a hopping Archeton rises at the middle of its hop, in squares - see renderBoard.
+  const HOP_RISE = 0.35;
 
   // How much of an open Gate shows - see renderBoard.
   const OPEN_GATE_OPACITY = 0.5;
