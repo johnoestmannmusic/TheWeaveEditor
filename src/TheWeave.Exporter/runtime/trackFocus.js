@@ -447,6 +447,7 @@ function buildBoardGame(facing, visit){
         releaseDirections();
         breakContrails(boardContrails, boardMover.position);
       },
+      onTeleported: () => breakContrails(boardContrails, boardMover.position),
       onLanded: () => {
         breakContrails(boardContrails, boardMover.position);
         releaseDirections();
@@ -685,7 +686,7 @@ function updateBoardGame(dtMs){
 
   boardPlay.step(dtMs);
   renderBoardShip();
-  if (!boardPlay.jump) updateBoardContrails(dtMs);
+  if (!boardPlay.jump && !boardPlay.teleport) updateBoardContrails(dtMs);
   drawBoardObjects();
 }
 
@@ -728,7 +729,8 @@ function boardPushHints(){
 
 function renderBoardShip(){
   // In mid-air from a Jump Tile: along a straight line between the squares, growing towards the middle of it.
-  let { x, y, t } = boardPlay.shipPosition();
+  // Going between Teleporters: spinning, and faded, as it crosses - see board.js's shipPosition.
+  let { x, y, t, spin, opacity } = boardPlay.shipPosition();
   let position = { x, y };
   let leap = t === null ? 1 : 1 + BOARD_JUMP_RISE * Math.sin(Math.PI * t);
   // Crossing the gap from the last board's Finish onto this one's entrance, while the boards scroll.
@@ -744,5 +746,6 @@ function renderBoardShip(){
   boardShipEl.style.left = (position.x * trackFocusScale - width / 2) + "px";
   boardShipEl.style.top = (position.y * trackFocusScale - height / 2) + "px";
   // Sprite's forward points "up" at rest, same as the map ship - see renderShip.
-  boardShipEl.style.transform = "rotate(" + (FACING_ANGLES[boardMover.facing] + Math.PI / 2) + "rad) scale(" + leap + ")";
+  boardShipEl.style.transform = "rotate(" + (FACING_ANGLES[boardMover.facing] + Math.PI / 2 + spin) + "rad) scale(" + leap + ")";
+  boardShipEl.style.opacity = opacity;
 }

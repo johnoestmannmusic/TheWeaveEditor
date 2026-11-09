@@ -68,7 +68,7 @@ function drawPlaytest(context, look, timeMs) {
 
   const { list, options, key } = play.frame(timeMs, { pushHints: play.finished ? [] : play.pushHints(timeMs) });
   const ship = play.shipPosition();
-  const drawnKey = `${key}|${Math.round(ship.x)},${Math.round(ship.y)},${play.mover.facing}|${look === playtest.look}`;
+  const drawnKey = `${key}|${Math.round(ship.x)},${Math.round(ship.y)},${play.mover.facing},${ship.spin.toFixed(2)},${ship.opacity.toFixed(2)}|${look === playtest.look}`;
   if (drawnKey === playtest.drawnKey) return;
   playtest.drawnKey = drawnKey;
   playtest.look = look;
@@ -82,7 +82,8 @@ function drawPlaytest(context, look, timeMs) {
   context.save();
   context.imageSmoothingEnabled = false;
   context.translate(Math.round(ship.x), Math.round(ship.y));
-  context.rotate(PLAYTEST_SHIP_TURNS[play.mover.facing] ?? 0);
+  context.rotate((PLAYTEST_SHIP_TURNS[play.mover.facing] ?? 0) + ship.spin);
+  context.globalAlpha = ship.opacity;
   context.drawImage(puzzleEditor.shipImage, -PUZZLE_SHIP_WIDTH / 2, -PUZZLE_SHIP_HEIGHT / 2, PUZZLE_SHIP_WIDTH, PUZZLE_SHIP_HEIGHT);
   context.restore();
 }

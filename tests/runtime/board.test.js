@@ -85,3 +85,25 @@ test('every Push Block next to the ship that it could push gets an arrow, whiche
   assert.deepEqual(hints, ['Right@5,5', 'Up@4,4'], 'the Circle and Star, but not the Cross, with a Wall behind it');
   assert.notEqual(play.frame(0, { pushHints: play.pushHints(0) }).key, play.frame(0).key, 'and they\'re part of what\'s drawn');
 });
+
+test('a Teleporter sends the ship across to the other, spinning and fading as it goes, before it gets there', () => {
+  let events = [];
+  let play = createBoardPlay({ puzzle: { objects: [obj('Start', 1, 5), obj('Teleporter', 2, 5, { letter: 'A' }), obj('Teleporter', 7, 2, { letter: 'A' })] }, hooks: { onTeleport: () => events.push('off'), onTeleported: () => events.push('there') } });
+  play.mover.press('right');
+  play.mover.release('right');
+  run(play, BOARD_TIMING.stepMs + 20);
+  assert.ok(play.teleport, 'on its way');
+  assert.deepEqual(play.mover.cell, at(2, 5), 'still at the first until it arrives');
+  let mid = play.teleport.durationMs / 2 - play.teleport.ms;
+  run(play, mid);
+  let halfway = play.shipPosition();
+  assert.ok(halfway.opacity < 0.3, `three-quarters see-through at the middle: ${halfway.opacity}`);
+  assert.ok(halfway.spin > 2.5 && halfway.spin < 3.8, 'half a turn round');
+  assert.ok(halfway.x > 2.5 * 24 && halfway.x < 7.5 * 24, 'part way across');
+  assert.deepEqual(play.pushHints(0), [], 'no hints while it\'s going');
+  run(play, play.teleport.durationMs);
+  assert.equal(play.teleport, null);
+  assert.deepEqual(play.mover.cell, at(7, 2));
+  assert.deepEqual([play.shipPosition().opacity, play.shipPosition().spin], [1, 0]);
+  assert.deepEqual(events, ['off', 'there']);
+});
