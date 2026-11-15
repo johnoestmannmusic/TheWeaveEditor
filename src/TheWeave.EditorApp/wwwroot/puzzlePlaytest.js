@@ -104,16 +104,18 @@ function drawSightLines(context, play, ship, reflections) {
   if (!reflections.length && !blocked.length) return;
   const tile = PUZZLE_TILE_PX;
   context.save();
-  context.lineWidth = refused ? 2 : 1;
+  context.lineWidth = 2;
   context.strokeStyle = refused ? 'rgba(255, 154, 60, 0.8)' : 'rgba(255, 154, 60, 0.1)';
   context.setLineDash(refused ? [3, 2] : [3, 3]);
-  context.beginPath();
-  for (const reflection of reflections) {
-    const line = WeavePuzzle.reflectionSightLine(reflection, ship, tile);
-    context.moveTo(Math.round(line.from.x), Math.round(line.from.y));
-    context.lineTo(Math.round(line.to.x), Math.round(line.to.y));
+  if (reflections.length) {
+    context.beginPath();
+    for (const reflection of reflections) {
+      const line = WeavePuzzle.reflectionSightLine(reflection, ship, tile);
+      context.moveTo(Math.round(line.from.x), Math.round(line.from.y));
+      context.lineTo(Math.round(line.to.x), Math.round(line.to.y));
+    }
+    context.stroke();
   }
-  context.stroke();
 
   if (blocked.length) {
     context.lineWidth = 1;
