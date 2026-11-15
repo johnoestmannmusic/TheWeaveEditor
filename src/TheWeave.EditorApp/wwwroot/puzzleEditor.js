@@ -537,6 +537,7 @@ function layoutPuzzleBoard() {
 // up, the same as in the game. Redrawn every frame while open, because Streams are always moving.
 function drawPuzzleBoard(timeMs) {
   if (!puzzleEditor) return;
+  puzzleEditor.lastFrameMs = performance.now();
 
   const canvas = document.getElementById('pe-canvas');
   const context = canvas.getContext('2d');
@@ -707,9 +708,34 @@ document.getElementById('pe-export').addEventListener('click', () => {
 document.getElementById('pe-clear').addEventListener('click', () => {
   if (puzzleEditor?.playtest) return;
   const { pageId, nodeId } = puzzleEditor;
+  if (!findNode(pageId, nodeId)?.puzzle) return;
   puzzleEditor.painting = null;
-  if (findNode(pageId, nodeId)?.puzzle) send('update-puzzle', { pageId, nodeId, puzzle: null });
+  send('update-puzzle', { pageId, nodeId, puzzle: null });
+  // The board is cleared here as well as on the other side, rather than when the project comes back: waiting for that
+  // left the old puzzle on screen until the editor was closed and opened again.
+  clearPuzzleBoard();
 });
+
+// A board whose puzzle isn't there any more: nothing on it but the ship's Start, where it would begin - what
+// syncPuzzleEditor gives a location that has no puzzle yet.
+function clearPuzzleBoard() {
+  const neighbours = puzzleNeighbours(puzzleEditor.pageId, puzzleEditor.nodeId);
+  const startAt = neighbours.entrance ?? WeavePuzzle.DEFAULT_START;
+  puzzleEditor.neighbours = neighbours;
+  puzzleEditor.objects = [{ kind: 'Start', col: startAt.col, row: startAt.row }];
+  puzzleEditor.drawnBoard = null;
+  renderToolTray();
+  renderPuzzleProblems();
+  document.getElementById('pe-export').disabled = true;
+  document.getElementById('pe-playtest').disabled = true;
+  redrawPuzzleBoard();
+}
+
+// Asks for the board to be drawn on the next frame, and starts the animation loop again if it has stopped - an error in
+// a frame ends it for good, which leaves the board showing whatever it last drew until the editor is closed and opened.
+function redrawPuzzleBoard() {
+  if (performance.now() - (puzzleEditor.lastFrameMs ?? 0) > 250) requestAnimationFrame(drawPuzzleBoard);
+}
 
 document.addEventListener('keydown', (e) => {
   if (!puzzleEditor || e.key !== 'Escape') return;
