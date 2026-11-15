@@ -391,6 +391,13 @@ public class ProjectEditingTests
             new PuzzleObject { Kind = PuzzleObjectKind.Stream, Direction = PuzzleDirection.Down },
         } },
         { new[] { new PuzzleObject { Kind = PuzzleObjectKind.Start }, new PuzzleObject { Kind = PuzzleObjectKind.Start, Col = 1 } } },
+        // An Edge is on one side of its square, so it needs to say which - and two on the same side is one too many.
+        { new[] { new PuzzleObject { Kind = PuzzleObjectKind.Edge } } },
+        { new[]
+        {
+            new PuzzleObject { Kind = PuzzleObjectKind.Edge, Direction = PuzzleDirection.Up },
+            new PuzzleObject { Kind = PuzzleObjectKind.Edge, Direction = PuzzleDirection.Up },
+        } },
     };
 
     [Theory]
@@ -428,6 +435,21 @@ public class ProjectEditingTests
     {
         Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyPuzzleEdit(new Node(), MakePuzzle(new PuzzleObject { Kind = PuzzleObjectKind.PushBlock })));
         Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyPuzzleEdit(new Node(), MakePuzzle(new PuzzleObject { Kind = PuzzleObjectKind.JumpTile })));
+    }
+
+    [Fact]
+    public void ApplyPuzzleEdit_KeepsAnEdgeOnEachSideOfASquare()
+    {
+        var node = new Node();
+
+        // A raised area's corner needs a ledge on each of the two sides that meet there.
+        ProjectEditing.ApplyPuzzleEdit(node, MakePuzzle(
+            new PuzzleObject { Kind = PuzzleObjectKind.Edge, Col = 3, Row = 4, Direction = PuzzleDirection.Up },
+            new PuzzleObject { Kind = PuzzleObjectKind.Edge, Col = 3, Row = 4, Direction = PuzzleDirection.Right }));
+
+        Assert.Equal(2, node.Puzzle!.Objects.Count);
+        Assert.Equal((PuzzleDirection?)PuzzleDirection.Up, node.Puzzle.Objects[0].Direction);
+        Assert.Equal((PuzzleDirection?)PuzzleDirection.Right, node.Puzzle.Objects[1].Direction);
     }
 
     [Fact]

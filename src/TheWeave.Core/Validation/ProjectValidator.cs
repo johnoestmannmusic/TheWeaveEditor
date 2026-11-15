@@ -286,6 +286,21 @@ public static class ProjectValidator
                 Warn($"the Jump Tile at column {jump.Col + 1}, row {jump.Row + 1} has nowhere to land, so it does nothing.");
         }
 
+        // An Edge's direction is the side of its square it's on, and the higher ground that way: facing off the board
+        // there's no square to climb up from, so it never refuses a step.
+        foreach (var edge in puzzle.Objects.Where(o => o.Kind == PuzzleObjectKind.Edge))
+        {
+            var (col, row) = edge.Direction switch
+            {
+                PuzzleDirection.Up => (edge.Col, edge.Row - 1),
+                PuzzleDirection.Down => (edge.Col, edge.Row + 1),
+                PuzzleDirection.Left => (edge.Col - 1, edge.Row),
+                _ => (edge.Col + 1, edge.Row),
+            };
+            if (col < 0 || col >= Puzzle.BoardSize || row < 0 || row >= Puzzle.BoardSize)
+                Warn($"the Edge at column {edge.Col + 1}, row {edge.Row + 1} faces off the board, so there's no higher ground for it to lead up to and it does nothing.");
+        }
+
         var missingDrawings = puzzle.Objects
             .Where(o => o.Variant is not null && drawings?.Any(d => d.Id == o.Variant && d.Kind == o.Kind) != true)
             .GroupBy(o => (o.Kind, o.Variant))

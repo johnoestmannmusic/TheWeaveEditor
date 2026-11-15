@@ -49,6 +49,7 @@
       mover: null,
       finished: false,
       jump: null, // { from, to, ms, durationMs } while the ship's in the air
+      dropping: false, // whether the step underway is a drop off a ledge, drawn as a small jump - see shipPosition
       teleport: null, // { from, to, ms, durationMs } while it's going from one Teleporter to the other
       reset: null, // { before, ms, durationMs } while a Reset Switch's sweep crosses the board
       streamMs: 0,
@@ -129,6 +130,7 @@
         facing: facing ?? facingInwards(startCell),
         canEnter: game ? game.canEnter : undefined,
         onArrive: game ? (arrived) => {
+          play.dropping = false;
           game.settlePushes();
           onEvent(game.shipArrivedAt(arrived));
           carry();
@@ -136,6 +138,8 @@
         // Walking into a Push Block pushes it on ahead, as the step begins - and so does a reflection, so that its block
         // glides along with the ship rather than jumping once the step is over.
         onStepStart: game ? (from, to, direction) => {
+          // Stepping off a ledge drops the ship down it, which is drawn as a small jump - see shipPosition.
+          play.dropping = game.dropsOffEdge(from, to);
           onEvent(game.pushFrom(from, to, direction));
           onEvent(game.pushForReflections(direction));
         } : undefined,
@@ -238,7 +242,8 @@
     };
 
     // Where the ship is drawn: gliding between squares, or in a jump, a straight line from where it left to where it
-    // lands, with how far through the jump it is (t), for a caller that arcs it.
+    // lands, with how far through the jump it is (t), for a caller that arcs it. Stepping off a ledge is a jump too,
+    // just a small one, so it comes back with a t of its own - see onStepStart.
     play.shipPosition = () => {
       if (play.teleport) {
         let t = Math.min(1, play.teleport.ms / play.teleport.durationMs);
@@ -247,7 +252,10 @@
         // One whole turn on the way, and three-quarters see-through at its middle.
         return { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, t: null, spin: t * Math.PI * 2, opacity: 1 - 0.75 * Math.sin(Math.PI * t) };
       }
-      if (!play.jump) return { ...play.mover.position, t: null, spin: 0, opacity: 1 };
+      if (!play.jump) {
+        let dropping = play.dropping && play.mover.isMoving;
+        return { ...play.mover.position, t: dropping ? play.mover.progress : null, spin: 0, opacity: 1 };
+      }
       let t = Math.min(1, play.jump.ms / play.jump.durationMs);
       let centre = (c) => ({ x: (c.col + 0.5) * TILE_PX, y: (c.row + 0.5) * TILE_PX });
       let from = centre(play.jump.from), to = centre(play.jump.to);

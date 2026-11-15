@@ -38,23 +38,28 @@
   // optionally a floor tile under it, so anything new replaces only what it would otherwise share the
   // square with, and there's only ever one Start. The ship always needs somewhere to begin, so nothing
   // else can replace Start - it has to be moved out of the way first.
+  // An Edge is along one side of its square rather than on it, so a square holds one on each of its sides: placing
+  // one only replaces the Edge already on that side.
   function placeObject(objects, object){
     let floor = isFloor(object);
     if (!floor && object.kind !== 'Start' && objects.some(other => other.kind === 'Start' && isAt(other, object))) return objects;
     return [
       ...objects.filter(other => {
         if (object.kind === 'Start' && other.kind === 'Start') return false;
-        return !(isAt(other, object) && isFloor(other) === floor);
+        if (!(isAt(other, object) && isFloor(other) === floor)) return true;
+        return object.kind === 'Edge' && other.kind === 'Edge' && other.direction !== object.direction;
       }),
       object,
     ];
   }
 
   // A board with the top thing on a square removed: an object first, then the floor tile it was on. Start
-  // stays, for the same reason it can't be replaced.
-  function eraseObject(objects, cell){
+  // stays, for the same reason it can't be replaced. Given a direction, an Edge on that side of the square goes
+  // first, since a square can have one on each of its sides - see placeObject.
+  function eraseObject(objects, cell, direction = null){
     let here = objects.filter(other => isAt(other, cell) && other.kind !== 'Start');
-    let top = here.find(other => !isFloor(other)) ?? here[0];
+    let chosen = direction ? here.find(other => other.kind === 'Edge' && other.direction === direction) : null;
+    let top = chosen ?? here.find(other => !isFloor(other)) ?? here[0];
     return objects.filter(other => other !== top);
   }
 
@@ -126,6 +131,9 @@
   // sokoban.js's directions are lower case, and a puzzle's are capitalized as they are in the project file.
   const MOVER_DIRECTIONS = { Up: 'up', Down: 'down', Left: 'left', Right: 'right' };
   const PUZZLE_DIRECTIONS = { up: 'Up', down: 'Down', left: 'Left', right: 'Right' };
+  // The direction a step is in, by the deltas it's taken with - for anything walking a line square by square, like
+  // clearBetween does.
+  const DIRECTION_OF = { '0,-1': 'Up', '0,1': 'Down', '-1,0': 'Left', '1,0': 'Right' };
 
   // Whether a puzzle can be solved at all, which is what decides if it can hold anything back.
   function hasFinish(puzzle){
@@ -188,10 +196,12 @@
     // counts: that's what's in the way, gets pushed, or stops a beam.
     // What's on a square. Two can share one: a Push Block in an open Gate, or a Slide Bug sliding over a Switch, say.
     // Then it's the solid one that counts - what's in the way, gets pushed, or stops a beam - then anything but a Gate.
+    // An Edge isn't on a square so much as along one of its sides, so it's never what's standing there: a block can be
+    // shoved onto a ledge's square, and a Switch under one still works.
     function objectAt(cell){
       return objects.find(object => isAt(object, cell) && isSolid(object))
-        ?? objects.find(object => isAt(object, cell) && object.kind !== 'Gate')
-        ?? objects.find(object => isAt(object, cell))
+        ?? objects.find(object => isAt(object, cell) && object.kind !== 'Gate' && object.kind !== 'Edge')
+        ?? objects.find(object => isAt(object, cell) && object.kind !== 'Edge')
         ?? null;
     }
 
@@ -203,16 +213,40 @@
       return object.kind === 'Wall' || object.kind === 'PushBlock' || object.kind === 'Archeton' || (object.kind === 'Gate' && !object.open);
     }
 
+    // ---------- Edges ----------
+
+    // A ledge, along one side of a square: an Edge's direction is the side it's on, and the higher ground is the
+    // square that way. So stepping off its square that way - up the ledge - is refused, while arriving on its square
+    // from that side is a drop off the ledge, which is always allowed. A square holds one on each of its sides, so
+    // they're looked up by square and side rather than one to a square - a raised area's corner takes two. Read
+    // straight off the board rather than kept, since a Reset Switch puts everything back and a Stream carries what's
+    // lying on it about (but never a ledge, which is part of the ground - see moveAlong).
+    function ledgeAt(cell, direction){
+      return objects.some(object => object.kind === 'Edge' && object.direction === direction && isAt(object, cell));
+    }
+
+    // Whether going from one square to the next drops off a ledge: the square arrived at has one facing back the way
+    // the mover came, so it's coming down onto that square's low side. For drawing the drop as a jump - see
+    // renderBoard and board.js's shipPosition.
+    function dropsOffEdge(from, to){
+      let dc = to.col - from.col, dr = to.row - from.row;
+      if (Math.abs(dc) + Math.abs(dr) !== 1) return false;
+      return ledgeAt(to, OPPOSITES[DIRECTION_OF[dc + ',' + dr]]);
+    }
+
     // ---------- Archetons ----------
 
     // Each Archeton's parts, by its definition's id - see TheWeave.Core's ArchetonDefinition.
     let archetonDefinitions = new Map((puzzle.archetons ?? []).map(definition => [definition.id, definition]));
     const ALL_WAYS = ['Up', 'Down', 'Left', 'Right'];
 
-    // Whether something on a square stops a Beam there. Anything solid does, and a Push Block only if the Beam's
-    // Blocked by Blocks says so - except for glass: a Reflect Mimic is a pane a photonic Beam goes straight through.
-    // Materials are where this is headed, so that "does this stop a beam" can be a table rather than a condition.
-    function stopsBeam(cell, part){
+    // Whether something on a square stops a Beam there, on its way from the square before it. Anything solid does, and
+    // a Push Block only if the Beam's Blocked by Blocks says so - except for glass: a Reflect Mimic is a pane a
+    // photonic Beam goes straight through. A ledge stops one from its low side, as it stops the ship, and lets it over
+    // from the high one. Materials are where this is headed, so that "does this stop a beam" can be a table rather
+    // than a condition.
+    function stopsBeam(from, cell, direction, part){
+      if (ledgeAt(from, direction)) return true;
       let there = objectAt(cell);
       if (!there) return false;
       if (there.kind === 'PushBlock') return part.blockedByBlocks !== false;
@@ -241,8 +275,9 @@
             let cells = [];
             let cell = { col: archeton.col, row: archeton.row };
             for (let reach = 1; reach <= (part.range ?? 0); reach++) {
-              cell = nextCell(cell, direction);
-              if (!onBoard(cell) || stopsBeam(cell, part)) break;
+              let from = cell;
+              cell = nextCell(from, direction);
+              if (!onBoard(cell) || stopsBeam(from, cell, direction, part)) break;
               cells.push(cell);
               if (!throughShip && isAt(shipCell, cell)) break;
             }
@@ -346,6 +381,9 @@
     function canEnterAlone(from, to, moverDirection){
       if (!onBoard(to)) return false;
       let direction = PUZZLE_DIRECTIONS[moverDirection];
+      // Up a ledge, and nowhere else: it's only ever the way out of its own square that's refused, so dropping off
+      // one onto the square below is a step like any other - see ledgeAt.
+      if (ledgeAt(from, direction)) return false;
       let holding = streams.get(cellKey(from));
       if (holding && holding !== direction) return false;
       if (streams.get(cellKey(to)) === OPPOSITES[direction]) return false;
@@ -400,6 +438,8 @@
     // Where a Push Block would go if pushed along a direction: the next square, if it's on the board, has nothing
     // on it, and isn't a Stream flowing straight back at it. Otherwise null, and it can't be pushed.
     function pushedTo(block, direction){
+      // Shoved off a ledge, but not up one, as the ship is - see ledgeAt.
+      if (ledgeAt(block, direction)) return null;
       let to = nextCell(block, direction);
       let there = onBoard(to) ? objectAt(to) : null;
       let openGate = there?.kind === 'Gate' && there.open;
@@ -617,21 +657,37 @@
     }
 
     // Whether nothing solid stands on the squares between two in the same row or column, the two of them aside: a Wall
-    // between the ship and a pane hides it, as it would hide the ship from a Beam.
+    // between the ship and a pane hides it, as it would hide the ship from a Beam. A ledge hides what's beyond it from
+    // its low side, and lets a sight over from the high one, so it's the square being left that's asked about - see
+    // ledgeAt.
     function clearBetween(from, to){
       let dc = Math.sign(to.col - from.col), dr = Math.sign(to.row - from.row);
-      for (let cell = { col: from.col + dc, row: from.row + dr }; !isAt(cell, to); cell = { col: cell.col + dc, row: cell.row + dr }) {
-        if (!onBoard(cell) || solidAt(cell)) return false;
+      let direction = DIRECTION_OF[dc + ',' + dr];
+      let cell = from;
+      while (!isAt(cell, to)) {
+        // A ledge between this square and the next hides what's beyond it from its low side - see ledgeAt.
+        if (ledgeAt(cell, direction)) return false;
+        let next = { col: cell.col + dc, row: cell.row + dr };
+        if (!onBoard(next)) return false;
+        // Only what's between them hides anything: the two ends aside.
+        if (!isAt(next, to) && solidAt(next)) return false;
+        cell = next;
       }
       return true;
     }
 
     // The first square between two in the same row or column that has something solid on it, or that's off the board, or
-    // null if there's nothing between them - see clearBetween.
+    // null if there's nothing between them - see clearBetween. A ledge is on one square's own side, so that square is
+    // where a sight stops, rather than the one past it.
     function firstBetween(from, to){
       let dc = Math.sign(to.col - from.col), dr = Math.sign(to.row - from.row);
-      for (let cell = { col: from.col + dc, row: from.row + dr }; !isAt(cell, to); cell = { col: cell.col + dc, row: cell.row + dr }) {
-        if (!onBoard(cell) || solidAt(cell)) return cell;
+      let direction = DIRECTION_OF[dc + ',' + dr];
+      let cell = from;
+      while (!isAt(cell, to)) {
+        if (ledgeAt(cell, direction)) return cell;
+        let next = { col: cell.col + dc, row: cell.row + dr };
+        if (!onBoard(next) || (!isAt(next, to) && solidAt(next))) return next;
+        cell = next;
       }
       return null;
     }
@@ -664,6 +720,8 @@
       block.fromCol = block.col;
       block.fromRow = block.row;
       block.glide = 'push';
+      // Off a ledge it hops down it, as the ship does - see renderBoard's LEDGE_HOP_RISE.
+      block.falls = dropsOffEdge(block, next);
       block.col = next.col;
       block.row = next.row;
       revealLitAreas();
@@ -1059,7 +1117,8 @@
     // same form as shipArrivedAt.
     function moveAlong(track, glide, shipHeadingTo){
       for (const object of objects) {
-        if (!track.has(cellKey(object))) continue;
+        // A ledge is part of the ground, not something lying on it, so nothing carries it about.
+        if (object.kind === 'Edge' || !track.has(cellKey(object))) continue;
         object.fromCol = object.col;
         object.fromRow = object.row;
         object.glide = glide;
@@ -1143,6 +1202,7 @@
           if (object.glide !== 'push') continue;
           object.fromCol = object.col;
           object.fromRow = object.row;
+          object.falls = false;
         }
       },
 
@@ -1156,6 +1216,10 @@
         reflections = [];
         formReflections();
       },
+
+      // Whether the step the ship just took dropped it off a ledge, for drawing that as a small jump - see board.js's
+      // shipPosition, and puzzleDrawing.js's renderBoard for a Push Block's.
+      dropsOffEdge,
 
       // Which way a Stream is carrying a ship on this square, as sokoban.js's direction, or null.
       // A Stream comes first, and otherwise an Archeton's Beam pushing it away, or a Block's laser sending it back

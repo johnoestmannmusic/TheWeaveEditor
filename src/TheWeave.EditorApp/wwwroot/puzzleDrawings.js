@@ -18,7 +18,7 @@ const DRAWING_PAINTS = [
 
 const DRAWING_SHADES = ['Darkest', 'Dark', 'Main', 'Light'];
 const DRAWING_ROLE_LABELS = {
-  wall: 'Wall', finish: 'Finish', gate: 'Gate + Switch', teleporter: 'Teleporter', stream: 'Stream',
+  wall: 'Wall', edge: 'Edge', finish: 'Finish', gate: 'Gate + Switch', teleporter: 'Teleporter', stream: 'Stream',
   key: 'Key', rotator: 'Rotator', lantern: 'Lantern', block: 'Push Block', jump: 'Jump Tile', reset: 'Reset Switch', pipe: 'Pipe Switch', archeton: 'Archeton', outline: 'Outline', light: 'Light',
 };
 const DRAWING_MAX_MIX = 4;
@@ -38,6 +38,9 @@ const DRAWING_FRAMES = {
   ],
   JumpTile: [
     { frame: 'drawing', label: 'Drawing', field: 'pixels', hint: 'Drawn pointing right, and turned whichever way a Jump Tile points.' },
+  ],
+  Edge: [
+    { frame: 'drawing', label: 'Drawing', field: 'pixels', hint: 'Drawn with its ledge along the square\'s right side, and turned to whichever side of the square the Edge is on, so a run of them joins up. The one at the foot of a step is drawn raised, with a darker face under it, like a Wall.' },
   ],
   Archeton: [
     { frame: 'drawing', label: 'Drawing', field: 'pixels', hint: 'Drawn looking right, and turned whichever way it faces. Choose it for an Archeton in the Archetons window.' },

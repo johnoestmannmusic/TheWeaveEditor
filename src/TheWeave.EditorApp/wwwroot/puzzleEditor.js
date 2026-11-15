@@ -8,6 +8,7 @@
 
 const PUZZLE_TOOLS = [
   { kind: 'Wall', label: 'Wall', hint: 'Blocks the way. Drag to paint.', paints: true, canHide: true },
+  { kind: 'Edge', label: 'Edge', hint: 'A one-way wall along one side of a square: the ship can drop off it that way, but can\'t climb back up. Its direction is the side it\'s on, which is also the way the higher ground is. Drag to paint.', paints: true, direction: true, canHide: true },
   { kind: 'Finish', label: 'Finish', hint: 'Reaching this solves the puzzle.' },
   { kind: 'Gate', label: 'Gate', hint: 'Blocks the way while closed. A Switch with its letter flips it between closed and open.', letter: true, gateState: true, canHide: true },
   { kind: 'Switch', label: 'Switch', hint: 'Stepping on this opens or closes every Gate with its letter.', letter: true, canHide: true },
@@ -39,7 +40,7 @@ const PUZZLE_TILE_PX = WeavePuzzle.TILE_PX;
 // img/ui/pilot-ship.png's own size, which is what the ship is drawn at against the art.
 const PUZZLE_SHIP_WIDTH = 12;
 const PUZZLE_SHIP_HEIGHT = 16;
-const PUZZLE_PALETTE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'block', 'jump', 'reset', 'pipe', 'archeton', 'outline', 'light'];
+const PUZZLE_PALETTE_ROLES = ['wall', 'edge', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'block', 'jump', 'reset', 'pipe', 'archeton', 'outline', 'light'];
 
 // A Push Block's symbols, with a character to show each on its button - see puzzle.js's SYMBOLS.
 const PUZZLE_SYMBOLS = [
@@ -651,8 +652,11 @@ function applyPuzzleTool(cell, erasing) {
     objects = objects.filter((object) => object.kind !== 'Finish');
   }
 
+  // An Edge is on one side of a square, and a square can have one on each, so erasing with the Edge tool takes the one
+  // on the side chosen - see puzzle.js's eraseObject.
+  const side = puzzleEditor.tool === 'Edge' ? puzzleEditor.direction : null;
   puzzleEditor.objects = erasing
-    ? WeavePuzzle.eraseObject(objects, cell)
+    ? WeavePuzzle.eraseObject(objects, cell, side)
     : WeavePuzzle.placeObject(objects, buildPuzzleObject(cell));
 }
 
