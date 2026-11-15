@@ -206,12 +206,14 @@
     let archetonDefinitions = new Map((puzzle.archetons ?? []).map(definition => [definition.id, definition]));
     const ALL_WAYS = ['Up', 'Down', 'Left', 'Right'];
 
-    // Whether a Beam stops at a square: Walls, closed Gates and other Archetons always stop it, and Push Blocks if
-    // it says so.
+    // Whether something on a square stops a Beam there. Anything solid does, and a Push Block only if the Beam's
+    // Blocked by Blocks says so - except for glass: a Reflect Mimic is a pane a photonic Beam goes straight through.
+    // Materials are where this is headed, so that "does this stop a beam" can be a table rather than a condition.
     function stopsBeam(cell, part){
       let there = objectAt(cell);
       if (!there) return false;
       if (there.kind === 'PushBlock') return part.blockedByBlocks !== false;
+      if (there.kind === 'Archeton' && hasPart(there, 'Reflect')) return false;
       return isSolid(there);
     }
 

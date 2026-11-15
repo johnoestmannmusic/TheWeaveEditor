@@ -1233,15 +1233,19 @@ public class ProjectEditingTests
         var project = new WeaveProject();
         ProjectEditing.SeedArchetons(project);
 
-        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a"], project.Archetons!.Select(a => a.Id));
-        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a"], project.ArchetonsOffered);
-        Assert.Equal(["slide-bug", "jumpbug"], project.PuzzleDrawings!.Select(d => d.Id));
+        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic"], project.Archetons!.Select(a => a.Id));
+        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic"], project.ArchetonsOffered);
+        Assert.Equal(["slide-bug", "jumpbug", "reflect-mimic"], project.PuzzleDrawings!.Select(d => d.Id));
         Assert.All(project.PuzzleDrawings!, drawing =>
         {
             Assert.Equal(PuzzleObjectKind.Archeton, drawing.Kind);
             Assert.Equal(576, drawing.Pixels.Length);
         });
         Assert.Equal(8, project.Archetons!.Single(a => a.Id == "jumpbug-a").Parts[0].Moves!.Count);
+        var mimic = project.Archetons!.Single(a => a.Id == "reflect-mimic");
+        Assert.Equal("Reflect Mimic", mimic.Name);
+        Assert.Equal("reflect-mimic", mimic.Drawing);
+        Assert.Equal(ArchetonPartKind.Reflect, Assert.Single(mimic.Parts).Kind);
         ProjectEditing.ValidateArchetons(project.Archetons!, project.PuzzleDrawings);
     }
 
@@ -1250,12 +1254,23 @@ public class ProjectEditingTests
     {
         var project = new WeaveProject { Archetons = [ArchetonDefinitions.Sentribeam()] };
         ProjectEditing.SeedArchetons(project);
-        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a"], project.Archetons!.Select(a => a.Id));
+        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic"], project.Archetons!.Select(a => a.Id));
 
         project.Archetons = [];
         ProjectEditing.SeedArchetons(project);
         Assert.Empty(project.Archetons);
-        Assert.Equal(2, project.PuzzleDrawings!.Count);
+        Assert.Equal(3, project.PuzzleDrawings!.Count);
+    }
+
+    [Fact]
+    public void ValidateArchetons_AReflectPartNeedsNoSettings_AndLosesTheOnesItCameWith()
+    {
+        var reflect = new ArchetonPart { Kind = ArchetonPartKind.Reflect, Range = 3, Moves = [PuzzleDirection.Up] };
+
+        ProjectEditing.ValidateArchetons([new ArchetonDefinition { Id = "reflect-mimic", Name = "Reflect Mimic", Parts = [reflect] }], null);
+
+        Assert.Null(reflect.Range);
+        Assert.Null(reflect.Moves);
     }
 
     [Fact]

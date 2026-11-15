@@ -11,6 +11,7 @@ const ARCHETON_PARTS = [
   { kind: 'Slide', label: 'Slide', hint: 'Each step the ship takes, slides a square along its line towards the ship: its row when placed facing left or right, its column facing up or down. Anything solid stops it, and it sets off Switches, Lanterns, Pipe Switches and Reset Switches it lands on.' },
   { kind: 'Sequence', label: 'Move Sequence', hint: 'Each step the ship takes, hops to the next square of its moves, counted from where it started, so it always comes back round. A move that\'s blocked, it stays put for, and carries on with the next.' },
   { kind: 'Sting', label: 'Sting', hint: 'Touching it hurts: the ship stepping into it, or it landing on the ship, sends the ship back to where it came from. Still solid to everything else, like beams and Push Blocks.' },
+  { kind: 'Reflect', label: 'Reflect', hint: 'A pane of glass: solid to the ship and to Push Blocks, but beams are photonic and pass through. While the ship is in its line - its row when placed facing left or right, its column facing up or down - a shadowy reflection of it shows as far the other side, moving as it does, setting off what it lands on, and hurting the ship when it\'s hurt.' },
 ];
 // The moves a Move Sequence can be given, and how each is shown.
 const ARCHETON_MOVES = [

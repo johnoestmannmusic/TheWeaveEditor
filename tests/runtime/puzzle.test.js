@@ -1672,3 +1672,17 @@ test('stepping into a Jumpbug sends the ship back, and so does it landing on the
   assert.equal(jumpbugAt(landed), '4,3');
   assert.equal(landed.carryDirection(at(4, 3)), 'right', 'back to the square it came from');
 });
+
+// ---------- Reflect Mimics ----------
+
+const REFLECT_MIMIC = { id: 'reflect-mimic', name: 'Reflect Mimic', parts: [{ kind: 'Reflect' }] };
+const mimic = (col, row, direction = 'Right') => obj('Archeton', col, row, { archeton: 'reflect-mimic', direction });
+// Just the squares, for comparing: a reflection carries its pane and what it came from as well.
+const cells = (g) => g.reflections.map(cell => at(cell.col, cell.row));
+
+test('a Reflect Mimic is solid to the ship, but a Beam is photonic and passes through the glass', () => {
+  let g = withArchetons([SENTRIBEAM, REFLECT_MIMIC], eye(1, 5), mimic(2, 5), obj('Start', 3, 5));
+  assert.deepEqual(g.beams.map(beam => beam.to), [at(3, 5)], 'the Sentribeam reaches through the glass to the ship');
+  assert.equal(g.carryDirection(at(3, 5)), 'right', 'and pushes it, as it would with nothing in between');
+  assert.equal(g.canEnter(at(3, 5), at(2, 5), 'left'), false, 'the ship still cannot walk through the glass');
+});
