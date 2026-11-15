@@ -124,6 +124,9 @@ test('a step refused by the reflection\'s side flashes what stopped it, on the s
   assert.ok(play.refusedFlash, 'and what stopped it flashes');
   assert.deepEqual([play.refusedFlash.col, play.refusedFlash.row], [1, 5], 'on the square it tried to walk into');
   assert.equal(play.refusedFlash.object?.kind, 'Wall');
+  let shownFor = play.refusedFlash.ms;
+  run(play, 120);
+  assert.ok(play.refusedFlash.ms > shownFor, 'holding on into it carries the flash on rather than starting it again');
   run(play, 700);
   assert.equal(play.refusedFlash, null, 'then fades');
 });

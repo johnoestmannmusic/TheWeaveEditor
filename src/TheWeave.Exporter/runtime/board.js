@@ -143,7 +143,10 @@
           // A step refused because a reflection couldn't follow leaves whatever stopped it flashing on the ship's side of
           // the pane, on the square it tried to walk into.
           let refused = game && to ? game.reflectionObstacleInTheWay(from, to, direction) : null;
-          if (refused) play.refusedFlash = { col: to.col, row: to.row, object: refused.object, ms: 0, durationMs: REFUSED_FLASH_MS };
+          // Pressing on into the same thing flashes once and fades, rather than being started again every frame it's held.
+          let flashing = play.refusedFlash;
+          let sameReason = flashing && flashing.col === to?.col && flashing.row === to?.row && flashing.object === refused?.object;
+          if (refused && !sameReason) play.refusedFlash = { col: to.col, row: to.row, object: refused.object, ms: 0, durationMs: REFUSED_FLASH_MS };
           hooks.onBlocked?.(from, to, direction);
         },
       }
