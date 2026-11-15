@@ -738,6 +738,36 @@
       return reflection.fromShip ? shipCell : reflection.from;
     }
 
+    // The Push Blocks the reflections will shove as the ship's step begins: each shoves what's in the way of the step its
+    // pane shows it taking, so the block glides along with the ship rather than jumping once the step is over - see
+    // stepReflections, and board.js's onStepStart. Returns what the shoving did, for the caller.
+    function pushForReflections(moverDirection){
+      let direction = PUZZLE_DIRECTIONS[moverDirection];
+      let events = null;
+      for (const reflection of syncReflections()) {
+        let mirrored = mirroredDirection(reflection.pane, direction);
+        let target = nextCell(reflection, mirrored);
+        if (objectAt(target)?.kind !== 'PushBlock') continue;
+        events = mergeEvent(events, pushFrom(reflection, target, MOVER_DIRECTIONS[mirrored]));
+      }
+      return events;
+    }
+
+    // The Push Block that stopped the ship stepping this way by being in the way on the reflection's side - the one a
+    // reflection would have had to shove and couldn't. Mirrored back across its pane that block is on the square the ship
+    // was trying to walk into, which is where the callers flash it - see board.js's blockFlash.
+    function reflectionBlockInTheWay(from, to, moverDirection){
+      if (!isAt(from, shipCell)) return null;
+      let direction = PUZZLE_DIRECTIONS[moverDirection];
+      for (const reflection of syncReflections()) {
+        let mirrored = mirroredDirection(reflection.pane, direction);
+        let object = objectAt(nextCell(reflection, mirrored));
+        if (object?.kind !== 'PushBlock' || pushedTo(object, mirrored)) continue;
+        return object;
+      }
+      return null;
+    }
+
     // Every reflection has to be exactly where its pane shows what it reflects. One that isn't - because the ship walked
     // out of the pane's line, or a shove didn't go as far as it did - is gone, and so is anything reflected from it.
     function settleReflections(){
@@ -1039,6 +1069,8 @@
       // For sokoban.js's onStepStart: the ship stepping into a Push Block pushes it on ahead, gliding along with
       // the ship - see renderBoard's pushAlong. Returns { sank } if that brought matching blocks together.
       pushFrom,
+      pushForReflections,
+      reflectionBlockInTheWay,
 
       // Once a push has finished gliding, the block is simply where it is.
       settlePushes(){

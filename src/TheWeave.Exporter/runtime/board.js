@@ -21,6 +21,8 @@
   const TILE_PX = WeavePuzzle.TILE_PX;
   // How long one cycle of each animation takes, as puzzle.js's renderBoard has them, for telling when a frame would
   // look any different from the last - see frame.
+  // How long the reflection side's blocking block flashes on the ship's side of the pane, once a step is refused for it.
+  const BLOCK_FLASH_MS = 520;
   const STREAM_CYCLE_MS = 900;
   const ROTATOR_CYCLE_MS = 1000;
   const FINISH_ARROW_CYCLE_MS = 1200;
@@ -57,6 +59,10 @@
       pipeTurnMs: null,
       returnMs: null,
       slideMs: null, // how long ago Slide Bugs last slid, for their glide
+      // { col, row, block, ms } while a step is being refused because of a Push Block on the reflection's side: the block
+      // is drawn on the square the ship tried to walk into, so it's plain the space is taken over there - see the
+      // renderers and puzzleRules.js's reflectionBlockInTheWay.
+      blockFlash: null,
       hopMs: null, // how long ago Archetons with a Move Sequence last hopped
       sinking: [],
       pulses: [],
@@ -127,9 +133,19 @@
           onEvent(game.shipArrivedAt(arrived));
           carry();
         } : undefined,
-        // Walking into a Push Block pushes it on ahead, as the step begins.
-        onStepStart: game ? (from, to, direction) => onEvent(game.pushFrom(from, to, direction)) : undefined,
-        onBlocked: (blockedCell, direction) => hooks.onBlocked?.(blockedCell, direction),
+        // Walking into a Push Block pushes it on ahead, as the step begins - and so does a reflection, so that its block
+        // glides along with the ship rather than jumping once the step is over.
+        onStepStart: game ? (from, to, direction) => {
+          onEvent(game.pushFrom(from, to, direction));
+          onEvent(game.pushForReflections(direction));
+        } : undefined,
+        onBlocked: (blockedCell, direction) => {
+          // A step refused because a reflection couldn't follow leaves the block that stopped it flashing on the ship's
+          // side of the pane, on the square it tried to walk into.
+          let block = game ? game.reflectionBlockInTheWay(play.mover.cell, blockedCell, direction) : null;
+          if (block) play.blockFlash = { col: blockedCell.col, row: blockedCell.row, block, ms: 0, durationMs: BLOCK_FLASH_MS };
+          hooks.onBlocked?.(blockedCell, direction);
+        },
       }
     );
 
@@ -144,6 +160,10 @@
       if (play.returnMs !== null) play.returnMs += dtMs;
       if (play.slideMs !== null) play.slideMs += dtMs;
       if (play.hopMs !== null) play.hopMs += dtMs;
+      if (play.blockFlash) {
+        play.blockFlash.ms += dtMs;
+        if (play.blockFlash.ms >= play.blockFlash.durationMs) play.blockFlash = null;
+      }
     };
 
     // The board being played: the ship moving, and everything that moves by itself. Nothing else moves while the
