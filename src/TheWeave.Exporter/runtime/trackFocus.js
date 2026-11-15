@@ -85,6 +85,7 @@ function renderTrackFocus(){
       }
       board.appendChild(boardContrails.canvas);
       board.appendChild(buildBoardShip());
+      board.appendChild(buildBoardReflection());
     }
     slide.appendChild(board);
     if (lockedBy) frame.appendChild(buildArtLabel('Locked'));
@@ -633,6 +634,7 @@ function leaveBoardGame(){
   runFocusTransition(() => flipFocus(() => {
     boardMover = null;
     boardShipEl = null;
+    boardReflectionEl = null;
     boardContrails = null;
     boardGame = null;
     boardPlay = null;
@@ -650,6 +652,18 @@ function buildBoardShip(){
   boardShipEl.className = 'trackFocusBoardShip';
   boardShipEl.src = 'img/ui/pilot-ship.png';
   return boardShipEl;
+}
+
+// A Reflect Mimic's reflection of the ship: the same picture, tinted and see-through by main.css - see
+// renderBoardReflections. One element, moved to wherever the first pane mirrors the ship: a board with several
+// reflections shows the first, since they're all the same ship.
+function buildBoardReflection(){
+  boardReflectionEl = document.createElement('img');
+  boardReflectionEl.id = 'trackFocusBoardReflection';
+  boardReflectionEl.className = 'trackFocusBoardShip boardReflection';
+  boardReflectionEl.src = 'img/ui/pilot-ship.png';
+  boardReflectionEl.style.display = 'none';
+  return boardReflectionEl;
 }
 
 // How much bigger the ship looks at the top of a Jump Tile's leap - see board.js.
@@ -748,4 +762,23 @@ function renderBoardShip(){
   // Sprite's forward points "up" at rest, same as the map ship - see renderShip.
   boardShipEl.style.transform = "rotate(" + (FACING_ANGLES[boardMover.facing] + Math.PI / 2 + spin) + "rad) scale(" + leap + ")";
   boardShipEl.style.opacity = opacity;
+  renderBoardReflections();
+}
+
+// Where a Reflect Mimic shows the ship's reflection, from puzzleRules.js's reflections and reflectionPosition: moved to
+// wherever the first pane mirrors where the ship is being drawn, so it glides with it. Hidden when there are none.
+function renderBoardReflections(){
+  if (!boardReflectionEl) return;
+  let first = boardPlay?.game?.reflections?.[0] ?? null;
+  boardReflectionEl.style.display = first ? "" : "none";
+  if (!first) return;
+  let mirrored = WeavePuzzle.reflectionPosition(first, boardPlay.shipPosition(), BOARD_TILE_PX);
+  let width = Math.round(BOARD_SHIP_WIDTH * trackFocusScale);
+  let height = Math.round(BOARD_SHIP_HEIGHT * trackFocusScale);
+  boardReflectionEl.style.width = width + "px";
+  boardReflectionEl.style.height = height + "px";
+  boardReflectionEl.style.left = (mirrored.x * trackFocusScale - width / 2) + "px";
+  boardReflectionEl.style.top = (mirrored.y * trackFocusScale - height / 2) + "px";
+  // Facing the way the ship faces, as a reflection of it would: its picture points up at rest, as the ship's does.
+  boardReflectionEl.style.transform = "rotate(" + (FACING_ANGLES[boardMover.facing] + Math.PI / 2) + "rad)";
 }

@@ -516,6 +516,63 @@
       return !!archetonDefinitions.get(object.archeton)?.parts?.some(part => part.kind === kind);
     }
 
+    // ---------- Reflect Mimics ----------
+
+    // Where an Archeton with a Reflect part mirrors a point to, or null if the point isn't in its line: a pane turned
+    // Left or Right stands upright, mirroring columns across its own, and one turned Up or Down lies flat, mirroring
+    // rows. The mirror is the middle of its square, so a point as far one side lands as far the other.
+    function reflectedBy(archeton, cell){
+      let upright = archeton.direction !== 'Up' && archeton.direction !== 'Down';
+      if (upright) return cell.row === archeton.row ? { col: archeton.col * 2 - cell.col, row: archeton.row } : null;
+      return cell.col === archeton.col ? { col: archeton.col, row: archeton.row * 2 - cell.row } : null;
+    }
+
+    // Whether nothing at all stands on the squares between two in the same row or column, the two of them aside: a
+    // Wall between the ship and a pane hides it, as it would hide the ship from a Beam.
+    function clearBetween(from, to){
+      let dc = Math.sign(to.col - from.col), dr = Math.sign(to.row - from.row);
+      for (let cell = { col: from.col + dc, row: from.row + dr }; !isAt(cell, to); cell = { col: cell.col + dc, row: cell.row + dr }) {
+        if (!onBoard(cell) || objectAt(cell)) return false;
+      }
+      return true;
+    }
+
+    // Whether the ship's reflection can be on a square: anywhere the ship could stand, and anywhere it would be hurt - a
+    // closed Gate, or a Stinging Archeton - so that the ship is sent back for it. A Wall, a Push Block or another
+    // Archeton is somewhere an image can't be. Everything else it lands on, it acts on, as the ship would: a Switch, a
+    // Key, the Finish.
+    function canHoldReflection(cell){
+      let object = objectAt(cell);
+      if (!object) return true;
+      if (object.kind === 'Gate') return true;
+      if (object.kind === 'PushBlock') return false;
+      if (object.kind === 'Archeton') return hasPart(object, 'Sting');
+      return !isSolid(object);
+    }
+
+    // Where the ship's reflection shows: across every Reflect pane whose line it's in, then across any pane those images
+    // are in themselves, for as long as they keep landing on the board - so two panes facing each other bounce a
+    // reflection between them. Worked out from the ship's own square, which is what makes it move with it. Each is
+    // { col, row }, plus the pane that made it and what it came from, which is what lets the drawing follow the ship's
+    // glide rather than jump between squares - see reflectionPosition.
+    function reflectionCells(from){
+      let found = new Map();
+      let queue = [from];
+      while (queue.length > 0) {
+        let cell = queue.shift();
+        for (const archeton of objects) {
+          if (archeton.kind !== 'Archeton' || !hasPart(archeton, 'Reflect')) continue;
+          let image = reflectedBy(archeton, cell);
+          if (!image || !onBoard(image) || !clearBetween(cell, archeton)) continue;
+          if (isAt(image, from) || found.has(cellKey(image)) || !canHoldReflection(image)) continue;
+          let reflection = { ...image, pane: { col: archeton.col, row: archeton.row, direction: archeton.direction }, from: cell };
+          found.set(cellKey(image), reflection);
+          queue.push(reflection);
+        }
+      }
+      return [...found.values()];
+    }
+
     // The way from one square to another, along whichever of across and down it goes further.
     function wayFrom(from, to){
       let dc = to.col - from.col, dr = to.row - from.row;
@@ -732,6 +789,8 @@
       get onRotatorSwitch(){ return objectAt(shipCell)?.kind === 'RotatorSwitch'; },
       // Whether the ship is on a Pipe Switch, which turns the Pipes again each second it stays there.
       get onPipeSwitch(){ return objectAt(shipCell)?.kind === 'PipeSwitch'; },
+      // Where the ship's reflection shows right now, one per Reflect pane it's in the line of - see reflectionCells.
+      get reflections(){ return reflectionCells(shipCell); },
       turnPipes,
       floors,
 
@@ -812,6 +871,23 @@
     };
   }
 
+  // ---------- reflections ----------
+
+  // Where a reflection is drawn: its pane's mirror of where the thing it reflects is being drawn - the ship, or another
+  // reflection, all the way back through the chain - so the whole chain glides with the ship rather than jumping between
+  // squares. Tile size in art pixels; the ship's position is where board.js's shipPosition has it.
+  function reflectionPosition(reflection, ship, tilePx, drawn = new Map()){
+    if (drawn.has(reflection)) return drawn.get(reflection);
+    let source = reflection.from?.pane ? reflectionPosition(reflection.from, ship, tilePx, drawn) : ship;
+    let { col, row, direction } = reflection.pane;
+    let upright = direction !== 'Up' && direction !== 'Down';
+    let position = upright
+      ? { x: (2 * col + 1) * tilePx - source.x, y: source.y }
+      : { x: source.x, y: (2 * row + 1) * tilePx - source.y };
+    drawn.set(reflection, position);
+    return position;
+  }
+
   // ---------- timing ----------
 
   // How long things take on a board, shared by the game (main.js) and the Puzzle Editor's playtest, so that a puzzle
@@ -871,5 +947,5 @@
     return [...after.filter(object => !sweeps(object)), ...leaving, ...arriving].filter(object => (object.fade ?? 1) > 0);
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, isFloor };
+  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, isFloor, reflectionPosition };
 });

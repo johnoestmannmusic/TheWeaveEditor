@@ -1686,3 +1686,68 @@ test('a Reflect Mimic is solid to the ship, but a Beam is photonic and passes th
   assert.equal(g.carryDirection(at(3, 5)), 'right', 'and pushes it, as it would with nothing in between');
   assert.equal(g.canEnter(at(3, 5), at(2, 5), 'left'), false, 'the ship still cannot walk through the glass');
 });
+
+test('a Reflect Mimic mirrors the ship as far the other side of itself', () => {
+  let g = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5));
+  assert.deepEqual(cells(g), [at(8, 5)], 'equally far the other side, in its own row');
+
+  g.placeShip(at(4, 6));
+  assert.deepEqual(cells(g), [], 'not in its row, so nothing');
+
+  g.placeShip(at(6, 5));
+  assert.deepEqual(cells(g), [at(4, 5)], 'either side of it');
+});
+
+test('a Reflect Mimic facing up or down lies flat, and mirrors rows', () => {
+  let g = withArchetons([REFLECT_MIMIC], mimic(5, 5, 'Up'), obj('Start', 5, 2));
+  assert.deepEqual(cells(g), [at(5, 8)]);
+
+  g.placeShip(at(6, 4));
+  assert.deepEqual(cells(g), [], 'not in its column, so nothing');
+});
+
+test('no reflection is produced off the board, or through anything solid', () => {
+  let off = withArchetons([REFLECT_MIMIC], mimic(0, 5), obj('Start', 9, 5));
+  assert.deepEqual(cells(off), [], 'its reflection would be off the board');
+
+  for (const between of [wall(3, 5), block(3, 5), obj('Gate', 3, 5, { letter: 'A' })]) {
+    let g = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), between);
+    assert.deepEqual(cells(g), [], `a ${between.kind} between them hides the ship`);
+  }
+
+  let into = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), wall(8, 5));
+  assert.deepEqual(cells(into), [], 'nowhere to stand on the far side');
+});
+
+test('a reflection is shown where it would be hurt, and where it can act', () => {
+  const STINGER = { id: 'stinger', name: 'Stinger', parts: [{ kind: 'Sting' }] };
+
+  let bug = withArchetons([REFLECT_MIMIC, STINGER], mimic(5, 5), obj('Start', 2, 5), obj('Archeton', 8, 5, { archeton: 'stinger', direction: 'Right' }));
+  assert.deepEqual(cells(bug), [at(8, 5)], 'a Sting is somewhere it is hurt, not somewhere it cannot be');
+
+  let closed = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Gate', 8, 5, { letter: 'A' }));
+  assert.deepEqual(cells(closed), [at(8, 5)], 'so is a closed Gate');
+
+  let finishing = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Finish', 8, 5));
+  assert.deepEqual(cells(finishing), [at(8, 5)], 'a Finish is somewhere it can be, and finish the board from');
+
+  let keys = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Key', 8, 5, { letter: 'A' }));
+  assert.deepEqual(cells(keys), [at(8, 5)], 'and a Key is there for it to take');
+});
+
+test('each reflection knows the pane that made it and what it came from, for drawing the glide', () => {
+  let g = withArchetons([REFLECT_MIMIC], mimic(3, 5), mimic(7, 5), obj('Start', 1, 5));
+  let [first, second] = g.reflections;
+  const at3 = (pane) => at(pane.col, pane.row);
+  assert.deepEqual(at3(first.pane), at(3, 5), 'the near pane made the first');
+  assert.equal(first.pane.direction, 'Right', 'and upright, so it mirrors columns');
+  assert.deepEqual(first.from, at(1, 5), 'from the ship');
+  assert.deepEqual(at3(second.pane), at(7, 5), 'the far pane made the second');
+  assert.deepEqual(at(second.from.col, second.from.row), at(5, 5), 'from the first reflection, not the ship');
+  assert.deepEqual(at3(second.from.pane), at(3, 5), 'which is how the drawing knows where to mirror from');
+});
+
+test('panes facing each other bounce a reflection between them, as far as the board allows', () => {
+  let g = withArchetons([REFLECT_MIMIC], mimic(3, 5), mimic(7, 5), obj('Start', 1, 5));
+  assert.deepEqual(cells(g).map(cell => cell.col).sort((a, b) => a - b), [5, 9], '1 across 3 is 5, 5 across 7 is 9');
+});

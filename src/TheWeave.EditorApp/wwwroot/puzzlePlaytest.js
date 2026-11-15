@@ -57,7 +57,23 @@ function buildPlaytest() {
   return { objects, play, lastMs: null, drawnKey: null };
 }
 
-// The board as it's being played, then the ship, only drawn again when either would look any different.
+// A lighter, slightly orange copy of the ship, for a Reflect Mimic's reflection: the ship's own picture with an orange
+// wash over it, drawn at 40% opacity. Made once, when first asked for, and kept.
+function reflectionSprite() {
+  if (puzzleEditor.reflectionImage !== undefined || !puzzleEditor.shipImage) return puzzleEditor.reflectionImage;
+  const canvas = document.createElement('canvas');
+  canvas.width = PUZZLE_SHIP_WIDTH;
+  canvas.height = PUZZLE_SHIP_HEIGHT;
+  const context = canvas.getContext('2d');
+  context.imageSmoothingEnabled = false;
+  context.drawImage(puzzleEditor.shipImage, 0, 0, PUZZLE_SHIP_WIDTH, PUZZLE_SHIP_HEIGHT);
+  context.globalCompositeOperation = 'source-atop';
+  context.fillStyle = 'rgba(255, 170, 90, 0.65)';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  return puzzleEditor.reflectionImage = canvas;
+}
+
+// The board as it's being played, then the ship and its reflections, only drawn again when they'd look any different.
 function drawPlaytest(context, look, timeMs) {
   const playtest = puzzleEditor.playtest;
   const { play } = playtest;
@@ -68,7 +84,8 @@ function drawPlaytest(context, look, timeMs) {
 
   const { list, options, key } = play.frame(timeMs, { pushHints: play.finished ? [] : play.pushHints(timeMs) });
   const ship = play.shipPosition();
-  const drawnKey = `${key}|${Math.round(ship.x)},${Math.round(ship.y)},${play.mover.facing},${ship.spin.toFixed(2)},${ship.opacity.toFixed(2)}|${look === playtest.look}`;
+  const reflections = play.game.reflections;
+  const drawnKey = `${key}|${Math.round(ship.x)},${Math.round(ship.y)},${play.mover.facing},${ship.spin.toFixed(2)},${ship.opacity.toFixed(2)}|${reflections.map((cell) => cell.col + ',' + cell.row).join(';')}|${look === playtest.look}`;
   if (drawnKey === playtest.drawnKey) return;
   playtest.drawnKey = drawnKey;
   playtest.look = look;
@@ -86,6 +103,21 @@ function drawPlaytest(context, look, timeMs) {
   context.globalAlpha = ship.opacity;
   context.drawImage(puzzleEditor.shipImage, -PUZZLE_SHIP_WIDTH / 2, -PUZZLE_SHIP_HEIGHT / 2, PUZZLE_SHIP_WIDTH, PUZZLE_SHIP_HEIGHT);
   context.restore();
+
+  // What any Reflect Mimic shows of the ship: the same picture, tinted and see-through, drawn where its pane mirrors
+  // where the ship is being drawn - so it glides with it rather than jumping between squares.
+  const reflection = reflectionSprite();
+  if (!reflection) return;
+  for (const cell of reflections) {
+    const mirrored = WeavePuzzle.reflectionPosition(cell, ship, PUZZLE_TILE_PX);
+    context.save();
+    context.imageSmoothingEnabled = false;
+    context.translate(Math.round(mirrored.x), Math.round(mirrored.y));
+    context.rotate(PLAYTEST_SHIP_TURNS[play.mover.facing] ?? 0);
+    context.globalAlpha = 0.4;
+    context.drawImage(reflection, -PUZZLE_SHIP_WIDTH / 2, -PUZZLE_SHIP_HEIGHT / 2, PUZZLE_SHIP_WIDTH, PUZZLE_SHIP_HEIGHT);
+    context.restore();
+  }
 }
 
 document.getElementById('pe-playtest').addEventListener('click', () => {

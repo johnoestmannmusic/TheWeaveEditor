@@ -671,6 +671,13 @@ h3 {
   transform-origin: center center;
 }
 
+/* A Reflect Mimic's reflection of the ship: the same picture, lighter and slightly orange, 40% see-through - see
+   trackFocus.js's renderBoardReflections. */
+.boardReflection {
+  filter: brightness(1.6) sepia(0.7) saturate(2.2) hue-rotate(-15deg);
+  opacity: 0.4;
+}
+
 /* Everything in here flows normally - see the top of this file on the site-wide position:absolute
    default this has to opt back out of, including for inline elements inside poetry lines. */
 #trackFocusText, #trackFocusText * {
