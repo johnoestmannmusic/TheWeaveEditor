@@ -107,3 +107,38 @@ test('a Teleporter sends the ship across to the other, spinning and fading as it
   assert.deepEqual([play.shipPosition().opacity, play.shipPosition().spin], [1, 0]);
   assert.deepEqual(events, ['off', 'there']);
 });
+
+test('a step refused by the reflection\'s side flashes what stopped it, on the square the ship tried', () => {
+  const REFLECT = { id: 'reflect-mimic', name: 'Reflect Mimic', parts: [{ kind: 'Reflect' }] };
+  // The pane at 5,5 shows the ship at 2,5 as being at 8,5, with a Wall at 9,5 for it to walk into.
+  let play = createBoardPlay({
+    puzzle: {
+      objects: [obj('Archeton', 5, 5, { archeton: 'reflect-mimic', direction: 'Right' }), obj('Start', 2, 5), obj('Wall', 9, 5)],
+      archetons: [REFLECT],
+    },
+  });
+  play.mover.press('left');
+  play.mover.release('left');
+  run(play, 40);
+  assert.deepEqual(play.mover.cell, at(2, 5), 'the ship stays where it is');
+  assert.ok(play.refusedFlash, 'and what stopped it flashes');
+  assert.deepEqual([play.refusedFlash.col, play.refusedFlash.row], [1, 5], 'on the square it tried to walk into');
+  assert.equal(play.refusedFlash.object?.kind, 'Wall');
+  run(play, 700);
+  assert.equal(play.refusedFlash, null, 'then fades');
+});
+
+test('a step nothing refuses shows nothing', () => {
+  const REFLECT = { id: 'reflect-mimic', name: 'Reflect Mimic', parts: [{ kind: 'Reflect' }] };
+  let play = createBoardPlay({
+    puzzle: {
+      objects: [obj('Archeton', 5, 5, { archeton: 'reflect-mimic', direction: 'Right' }), obj('Start', 2, 5)],
+      archetons: [REFLECT],
+    },
+  });
+  play.mover.press('left');
+  play.mover.release('left');
+  run(play, 40);
+  assert.deepEqual(play.mover.cell, at(1, 5), 'the ship walks on');
+  assert.equal(play.refusedFlash, null);
+});

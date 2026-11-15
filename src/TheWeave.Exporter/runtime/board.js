@@ -38,7 +38,7 @@
   // (or on a fresh one), and facing which way it faces, if not inwards. hooks are told what's happened, for the
   // caller to act on: onEvent(event) after the board itself has, onJump(from, to) and onLanded(cell) around a jump,
   // onTeleport(from, to) and onTeleported(cell) around a teleport,
-  // and onBlocked(cell, direction) as sokoban.js's mover has it.
+  // and onBlocked(from, to, direction) as sokoban.js's mover has it.
   function createBoardPlay({ puzzle, game = null, cell = null, facing = null, hooks = {} }){
     game ??= puzzle ? WeavePuzzle.createPuzzleGame(puzzle) : null;
     let startCell = cell ?? (game ? game.start : WeavePuzzle.DEFAULT_START);
@@ -139,12 +139,12 @@
           onEvent(game.pushFrom(from, to, direction));
           onEvent(game.pushForReflections(direction));
         } : undefined,
-        onBlocked: (blockedCell, direction) => {
+        onBlocked: (from, to, direction) => {
           // A step refused because a reflection couldn't follow leaves whatever stopped it flashing on the ship's side of
           // the pane, on the square it tried to walk into.
-          let refused = game ? game.reflectionObstacleInTheWay(play.mover.cell, blockedCell, direction) : null;
-          if (refused) play.refusedFlash = { col: blockedCell.col, row: blockedCell.row, object: refused.object, ms: 0, durationMs: REFUSED_FLASH_MS };
-          hooks.onBlocked?.(blockedCell, direction);
+          let refused = game && to ? game.reflectionObstacleInTheWay(from, to, direction) : null;
+          if (refused) play.refusedFlash = { col: to.col, row: to.row, object: refused.object, ms: 0, durationMs: REFUSED_FLASH_MS };
+          hooks.onBlocked?.(from, to, direction);
         },
       }
     );

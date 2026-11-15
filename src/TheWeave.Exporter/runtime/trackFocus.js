@@ -519,8 +519,9 @@ function finishBoardLevel(){
 // Pushing off the edge of a board, between connected boards: from a part's Start back across to the part
 // before, onto its Finish, or from a solved Finish across to the next part again. So the ship can always cross
 // back and forth, whatever has moved around on either board since.
-function onBoardBlocked(cell, direction){
-  if (!boardGame || boardSolvedMs !== null || boardScroll) return;
+function onBoardBlocked(cell, to, direction){
+  // Only a step off the edge of the board crosses to another one; anything in the way on it isn't that.
+  if (to || !boardGame || boardSolvedMs !== null || boardScroll) return;
   let pushed = PUZZLE_DIRECTIONS[direction];
   let isAt = (object) => object && object.col === cell.col && object.row === cell.row;
   let here = nodeMeta.get(activeNode).puzzle;
