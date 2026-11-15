@@ -492,6 +492,43 @@
       }
     }
 
+    // A Gate Switch's Beams, in flight: { from, gates, letter, ms }. A press aims one at every Gate with its letter and
+    // they all change together when it lands, so a Gate is never left out of step with the others that share its
+    // letter - see trigger. A Reset Switch takes them with it, so nothing is left in flight aimed at Gates that are
+    // back as they started.
+    let gateBeams = [];
+
+    // Steps the Gate Beams on by ms, and changes the Gates of any that have reached them - which is when a Switch's
+    // press finally takes effect. Each one that lands says so, for the caller to flash its Gates with - see board.js's
+    // gateBeams and renderBoard's. Returns the events, which may carry { returned } and { sank } as the press used to.
+    function advanceGateBeams(ms){
+      for (const beam of gateBeams) beam.ms += ms;
+      let landed = gateBeams.filter(beam => beam.ms >= BOARD_TIMING.gateBeamTravelMs);
+      gateBeams = gateBeams.filter(beam => beam.ms < BOARD_TIMING.gateBeamTravelMs);
+      return landed.map(landGateBeam).filter(Boolean);
+    }
+
+    // A Beam reaching the Gates it was aimed at: they change, and whatever was caught in one that closed passes back
+    // out of it. A Reset Switch since the press may have put the board back, so a Gate that's no longer on it is left
+    // alone rather than flipped in a copy nobody draws.
+    function landGateBeam(beam){
+      settle('return');
+      let gates = beam.gates.filter(gate => objects.includes(gate));
+      if (gates.length === 0) return null;
+      for (const gate of gates) gate.open = !gate.open;
+      let returned = [];
+      for (const gate of gates.filter(gate => !gate.open)) {
+        for (const caught of objects.filter(other => other.kind !== 'Gate' && isAt(other, gate))) {
+          if (passBack(caught)) returned.push(caught);
+        }
+      }
+      let landed = { gateLanded: { from: beam.from, gates: gates.map(gate => ({ col: gate.col, row: gate.row, open: gate.open })) } };
+      if (returned.length === 0) return landed;
+      revealLitAreas();
+      let sank = sinkMatches();
+      return sank ? { ...landed, returned, sank } : { ...landed, returned };
+    }
+
     // What standing on a square does to the board, and where that leaves the ship: null, or
     // { teleportTo }, { jumpTo }, { finished }, { reset } (with the objects as they were), { pipesTurned } or { lit,
     // revealed } for the caller to act on. jumped says the ship landed here from a
@@ -502,22 +539,17 @@
       switch (object.kind) {
         // A Gate that closes on anything sitting in it - a Push Block, a Slide Bug - passes it back the way it came: to
         // the last square it was on that's clear, past any that now have a closed Gate in them too. With nowhere clear
-        // behind it, it stays, and the square stays solid either way. All the Switch's Gates change before any of it.
+        // behind it, it stays, and the square stays solid either way. All the Switch's Gates change before any of it,
+        // once the Beam it sent out has reached them - see advanceGateBeams.
         case 'Switch': {
           if (!switchesActive()) return null;
-          settle('return');
           let gates = objects.filter(gate => gate.kind === 'Gate' && gate.letter === object.letter);
-          for (const gate of gates) gate.open = !gate.open;
-          let returned = [];
-          for (const gate of gates.filter(gate => !gate.open)) {
-            for (const caught of objects.filter(other => other.kind !== 'Gate' && isAt(other, gate))) {
-              if (passBack(caught)) returned.push(caught);
-            }
-          }
-          if (returned.length === 0) return null;
-          revealLitAreas();
-          let sank = sinkMatches();
-          return sank ? { returned, sank } : { returned };
+          if (gates.length === 0) return null;
+          // Its Gates don't change on the press: a Beam shoots out to each of them and they change when it lands, so
+          // that the board shows what the Switch is wired to - see advanceGateBeams. All of them change together, so a
+          // Gate is never left out of step with the others that share its letter.
+          gateBeams.push({ from: { col: object.col, row: object.row }, gates, letter: object.letter, ms: 0 });
+          return { gateBeam: { from: { col: object.col, row: object.row }, to: gates.map(gate => ({ col: gate.col, row: gate.row })) } };
         }
 
         // Lighting one says where, and what it brought into view, for its pulse to reveal as it spreads - see
@@ -534,6 +566,7 @@
         // back, Gates close or open again, Lanterns go out, and what they revealed is hidden again.
         case 'ResetSwitch': {
           let before = objects;
+          gateBeams = [];
           objects = startingObjects();
           for (const floor of floors) floor.revealed = false;
           for (const pipe of pipes.values()) pipe.direction = pipe.startDirection;
@@ -1221,6 +1254,11 @@
       // shipPosition, and puzzleDrawing.js's renderBoard for a Push Block's.
       dropsOffEdge,
 
+      // Steps a Gate Switch's Beams on, changing its Gates as they land - see trigger and landGateBeam.
+      advanceGateBeams,
+      // The Beams in flight, for a caller that keeps its own clock: each says where it came from and when it left.
+      get gateBeams(){ return gateBeams.map(beam => ({ from: beam.from, letter: beam.letter, ms: beam.ms, gates: beam.gates.map(gate => ({ col: gate.col, row: gate.row })) })); },
+
       // Which way a Stream is carrying a ship on this square, as sokoban.js's direction, or null.
       // A Stream comes first, and otherwise an Archeton's Beam pushing it away, or a Block's laser sending it back
       // out of its reach, as long as it can go - see pushedByBeam and hurtBack. Either way the caller moves the
@@ -1284,6 +1322,9 @@
     jumpMsPerSquare: 175,
     sinkMs: 500,
     pulseMs: 700,
+    gateBeamTravelMs: 150,
+    gateBeamMs: 1000,
+    gateFlashMs: 400,
   };
 
   // ---------- resetting ----------
