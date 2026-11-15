@@ -857,6 +857,8 @@
       blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX), top + sunk, object.sink ? top + TILE_PX : Infinity, opacity, grow);
     }
 
+    // A Gate Switch's Beams, over the board and under everything else drawn on top of it.
+    for (const beam of options.gateBeams ?? []) drawGateBeam(image, beam, options.originY ?? 0);
     for (const hint of options.pushHints ?? (options.pushHint ? [options.pushHint] : [])) drawPushHint(image, hint, look, options.originY ?? 0);
     for (const pulse of options.pulses ?? []) drawPulse(image, pulse, look, options.originY ?? 0);
     for (const cell of options.reaches ?? []) drawReach(image, cell, look, options.originY ?? 0);
@@ -905,6 +907,80 @@
     }
   }
 
+
+  // A Gate Switch's Beam: a yellow line shooting out from the Switch to each Gate it works, as far as it's got, and the
+  // yellow wash it leaves on the Switch as it fires and on each Gate as it reaches it - which is when that Gate opens or
+  // closes, see puzzleRules.js's advanceGateBeams. Yellow rather than a palette colour: it's the board saying what's
+  // wired to what, so it should read the same whatever the album art is.
+  const GATE_BEAM_YELLOW = { r: 255, g: 226, b: 64 };
+
+  // How much of the yellow a flash lays over a Switch or a Gate at its brightest: enough to read at a glance, not so much
+  // that what's flashing - a Gate's letter, say - is painted out.
+  const GATE_FLASH_MAX = 0.7;
+
+  function drawGateBeam(image, beam, originY){
+    let { data, width, height } = image;
+    // Lit up over whatever's there, including bare ground the line crosses: the Beam is in the air, above the board.
+    let light = (x, y, opacity) => {
+      let px = Math.round(x), py = Math.round(y);
+      if (opacity <= 0 || px < 0 || px >= width || py < 0 || py >= height) return;
+      let i = (py * width + px) * 4;
+      let under = data[i + 3] / 255 * (1 - opacity);
+      let total = opacity + under;
+      data[i] = (GATE_BEAM_YELLOW.r * opacity + data[i] * under) / total;
+      data[i + 1] = (GATE_BEAM_YELLOW.g * opacity + data[i + 1] * under) / total;
+      data[i + 2] = (GATE_BEAM_YELLOW.b * opacity + data[i + 2] * under) / total;
+      data[i + 3] = total * 255;
+    };
+    // Flashed, but only where something's drawn: an empty square doesn't light up, the thing on it does.
+    let wash = (x, y, opacity) => {
+      let px = Math.round(x), py = Math.round(y);
+      if (opacity <= 0 || px < 0 || px >= width || py < 0 || py >= height) return;
+      let i = (py * width + px) * 4;
+      if (data[i + 3] === 0) return;
+      data[i] = data[i] * (1 - opacity) + GATE_BEAM_YELLOW.r * opacity;
+      data[i + 1] = data[i + 1] * (1 - opacity) + GATE_BEAM_YELLOW.g * opacity;
+      data[i + 2] = data[i + 2] * (1 - opacity) + GATE_BEAM_YELLOW.b * opacity;
+    };
+
+    let centre = (cell) => ({ x: (cell.col + 0.5) * TILE_PX, y: (cell.row + 0.5) * TILE_PX + originY });
+    let from = centre(beam.from);
+
+    for (const gate of beam.to) {
+      let to = centre(gate);
+      let dx = to.x - from.x, dy = to.y - from.y;
+      let length = Math.hypot(dx, dy) || 1;
+      let reached = length * Math.min(1, beam.progress);
+      for (let step = 0; step <= reached; step++) {
+        let t = step / length;
+        // A crackle: the line wanders a pixel either side of true, and moves as it goes.
+        let wander = (step * 7 + Math.floor(beam.ms / 45) * 5) % 3 - 1;
+        let x = from.x + dx * t - dy / length * wander;
+        let y = from.y + dy * t + dx / length * wander;
+        light(x, y, beam.opacity);
+        light(x - 1, y, beam.opacity * 0.3);
+        light(x + 1, y, beam.opacity * 0.3);
+      }
+      // The head of it, brighter, until it lands.
+      if (beam.progress < 1) {
+        let head = { x: from.x + dx * beam.progress, y: from.y + dy * beam.progress };
+        for (let d = -1; d <= 1; d++) for (let e = -1; e <= 1; e++) light(head.x + d, head.y + e, beam.opacity);
+      }
+      // The Gate flashing as the Beam reaches it, over the whole of its square.
+      if (beam.gateFlash > 0) {
+        for (let y = gate.row * TILE_PX + originY; y < (gate.row + 1) * TILE_PX + originY; y++) {
+          for (let x = gate.col * TILE_PX; x < (gate.col + 1) * TILE_PX; x++) wash(x, y, beam.gateFlash * GATE_FLASH_MAX);
+        }
+      }
+    }
+
+    // And the Switch itself flashing as it fires.
+    if (beam.switchFlash > 0) {
+      for (let y = beam.from.row * TILE_PX + originY; y < (beam.from.row + 1) * TILE_PX + originY; y++) {
+        for (let x = beam.from.col * TILE_PX; x < (beam.from.col + 1) * TILE_PX; x++) wash(x, y, beam.switchFlash * GATE_FLASH_MAX);
+      }
+    }
+  }
 
   // How high a hopping Archeton rises at the middle of its hop, in squares - see renderBoard.
   const HOP_RISE = 0.35;

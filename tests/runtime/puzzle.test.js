@@ -1,7 +1,7 @@
 // Run with: node --test tests/runtime/*.test.js
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { placeObject, eraseObject, suggestLetter, pickPalette } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+const { placeObject, eraseObject, suggestLetter, pickPalette, BOARD_TIMING } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
 
 const wall = (col, row) => ({ kind: 'Wall', col, row });
 const stream = (col, row, direction = 'Up') => ({ kind: 'Stream', col, row, direction });
@@ -120,6 +120,9 @@ const { createPuzzleGame, hasFinish } = require('../../src/TheWeave.Exporter/run
 
 const at = (col, row) => ({ col, row });
 const game = (...objects) => createPuzzleGame({ objects, palette: {} });
+// A Switch's Gates don't change on the press: the Beam it sends out reaches them first - see advanceGateBeams. Anything
+// stepping on a Switch and looking for its Gates to have changed lets it land first.
+const land = (g) => g.advanceGateBeams(BOARD_TIMING.gateBeamTravelMs);
 const obj = (kind, col, row, extra = {}) => ({ kind, col, row, ...extra });
 const find = (g, kind) => g.objects.find(o => o.kind === kind);
 
@@ -172,10 +175,46 @@ test('a Stream reports which way it carries, in the mover\'s terms', () => {
   assert.equal(g.carryDirection(at(4, 3)), null);
 });
 
+test('a Switch sends a Beam out, and its Gates change when it lands rather than on the press', () => {
+  let g = game(obj('Gate', 1, 0, { letter: 'A' }), obj('Gate', 2, 0, { letter: 'A' }), obj('Switch', 5, 5, { letter: 'A' }));
+
+  let event = g.shipArrivedAt(at(5, 5));
+  assert.deepEqual(event.gateBeam, { from: at(5, 5), to: [at(1, 0), at(2, 0)] }, 'aimed at every Gate with its letter');
+  assert.equal(g.canEnter(at(1, 1), at(1, 0), 'up'), false, 'and they are still as they were');
+
+  let [landed] = g.advanceGateBeams(BOARD_TIMING.gateBeamTravelMs);
+  assert.deepEqual(landed.gateLanded.gates, [{ col: 1, row: 0, open: true }, { col: 2, row: 0, open: true }], 'both of them, together');
+  assert.equal(g.canEnter(at(1, 1), at(1, 0), 'up'), true);
+  assert.equal(g.canEnter(at(2, 1), at(2, 0), 'up'), true);
+});
+
+test('a Beam in flight is reported while it flies, and a Switch with no Gates sends none', () => {
+  let g = game(obj('Gate', 1, 0, { letter: 'A' }), obj('Switch', 5, 5, { letter: 'A' }));
+  g.shipArrivedAt(at(5, 5));
+  assert.deepEqual(g.gateBeams.map(beam => beam.ms), [0]);
+  g.advanceGateBeams(BOARD_TIMING.gateBeamTravelMs / 2);
+  assert.deepEqual(g.gateBeams.map(beam => beam.ms), [BOARD_TIMING.gateBeamTravelMs / 2]);
+  assert.deepEqual(g.advanceGateBeams(BOARD_TIMING.gateBeamTravelMs), [{ gateLanded: { from: at(5, 5), gates: [{ col: 1, row: 0, open: true }] } }], 'landing as it arrives');
+  assert.deepEqual(g.gateBeams, [], 'and gone once it has');
+
+  assert.equal(game(obj('Switch', 5, 5, { letter: 'B' })).shipArrivedAt(at(5, 5)), null, 'nothing to aim at');
+});
+
+test('a Reset Switch takes any Beam still in flight with it', () => {
+  let g = game(obj('Gate', 1, 0, { letter: 'A' }), obj('Switch', 5, 5, { letter: 'A' }), obj('ResetSwitch', 7, 7));
+  g.shipArrivedAt(at(5, 5));
+  assert.equal(g.gateBeams.length, 1);
+  g.shipArrivedAt(at(7, 7));
+  assert.deepEqual(g.gateBeams, [], 'the board is back as it started, so nothing is still on its way to it');
+  assert.deepEqual(g.advanceGateBeams(BOARD_TIMING.gateBeamTravelMs), [], 'and nothing lands later');
+  assert.equal(find(g, 'Gate').open, false);
+});
+
 test('a Gate blocks until its own Switch opens it', () => {
   let g = game(obj('Gate', 1, 0, { letter: 'A' }), obj('Gate', 2, 0, { letter: 'B' }), obj('Switch', 5, 5, { letter: 'A' }));
   assert.equal(g.canEnter(at(1, 1), at(1, 0), 'up'), false);
   g.shipArrivedAt(at(5, 5));
+  land(g);
   assert.equal(g.canEnter(at(1, 1), at(1, 0), 'up'), true);
   assert.equal(g.canEnter(at(2, 1), at(2, 0), 'up'), false);
 });
@@ -183,8 +222,10 @@ test('a Gate blocks until its own Switch opens it', () => {
 test('stepping on a Switch again closes its Gates again', () => {
   let g = game(obj('Gate', 1, 0, { letter: 'A' }), obj('Switch', 5, 5, { letter: 'A' }));
   g.shipArrivedAt(at(5, 5));
+  land(g);
   assert.equal(find(g, 'Gate').open, true);
   g.shipArrivedAt(at(5, 5));
+  land(g);
   assert.equal(find(g, 'Gate').open, false);
 });
 
@@ -193,6 +234,7 @@ test('a Gate can start open, and a Switch flips each Gate from whatever state it
   assert.equal(g.canEnter(at(1, 1), at(1, 0), 'up'), true);
   assert.equal(g.canEnter(at(2, 1), at(2, 0), 'up'), false);
   g.shipArrivedAt(at(5, 5));
+  land(g);
   assert.equal(g.canEnter(at(1, 1), at(1, 0), 'up'), false);
   assert.equal(g.canEnter(at(2, 1), at(2, 0), 'up'), true);
 });
@@ -210,19 +252,25 @@ test('switchesActive is false until the last Key is collected, and true with no 
 test('a Switch works every Gate with its letter', () => {
   let g = game(obj('Gate', 1, 0, { letter: 'A' }), obj('Gate', 2, 0, { letter: 'A' }), obj('Switch', 5, 5, { letter: 'A' }));
   g.shipArrivedAt(at(5, 5));
+  land(g);
   assert.ok(g.objects.filter(o => o.kind === 'Gate').every(o => o.open));
 });
 
 test('Switches do nothing until every Key is collected, then need stepping on again', () => {
   let g = game(obj('Gate', 1, 0, { letter: 'A' }), obj('Switch', 5, 5, { letter: 'A' }), obj('Key', 6, 6), obj('Key', 7, 7));
   g.shipArrivedAt(at(5, 5));
+  land(g);
   assert.equal(find(g, 'Gate').open, false);
   g.shipArrivedAt(at(6, 6));
+  land(g);
   g.shipArrivedAt(at(5, 5));
+  land(g);
   assert.equal(find(g, 'Gate').open, false);
   g.shipArrivedAt(at(7, 7));
+  land(g);
   assert.equal(find(g, 'Gate').open, false);
   g.shipArrivedAt(at(5, 5));
+  land(g);
   assert.equal(find(g, 'Gate').open, true);
 });
 
@@ -344,7 +392,9 @@ test('a closed Gate on a Stream waits for the ship, and an open one doesn\'t', (
   g.tick(null);
   assert.equal(find(g, 'Gate').col, 1);
   g.shipArrivedAt(at(8, 8));
+  land(g);
   g.shipArrivedAt(at(2, 5));
+  land(g);
   g.tick(null);
   assert.equal(find(g, 'Gate').col, 2);
 });
@@ -362,6 +412,7 @@ test('something moving under a still ship counts as stepping on it', () => {
 
   let toggle = game(obj('Start', 2, 5), ...line(1, 2), obj('Switch', 1, 5, { letter: 'A' }), obj('Gate', 8, 8, { letter: 'A' }));
   toggle.tick(null);
+  land(toggle);
   assert.equal(find(toggle, 'Gate').open, true);
 });
 
@@ -374,6 +425,7 @@ test('something moving under a ship that\'s on its way elsewhere doesn\'t count'
 test('an object sitting still on a Stream under the ship doesn\'t fire again each tick', () => {
   let g = game(obj('Start', 5, 5), obj('Stream', 2, 5, { direction: 'Right' }), obj('Switch', 2, 5, { letter: 'A' }), obj('Gate', 8, 8, { letter: 'A' }));
   g.shipArrivedAt(at(2, 5));
+  land(g);
   assert.equal(find(g, 'Gate').open, true);
   g.tick(null);
   g.tick(null);
@@ -841,6 +893,7 @@ test('invisible things behave exactly the same', () => {
   assert.equal(g.canEnter(at(3, 3), at(3, 2), 'up'), false);
   assert.equal(g.canEnter(at(4, 0), at(5, 0), 'right'), false);
   g.shipArrivedAt(at(6, 6));
+  land(g);
   assert.equal(g.canEnter(at(4, 0), at(5, 0), 'right'), true);
   assert.equal(find(g, 'Gate').revealed, false);
 });
@@ -1184,6 +1237,7 @@ test('landing works like arriving: on a Switch it flips its Gates, on another Ju
   let g = game(jump(2, 5), obj('Switch', 4, 5, { letter: 'A' }), obj('Gate', 0, 0, { letter: 'A' }));
   let landing = g.shipArrivedAt(at(2, 5)).jumpTo;
   g.shipArrivedAt(landing, { jumped: true });
+  land(g);
   assert.equal(find(g, 'Gate').open, true);
   let chain = game(jump(1, 5), jump(3, 5));
   assert.deepEqual(chain.shipArrivedAt(at(1, 5)), { jumpTo: at(3, 5) });
@@ -1286,13 +1340,17 @@ test('a Reset Switch puts every object back as it started, and leaves the ship w
   g.pushFrom(at(1, 5), at(2, 5), 'right'); // the Stars meet and sink
   g.pushFrom(at(5, 2), at(6, 2), 'right'); // the Circle moves along
   g.shipArrivedAt(at(8, 8)); // the Key's collected
+  land(g);
   g.shipArrivedAt(at(7, 7)); // so the Switch opens Gate A
+  land(g);
   g.shipArrivedAt(at(3, 3)); // the Lantern reveals the Wall and Stream
+  land(g);
   assert.deepEqual(blocksIn(g), ['Circle@7,2']);
   assert.equal(g.objects.find(o => o.letter === 'A' && o.kind === 'Gate').open, true);
   assert.equal(find(g, 'Wall').revealed, true);
 
   let event = g.shipArrivedAt(at(9, 9));
+  land(g);
   assert.deepEqual(blocksIn(g), ['Circle@6,2', 'Star@2,5', 'Star@4,5']);
   assert.ok(find(g, 'Key'), 'the Key is back');
   assert.equal(g.switchesActive, false, 'so Switches wait for it again');
@@ -1490,7 +1548,8 @@ test('a Gate closing on a Push Block sends it back to the square it was pushed f
   let g = game(block(2, 5), obj('Gate', 3, 5, { letter: 'A', open: true }), obj('Switch', 3, 8, { letter: 'A' }));
   g.pushFrom(at(1, 5), at(2, 5), 'right');
   g.settlePushes();
-  let event = g.shipArrivedAt(at(3, 8));
+  g.shipArrivedAt(at(3, 8));
+  let [event] = land(g);
   assert.deepEqual(blocksIn(g), ['Circle@2,5'], 'back where it came from');
   assert.equal(event.returned.length, 1);
   assert.equal(find(g, 'PushBlock').glide, 'return');
@@ -1503,7 +1562,8 @@ test('a Gate closing on a Push Block sends it back to the square it was pushed f
   taken.settlePushes();
   taken.pushFrom(at(2, 3), at(2, 4), 'down'); // and on into (2, 5), where the Circle came from
   taken.settlePushes();
-  assert.equal(taken.shipArrivedAt(at(3, 8)), null);
+  taken.shipArrivedAt(at(3, 8));
+  assert.deepEqual(land(taken).filter(event => event.returned), [], 'nothing to send back');
   assert.deepEqual(blocksIn(taken), ['Circle@3,5', 'Star@2,5'], 'with its square taken, it stays in the closed Gate');
 });
 
@@ -1537,9 +1597,11 @@ test('anything solid stops a Slide Bug, and so does the board\'s edge, and it\'s
 test('a Slide Bug passes over a Switch, flipping its Gates, and lights a Lantern, and is what counts on that square', () => {
   let g = withArchetons([SLIDE_BUG], bug(1, 3), obj('Switch', 2, 3, { letter: 'A' }), obj('Gate', 0, 0, { letter: 'A' }), obj('Lantern', 3, 3), obj('Wall', 3, 6, { invisible: true }));
   g.shipArrivedAt(at(6, 8));
+  land(g);
   assert.equal(find(g, 'Gate').open, true, 'the Switch it slid onto');
   assert.equal(g.canEnter(at(2, 4), at(2, 3), 'up'), false, 'and on the Switch, it\'s the bug that\'s in the way');
   let event = g.shipArrivedAt(at(6, 8));
+  land(g);
   assert.equal(find(g, 'Lantern').lit, true);
   assert.ok(event.lit, 'with its pulse');
 });
@@ -1575,10 +1637,12 @@ test('a Slide Bug won\'t hurt a ship that couldn\'t be sent anywhere', () => {
 test('a Gate closing on a Slide Bug passes it back the way it came, past any other Gates closing with it', () => {
   // Two open Gates in the bug's row, with the ship's Switch down below, ahead of where the bug will be.
   let g = withArchetons([SLIDE_BUG], bug(1, 3), obj('Gate', 2, 3, { letter: 'A', open: true }), obj('Gate', 3, 3, { letter: 'A', open: true }), obj('Switch', 6, 8, { letter: 'A' }));
+  // One step before the press, so that the slide the press itself causes is the one that puts the bug inside the
+  // second Gate - the Gates close a moment after the press, once the Beam lands, not on it.
   g.shipArrivedAt(at(6, 7));
-  g.shipArrivedAt(at(6, 7));
-  assert.deepEqual(bugsIn(g), ['3,3'], 'the bug slides into the second Gate');
-  let event = g.shipArrivedAt(at(6, 8)); // the Switch closes both
+  assert.deepEqual(bugsIn(g), ['2,3'], 'the bug slides into the first Gate');
+  g.shipArrivedAt(at(6, 8)); // the Switch closes both
+  let [event] = land(g);
   assert.deepEqual(bugsIn(g), ['1,3'], 'back past both closed Gates, to where it was before them');
   assert.ok(event.returned.some(o => o.archeton === 'slide-bug'));
   assert.equal(g.objects.find(o => o.archeton === 'slide-bug').glide, 'return');
@@ -1588,6 +1652,7 @@ test('a Gate a Slide Bug closes on the ship sends the ship back, as being hurt d
   let g = withArchetons([SLIDE_BUG], bug(1, 3), obj('Switch', 2, 3, { letter: 'A' }), obj('Gate', 6, 5, { letter: 'A', open: true }));
   g.placeShip(at(6, 6));
   g.shipArrivedAt(at(6, 5)); // into the open Gate, as the bug slides onto the Switch
+  land(g);
   assert.equal(find(g, 'Gate').open, false);
   assert.equal(g.carryDirection(at(6, 5)), 'down', 'back where it came from');
 });
@@ -1785,6 +1850,7 @@ test('the reflection sets off a Switch it lands on, as the ship would', () => {
   let before = g.objects.find(o => o.kind === 'Gate').open;
   g.placeShip(at(1, 5));
   g.shipArrivedAt(at(2, 5));
+  land(g);
   assert.notEqual(g.objects.find(o => o.kind === 'Gate').open, before, 'the reflection stepped on the Switch');
 });
 
@@ -2199,4 +2265,53 @@ test('a Push Block shoved off a ledge leaps down it, growing towards the middle 
   };
   assert.ok(width(true, 0.5) > width(false, 0.5), 'mid-leap, so drawn bigger than the glide alone would');
   assert.equal(width(true, 1), width(false, 1), 'and its own size again once it has landed');
+});
+
+// ---------- Gate Beams ----------
+
+// The brightest pixel in a square, as the renderer leaves it - for a Beam's crackle, which wanders a pixel either side
+// of true, and for a flash, which only lights what's already drawn.
+function brightestIn(image, col, row){
+  let best = [0, 0, 0, 0];
+  for (let y = row * TILE_PX; y < (row + 1) * TILE_PX; y++) {
+    for (let x = col * TILE_PX; x < (col + 1) * TILE_PX; x++) {
+      let pixel = pixelAt(image, x, y);
+      if (pixel[3] > best[3] || (pixel[3] === best[3] && pixel[0] + pixel[1] > best[0] + best[1])) best = pixel;
+    }
+  }
+  return best;
+}
+
+test('a Gate Beam is drawn yellow from the Switch towards its Gates, as far as it has got', () => {
+  let { look } = artLook();
+  let drawn = (progress) => {
+    let image = blank();
+    renderBoard(image, [], look, { gateBeams: [{ from: at(1, 4), to: [at(6, 4)], ms: 0, progress, opacity: 1, switchFlash: 0, gateFlash: 0 }] });
+    return image;
+  };
+  let lit = brightestIn(drawn(1), 3, 4);
+  assert.ok(lit[3] > 200, 'lit where the Beam has got to');
+  assert.ok(lit[0] > 200 && lit[1] > 180 && lit[2] < 120, `yellow, not a palette colour: ${lit}`);
+
+  assert.equal(brightestIn(drawn(0.3), 5, 4)[3], 0, 'and dark where it has not reached yet');
+  assert.ok(brightestIn(drawn(0.3), 2, 4)[3] > 200, 'but lit behind the head');
+});
+
+test('the Switch flashes as it fires, and a Gate flashes as the Beam reaches it', () => {
+  let { look } = artLook();
+  let drawn = (flash) => {
+    let image = blank();
+    renderBoard(image, [obj('Switch', 1, 4, { letter: 'A' }), obj('Gate', 6, 4, { letter: 'A', open: true })], look, {
+      // No line, so that only the flashes are in the picture: the Beam starts on the Switch's own square.
+      gateBeams: [{ from: at(1, 4), to: [at(6, 4)], ms: 0, progress: 0, opacity: 0, ...flash }],
+    });
+    return image;
+  };
+  let plain = { switchFlash: 0, gateFlash: 0 };
+  let firing = drawn({ switchFlash: 1, gateFlash: 0 });
+  assert.ok(brightestIn(firing, 1, 4)[2] < brightestIn(drawn(plain), 1, 4)[2], 'the Switch lights up as it fires, going yellow');
+  assert.deepEqual(brightestIn(firing, 6, 4), brightestIn(drawn(plain), 6, 4), 'but the Gate does not, until the Beam reaches it');
+
+  let landed = drawn({ switchFlash: 0, gateFlash: 1 });
+  assert.ok(brightestIn(landed, 6, 4)[2] < brightestIn(drawn(plain), 6, 4)[2], 'then the Gate lights up too');
 });

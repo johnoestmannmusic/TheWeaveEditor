@@ -67,6 +67,7 @@
       hopMs: null, // how long ago Archetons with a Move Sequence last hopped
       sinking: [],
       pulses: [],
+      gateBeams: [], // a Gate Switch's Beams, for as long as they're drawn - see advanceGateBeams
     };
 
     // A Stream carries the ship along, whatever's being pressed, and an Archeton's laser can push or send it back.
@@ -106,6 +107,7 @@
       if (event.slid) play.slideMs = 0;
       if (event.hopped) play.hopMs = 0;
       if (event.lit) play.pulses.push({ ...event.lit, ms: 0, revealed: event.revealed ?? [] });
+      if (event.gateBeam) play.gateBeams.push({ ...event.gateBeam, ms: 0 });
       if (event.pipesTurned) {
         play.pipeTurnMs = 0;
         play.pipeActiveMs = 0;
@@ -163,6 +165,11 @@
       play.sinking = play.sinking.filter(sinking => sinking.ms < sinking.glideMs + TIMING.sinkMs);
       for (const pulse of play.pulses) pulse.ms += dtMs;
       play.pulses = play.pulses.filter(pulse => pulse.ms < TIMING.pulseMs);
+      for (const beam of play.gateBeams) beam.ms += dtMs;
+      play.gateBeams = play.gateBeams.filter(beam => beam.ms < TIMING.gateBeamMs);
+      // A Beam that's reached its Gates changes them, which is when the press finally takes effect - see
+      // puzzleRules.js's advanceGateBeams.
+      for (const event of game?.advanceGateBeams(dtMs) ?? []) onEvent(event);
       if (play.pipeTurnMs !== null) play.pipeTurnMs += dtMs;
       if (play.returnMs !== null) play.returnMs += dtMs;
       if (play.slideMs !== null) play.slideMs += dtMs;
@@ -334,6 +341,17 @@
         slideAlong: play.slideMs === null ? 1 : Math.min(1, play.slideMs / TIMING.stepMs),
         hopAlong: play.hopMs === null ? 1 : Math.min(1, play.hopMs / TIMING.stepMs),
         pulses,
+        gateBeams: play.gateBeams.map(beam => ({
+          from: beam.from,
+          to: beam.to,
+          ms: beam.ms,
+          // How far it's got, how bright it is, and how much the Switch and each Gate are flashing: the Switch from the
+          // press, a Gate from the moment the Beam reaches it - see puzzleDrawing.js's drawGateBeam.
+          progress: Math.min(1, beam.ms / TIMING.gateBeamTravelMs),
+          opacity: 1 - Math.min(1, Math.max(0, beam.ms - (TIMING.gateBeamMs - TIMING.gateFlashMs)) / TIMING.gateFlashMs),
+          switchFlash: 1 - Math.min(1, beam.ms / TIMING.gateFlashMs),
+          gateFlash: beam.ms < TIMING.gateBeamTravelMs ? 0 : 1 - Math.min(1, (beam.ms - TIMING.gateBeamTravelMs) / TIMING.gateFlashMs),
+        })),
         beams: game.beams,
         reaches: game.reaches,
         ...extra,
@@ -350,6 +368,8 @@
       if (floors.some(f => f.kind === 'RotatorTile')) key.push('R', phase(play.rotatorClockMs, ROTATOR_CYCLE_MS));
       if (game.objects.some(o => o.kind === 'Finish' && WeavePuzzle.exitDirectionOf(o))) key.push('F', phase(timeMs, FINISH_ARROW_CYCLE_MS) % 8);
       for (const hint of extra.pushHints ?? []) key.push('h', hint.col, hint.row, hint.direction, hint.bob);
+      // A Gate Switch's Beam, and the flashes it makes, run in whole pixels - see renderBoard's drawGateBeam.
+      for (const beam of play.gateBeams) key.push('g', Math.round(beam.ms));
 
       return { list: [...floors, ...objects, ...sinking], options, key: key.join(',') };
     };

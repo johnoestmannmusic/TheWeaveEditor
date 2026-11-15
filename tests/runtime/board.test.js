@@ -221,3 +221,25 @@ test('a Push Block shoved along the flat does not fall', () => {
   run(play, 16);
   assert.equal(play.game.objects.find(object => object.kind === 'PushBlock').falls, false);
 });
+
+test('a Switch press sends a Beam out, and its Gates change when it lands rather than on the press', () => {
+  let play = createBoardPlay({ puzzle: { objects: [obj('Start', 4, 5), obj('Switch', 4, 6, { letter: 'A' }), obj('Gate', 4, 8, { letter: 'A' })] } });
+  let gate = () => play.game.objects.find(object => object.kind === 'Gate');
+
+  play.mover.press('down');
+  play.mover.release('down');
+  run(play, BOARD_TIMING.stepMs);
+  assert.equal(gate().open, false, 'still shut while the Beam is on its way');
+  assert.equal(play.gateBeams.length, 1, 'and the Beam is there to be drawn');
+  assert.deepEqual(play.gateBeams[0].to, [at(4, 8)], 'aimed at the Gate');
+
+  run(play, BOARD_TIMING.gateBeamTravelMs);
+  assert.equal(gate().open, true, 'open once it lands');
+  let { options } = play.frame(0, {});
+  assert.ok(options.gateBeams[0].gateFlash > 0.9, 'and the Gate flashes as it does');
+  assert.ok(options.gateBeams[0].switchFlash > 0 && options.gateBeams[0].switchFlash < 1, 'while the Switch is on its way back down');
+
+  // Drawn for about a second, then gone.
+  run(play, BOARD_TIMING.gateBeamMs);
+  assert.deepEqual(play.gateBeams, [], 'and the Beam is taken down after it');
+});
