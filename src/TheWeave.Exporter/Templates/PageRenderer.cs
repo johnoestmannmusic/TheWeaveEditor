@@ -134,8 +134,14 @@ public sealed class PageRenderer
                 ? " data-travel-home=\"true\""
                 : "";
 
+        // A location's own lock message (see Node.LockMessage), which cards.js's refreshNodeLocks shows on its card.
+        // Nested parts are locked in turn by their own puzzles, so they never carry one.
+        var lockMessageAttr = string.IsNullOrWhiteSpace(node.LockMessage)
+            ? ""
+            : $" data-lock-message=\"{EscapeAttr(node.LockMessage.Trim())}\"";
+
         sb.AppendLine($"{pad}<!-- {SafeComment(node.Card.HeadingText)} -->");
-        sb.AppendLine($"{pad}<div class=\"node\"{persistentAttr}{modalAttr}{travelHomeAttr}{BuildPuzzleAttr(node, _project.PuzzleDrawings, _project.Archetons)}{(isNested ? "" : BuildStagesAttr(sourcePage, node))} style=\"left: {Px(left)}px; top: {Px(top)}px;\">");
+        sb.AppendLine($"{pad}<div class=\"node\"{persistentAttr}{modalAttr}{travelHomeAttr}{lockMessageAttr}{BuildPuzzleAttr(node, _project.PuzzleDrawings, _project.Archetons)}{(isNested ? "" : BuildStagesAttr(sourcePage, node))} style=\"left: {Px(left)}px; top: {Px(top)}px;\">");
         sb.AppendLine($"{pad}  <img class=\"nodeImage\" src=\"{iconSrc}\">");
 
         sb.AppendLine();

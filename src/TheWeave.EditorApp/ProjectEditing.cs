@@ -167,10 +167,13 @@ internal static class ProjectEditing
 
     public static void ApplyNodeEdit(WeaveProject project, Page page, Node node, NodeEditRequest edit)
     {
-        // Checked before anything else changes, so a rejected square or requirement leaves the whole node untouched.
+        // Checked before anything else changes, so a rejected square, requirement or lock message leaves the whole
+        // node untouched.
         var requirements = edit.Requirements is null ? node.Requirements : CheckRequirements(project, page, node, edit.Requirements);
+        var lockMessage = edit.LockMessage is null ? node.LockMessage : CheckLockMessage(page, node, edit.LockMessage);
         (node.X, node.Y) = ResolveNodePosition(project, page, node, edit.X, edit.Y);
         node.Requirements = requirements is { Count: > 0 } ? requirements : null;
+        node.LockMessage = lockMessage;
         node.Persistent = edit.Persistent;
         node.IconStyle = Enum.TryParse<IconStyle>(edit.IconStyle, out var iconStyle) ? iconStyle : IconStyle.Default;
 
@@ -214,6 +217,18 @@ internal static class ProjectEditing
                 throw new InvalidOperationException($"'{required.Card.HeadingText}' has no puzzles to complete, so it can't be a requirement.");
         }
         return distinct;
+    }
+
+    // A location's own lock message, or null for one that isn't held back - see Node.LockMessage. Like its
+    // requirements, only a location on the map can have one: a part of one is locked by the parts before it already.
+    private static string? CheckLockMessage(Page page, Node node, string message)
+    {
+        var trimmed = (message ?? "").Trim();
+        if (trimmed.Length == 0)
+            return null;
+        if (!page.Nodes.Contains(node))
+            throw new InvalidOperationException("Only a location on the map can be locked with a message, not one of its parts.");
+        return trimmed;
     }
 
     /// <summary>Points every requirement on a location that's been renamed at its new id.</summary>

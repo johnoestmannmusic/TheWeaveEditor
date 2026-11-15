@@ -903,6 +903,36 @@ public class ProjectEditingTests
     }
 
     [Fact]
+    public void ApplyNodeEdit_SavesALockMessage_Trimmed_AndAnEmptyOneClearsIt()
+    {
+        var (project, page, node) = MakeRequirementsProject();
+
+        ProjectEditing.ApplyNodeEdit(project, page, node, new NodeEditRequest { X = node.X, Y = node.Y, LockMessage = "  Coming in a future version  " });
+        Assert.Equal("Coming in a future version", node.LockMessage);
+
+        ProjectEditing.ApplyNodeEdit(project, page, node, new NodeEditRequest { X = node.X, Y = node.Y, LockMessage = null });
+        Assert.Equal("Coming in a future version", node.LockMessage);
+
+        ProjectEditing.ApplyNodeEdit(project, page, node, new NodeEditRequest { X = node.X, Y = node.Y, LockMessage = "   " });
+        Assert.Null(node.LockMessage);
+    }
+
+    [Fact]
+    public void ApplyNodeEdit_RejectsALockMessageOnAPart_LeavingTheNodeAlone()
+    {
+        var (project, _, node) = MakeRequirementsProject();
+        var part = project.Pages[1].Nodes[0].Children[0];
+        part.Card.HeadingText = "Before";
+
+        Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyNodeEdit(project, project.Pages[1], part,
+            new NodeEditRequest { X = part.X, Y = part.Y, HeadingText = "After", LockMessage = "Coming in a future version" }));
+
+        Assert.Equal("Before", part.Card.HeadingText);
+        Assert.Null(part.LockMessage);
+        Assert.Null(node.LockMessage);
+    }
+
+    [Fact]
     public void Requirements_FollowARenamedLocation_AndDropADeletedOne()
     {
         var (project, _, node) = MakeRequirementsProject();

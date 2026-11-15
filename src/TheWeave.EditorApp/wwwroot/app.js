@@ -969,7 +969,7 @@ function renderNodeInspector(container, pageId, node) {
 
     ${renderPuzzleField(node)}
 
-    ${onMap ? renderRequirementsField(pageId, node) : ''}
+    ${onMap ? renderLockingField(pageId, node) : ''}
 
     <fieldset>
       <legend>Action</legend>
@@ -1055,8 +1055,9 @@ function renderNodeInspector(container, pageId, node) {
         travelSpawnX: arrival?.x ?? null,
         travelSpawnY: arrival?.y ?? null,
         travelSkipTutorial: document.getElementById('f-skip-tutorial')?.checked ?? false,
-        // Only a location on the map has requirements - see renderRequirementsField.
+        // Only a location on the map has requirements or a lock message - see renderLockingField.
         requirements: onMap ? requirements : null,
+        lockMessage: onMap ? document.getElementById('f-lock-message').value : null,
       },
     });
   };
@@ -1082,7 +1083,7 @@ function renderNodeInspector(container, pageId, node) {
   // save re-renders this whole form from the authoritative C# state. Select/checkbox fields
   // have no such conflict, so they save immediately on change.
   for (const id of ['f-heading', 'f-custom-width', 'f-custom-height', 'f-cover',
-                     'f-audio', 'f-poetry', 'f-action-url'])
+                     'f-audio', 'f-poetry', 'f-action-url', 'f-lock-message'])
     document.getElementById(id).addEventListener('blur', saveNode);
 
   for (const id of ['f-icon-style', 'f-persistent', 'f-card-size', 'f-action-kind',
@@ -1123,8 +1124,9 @@ function requirementChoices() {
   })).filter((group) => group.nodes.length > 0);
 }
 
-// Locations whose puzzles all have to be solved before this one opens in the game - see Node.Requirements.
-function renderRequirementsField(pageId, node) {
+// What keeps a location shut in the game: a message of its own, for one that isn't in the game yet (see
+// Node.LockMessage), and the locations whose puzzles all have to be solved before it opens - see Node.Requirements.
+function renderLockingField(pageId, node) {
   const chosen = node.requirements ?? [];
   const groups = requirementChoices();
   const find = (id) => {
@@ -1153,7 +1155,14 @@ function renderRequirementsField(pageId, node) {
 
   return `
     <fieldset>
-      <legend>Requirements</legend>
+      <legend>Locking</legend>
+      <div class="field">
+        <label>Lock message</label>
+        <input type="text" id="f-lock-message" value="${escapeAttr(node.lockMessage ?? '')}">
+        <div class="field-hint">${node.lockMessage
+          ? 'Its card says this instead of anything about it, and it stays locked whatever its requirements are.'
+          : 'Leave empty for a location that opens as soon as its requirements are met. A message such as "Coming in a future version" keeps it locked for good, and its card says this.'}</div>
+      </div>
       ${chosen.length > 0 ? `<ul id="f-requirements">${list}</ul>` : ''}
       <div class="field">
         <select id="f-requirement-add" ${options ? '' : 'disabled'}>

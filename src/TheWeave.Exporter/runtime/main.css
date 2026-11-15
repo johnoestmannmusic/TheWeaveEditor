@@ -153,10 +153,10 @@ h3 {
   cursor: pointer;
 }
 
-/* A location waiting on its requirements - see cards.js's refreshNodeLocks. Its icon is a dull red, here and on the
-   minimap, and its card says only what it's waiting for. */
-/* Its icon is its own dull red one, drawn in cards.js's lockedIconSrc, rather than the location icon recoloured here:
-   that icon is mostly see-through, so any tint of it comes out too faint to notice. */
+/* A location that's locked, waiting on its requirements or held back with a message of its own - see Node.LockMessage
+   and cards.js's refreshNodeLocks. Its icon is the locked one, here and on the minimap, and its card says only why.
+   That icon is drawn in cards.js's lockedIconSrc, rather than the location icon recoloured here: that icon is mostly
+   see-through, so any tint of it comes out too faint to notice. */
 
 .node.locked > .floatInfo > :not(.lockedPanel) {
   display: none !important;
@@ -175,6 +175,11 @@ h3 {
 
 .lockedPanel h3 {
   margin: 0 0 0.4em;
+}
+
+/* A location's own lock message, under the word Locked - see Node.LockMessage. */
+.lockedMessage {
+  margin-bottom: 0.5em;
 }
 
 .lockedRequirement {

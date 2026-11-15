@@ -2,7 +2,7 @@
 // John Oestmann
 // Location cards: modal cards and the ones already seen, opening and placing a location's card, persistent
 // cards, a location's parts locking until the part before is solved, solved puzzles, locations locked by their
-// requirements, and what Z, X and C do on the map.
+// requirements or held back with a message of their own, and what Z, X and C do on the map.
 //
 // Part of the page script, split from main.js by concern. Every part shares one set of page-wide names, loaded in
 // order after main.js - see main.js for the page's state and setup. Part of the canonical shared runtime owned by
@@ -181,20 +181,23 @@ function isStageSolved(id){
   return isPuzzleSolved({ id });
 }
 
-// Which locations on the map are locked, waiting on their requirements (see Node.Requirements), and which are
-// fully completed, every one of their stages solved. Worked out on load and whenever a puzzle is solved, so that
-// finishing the last stage of one location opens another straight away. A locked one's icon is greyed out, and
-// its card only says what it's waiting for - see main.css's .node.locked.
-// The icon a location shows while the ship isn't on it: its own, or a locked one if it's waiting on requirements.
+// Which locations on the map are locked - by a message of their own (see Node.LockMessage), which keeps one that
+// isn't in the game yet shut whatever its requirements say, or by waiting on their requirements (see
+// Node.Requirements) - and which are fully completed, every one of their stages solved. Worked out on load and
+// whenever a puzzle is solved, so that finishing the last stage of one location opens another straight away. A
+// locked one's icon is the locked one, and its card only says why - see main.css's .node.locked.
+// The icon a location shows while the ship isn't on it: its own, or a locked one if it's locked.
 function restingIcon(meta){
   return meta.locked ? lockedIconSrc() : (meta.restingSrc ?? 'img/node.png');
 }
 
-// A locked location's icon: the location icon's own 8-pixel octagon, but in a dull red, at 30% opacity, so it reads
-// as off-limits. Drawn once, rather than recoloured from the icon's image, which a page opened from a file can't read.
+// A locked location's icon: the location icon's own 8-pixel octagon, but in a fuchsia-purple, at 30% opacity, so it
+// reads as off-limits. Drawn once, rather than recoloured from the icon's image, which a page opened from a file
+// can't read. The two shades are the dull red this started as, turned to fuchsia and otherwise mixed the same, so
+// they carry the same weight on the map.
 const LOCKED_ICON_ROWS = ['..####..', '.#oooo#.', '#oooooo#', '#oooooo#', '#oooooo#', '#oooooo#', '.#oooo#.', '..####..'];
 const LOCKED_ICON_OPACITY = 0.3;
-const LOCKED_ICON_COLOURS = { '#': `rgba(104, 34, 30, ${LOCKED_ICON_OPACITY})`, 'o': `rgba(150, 56, 48, ${LOCKED_ICON_OPACITY})` };
+const LOCKED_ICON_COLOURS = { '#': `rgba(103, 30, 103, ${LOCKED_ICON_OPACITY})`, 'o': `rgba(150, 49, 150, ${LOCKED_ICON_OPACITY})` };
 let lockedIcon = null;
 
 function lockedIconSrc(){
@@ -217,7 +220,7 @@ function refreshNodeLocks(){
     let waitingOn = meta.requires
       .map(requirement => ({ ...requirement, solved: requirement.stages.filter(isStageSolved).length }))
       .filter(requirement => requirement.solved < requirement.stages.length);
-    meta.locked = waitingOn.length > 0;
+    meta.locked = Boolean(meta.lockMessage) || waitingOn.length > 0;
     let completed = meta.stages.length > 0 && meta.stages.every(isStageSolved);
 
     node.classList.toggle('locked', meta.locked);
@@ -231,18 +234,24 @@ function refreshNodeLocks(){
     if (meta.minimapIcon) meta.minimapIcon.src = restingIcon(meta);
 
     meta.info.querySelector(':scope > .lockedPanel')?.remove();
-    if (meta.locked) meta.info.prepend(buildLockedPanel(waitingOn));
+    if (meta.locked) meta.info.prepend(buildLockedPanel(waitingOn, meta.lockMessage));
   });
 }
 
-// What a locked location's card says instead of anything about it: what it's waiting for, and how far along each
-// is, in stages.
-function buildLockedPanel(waitingOn){
+// What a locked location's card says instead of anything about it: the location's own message, if it has one (see
+// Node.LockMessage), then what it's waiting for, and how far along each is, in stages.
+function buildLockedPanel(waitingOn, lockMessage){
   let panel = document.createElement('div');
   panel.className = 'lockedPanel';
   let heading = document.createElement('h3');
   heading.textContent = 'Locked';
   panel.appendChild(heading);
+  if (lockMessage) {
+    let message = document.createElement('div');
+    message.className = 'lockedMessage';
+    message.textContent = lockMessage;
+    panel.appendChild(message);
+  }
   for (const requirement of waitingOn) {
     let line = document.createElement('div');
     line.className = 'lockedRequirement';
