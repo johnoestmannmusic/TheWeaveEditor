@@ -5209,14 +5209,6 @@
                           },
                           {
                             "Kind": "RotatorTile",
-                            "Col": 2,
-                            "Row": 7,
-                            "Letter": null,
-                            "Direction": "Left",
-                            "Variant": "rotatortile-2"
-                          },
-                          {
-                            "Kind": "RotatorTile",
                             "Col": 1,
                             "Row": 7,
                             "Letter": null,
@@ -5280,13 +5272,6 @@
                           {
                             "Kind": "Edge",
                             "Col": 6,
-                            "Row": 8,
-                            "Letter": null,
-                            "Direction": "Right"
-                          },
-                          {
-                            "Kind": "Edge",
-                            "Col": 6,
                             "Row": 9,
                             "Letter": null,
                             "Direction": "Right"
@@ -5313,28 +5298,6 @@
                             "Direction": "Left"
                           },
                           {
-                            "Kind": "Edge",
-                            "Col": 6,
-                            "Row": 3,
-                            "Letter": null,
-                            "Direction": "Left"
-                          },
-                          {
-                            "Kind": "Edge",
-                            "Col": 6,
-                            "Row": 4,
-                            "Letter": null,
-                            "Direction": "Left"
-                          },
-                          {
-                            "Kind": "Archeton",
-                            "Col": 1,
-                            "Row": 7,
-                            "Letter": null,
-                            "Direction": "Left",
-                            "Archeton": "reflect-mimic"
-                          },
-                          {
                             "Kind": "Archeton",
                             "Col": 6,
                             "Row": 2,
@@ -5344,24 +5307,10 @@
                           },
                           {
                             "Kind": "Edge",
-                            "Col": 2,
-                            "Row": 2,
-                            "Letter": null,
-                            "Direction": "Down"
-                          },
-                          {
-                            "Kind": "Edge",
                             "Col": 0,
                             "Row": 2,
                             "Letter": null,
                             "Direction": "Down"
-                          },
-                          {
-                            "Kind": "Teleporter",
-                            "Col": 0,
-                            "Row": 7,
-                            "Letter": "A",
-                            "Direction": null
                           },
                           {
                             "Kind": "Edge",
@@ -5379,31 +5328,10 @@
                           },
                           {
                             "Kind": "Edge",
-                            "Col": 5,
-                            "Row": 2,
-                            "Letter": null,
-                            "Direction": "Down"
-                          },
-                          {
-                            "Kind": "Edge",
                             "Col": 8,
                             "Row": 2,
                             "Letter": null,
                             "Direction": "Up"
-                          },
-                          {
-                            "Kind": "Edge",
-                            "Col": 7,
-                            "Row": 0,
-                            "Letter": null,
-                            "Direction": "Right"
-                          },
-                          {
-                            "Kind": "Edge",
-                            "Col": 9,
-                            "Row": 1,
-                            "Letter": null,
-                            "Direction": "Left"
                           },
                           {
                             "Kind": "Teleporter",
@@ -5418,13 +5346,6 @@
                             "Row": 0,
                             "Letter": null,
                             "Direction": "Right"
-                          },
-                          {
-                            "Kind": "Edge",
-                            "Col": 9,
-                            "Row": 1,
-                            "Letter": null,
-                            "Direction": "Up"
                           },
                           {
                             "Kind": "Teleporter",
@@ -5438,27 +5359,6 @@
                             "Col": 0,
                             "Row": 1,
                             "Letter": "B",
-                            "Direction": null
-                          },
-                          {
-                            "Kind": "Gate",
-                            "Col": 0,
-                            "Row": 5,
-                            "Letter": "A",
-                            "Direction": null
-                          },
-                          {
-                            "Kind": "Gate",
-                            "Col": 1,
-                            "Row": 5,
-                            "Letter": "A",
-                            "Direction": null
-                          },
-                          {
-                            "Kind": "Gate",
-                            "Col": 2,
-                            "Row": 5,
-                            "Letter": "A",
                             "Direction": null
                           },
                           {
@@ -5514,21 +5414,7 @@
                           {
                             "Kind": "Edge",
                             "Col": 9,
-                            "Row": 6,
-                            "Letter": null,
-                            "Direction": "Up"
-                          },
-                          {
-                            "Kind": "Edge",
-                            "Col": 9,
                             "Row": 7,
-                            "Letter": null,
-                            "Direction": "Down"
-                          },
-                          {
-                            "Kind": "Edge",
-                            "Col": 9,
-                            "Row": 6,
                             "Letter": null,
                             "Direction": "Down"
                           },
@@ -5547,6 +5433,193 @@
                             "Letter": null,
                             "Direction": "Left",
                             "Archeton": "reflect-mimic"
+                          },
+                          {
+                            "Kind": "Teleporter",
+                            "Col": 1,
+                            "Row": 6,
+                            "Letter": "A",
+                            "Direction": null
+                          },
+                          {
+                            "Kind": "Archeton",
+                            "Col": 1,
+                            "Row": 7,
+                            "Letter": null,
+                            "Direction": "Right",
+                            "Archeton": "reflect-mimic"
+                          },
+                          {
+                            "Kind": "RotatorTile",
+                            "Col": 2,
+                            "Row": 7,
+                            "Letter": null,
+                            "Direction": "Left",
+                            "Variant": "rotatortile-2"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 6,
+                            "Row": 8,
+                            "Letter": null,
+                            "Direction": "Right"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 9,
+                            "Row": 6,
+                            "Letter": null,
+                            "Direction": "Up"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 9,
+                            "Row": 6,
+                            "Letter": null,
+                            "Direction": "Down"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 0,
+                            "Row": 4,
+                            "Letter": null,
+                            "Direction": "Down"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 1,
+                            "Row": 4,
+                            "Letter": null,
+                            "Direction": "Right"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 1,
+                            "Row": 4,
+                            "Letter": null,
+                            "Direction": "Down"
+                          },
+                          {
+                            "Kind": "Switch",
+                            "Col": 0,
+                            "Row": 3,
+                            "Letter": "B",
+                            "Direction": null
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 8,
+                            "Row": 0,
+                            "Letter": null,
+                            "Direction": "Down"
+                          },
+                          {
+                            "Kind": "Gate",
+                            "Col": 1,
+                            "Row": 8,
+                            "Letter": "B",
+                            "Direction": null
+                          },
+                          {
+                            "Kind": "Gate",
+                            "Col": 2,
+                            "Row": 5,
+                            "Letter": "A",
+                            "Direction": null
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 9,
+                            "Row": 1,
+                            "Letter": null,
+                            "Direction": "Up"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 9,
+                            "Row": 1,
+                            "Letter": null,
+                            "Direction": "Left"
+                          },
+                          {
+                            "Kind": "Gate",
+                            "Col": 1,
+                            "Row": 5,
+                            "Letter": "C",
+                            "Direction": null
+                          },
+                          {
+                            "Kind": "Switch",
+                            "Col": 3,
+                            "Row": 0,
+                            "Letter": "C",
+                            "Direction": null
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 3,
+                            "Row": 3,
+                            "Letter": null,
+                            "Direction": "Up"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 4,
+                            "Row": 3,
+                            "Letter": null,
+                            "Direction": "Up"
+                          },
+                          {
+                            "Kind": "JumpTile",
+                            "Col": 5,
+                            "Row": 5,
+                            "Letter": null,
+                            "Direction": "Right",
+                            "Variant": "jumptile-2"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 5,
+                            "Row": 3,
+                            "Letter": null,
+                            "Direction": "Up"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 5,
+                            "Row": 3,
+                            "Letter": null,
+                            "Direction": "Right"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 5,
+                            "Row": 4,
+                            "Letter": null,
+                            "Direction": "Right"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 3,
+                            "Row": 3,
+                            "Letter": null,
+                            "Direction": "Left"
+                          },
+                          {
+                            "Kind": "Wall",
+                            "Col": 2,
+                            "Row": 3,
+                            "Letter": null,
+                            "Direction": null,
+                            "Variant": "wall-2"
+                          },
+                          {
+                            "Kind": "Wall",
+                            "Col": 2,
+                            "Row": 4,
+                            "Letter": null,
+                            "Direction": null,
+                            "Variant": "wall-3"
                           }
                         ],
                         "Palette": {
