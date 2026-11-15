@@ -114,6 +114,26 @@ public class PageRendererTests
     }
 
     [Fact]
+    public void RenderPage_ALocationsOwnLockMessage_IsCarriedEscaped_OrLeftOut()
+    {
+        var soon = new Node { Id = "soon", Card = new Card { HeadingText = "Soon" }, LockMessage = "  Coming in a future version, \"one day\" & soon  " };
+        var plain = new Node { Id = "plain", Card = new Card { HeadingText = "Plain" } };
+        var project = new WeaveProject();
+        var page = new Page { Id = "ouros", Background = new ImageRef { ImagePath = "img/ouros.png" }, Nodes = { soon, plain } };
+        project.Pages.Add(page);
+
+        var html = new PageRenderer(project).RenderPage(page);
+
+        var attr = System.Text.RegularExpressions.Regex.Match(html, "data-lock-message=\"([^\"]*)\"").Groups[1].Value;
+        Assert.Equal("Coming in a future version, \"one day\" & soon", System.Net.WebUtility.HtmlDecode(attr));
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(html, "data-lock-message="));
+
+        // A message of nothing but spaces is no message, as in the Editor.
+        soon.LockMessage = "   ";
+        Assert.DoesNotContain("data-lock-message", new PageRenderer(project).RenderPage(page));
+    }
+
+    [Fact]
     public void RenderPage_LeavesOutAPuzzleThatCantBePlayed()
     {
         Assert.DoesNotContain("data-puzzle", RenderTrackWithPuzzle(new Card { CoverImagePath = "img/track.png" }));

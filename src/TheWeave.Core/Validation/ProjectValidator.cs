@@ -74,8 +74,9 @@ public static class ProjectValidator
         return issues;
     }
 
-    // A location's requirements (see Node.Requirements) each have to exist and have stages to complete, and can't lead
-    // round in a loop back to it, which would leave it locked for good.
+    // A location's requirements (see Node.Requirements) each have to exist, have stages to complete, and not be locked
+    // for good by a message of their own (see Node.LockMessage), and can't lead round in a loop back to it, which
+    // would leave it locked for good too.
     private static void CheckRequirements(WeaveProject project, List<ValidationIssue> issues)
     {
         var topLevel = project.Pages.SelectMany(p => p.Nodes.Select(n => (Page: p, Node: n))).ToList();
@@ -99,6 +100,8 @@ public static class ProjectValidator
                     Warn($"requires '{id}', which isn't a location on any map, so it's ignored.");
                 else if (PuzzleStages.Of(required).Count == 0)
                     Warn($"requires '{id}', which has no puzzles to complete, so it's ignored.");
+                else if (!string.IsNullOrWhiteSpace(required.LockMessage))
+                    Warn($"requires '{id}', which is locked with a message of its own, so it can never be unlocked.");
             }
 
             if (RequiresItself(node, byId))

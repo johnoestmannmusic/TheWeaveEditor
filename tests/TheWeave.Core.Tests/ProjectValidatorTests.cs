@@ -114,6 +114,17 @@ public class ProjectValidatorTests
     }
 
     [Fact]
+    public void ARequirementLockedWithItsOwnMessage_IsReported_AsItCanNeverBeUnlocked()
+    {
+        var gallery = PlayableTrack("gallery");
+        gallery.LockMessage = "Coming in a future version";
+
+        var problems = RequirementProblems(PlayableTrack("a", "gallery"), gallery);
+
+        Assert.Equal(["Location 'a' requires 'gallery', which is locked with a message of its own, so it can never be unlocked."], problems);
+    }
+
+    [Fact]
     public void Requirements_ThatLoopBack_AreReported_AndOnesThatDont_Arent()
     {
         var problems = RequirementProblems(PlayableTrack("a", "b"), PlayableTrack("b", "c"), PlayableTrack("c", "a"), PlayableTrack("d", "a"), PlayableTrack("e", "e"));

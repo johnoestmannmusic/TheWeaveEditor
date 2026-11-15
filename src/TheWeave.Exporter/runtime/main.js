@@ -379,6 +379,9 @@ function loadNodes() {
       // A top-level location's own stages, and its requirements' - see refreshNodeLocks.
       stages: curNode.dataset.stages ? JSON.parse(curNode.dataset.stages) : [],
       requires: curNode.dataset.requires ? JSON.parse(curNode.dataset.requires) : [],
+      // A message the location shows instead of opening, for one that isn't in the game yet - see
+      // Node.LockMessage and refreshNodeLocks.
+      lockMessage: curNode.dataset.lockMessage || null,
       locked: false,
     });
 

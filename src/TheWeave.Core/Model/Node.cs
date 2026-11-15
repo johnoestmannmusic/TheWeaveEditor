@@ -41,4 +41,13 @@ public sealed class Node
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<string>? Requirements { get; set; }
+
+    /// <summary>
+    /// A message to show in place of a location's card, for one that can't be visited yet: "Coming in a future
+    /// version", say. While it's set the location stays locked whatever its requirements are, its icon is the locked
+    /// one, and its card says this. Top-level locations only, like Requirements. Left out of the project file when
+    /// it's empty.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LockMessage { get; set; }
 }

@@ -110,6 +110,12 @@ public sealed class NodeEditRequest
     /// a nested node, which can't have any.
     /// </summary>
     public List<string>? Requirements { get; set; }
+
+    /// <summary>
+    /// The message this location shows instead of opening (see Node.LockMessage), or null to leave it as it is, as
+    /// for a nested node, which can't have one. Empty clears it.
+    /// </summary>
+    public string? LockMessage { get; set; }
 }
 
 /// <summary>
