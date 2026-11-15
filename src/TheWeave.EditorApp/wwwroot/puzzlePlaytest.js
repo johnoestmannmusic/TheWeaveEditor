@@ -95,6 +95,40 @@ function refusedSilhouette(object, look) {
   return silhouette;
 }
 
+// The line of sight from the ship to each reflection, dotted and faint, so it's plain which pane is showing it and how
+// far away it is - and stronger when the reflection is what's refusing to let the ship move. A pane in line with the
+// ship but with something between can't show a reflection at all, so its line runs only as far as whatever's in the way.
+function drawSightLines(context, play, ship, reflections) {
+  const blocked = play.game.blockedSights;
+  const refused = play.refusedFlash;
+  if (!reflections.length && !blocked.length) return;
+  const tile = PUZZLE_TILE_PX;
+  context.save();
+  context.lineWidth = refused ? 2 : 1;
+  context.strokeStyle = refused ? 'rgba(255, 154, 60, 0.8)' : 'rgba(255, 154, 60, 0.2)';
+  context.setLineDash(refused ? [3, 2] : [2, 3]);
+  context.beginPath();
+  for (const reflection of reflections) {
+    const line = WeavePuzzle.reflectionSightLine(reflection, ship, tile);
+    context.moveTo(Math.round(line.from.x), Math.round(line.from.y));
+    context.lineTo(Math.round(line.to.x), Math.round(line.to.y));
+  }
+  context.stroke();
+
+  if (blocked.length) {
+    context.lineWidth = 1;
+    context.strokeStyle = 'rgba(255, 154, 60, 0.35)';
+    context.setLineDash([1, 2]);
+    context.beginPath();
+    for (const { blocker } of blocked) {
+      context.moveTo(Math.round(ship.x), Math.round(ship.y));
+      context.lineTo(Math.round((blocker.col + 0.5) * tile), Math.round((blocker.row + 0.5) * tile));
+    }
+    context.stroke();
+  }
+  context.restore();
+}
+
 // The board as it's being played, then the ship and its reflections, only drawn again when they'd look any different.
 function drawPlaytest(context, look, timeMs) {
   const playtest = puzzleEditor.playtest;
@@ -107,9 +141,11 @@ function drawPlaytest(context, look, timeMs) {
   const { list, options, key } = play.frame(timeMs, { pushHints: play.finished ? [] : play.pushHints(timeMs) });
   const ship = play.shipPosition();
   const reflections = play.game.reflections;
+  const blockedSights = play.game.blockedSights;
   const flash = play.refusedFlash;
   const flashKey = flash ? `${flash.col},${flash.row},${Math.floor(flash.ms / 45)}` : '';
-  const drawnKey = `${key}|${Math.round(ship.x)},${Math.round(ship.y)},${play.mover.facing},${ship.spin.toFixed(2)},${ship.opacity.toFixed(2)}|${reflections.map((cell) => cell.col + ',' + cell.row).join(';')}|${flashKey}|${look === playtest.look}`;
+  const sightKey = blockedSights.map(({ blocker }) => `${blocker.col},${blocker.row}`).join(';');
+  const drawnKey = `${key}|${Math.round(ship.x)},${Math.round(ship.y)},${play.mover.facing},${ship.spin.toFixed(2)},${ship.opacity.toFixed(2)}|${reflections.map((cell) => cell.col + ',' + cell.row).join(';')}|${sightKey}|${flashKey}|${look === playtest.look}`;
   if (drawnKey === playtest.drawnKey) return;
   playtest.drawnKey = drawnKey;
   playtest.look = look;
@@ -118,6 +154,7 @@ function drawPlaytest(context, look, timeMs) {
   puzzleEditor.image ??= context.createImageData(PUZZLE_ART_PX, PUZZLE_ART_PX);
   WeavePuzzle.renderBoard(puzzleEditor.image, list, look, options);
   context.putImageData(puzzleEditor.image, 0, 0);
+  drawSightLines(context, play, ship, reflections);
 
   if (!puzzleEditor.shipImage) return;
   context.save();

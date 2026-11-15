@@ -613,6 +613,31 @@
       return true;
     }
 
+    // The first square between two in the same row or column that has something on it, or that's off the board, or null
+    // if there's nothing between them - see clearBetween.
+    function firstBetween(from, to){
+      let dc = Math.sign(to.col - from.col), dr = Math.sign(to.row - from.row);
+      for (let cell = { col: from.col + dc, row: from.row + dr }; !isAt(cell, to); cell = { col: cell.col + dc, row: cell.row + dr }) {
+        if (!onBoard(cell) || objectAt(cell)) return cell;
+      }
+      return null;
+    }
+
+    // Panes that have the ship in their line but can't see it, because something's between: { pane, blocker } each, the
+    // blocker being the first square in the way. Nothing shows a reflection when it's blocked, so this is what lets the
+    // drawing show the line of sight stopping short - see reflectionSightLine.
+    function blockedSights(){
+      let blocked = [];
+      for (const archeton of objects) {
+        if (archeton.kind !== 'Archeton' || !hasPart(archeton, 'Reflect')) continue;
+        let pane = { col: archeton.col, row: archeton.row, direction: archeton.direction };
+        if (!reflectedBy(pane, shipCell) || clearBetween(shipCell, pane)) continue;
+        let blocker = firstBetween(shipCell, pane);
+        if (blocker) blocked.push({ pane, blocker });
+      }
+      return blocked;
+    }
+
     // For sokoban.js's onStepStart: something stepping into a Push Block pushes it on ahead, gliding along with it - see
     // renderBoard's pushAlong. Returns { sank } if that brought matching blocks together. The ship does this through the
     // board's own pushFrom, and a reflection as it moves - see stepReflections.
@@ -1039,6 +1064,8 @@
       // Where the ship's reflections are right now, one for each Reflect pane it's in the line of and one more for each
       // pane those are in the line of - see formReflections, stepReflections and settleReflections.
       get reflections(){ return syncReflections(); },
+      // Panes in line with the ship whose sight something is in the way of, { pane, blocker } each - see blockedSights.
+      get blockedSights(){ return blockedSights(); },
       turnPipes,
       floors,
 
@@ -1136,6 +1163,14 @@
     return position;
   }
 
+  // The line of sight between a reflection and whatever it's an image of - the ship, or the reflection its pane
+  // reflects - as two points in art pixels, from wherever each is being drawn. What the renderers put a dotted line
+  // between, so it's plain which pane is showing the ship and from how far away - see reflectionPosition.
+  function reflectionSightLine(reflection, ship, tilePx){
+    let from = reflection.from?.pane ? reflectionPosition(reflection.from, ship, tilePx) : ship;
+    return { from, to: reflectionPosition(reflection, ship, tilePx) };
+  }
+
   // ---------- timing ----------
 
   // How long things take on a board, shared by the game (main.js) and the Puzzle Editor's playtest, so that a puzzle
@@ -1195,5 +1230,5 @@
     return [...after.filter(object => !sweeps(object)), ...leaving, ...arriving].filter(object => (object.fade ?? 1) > 0);
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, isFloor, reflectionPosition, reflectionFacing };
+  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
 });

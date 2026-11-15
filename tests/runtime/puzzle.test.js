@@ -1995,3 +1995,30 @@ test('a Push Block drawn on its own gives the flash its shape, with nothing behi
   assert.ok(painted > 0, 'the block draws');
   assert.ok(painted < ART_PX * ART_PX, 'and only it does, so the flash shows a block rather than a whole square');
 });
+
+test('the line of sight runs from the ship to its reflection, wherever both are being drawn', () => {
+  const { reflectionSightLine } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+  let g = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5));
+  let ship = { x: 2.5 * TILE_PX, y: 5.5 * TILE_PX };
+  assert.deepEqual(reflectionSightLine(g.reflections[0], ship, TILE_PX), { from: ship, to: { x: 8.5 * TILE_PX, y: 5.5 * TILE_PX } }, '2 across the pane at 5 is 8');
+
+  let chain = withArchetons([REFLECT_MIMIC], mimic(3, 5), mimic(7, 5), obj('Start', 1, 5));
+  let second = chain.reflections.find(reflection => reflection.col === 9);
+  let line = reflectionSightLine(second, { x: 1.5 * TILE_PX, y: 5.5 * TILE_PX }, TILE_PX);
+  assert.deepEqual(line.from, { x: 5.5 * TILE_PX, y: 5.5 * TILE_PX }, 'from the reflection it was made from, not the ship');
+  assert.deepEqual(line.to, { x: 9.5 * TILE_PX, y: 5.5 * TILE_PX });
+});
+
+test('a pane whose sight is blocked is reported, so the line can stop where it does', () => {
+  let clear = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5));
+  assert.deepEqual(clear.blockedSights, [], 'nothing in the way, nothing to report');
+
+  let blocked = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Wall', 4, 5));
+  assert.deepEqual(cells(blocked), [], 'with a Wall between, the pane shows nothing');
+  let [sight] = blocked.blockedSights;
+  assert.deepEqual(at(sight.pane.col, sight.pane.row), at(5, 5), 'the pane is reported');
+  assert.deepEqual(at(sight.blocker.col, sight.blocker.row), at(4, 5), 'and the Wall that stops the sight');
+
+  let outOfLine = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 4));
+  assert.deepEqual(outOfLine.blockedSights, [], 'a pane the ship isn\'t in line with has no sight to block');
+});

@@ -720,7 +720,45 @@ function drawBoardObjects(){
   if (!flashing) boardDrawnKey = key;
   WeavePuzzle.renderBoard(boardObjectsImage, list, boardPuzzle, options);
   boardObjectsCanvas.getContext('2d').putImageData(boardObjectsImage, 0, 0);
+  drawSightLines();
   drawRefusedFlash();
+}
+
+// The line of sight from the ship to each reflection, dotted and faint, so it's plain which pane is showing it and how
+// far away it is - and stronger when the reflection is what's refusing to let the ship move. A pane in line with the
+// ship but with something between can't show a reflection at all, so its line runs only as far as whatever's in the way.
+function drawSightLines(){
+  let reflections = boardPlay.game?.reflections ?? [];
+  let blocked = boardPlay.game?.blockedSights ?? [];
+  if (!boardObjectsCanvas || (!reflections.length && !blocked.length)) return;
+  let context = boardObjectsCanvas.getContext('2d');
+  let ship = boardPlay.shipPosition();
+  let refused = boardPlay.refusedFlash;
+  let tile = BOARD_TILE_PX;
+  context.save();
+  context.lineWidth = refused ? 2 : 1;
+  context.strokeStyle = refused ? 'rgba(255, 154, 60, 0.8)' : 'rgba(255, 154, 60, 0.2)';
+  context.setLineDash(refused ? [3, 2] : [2, 3]);
+  context.beginPath();
+  for (const reflection of reflections) {
+    let line = WeavePuzzle.reflectionSightLine(reflection, ship, tile);
+    context.moveTo(Math.round(line.from.x), Math.round(line.from.y));
+    context.lineTo(Math.round(line.to.x), Math.round(line.to.y));
+  }
+  context.stroke();
+
+  if (blocked.length) {
+    context.lineWidth = 1;
+    context.strokeStyle = 'rgba(255, 154, 60, 0.35)';
+    context.setLineDash([1, 2]);
+    context.beginPath();
+    for (const { blocker } of blocked) {
+      context.moveTo(Math.round(ship.x), Math.round(ship.y));
+      context.lineTo(Math.round((blocker.col + 0.5) * tile), Math.round((blocker.row + 0.5) * tile));
+    }
+    context.stroke();
+  }
+  context.restore();
 }
 
 // A step refused because a reflection couldn't follow leaves whatever stopped it flashing on the ship's side, on the
