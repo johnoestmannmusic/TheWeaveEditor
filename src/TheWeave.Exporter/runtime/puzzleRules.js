@@ -165,6 +165,9 @@
     let objects = startingObjects();
 
     let shipCell = start;
+    // The ship's reflections, kept rather than worked out afresh each time, so they can move with the ship and shove
+    // what's in their way as they go - see formReflections, stepReflections and settleReflections.
+    let reflections = [];
     // Goes up whenever anything on the board changes, so that whatever's worked out from it, or drawn from it, can
     // be kept until it does - see beamPaths, and board.js's frame.
     let version = 0;
@@ -282,7 +285,7 @@
     // as it would be for being hurt itself - see carryDirection. One hurt reflection is enough, and only one way back.
     function hurtByReflection(cell){
       if (!isAt(shipCell, cell)) return null;
-      let hurt = reflectionCells(cell).some(reflection => {
+      let hurt = syncReflections().some(reflection => {
         let object = objectAt(reflection);
         return (object?.kind === 'Gate' && !object.open)
           || (object?.kind === 'Archeton' && hasPart(object, 'Sting'))
@@ -517,34 +520,35 @@
       return null;
     }
 
-    // What the ship's reflection sets off where it stands, as the ship arriving would: Switches, Lanterns, Pipe
-    // Switches, Reset Switches, Keys and the Finish. Left for now: a Teleporter or a Jump Tile, which would leave the
-    // reflection somewhere its mirror isn't, and a Push Block, which only a ship of its own could move - see #132's
-    // Phase D. Nothing after a Reset counts, since the board has gone back to where it started.
-    function reflectionArrivals(){
-      let merged = null;
-      for (const reflection of reflectionCells(shipCell)) {
-        let object = objectAt(reflection);
-        if (!object || ['Teleporter', 'JumpTile', 'PushBlock'].includes(object.kind)) continue;
-        let event = arriveOn(object);
-        if (!event) continue;
-        merged = merged ? { ...merged, ...event } : event;
-        if (event.reset || event.finished) break;
-      }
-      return merged;
+    // Two arrivals' worth of news as one, for a step that sets off more than one thing.
+    function mergeEvent(event, more){
+      if (!more) return event;
+      return event ? { ...event, ...more } : more;
     }
 
     function shipArrives(cell, { jumped = false } = {}){
       version++;
-      if (!isAt(shipCell, cell)) previousShipCell = shipCell;
+      let step = null;
+      if (!isAt(shipCell, cell)) {
+        previousShipCell = shipCell;
+        if (Math.abs(cell.col - shipCell.col) + Math.abs(cell.row - shipCell.row) === 1) step = { direction: wayFrom(shipCell, cell) };
+      }
       shipCell = cell;
       if (!jumped) jumpsInARow = 0;
       let object = objectAt(cell);
       let event = object ? arriveOn(object) : null;
-      // A Reset or a Finish ends the arrival there, and anything else has the reflection's own arrivals folded in.
-      if (event?.reset || event?.finished) return event;
-      let mirrored = reflectionArrivals();
-      return mirrored ? { ...event, ...mirrored } : event;
+      // A Reset or a Finish ends the arrival there, and the reflections go with the board.
+      if (event?.reset || event?.finished) {
+        reflections = [];
+        return event;
+      }
+      // The reflections move with the ship - so a ship that jumps or teleports somewhere else finds them fresh, and one
+      // that walks has them walk too - and then act where they've landed, whether they walked there or appeared.
+      let pushed = stepReflections(step);
+      settleReflections();
+      formReflections();
+      let mirrored = reflectArrivals();
+      return mergeEvent(mergeEvent(event, pushed), mirrored);
     }
 
     // Everything that last moved in a way that's had time to finish - a slide, or being passed back from a Gate - is
@@ -567,10 +571,15 @@
     // Where an Archeton with a Reflect part mirrors a point to, or null if the point isn't in its line: a pane turned
     // Left or Right stands upright, mirroring columns across its own, and one turned Up or Down lies flat, mirroring
     // rows. The mirror is the middle of its square, so a point as far one side lands as far the other.
-    function reflectedBy(archeton, cell){
-      let upright = archeton.direction !== 'Up' && archeton.direction !== 'Down';
-      if (upright) return cell.row === archeton.row ? { col: archeton.col * 2 - cell.col, row: archeton.row } : null;
-      return cell.col === archeton.col ? { col: archeton.col, row: archeton.row * 2 - cell.row } : null;
+    // Whether a pane stands upright, mirroring columns, rather than lying flat and mirroring rows: one placed facing
+    // Left or Right does, one facing Up or Down doesn't - see puzzleDrawing.js's FLOW_TURNS.
+    function uprightPane(pane){
+      return pane.direction !== 'Up' && pane.direction !== 'Down';
+    }
+
+    function reflectedBy(pane, cell){
+      if (uprightPane(pane)) return cell.row === pane.row ? { col: pane.col * 2 - cell.col, row: pane.row } : null;
+      return cell.col === pane.col ? { col: pane.col, row: pane.row * 2 - cell.row } : null;
     }
 
     // Whether nothing at all stands on the squares between two in the same row or column, the two of them aside: a
@@ -583,10 +592,30 @@
       return true;
     }
 
+    // For sokoban.js's onStepStart: something stepping into a Push Block pushes it on ahead, gliding along with it - see
+    // renderBoard's pushAlong. Returns { sank } if that brought matching blocks together. The ship does this through the
+    // board's own pushFrom, and a reflection as it moves - see stepReflections.
+    function pushFrom(from, to, moverDirection){
+      version++;
+      let block = objectAt(to);
+      if (block?.kind !== 'PushBlock') return null;
+      let next = pushedTo(block, PUZZLE_DIRECTIONS[moverDirection]);
+      if (!next) return null;
+      leaving(block);
+      block.fromCol = block.col;
+      block.fromRow = block.row;
+      block.glide = 'push';
+      block.col = next.col;
+      block.row = next.row;
+      revealLitAreas();
+      let sank = sinkMatches();
+      return sank ? { sank } : null;
+    }
+
     // Whether the ship's reflection can be on a square: anywhere the ship could stand, and anywhere it would be hurt - a
     // closed Gate, or a Stinging Archeton - so that the ship is sent back for it. A Wall, a Push Block or another
-    // Archeton is somewhere an image can't be. Everything else it lands on, it acts on, as the ship would: a Switch, a
-    // Key, the Finish.
+    // Archeton is somewhere an image can't be, though a Block on a reflection's way is shoved on ahead as it moves - see
+    // stepReflections. Everything else it lands on, it acts on, as the ship would: a Switch, a Key, the Finish.
     function canHoldReflection(cell){
       let object = objectAt(cell);
       if (!object) return true;
@@ -596,27 +625,135 @@
       return !isSolid(object);
     }
 
-    // Where the ship's reflection shows: across every Reflect pane whose line it's in, then across any pane those images
-    // are in themselves, for as long as they keep landing on the board - so two panes facing each other bounce a
-    // reflection between them. Worked out from the ship's own square, which is what makes it move with it. Each is
-    // { col, row }, plus the pane that made it and what it came from, which is what lets the drawing follow the ship's
-    // glide rather than jump between squares - see reflectionPosition.
-    function reflectionCells(from){
-      let found = new Map();
-      let queue = [from];
+    // Every Reflect pane with a point in its line, and nothing solid between them.
+    function panesInLine(cell){
+      let panes = [];
+      for (const archeton of objects) {
+        if (archeton.kind !== 'Archeton' || !hasPart(archeton, 'Reflect')) continue;
+        let pane = { col: archeton.col, row: archeton.row, direction: archeton.direction };
+        if (!reflectedBy(pane, cell) || !clearBetween(cell, pane)) continue;
+        panes.push(pane);
+      }
+      return panes;
+    }
+
+    // The chain a reflection hangs from: its pane's square after whatever it reflects, so that each pane shows one
+    // reflection of each thing it can see, and a reflection can be told from its parent's.
+    function chainOf(source, pane){
+      let here = pane.col + ',' + pane.row;
+      return source.chain ? source.chain + '>' + here : here;
+    }
+
+    // A square to hang reflections from: the ship's own, with nothing else about it.
+    function shipSource(){
+      return { col: shipCell.col, row: shipCell.row };
+    }
+
+    // A direction mirrored across a pane, as puzzleRules names them: left and right swap across an upright pane, up and
+    // down across a flat one.
+    function mirroredDirection(pane, direction){
+      if (uprightPane(pane)) return direction === 'Left' ? 'Right' : direction === 'Right' ? 'Left' : direction;
+      return direction === 'Up' ? 'Down' : direction === 'Down' ? 'Up' : direction;
+    }
+
+    // Every reflection the board should be showing: from the ship outwards, a pane shows what's in its line, and what it
+    // shows is in the line of other panes in turn, so panes facing each other bounce a reflection between them as far as
+    // the board allows. Only where there's room to stand on the reflection's square - see canHoldReflection.
+    function formReflections(){
+      let queue = [shipSource()];
+      let seen = new Set();
       while (queue.length > 0) {
-        let cell = queue.shift();
-        for (const archeton of objects) {
-          if (archeton.kind !== 'Archeton' || !hasPart(archeton, 'Reflect')) continue;
-          let image = reflectedBy(archeton, cell);
-          if (!image || !onBoard(image) || !clearBetween(cell, archeton)) continue;
-          if (isAt(image, from) || found.has(cellKey(image)) || !canHoldReflection(image)) continue;
-          let reflection = { ...image, pane: { col: archeton.col, row: archeton.row, direction: archeton.direction }, from: cell };
-          found.set(cellKey(image), reflection);
+        let source = queue.shift();
+        if (seen.has(source.chain ?? '')) continue;
+        seen.add(source.chain ?? '');
+        for (const pane of panesInLine(source)) {
+          let image = reflectedBy(pane, source);
+          if (!image || !onBoard(image) || isAt(image, shipCell) || isAt(image, source)) continue;
+          let chain = chainOf(source, pane);
+          // One pane shows one reflection of what it sees, once: one that's already there is still a source for the
+          // panes in its own line, which is what gives a chain its second reflection.
+          let existing = reflections.find(reflection => reflection.chain === chain);
+          if (existing) {
+            queue.push(existing);
+            continue;
+          }
+          // And one reflection to a square, whichever panes would put it there - which is also what stops panes facing
+          // each other showing the same reflection round and round.
+          if (reflections.some(reflection => isAt(reflection, image))) continue;
+          if (!canHoldReflection(image)) continue;
+          let reflection = {
+            col: image.col, row: image.row, fromCol: image.col, fromRow: image.row,
+            pane, from: source, fromShip: !source.chain, chain: chainOf(source, pane),
+          };
+          reflections.push(reflection);
           queue.push(reflection);
         }
       }
-      return [...found.values()];
+    }
+
+    // The reflection moves with the ship: it takes a step the way the ship's was, mirrored across its pane, shoving a
+    // Push Block on ahead as the ship would. One that can't go where its pane shows it is gone - a reflection is only
+    // there while the pane has the ship to show. Returns what the shoving did, for the caller.
+    function stepReflections(step){
+      let events = null;
+      if (!step) return events;
+      for (const reflection of reflections.slice()) {
+        let direction = mirroredDirection(reflection.pane, step.direction);
+        let target = nextCell(reflection, direction);
+        if (!canEnter(reflection, target, MOVER_DIRECTIONS[direction])) continue;
+        let pushed = objectAt(target)?.kind === 'PushBlock' ? pushFrom(reflection, target, MOVER_DIRECTIONS[direction]) : null;
+        reflection.fromCol = reflection.col;
+        reflection.fromRow = reflection.row;
+        reflection.col = target.col;
+        reflection.row = target.row;
+        events = mergeEvent(events, pushed);
+      }
+      return events;
+    }
+
+    // What a reflection shows: the ship, or the reflection its pane reflects - which has moved since the reflection was
+    // made, so the ship's square is read fresh rather than kept.
+    function sourceOf(reflection){
+      return reflection.fromShip ? shipCell : reflection.from;
+    }
+
+    // Every reflection has to be exactly where its pane shows what it reflects. One that isn't - because the ship walked
+    // out of the pane's line, or a shove didn't go as far as it did - is gone, and so is anything reflected from it.
+    function settleReflections(){
+      for (const reflection of reflections.slice()) {
+        let expected = reflectedBy(reflection.pane, sourceOf(reflection));
+        if (expected && isAt(reflection, expected)) continue;
+        dropReflection(reflection);
+      }
+    }
+
+    // Takes a reflection off the board, and anything reflected from it.
+    function dropReflection(reflection){
+      reflections = reflections.filter(other => other !== reflection);
+      for (const child of reflections.filter(other => other.from === reflection)) dropReflection(child);
+    }
+
+    // What the reflections set off where they stand, as the ship arriving would: Switches, Lanterns, Pipe Switches,
+    // Reset Switches, Keys and the Finish. Not a Teleporter or a Jump Tile: they carry off whatever stands on them, and
+    // a reflection is only ever where its pane shows the ship, so there's nowhere for it to be carried to.
+    function reflectArrivals(){
+      let events = null;
+      for (const reflection of reflections.slice()) {
+        let object = objectAt(reflection);
+        if (!object || object.kind === 'PushBlock' || object.kind === 'Teleporter' || object.kind === 'JumpTile') continue;
+        let event = arriveOn(object);
+        events = mergeEvent(events, event);
+        if (event?.reset || event?.finished) break;
+      }
+      return events;
+    }
+
+    // The board's reflections as they should be right now: anything that's no longer where its pane shows it gone, and
+    // any pane that's come to have the ship in its line showing one.
+    function syncReflections(){
+      settleReflections();
+      formReflections();
+      return reflections;
     }
 
     // The way from one square to another, along whichever of across and down it goes further.
@@ -824,6 +961,9 @@
       return sank ? { ...arrived, sank } : arrived;
     }
 
+    // A board with panes in line with the ship starts with its reflections already showing.
+    formReflections();
+
     return {
       start,
       get objects(){ return objects; },
@@ -835,8 +975,9 @@
       get onRotatorSwitch(){ return objectAt(shipCell)?.kind === 'RotatorSwitch'; },
       // Whether the ship is on a Pipe Switch, which turns the Pipes again each second it stays there.
       get onPipeSwitch(){ return objectAt(shipCell)?.kind === 'PipeSwitch'; },
-      // Where the ship's reflection shows right now, one per Reflect pane it's in the line of - see reflectionCells.
-      get reflections(){ return reflectionCells(shipCell); },
+      // Where the ship's reflections are right now, one for each Reflect pane it's in the line of and one more for each
+      // pane those are in the line of - see formReflections, stepReflections and settleReflections.
+      get reflections(){ return syncReflections(); },
       turnPipes,
       floors,
 
@@ -869,22 +1010,7 @@
 
       // For sokoban.js's onStepStart: the ship stepping into a Push Block pushes it on ahead, gliding along with
       // the ship - see renderBoard's pushAlong. Returns { sank } if that brought matching blocks together.
-      pushFrom(from, to, moverDirection){
-        version++;
-        let block = objectAt(to);
-        if (block?.kind !== 'PushBlock') return null;
-        let next = pushedTo(block, PUZZLE_DIRECTIONS[moverDirection]);
-        if (!next) return null;
-        leaving(block);
-        block.fromCol = block.col;
-        block.fromRow = block.row;
-        block.glide = 'push';
-        block.col = next.col;
-        block.row = next.row;
-        revealLitAreas();
-        let sank = sinkMatches();
-        return sank ? { sank } : null;
-      },
+      pushFrom,
 
       // Once a push has finished gliding, the block is simply where it is.
       settlePushes(){
@@ -901,6 +1027,9 @@
       placeShip(cell){
         version++;
         shipCell = cell;
+        // Reflections are images, not state to be replayed: they're worked out again from wherever the ship now is.
+        reflections = [];
+        formReflections();
       },
 
       // Which way a Stream is carrying a ship on this square, as sokoban.js's direction, or null.

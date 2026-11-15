@@ -1788,17 +1788,45 @@ test('a reflection another pane reflects sets things off in the same way', () =>
   assert.ok(event?.reset, 'and it set it off');
 });
 
-test('a Teleporter or a Jump Tile is left until reflections have ships of their own', () => {
-  let teleport = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Teleporter', 8, 5, { letter: 'A' }), obj('Teleporter', 0, 0, { letter: 'A' }));
-  teleport.placeShip(at(1, 5));
-  teleport.shipArrivedAt(at(2, 5));
-  assert.deepEqual(teleport.shipCell, at(2, 5), 'the ship stayed where it walked to');
+test('the reflection shoves a Push Block on ahead, as the ship would', () => {
+  let g = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), block(8, 5));
+  g.placeShip(at(1, 5));
+  g.shipArrivedAt(at(2, 5));
+  assert.deepEqual(g.objects.filter(o => o.kind === 'PushBlock').map(o => at(o.col, o.row)), [at(7, 5)], 'shoved the way the pane mirrors the ship\'s step');
+  assert.deepEqual(cells(g).map(cell => cell.col), [8], 'and the reflection goes where the block was');
+});
 
-  let blocks = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), block(8, 5));
-  blocks.placeShip(at(1, 5));
-  blocks.shipArrivedAt(at(2, 5));
-  assert.deepEqual(cells(blocks), [], 'a Push Block is not somewhere a reflection can be yet - see Phase D');
-  assert.deepEqual(blocks.objects.filter(o => o.kind === 'PushBlock').map(o => at(o.col, o.row)), [at(8, 5)], 'and it was not pushed');
+test('a Push Block on the mirror\'s square stops a reflection forming at all', () => {
+  let g = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), block(8, 5));
+  assert.deepEqual(cells(g), [], 'the block is where the ship would be mirrored, so there is nothing to see');
+  assert.deepEqual(g.objects.filter(o => o.kind === 'PushBlock').map(o => at(o.col, o.row)), [at(8, 5)], 'and it hasn\'t been touched');
+});
+
+test('a reflection that can\'t follow the ship is gone until it can', () => {
+  let g = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Wall', 8, 5));
+  g.placeShip(at(1, 5));
+  assert.deepEqual(cells(g).map(cell => cell.col), [9], 'at rest, the pane shows it');
+  g.shipArrivedAt(at(2, 5));
+  assert.deepEqual(cells(g), [], 'a Wall where its next step would go leaves nothing to see');
+
+  let further = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Wall', 7, 5));
+  further.placeShip(at(1, 5));
+  further.shipArrivedAt(at(2, 5));
+  assert.deepEqual(cells(further).map(cell => cell.col), [8], 'one in the way further off is fine while there is room');
+  further.shipArrivedAt(at(3, 5));
+  assert.deepEqual(cells(further), [], 'until the step would go through it');
+
+  let upcoming = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 3, 5), obj('Wall', 7, 5));
+  upcoming.placeShip(at(2, 5));
+  assert.deepEqual(cells(upcoming).map(cell => cell.col), [8]);
+});
+
+test('the ship is carried off and its reflection stays where the pane shows it', () => {
+  let g = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Teleporter', 8, 5, { letter: 'A' }), obj('Teleporter', 0, 0, { letter: 'A' }));
+  g.placeShip(at(1, 5));
+  g.shipArrivedAt(at(2, 5));
+  assert.deepEqual(g.shipCell, at(2, 5), 'the ship stayed where it walked to: a Teleporter carries what stands on it');
+  assert.deepEqual(cells(g).map(cell => cell.col), [8], 'and the reflection is still on the Teleporter, where the pane shows it');
 });
 
 test('being hurt through the reflection sends the ship back where it came from', () => {
