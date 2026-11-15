@@ -779,6 +779,7 @@ function renderBoardReflections(){
   boardReflectionEl.style.height = height + "px";
   boardReflectionEl.style.left = (mirrored.x * trackFocusScale - width / 2) + "px";
   boardReflectionEl.style.top = (mirrored.y * trackFocusScale - height / 2) + "px";
-  // Facing the way the ship faces, as a reflection of it would: its picture points up at rest, as the ship's does.
-  boardReflectionEl.style.transform = "rotate(" + (FACING_ANGLES[boardMover.facing] + Math.PI / 2) + "rad)";
+  // Facing back at the ship when it faces the pane, and the way it's going when it walks along the pane's line: its
+  // picture points up at rest, as the ship's does - see puzzleRules.js's reflectionFacing.
+  boardReflectionEl.style.transform = "rotate(" + (FACING_ANGLES[WeavePuzzle.reflectionFacing(first, boardMover.facing)] + Math.PI / 2) + "rad)";
 }

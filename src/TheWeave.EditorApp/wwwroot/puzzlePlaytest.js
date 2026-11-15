@@ -113,7 +113,7 @@ function drawPlaytest(context, look, timeMs) {
     context.save();
     context.imageSmoothingEnabled = false;
     context.translate(Math.round(mirrored.x), Math.round(mirrored.y));
-    context.rotate(PLAYTEST_SHIP_TURNS[play.mover.facing] ?? 0);
+    context.rotate(PLAYTEST_SHIP_TURNS[WeavePuzzle.reflectionFacing(cell, play.mover.facing)] ?? 0);
     context.globalAlpha = 0.4;
     context.drawImage(reflection, -PUZZLE_SHIP_WIDTH / 2, -PUZZLE_SHIP_HEIGHT / 2, PUZZLE_SHIP_WIDTH, PUZZLE_SHIP_HEIGHT);
     context.restore();

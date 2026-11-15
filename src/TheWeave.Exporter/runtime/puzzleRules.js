@@ -919,6 +919,16 @@
 
   // ---------- reflections ----------
 
+  // Which way a reflection faces: the way the ship faces, mirrored across the pane - so a ship facing the pane sees a
+  // reflection facing back at it, and one walking along the pane's line sees it facing its own way. A chained reflection
+  // is mirrored again for each pane it's been reflected through, so two upright panes give it the ship's facing back.
+  function reflectionFacing(reflection, facing){
+    let mirrored = reflection.from?.pane ? reflectionFacing(reflection.from, facing) : facing;
+    let upright = reflection.pane.direction !== 'Up' && reflection.pane.direction !== 'Down';
+    if (upright) return mirrored === 'left' ? 'right' : mirrored === 'right' ? 'left' : mirrored;
+    return mirrored === 'up' ? 'down' : mirrored === 'down' ? 'up' : mirrored;
+  }
+
   // Where a reflection is drawn: its pane's mirror of where the thing it reflects is being drawn - the ship, or another
   // reflection, all the way back through the chain - so the whole chain glides with the ship rather than jumping between
   // squares. Tile size in art pixels; the ship's position is where board.js's shipPosition has it.
@@ -993,5 +1003,5 @@
     return [...after.filter(object => !sweeps(object)), ...leaving, ...arriving].filter(object => (object.fade ?? 1) > 0);
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, isFloor, reflectionPosition };
+  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, isFloor, reflectionPosition, reflectionFacing };
 });

@@ -1838,3 +1838,24 @@ test('a reflection is drawn at its pane\'s mirror of where the ship is drawn, so
   assert.deepEqual(reflectionPosition(second, { x: 1.5 * TILE_PX, y: 5.5 * TILE_PX }, TILE_PX),
     { x: 9.5 * TILE_PX, y: 5.5 * TILE_PX }, 'a chained reflection mirrors the one it was made from');
 });
+
+test('a reflection faces back at the ship, and the way it walks along the pane', () => {
+  const { reflectionFacing } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+
+  let upright = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5));
+  let reflection = upright.reflections[0];
+  assert.equal(reflectionFacing(reflection, 'left'), 'right', 'facing the pane, it faces back');
+  assert.equal(reflectionFacing(reflection, 'right'), 'left');
+  assert.equal(reflectionFacing(reflection, 'up'), 'up', 'walking along the pane, the same way the ship does');
+  assert.equal(reflectionFacing(reflection, 'down'), 'down');
+
+  let flat = withArchetons([REFLECT_MIMIC], mimic(5, 5, 'Up'), obj('Start', 5, 2));
+  let lying = flat.reflections[0];
+  assert.equal(reflectionFacing(lying, 'up'), 'down', 'a pane lying flat mirrors up and down instead');
+  assert.equal(reflectionFacing(lying, 'left'), 'left');
+
+  let chain = withArchetons([REFLECT_MIMIC], mimic(3, 5), mimic(7, 5), obj('Start', 1, 5));
+  let second = chain.reflections.find(reflection => reflection.col === 9);
+  assert.equal(reflectionFacing(second, 'left'), 'left', 'mirrored through two upright panes, it faces the way the ship does');
+  assert.equal(reflectionFacing(second, 'up'), 'up');
+});
