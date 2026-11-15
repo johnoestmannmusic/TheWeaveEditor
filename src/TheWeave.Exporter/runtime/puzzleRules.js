@@ -360,12 +360,16 @@
 
     // Whether every reflection could take the step its pane shows it taking if the ship stepped this way: each steps the
     // way the ship's step mirrors across its own pane, so a Wall in a reflection's way is a Wall in the ship's, and the
-    // ship stays where it is. Chained reflections are in it too, since each takes its own step.
+    // ship stays where it is. Chained reflections are in it too, since each takes its own step. The board's edge is not a
+    // Wall in that sense: a reflection with no board left to be shown on simply goes, and comes back when there is - see
+    // settleReflections, which drops it, and formReflections, which makes it again.
     function reflectionsFollow(moverDirection){
       let direction = PUZZLE_DIRECTIONS[moverDirection];
       return syncReflections().every(reflection => {
         let mirrored = mirroredDirection(reflection.pane, direction);
-        return canEnterAlone(reflection, nextCell(reflection, mirrored), MOVER_DIRECTIONS[mirrored]);
+        let target = nextCell(reflection, mirrored);
+        if (!onBoard(target)) return true;
+        return canEnterAlone(reflection, target, MOVER_DIRECTIONS[mirrored]);
       });
     }
 
@@ -780,17 +784,16 @@
 
     // Whatever stopped the ship stepping this way by being in the way on the reflection's side: a Wall, a shut Gate, an
     // Archeton, or a Push Block it couldn't shove. Mirrored back across its pane it stands on the square the ship was
-    // trying to walk into, which is where the callers flash it - see board.js's refusedFlash. { object } with no object
-    // when the reflection had no room to step because the board ends there, since there's still a square to point at.
-    // Null if the ship couldn't have stepped there anyway: then the reason is on the ship's own side, not the
-    // reflection's, and nothing should be shown on it.
+    // trying to walk into, which is where the callers flash it - see board.js's refusedFlash. Null if the ship couldn't
+    // have stepped there anyway - then the reason is on the ship's own side, not the reflection's, and nothing should be
+    // shown on it - and null for a reflection that would step off the board, since that refuses nothing: it goes.
     function reflectionObstacleInTheWay(from, to, moverDirection){
       if (!isAt(from, shipCell) || !canEnterAlone(from, to, moverDirection)) return null;
       let direction = PUZZLE_DIRECTIONS[moverDirection];
       for (const reflection of syncReflections()) {
         let mirrored = mirroredDirection(reflection.pane, direction);
         let target = nextCell(reflection, mirrored);
-        if (canEnterAlone(reflection, target, MOVER_DIRECTIONS[mirrored])) continue;
+        if (!onBoard(target) || canEnterAlone(reflection, target, MOVER_DIRECTIONS[mirrored])) continue;
         return { object: objectAt(target) ?? null };
       }
       return null;
