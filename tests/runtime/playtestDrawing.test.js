@@ -70,7 +70,7 @@ test('the line of sight is drawn from the ship to its reflection whenever there 
   const play = WeaveBoard.createBoardPlay({ puzzle: { objects: [pane(5, 5), obj('Start', 2, 5)], archetons: [REFLECT_MIMIC] } });
   const strokes = draw(play);
   assert.equal(strokes.length, 1, 'one line, at rest');
-  assert.equal(strokes[0].style, 'rgba(255, 154, 60, 0.1)', 'a tenth of full strength, so it sits behind the board');
+  assert.equal(strokes[0].style, 'rgba(255, 154, 60, 0.25)', 'a quarter of full strength, so it sits behind the board');
   assert.deepEqual(strokes[0].path, [['move', 2.5 * WeavePuzzle.TILE_PX, 5.5 * WeavePuzzle.TILE_PX], ['line', 8.5 * WeavePuzzle.TILE_PX, 5.5 * WeavePuzzle.TILE_PX]], 'ship centre to reflection centre');
 });
 

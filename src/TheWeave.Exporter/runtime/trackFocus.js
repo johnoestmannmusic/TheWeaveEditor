@@ -737,7 +737,7 @@ function drawSightLines(){
   let tile = BOARD_TILE_PX;
   context.save();
   context.lineWidth = 2;
-  context.strokeStyle = refused ? 'rgba(255, 154, 60, 0.8)' : 'rgba(255, 154, 60, 0.1)';
+  context.strokeStyle = refused ? 'rgba(255, 154, 60, 0.8)' : 'rgba(255, 154, 60, 0.25)';
   context.setLineDash(refused ? [3, 2] : [3, 3]);
   if (reflections.length) {
     context.beginPath();
