@@ -748,6 +748,12 @@
       return events;
     }
 
+    // Whether the ship or one of its reflections is standing on one of these: the reflections count for everything the
+    // ship standing there would set off, and for the switches that keep working while something stays on them.
+    function haunts(kind){
+      return [shipCell, ...syncReflections()].some(cell => objectAt(cell)?.kind === kind);
+    }
+
     // The board's reflections as they should be right now: anything that's no longer where its pane shows it gone, and
     // any pane that's come to have the ship in its line showing one.
     function syncReflections(){
@@ -971,10 +977,11 @@
       get version(){ return version; },
       get isSolved(){ return solved; },
       get switchesActive(){ return switchesActive(); },
-      // Whether the ship is on a Rotator Loop Switch, which is what makes Rotator tiles move.
-      get onRotatorSwitch(){ return objectAt(shipCell)?.kind === 'RotatorSwitch'; },
-      // Whether the ship is on a Pipe Switch, which turns the Pipes again each second it stays there.
-      get onPipeSwitch(){ return objectAt(shipCell)?.kind === 'PipeSwitch'; },
+      // Whether the ship is on a Rotator Loop Switch, which is what makes Rotator tiles move - or one of its reflections
+      // is, which counts as the ship standing there would, since that's the whole of what a reflection does.
+      get onRotatorSwitch(){ return haunts('RotatorSwitch'); },
+      // Whether the ship is on a Pipe Switch, which turns the Pipes again each second it stays there - or a reflection is.
+      get onPipeSwitch(){ return haunts('PipeSwitch'); },
       // Where the ship's reflections are right now, one for each Reflect pane it's in the line of and one more for each
       // pane those are in the line of - see formReflections, stepReflections and settleReflections.
       get reflections(){ return syncReflections(); },

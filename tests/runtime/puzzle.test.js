@@ -1887,3 +1887,13 @@ test('a reflection faces back at the ship, and the way it walks along the pane',
   assert.equal(reflectionFacing(second, 'left'), 'left', 'mirrored through two upright panes, it faces the way the ship does');
   assert.equal(reflectionFacing(second, 'up'), 'up');
 });
+
+test('a reflection standing on a switch that keeps working counts as the ship standing there', () => {
+  let g = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('PipeSwitch', 8, 5));
+  assert.equal(g.onPipeSwitch, true, 'the reflection is on the Pipe Switch, so the Pipes keep turning');
+  g.placeShip(at(2, 8));
+  assert.equal(g.onPipeSwitch, false, 'out of the pane\'s line, nothing stands on it');
+
+  let rotator = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('RotatorSwitch', 8, 5));
+  assert.equal(rotator.onRotatorSwitch, true, 'and a Rotator Loop Switch the same');
+});
