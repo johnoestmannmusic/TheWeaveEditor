@@ -267,7 +267,7 @@
       let away = hurtAwayFrom(cell);
       if (away === undefined) return null;
       let direction = backDirection(cell);
-      if (!direction) direction = away.find(way => canEnter(cell, nextCell(cell, way), MOVER_DIRECTIONS[way])) ?? null;
+      if (!direction) direction = away.find(way => canEnterAlone(cell, nextCell(cell, way), MOVER_DIRECTIONS[way])) ?? null;
       if (direction) recovering = true;
       return direction;
     }
@@ -277,7 +277,7 @@
       let back = previousShipCell;
       if (!back || Math.abs(back.col - cell.col) + Math.abs(back.row - cell.row) !== 1) return null;
       let towardsBack = back.col > cell.col ? 'Right' : back.col < cell.col ? 'Left' : back.row > cell.row ? 'Down' : 'Up';
-      return canEnter(cell, back, MOVER_DIRECTIONS[towardsBack]) ? towardsBack : null;
+      return canEnterAlone(cell, back, MOVER_DIRECTIONS[towardsBack]) ? towardsBack : null;
     }
 
     // Whether the ship's reflection is being hurt where it stands: a closed Gate shut on it, a Beam with a Block
@@ -326,7 +326,7 @@
     function pushedByBeam(cell){
       if (!isAt(shipCell, cell)) return null;
       for (const hit of beamsOnShip()) {
-        if (hit.pushes && canEnter(cell, nextCell(cell, hit.direction), MOVER_DIRECTIONS[hit.direction])) return hit.direction;
+        if (hit.pushes && canEnterAlone(cell, nextCell(cell, hit.direction), MOVER_DIRECTIONS[hit.direction])) return hit.direction;
       }
       return null;
     }
@@ -334,6 +334,16 @@
     // For sokoban.js's canEnter. A Stream holds a ship until it pushes it off: the only way to leave
     // one is the way it's going. It can't be stepped onto head-on either.
     function canEnter(from, to, moverDirection){
+      return canEnterAlone(from, to, moverDirection)
+        && (!isAt(from, shipCell) || reflectionsFollow(moverDirection));
+    }
+
+    // Whether a square can be entered at all, whatever else is moving with it: not off the board, not against a Stream or
+    // a Pipe it doesn't run along, not through a Beam, and not into anything solid - though a Push Block that can be
+    // pushed on isn't solid, and an Archeton with a Sting is solid to everything but the ship, which is hurt for it.
+    // Anything the board moves without asking - a Stream, a Beam, a Slide Bug - uses this, since a forced move can't be
+    // refused.
+    function canEnterAlone(from, to, moverDirection){
       if (!onBoard(to)) return false;
       let direction = PUZZLE_DIRECTIONS[moverDirection];
       let holding = streams.get(cellKey(from));
@@ -346,6 +356,17 @@
       // An Archeton with a Sting is solid to everything but the ship, which can step into it - and is hurt.
       if (object?.kind === 'Archeton' && hasPart(object, 'Sting')) return true;
       return !(object && isSolid(object));
+    }
+
+    // Whether every reflection could take the step its pane shows it taking if the ship stepped this way: each steps the
+    // way the ship's step mirrors across its own pane, so a Wall in a reflection's way is a Wall in the ship's, and the
+    // ship stays where it is. Chained reflections are in it too, since each takes its own step.
+    function reflectionsFollow(moverDirection){
+      let direction = PUZZLE_DIRECTIONS[moverDirection];
+      return syncReflections().every(reflection => {
+        let mirrored = mirroredDirection(reflection.pane, direction);
+        return canEnterAlone(reflection, nextCell(reflection, mirrored), MOVER_DIRECTIONS[mirrored]);
+      });
     }
 
     // Whether moving along a direction is along a square's Pipe, if it has one: across a Pipe lying Left or Right, or up
@@ -700,7 +721,7 @@
       for (const reflection of reflections.slice()) {
         let direction = mirroredDirection(reflection.pane, step.direction);
         let target = nextCell(reflection, direction);
-        if (!canEnter(reflection, target, MOVER_DIRECTIONS[direction])) continue;
+        if (!canEnterAlone(reflection, target, MOVER_DIRECTIONS[direction])) continue;
         let pushed = objectAt(target)?.kind === 'PushBlock' ? pushFrom(reflection, target, MOVER_DIRECTIONS[direction]) : null;
         reflection.fromCol = reflection.col;
         reflection.fromRow = reflection.row;
@@ -799,7 +820,7 @@
     // through anything - see hurtBack.
     function canBeSentBack(cell, onwards){
       let back = previousShipCell;
-      let canGo = (to, way) => onBoard(to) && canEnter(cell, to, MOVER_DIRECTIONS[way]);
+      let canGo = (to, way) => onBoard(to) && canEnterAlone(cell, to, MOVER_DIRECTIONS[way]);
       if (back && Math.abs(back.col - cell.col) + Math.abs(back.row - cell.row) === 1) {
         let towardsBack = back.col > cell.col ? 'Right' : back.col < cell.col ? 'Left' : back.row > cell.row ? 'Down' : 'Up';
         if (canGo(back, towardsBack)) return true;

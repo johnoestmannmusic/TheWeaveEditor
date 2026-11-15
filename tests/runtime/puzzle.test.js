@@ -1897,3 +1897,35 @@ test('a reflection standing on a switch that keeps working counts as the ship st
   let rotator = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('RotatorSwitch', 8, 5));
   assert.equal(rotator.onRotatorSwitch, true, 'and a Rotator Loop Switch the same');
 });
+
+test('the ship can\'t step where its reflection couldn\'t follow', () => {
+  // 2 across the pane at 5 is 8: stepping back to 1 sends the reflection to 9, and there's a Wall there.
+  let walled = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Wall', 9, 5));
+  assert.deepEqual(cells(walled).map(cell => cell.col), [8], 'the pane shows the reflection where it has room');
+  assert.equal(walled.canEnter(at(2, 5), at(1, 5), 'left'), false, 'a Wall in the reflection\'s way is a Wall in the ship\'s');
+  assert.equal(walled.canEnter(at(2, 5), at(3, 5), 'right'), true, 'and stepping the other way is still open');
+
+  // A Push Block the reflection could shove is fine; one it couldn't is the same as a Wall. Stepping the other way,
+  // the reflection goes from 8 to 7, where the block is.
+  let pushable = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), block(7, 5));
+  assert.equal(pushable.canEnter(at(2, 5), at(3, 5), 'right'), true, 'the reflection shoves the block on ahead');
+  let blocked = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), block(7, 5), obj('Wall', 6, 5));
+  assert.equal(blocked.canEnter(at(2, 5), at(3, 5), 'right'), false, 'and a block with nowhere to go stops it as a Wall would');
+});
+
+test('a chained reflection that couldn\'t follow stops the ship too', () => {
+  let g = withArchetons([REFLECT_MIMIC], mimic(3, 5), mimic(7, 5), obj('Start', 1, 5));
+  assert.deepEqual(cells(g).map(cell => cell.col).sort((a, b) => a - b), [5, 9], 'a reflection each');
+  assert.equal(g.canEnter(at(1, 5), at(0, 5), 'left'), false, 'the second reflection would step off the board');
+  assert.equal(g.canEnter(at(1, 5), at(2, 5), 'right'), true, 'the other way both follow');
+});
+
+test('a Beam pushes the ship even where its reflection couldn\'t follow, and the reflection goes', () => {
+  // The ship at 2 is shown at 8, with a Wall at 7 in the way of the step towards the pane.
+  let g = withArchetons([SENTRIBEAM, REFLECT_MIMIC], eye(1, 5), mimic(5, 5), obj('Start', 2, 5), obj('Wall', 7, 5));
+  assert.deepEqual(cells(g).map(cell => cell.col), [8], 'the pane shows the reflection where it has room');
+  assert.equal(g.canEnter(at(2, 5), at(3, 5), 'right'), false, 'the ship can\'t walk into the Wall its reflection would');
+  assert.equal(g.carryDirection(at(2, 5)), 'right', 'but the Beam pushes it anyway: being pushed is not a step');
+  g.placeShip(at(3, 5));
+  assert.deepEqual(cells(g), [], 'and the reflection, with the Wall where it would be shown, is gone');
+});
