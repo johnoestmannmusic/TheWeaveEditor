@@ -609,22 +609,29 @@
       return cell.col === pane.col ? { col: pane.col, row: pane.row * 2 - cell.row } : null;
     }
 
-    // Whether nothing at all stands on the squares between two in the same row or column, the two of them aside: a
-    // Wall between the ship and a pane hides it, as it would hide the ship from a Beam.
+    // Whether something solid stands on a square: what a Beam stops at, and what hides a pane's view of the ship - a
+    // Wall, a Push Block, a closed Gate, an Archeton. An open Gate is not there: the ship walks through it and stands in
+    // it, so a pane sees through one as it does through a doorway.
+    function solidAt(cell){
+      return objects.some(object => isAt(object, cell) && isSolid(object));
+    }
+
+    // Whether nothing solid stands on the squares between two in the same row or column, the two of them aside: a Wall
+    // between the ship and a pane hides it, as it would hide the ship from a Beam.
     function clearBetween(from, to){
       let dc = Math.sign(to.col - from.col), dr = Math.sign(to.row - from.row);
       for (let cell = { col: from.col + dc, row: from.row + dr }; !isAt(cell, to); cell = { col: cell.col + dc, row: cell.row + dr }) {
-        if (!onBoard(cell) || objectAt(cell)) return false;
+        if (!onBoard(cell) || solidAt(cell)) return false;
       }
       return true;
     }
 
-    // The first square between two in the same row or column that has something on it, or that's off the board, or null
-    // if there's nothing between them - see clearBetween.
+    // The first square between two in the same row or column that has something solid on it, or that's off the board, or
+    // null if there's nothing between them - see clearBetween.
     function firstBetween(from, to){
       let dc = Math.sign(to.col - from.col), dr = Math.sign(to.row - from.row);
       for (let cell = { col: from.col + dc, row: from.row + dr }; !isAt(cell, to); cell = { col: cell.col + dc, row: cell.row + dr }) {
-        if (!onBoard(cell) || objectAt(cell)) return cell;
+        if (!onBoard(cell) || solidAt(cell)) return cell;
       }
       return null;
     }

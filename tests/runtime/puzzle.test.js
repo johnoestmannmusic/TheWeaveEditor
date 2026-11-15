@@ -1735,6 +1735,33 @@ test('a reflection is shown where it would be hurt, and where it can act', () =>
   assert.deepEqual(cells(keys), [at(8, 5)], 'and a Key is there for it to take');
 });
 
+test('a pane sees the ship through an open Gate, and not through a shut one', () => {
+  // A flat pane at 5,4, the ship at 5,6, and a Gate in between at 5,5: an open Gate is a doorway, and the ship walks
+  // through one and stands in it.
+  let shut = withArchetons([REFLECT_MIMIC], mimic(5, 4, 'Down'), obj('Start', 5, 6), obj('Gate', 5, 5, { letter: 'A' }));
+  assert.deepEqual(cells(shut), [], 'a shut Gate hides the ship');
+  assert.deepEqual(shut.blockedSights.map(sight => sight.blocker), [at(5, 5)], 'and the sight line stops at it, for the drawing');
+
+  let open = withArchetons([REFLECT_MIMIC], mimic(5, 4, 'Down'), obj('Start', 5, 6), obj('Gate', 5, 5, { letter: 'A', open: true }));
+  assert.deepEqual(cells(open), [at(5, 2)], 'an open one is a doorway: the pane sees the ship through it');
+  assert.deepEqual(open.blockedSights, [], 'and there is nothing to draw in the way');
+});
+
+test('the ship standing behind an open Gate is reflected onto the Finish, finishing the board', () => {
+  // The shape of Glass Wall Gallery - Floor I's right-hand column: two panes lying flat, open Gates between the ship and
+  // the one above it, and the Finish where the second reflection lands.
+  let g = withArchetons([REFLECT_MIMIC],
+    mimic(5, 6, 'Down'), mimic(5, 2, 'Down'),
+    obj('Gate', 5, 7, { letter: 'A', open: true }), obj('Gate', 5, 8, { letter: 'A', open: true }),
+    obj('Finish', 5, 1), obj('Start', 5, 9));
+  assert.deepEqual(cells(g), [at(5, 3), at(5, 1)], 'the pane sees the ship through the Gates, and the pane above the Finish');
+
+  g.placeShip(at(5, 8));
+  let event = g.shipArrivedAt(at(5, 9));
+  assert.ok(event?.finished, 'the second reflection steps onto the Finish and the board finishes');
+  assert.equal(g.isSolved, true);
+});
+
 test('each reflection knows the pane that made it and what it came from, for drawing the glide', () => {
   let g = withArchetons([REFLECT_MIMIC], mimic(3, 5), mimic(7, 5), obj('Start', 1, 5));
   let [first, second] = g.reflections;
