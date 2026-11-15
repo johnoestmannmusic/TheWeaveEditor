@@ -164,6 +164,10 @@ public static class Program
                     OpenProject(window);
                     break;
 
+                case "save-project-as":
+                    SaveProjectAs(window);
+                    break;
+
                 case "import-legacy-site":
                     await ImportLegacySite(window);
                     break;
@@ -486,6 +490,82 @@ public static class Program
         {
             SendError(window, $"Auto-save failed: {ex.Message}");
         }
+    }
+
+    // Saves the project under a path the user picks: for moving a project's file into the folder it belongs in, or
+    // keeping a copy. Auto-save only ever writes wherever the project already is (see AutoSave), so this is the one
+    // way its file moves once it has one. The dialog starts at the project's own folder with its own name filled in,
+    // so saving it elsewhere is a matter of choosing the folder.
+    private static void SaveProjectAs(PhotinoWindow window)
+    {
+        if (_project is null)
+        {
+            SendError(window, "No project open.");
+            return;
+        }
+
+        var path = FileDialogs.ShowSaveFile(window, "Save Weave Project As", ProjectFileFilter,
+            _projectPath is null ? null : Path.GetDirectoryName(Path.GetFullPath(_projectPath)),
+            _projectPath is null ? "project.json" : Path.GetFileName(_projectPath));
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        if (SaveProjectTo(window, path))
+            SendStatus(window, $"Saved to {path}{MissingAssetNote()}");
+    }
+
+    // Writes the project to path, and makes that the project's own file from then on: the folder its assets are looked
+    // for in follows it unless they were deliberately elsewhere (see ContentRootAfterSaveAs), its undo history is saved
+    // again under the new path - that's keyed by the file's path, so otherwise it would be silently left behind - and
+    // the next launch opens it from there. The old file is left where it was, as with any Save As.
+    private static bool SaveProjectTo(PhotinoWindow window, string path)
+    {
+        try
+        {
+            WeaveProjectSerializer.SaveToFile(_project!, path);
+        }
+        catch (Exception ex)
+        {
+            SendError(window, $"Save failed: {ex.Message}");
+            return false;
+        }
+
+        _contentRoot = ContentRootAfterSaveAs(_contentRoot, _projectPath, path);
+        _projectPath = path;
+        RememberLastProjectPath();
+        _undoHistory.Save(_projectPath);
+        SendProjectState(window);
+        return true;
+    }
+
+    /// <summary>
+    /// Where a project's assets are looked for once it's saved over a chosen path. Normally the folder it's saved into,
+    /// since a project saved from a file keeps its assets beside it. One that came from an imported legacy site, or
+    /// otherwise has its assets somewhere else on purpose, keeps the content root it already had - that's where they
+    /// really are, and moving the project file doesn't move them.
+    /// </summary>
+    internal static string? ContentRootAfterSaveAs(string? contentRoot, string? projectPath, string chosenPath)
+    {
+        var chosenRoot = Path.GetDirectoryName(Path.GetFullPath(chosenPath));
+        var assetsWereBesideTheFile = contentRoot is null
+            || (projectPath is not null
+                && string.Equals(Path.GetFullPath(contentRoot), Path.GetDirectoryName(Path.GetFullPath(projectPath)), StringComparison.Ordinal));
+
+        return assetsWereBesideTheFile ? chosenRoot : contentRoot;
+    }
+
+    // Saving a project into a folder that hasn't got its images yet is allowed - it's the project file being saved, not
+    // the art - but previews and an export will look for them there, so it's worth saying so rather than leaving the
+    // user to find out from a blank canvas.
+    private static string MissingAssetNote()
+    {
+        var imgRoot = _project?.Assets.ImgRoot;
+        if (_contentRoot is null || string.IsNullOrWhiteSpace(imgRoot))
+            return "";
+
+        return Directory.Exists(Path.Combine(_contentRoot, imgRoot))
+            ? ""
+            : $" (no {imgRoot} folder there, so images and an export will look for one in {_contentRoot})";
     }
 
     private static void RememberLastProjectPath()

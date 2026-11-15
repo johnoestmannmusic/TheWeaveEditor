@@ -66,6 +66,10 @@ Neocities, replacing hand-authoring HTML per location.
 - No manual save step: every edit auto-saves to disk immediately (prompting once for a
   destination on a brand-new project, like a "Save As"); Export Site remembers its destination
   folder after the first run.
+- Save Project As, to move a project's file somewhere else (into the folder it belongs in, say)
+  or keep a copy: the project then carries on from the new path, auto-saving there, opening from
+  there next launch, with its undo history and, unless they were imported elsewhere, its assets
+  following it.
 - Imported cover images are copied into an organized `img/<page>/<location>.<ext>` path inside
   the project automatically, so a project's asset tree stays tidy as content is added.
 
