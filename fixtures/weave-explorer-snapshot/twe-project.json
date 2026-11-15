@@ -1606,6 +1606,7 @@
                     ],
                     "Palette": {
                       "wall": "#7a5050",
+                      "edge": "#377a36",
                       "finish": "#377a36",
                       "gate": "#7a5946",
                       "switch": "#7a5946",
@@ -1633,6 +1634,16 @@
                         ],
                         "Grain": "oq6qqqqqqqqqqqnmmqgmmexvqolllqqqqqqqqkeqdqpo8q8qoq7njqqqqqqqpqeqogppeepqoqqqqqqqqqqqpqqqdqepqqgqqqlqqqqqqqqqqqgqiqqqqqiqlqqqqqqqzqqqnqgiibgqgqqqqqqqqqqqqqqnnbne2ieqqkqiqqqqqqqqqqqqbk8ee9qqiqaiqqqqqqqqqqqqqkee0e9qejqqqqqqqqqqqqqqbq8a0eqqqexqmjqqnqqqqqqmh9hie3aqeqhqeqqqnqqqqqqqaqbo8dakqqqqhhopiqkqcqhqqqqqqqkkeqhqfqiqiqqqqhqqqqqqjqaqehqqqgqqqqqqxqhqqqqqqqqqqqiq9qqqqqqqqqqqqqqqqqiqiqqqimqqqqkqkqqqqqqqqqqqqqqqamfqfqkqqkqqqqqqqqiqeqaqmcqqqkqqnqqqyqwqqmkqkeqqeqkqhqqqnqqyqqqqwq9q9zxqqhqjqqqqnqnqyqqqwxqkqzqqeqiqeqqqnqqqqqqqwqeq9j7zqeqqqqqqjqlqqqqqqqdqq4qqelqqqqqqjqqqqqqqqvdq8qgq",
                         "Pixels": "110111111111111111011033111111111111110101110101110111111111110110110011111111111111111101011101111111111111110111111111111111113111110110010111111111111111101001011111111111111111010000111101111111111111110000010111111111111111010000111031111111111111101100010111011111111111010100011111111111110101111111110101011111111011111111010011101111113101111111111111011111111111111111111111111111111111111111111111010101111111111111110101101111111111313111111011011111111113111131010331111111111111311133111311011101111111111131010103101111111111111111011011011111111111111113010101"
+                      },
+                      "edge": {
+                        "Ramp": [
+                          "#0c610c",
+                          "#565f22",
+                          "#377a36",
+                          "#7a7a44"
+                        ],
+                        "Grain": "qgheqlw3c3j8d677cb8160fa4qmq2e4d4c3d3d4g4c4ujq8temqq94e2d4d4c5igc4cqujo84qoq28282e2d4i5h4c4qju8lqqqqqhv7sbydooqmnnndvdq9mqhqfo9tbhdydq9qdoevdq6qoahhgkqqqiqqyhthvdvdvdig5hcl5ngqlqqqfvfqfvdqhvgndcccdflqqqqqtfshsusxmqnr5q3g9naqwqwqnqssuxxmvsuko7xioqqqqqqqiskqxthqhvkqbx7ibqyusuxmigxuxxmivivkyqiviqiymqft2xbscmbxgpivvivixmxixmtfncssnahhvgsxfvhqlxiqmyfq2maqbxcqgvoqxmvfwnvfvhukysdfpilgqavjkqhvnqkvfqkvch8gcjbv5kjvvivfwnufvdukkaffichewfvjcuajhxhq9thqba3a372e6gcjugqavhv9q9vii4a373bffgjjgqaulqhq9mhxca1a272f4ecqvguasmvcz9wp89ibccinjaqqjuaqmshoczjq9icici8o9qjqxgtctmsdzcukl9icicgjjpqq",
+                        "Pixels": "211122301020100011000011022201010101010101022202122200101010102110122220022200000101020101022202222222302131222222213120221212021113120212131202211112222222312131313121011202122222131213121312111111222222212222232222020102023232222223323232203222222222222232121322130212322232213233223232322322232212031212131223323232323221212220113123131223222312020213121322323132313132321122212132221322231223110112130223323132213132211121213132121213120212100000010112212131302032200000111122121222120213100000010112312122313032002111222122221222121322021212020222312122213132202121122222"
                       },
                       "finish": {
                         "Ramp": [
@@ -2331,6 +2342,7 @@
                 ],
                 "Palette": {
                   "wall": "#ffffff",
+                  "edge": "#ffffff",
                   "finish": "#ffffff",
                   "gate": "#ffffff",
                   "switch": "#ffffff",
@@ -2350,6 +2362,16 @@
                 },
                 "Textures": {
                   "wall": {
+                    "Ramp": [
+                      "#ffffff",
+                      "#ffffff",
+                      "#ffffff",
+                      "#ffffff"
+                    ],
+                    "Grain": "00000zzzzz0zz0zzz0zz00000000z00zzz0zz0zzz00zz000000zz0z0zz0zz0zz0z0zzz000zzzzz0zzz0zz0zzz0zzz0zzz4zzzzz4zz4zz4zz4zzzzzz40z0zzz00zz0zz0zz00zzz0zzzz0zz000zz0zz0zz000zz00zz00zz000zz0zz0zz000zz00zz00zz000zz0zz0zz000zz00zz00zz000zz0zz0zz000zz00zz00zz000zz0zz0zz000zz00zz00zzz00zz0zz0zz00zzz00zz00zzzz0zz0zz0zz0zzzz00zz00zz0zzzz0zz0zzzz0zz00zzz0zz00zzz0zz0zzz00zz00zzz0zzz00zz0zz0zz00zzz00zz0zzzz00zzzzzzzz00zzz0z0z0zzz0z0zz0zz0zz0z0zz0z0z00zz00zzz0zz0zzz00zzz00z000z0000z0zz0z0000zz000z0000zz000zzzz0000zz000z0z00000zz00zz000zz0000z000z000000zzzzzzz00000z00000z0000000040000000z000",
+                    "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+                  },
+                  "edge": {
                     "Ramp": [
                       "#ffffff",
                       "#ffffff",
@@ -3015,6 +3037,7 @@
             ],
             "Palette": {
               "wall": "#76a48b",
+              "edge": "#e0834e",
               "finish": "#e0834e",
               "gate": "#d4a680",
               "switch": "#d4a680",
@@ -3042,6 +3065,16 @@
                 ],
                 "Grain": "3n8c6h9h8ndndnd868686444ddnafaififnjnju686j6b4625kcodi9ifi9njnd86b686424ckokoonfiiifuin6j6b6j2423n8odn8i9i9i9id8454d422694ddj4d9ifififnkofxrvvyz2d6j6d4dkocofi9oki9wjypz6djjiddcoookoookwoxjvzzz2d4d5l5ddodo9i9odw9o9zoy66jdd5llxrxrokukwkxfoyyy3j6j6lalrxlxkw9nfwdokviz9jjsslldwozozwofwwwryyyv196iaiad133e1526035e1606faladalae69595936395e2666d9dadad6a36392636393904a9b9ladaa69262626392f6943b8b9d9d133603260336090499j8b9laa3936363636361646d9b9b9d3636362636162604xvvpxxxrxxzwxopopopipipijthvjxlxxxxwooiiiiipioiovovpxrxrxozxxooiiipopiiipvjxpxlxxxoxxxooiiioipiixxxpxxxrxoooxxxovnnipopi",
                 "Pixels": "021112121222222111111000222121222222222111211010022222122212222111111000122222222222222121112000021222121212122100020001102220212222222222323333021212022222221222132323122222222222222232323333020202022222121223121323112220223232222232322333021212122323231223222323122222223232332233323333011212120002010100120101212121212111111010112011121212121101010101010100111121211110101010102110011112120001000100010100112111211010101010101010121111120101010101010100322233323333322222222222222223233333222222222222222232323233322222222222222323233323332222222222333233323222333232222222"
+              },
+              "edge": {
+                "Ramp": [
+                  "#e35c26",
+                  "#c87745",
+                  "#e0834e",
+                  "#caa144"
+                ],
+                "Grain": "8i6f6h670228051518288sesj8ijj7i1728252555288s8sj8i6f6g6827275a35281ees8jihhfhfi48272aaa5558essjj7i7h6g8i4b4i8lad5d5sdndng7igg7iii4iilaldd5sdnjxj4j4g7g4g4b4g7l5d5d5djxdnhgggiggbggggljldldddonxj7g7g7g7g4g7g7j7l5j5ddxlxl7hgi7ggg6ggg7lll8jdxrxral4g7i7g6g7g7g4j7l8lrzlzxvvlvrvgjglgiggbjgjjaaeejrgvgqgj6j8i7i7g7j7j2a3axmxmwozjj5lii7lgl7ii84aajuguoypj8j4g4i4g7g4g3728uvxvzyyjlggiiijbjbgb7788dndyjujj7g4d4b4d4b4b0708j5pjp8jirlrhk4b474d4g7jg5pdj4g4pfrbrg9467a594g4gjsligagfkjrlr797j794gbdb3d4g4b5kblcne75656494b4dh6ddj5pvyjokn6d464g7i4ld5j8j8j5zovewh6464b4b4i4dsjpjpjyyzvvhk464b4c8lilb",
+                "Pixels": "121212110001000001011323212221201010000000113132121212110101010001022312222222201010111000123322121212120102121202032323212221222022212220323232020212020102120202022323222222212222222222223332121212120212121202022323212221222122212221223333120212121212120212123323333233322222222122221122232323221212121212120101323233322022212221221011232333321202020212020101333333322222222121211111232323221202010201010101203231223232201010202122032202032313210111010202232221222232311121102121020201022223210101010102212220333232312010212022021212033323210101010202323232333332201010212221"
               },
               "finish": {
                 "Ramp": [
@@ -5041,223 +5074,484 @@
                             "Direction": null
                           },
                           {
-                            "Kind": "Wall",
-                            "Col": 5,
-                            "Row": 9,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-12"
-                          },
-                          {
-                            "Kind": "Wall",
+                            "Kind": "Archeton",
                             "Col": 7,
-                            "Row": 9,
+                            "Row": 7,
                             "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-13"
+                            "Direction": "Right",
+                            "Archeton": "reflect-mimic"
                           },
                           {
-                            "Kind": "PushBlock",
-                            "Col": 5,
-                            "Row": 6,
-                            "Letter": null,
-                            "Direction": null,
-                            "Symbol": "Circle"
-                          },
-                          {
-                            "Kind": "ResetSwitch",
-                            "Col": 4,
+                            "Kind": "Archeton",
+                            "Col": 6,
                             "Row": 5,
                             "Letter": null,
-                            "Direction": null,
-                            "Variant": "resetswitch-2"
+                            "Direction": "Right",
+                            "Archeton": "reflect-mimic"
                           },
                           {
-                            "Kind": "Wall",
-                            "Col": 5,
+                            "Kind": "Archeton",
+                            "Col": 1,
+                            "Row": 2,
+                            "Letter": null,
+                            "Direction": "Right",
+                            "Archeton": "reflect-mimic"
+                          },
+                          {
+                            "Kind": "Archeton",
+                            "Col": 8,
                             "Row": 3,
                             "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-12"
+                            "Direction": "Down",
+                            "Archeton": "reflect-mimic"
                           },
                           {
-                            "Kind": "Wall",
-                            "Col": 4,
-                            "Row": 4,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-12"
-                          },
-                          {
-                            "Kind": "Wall",
+                            "Kind": "Archeton",
                             "Col": 3,
-                            "Row": 5,
+                            "Row": 1,
                             "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-12"
-                          },
-                          {
-                            "Kind": "Wall",
-                            "Col": 4,
-                            "Row": 6,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-13"
-                          },
-                          {
-                            "Kind": "Wall",
-                            "Col": 4,
-                            "Row": 7,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-12"
-                          },
-                          {
-                            "Kind": "Wall",
-                            "Col": 6,
-                            "Row": 6,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-13"
-                          },
-                          {
-                            "Kind": "Wall",
-                            "Col": 6,
-                            "Row": 5,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-12"
-                          },
-                          {
-                            "Kind": "Wall",
-                            "Col": 6,
-                            "Row": 4,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-13"
-                          },
-                          {
-                            "Kind": "Wall",
-                            "Col": 4,
-                            "Row": 9,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-13"
-                          },
-                          {
-                            "Kind": "PushBlock",
-                            "Col": 4,
-                            "Row": 8,
-                            "Letter": null,
-                            "Direction": null,
-                            "Symbol": "Cross"
-                          },
-                          {
-                            "Kind": "PushBlock",
-                            "Col": 2,
-                            "Row": 8,
-                            "Letter": null,
-                            "Direction": null,
-                            "Symbol": "Cross"
-                          },
-                          {
-                            "Kind": "PushBlock",
-                            "Col": 5,
-                            "Row": 8,
-                            "Letter": null,
-                            "Direction": null,
-                            "Symbol": "Circle"
-                          },
-                          {
-                            "Kind": "Wall",
-                            "Col": 3,
-                            "Row": 7,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-12"
-                          },
-                          {
-                            "Kind": "Wall",
-                            "Col": 2,
-                            "Row": 7,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-13"
-                          },
-                          {
-                            "Kind": "Wall",
-                            "Col": 3,
-                            "Row": 9,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-12"
-                          },
-                          {
-                            "Kind": "Wall",
-                            "Col": 2,
-                            "Row": 9,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-12"
-                          },
-                          {
-                            "Kind": "Wall",
-                            "Col": 1,
-                            "Row": 9,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-13"
-                          },
-                          {
-                            "Kind": "Wall",
-                            "Col": 0,
-                            "Row": 9,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-12"
-                          },
-                          {
-                            "Kind": "Wall",
-                            "Col": 1,
-                            "Row": 7,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-13"
-                          },
-                          {
-                            "Kind": "Wall",
-                            "Col": 0,
-                            "Row": 7,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-12"
-                          },
-                          {
-                            "Kind": "Wall",
-                            "Col": 7,
-                            "Row": 7,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-12"
-                          },
-                          {
-                            "Kind": "Wall",
-                            "Col": 7,
-                            "Row": 8,
-                            "Letter": null,
-                            "Direction": null,
-                            "Variant": "wall-12"
+                            "Direction": "Down",
+                            "Archeton": "reflect-mimic"
                           },
                           {
                             "Kind": "Finish",
+                            "Col": 1,
+                            "Row": 9,
+                            "Letter": null,
+                            "Direction": null
+                          },
+                          {
+                            "Kind": "Archeton",
+                            "Col": 6,
+                            "Row": 1,
+                            "Letter": null,
+                            "Direction": "Right",
+                            "Archeton": "reflect-mimic"
+                          },
+                          {
+                            "Kind": "Archeton",
+                            "Col": 4,
+                            "Row": 1,
+                            "Letter": null,
+                            "Direction": "Down",
+                            "Archeton": "reflect-mimic"
+                          },
+                          {
+                            "Kind": "Archeton",
+                            "Col": 1,
+                            "Row": 3,
+                            "Letter": null,
+                            "Direction": "Left",
+                            "Archeton": "reflect-mimic"
+                          },
+                          {
+                            "Kind": "Archeton",
+                            "Col": 4,
+                            "Row": 7,
+                            "Letter": null,
+                            "Direction": "Down",
+                            "Archeton": "reflect-mimic"
+                          },
+                          {
+                            "Kind": "Archeton",
+                            "Col": 7,
+                            "Row": 8,
+                            "Letter": null,
+                            "Direction": "Left",
+                            "Archeton": "reflect-mimic"
+                          },
+                          {
+                            "Kind": "Wall",
+                            "Col": 7,
+                            "Row": 9,
+                            "Letter": null,
+                            "Direction": null,
+                            "Variant": "wall-7"
+                          },
+                          {
+                            "Kind": "Wall",
+                            "Col": 9,
+                            "Row": 9,
+                            "Letter": null,
+                            "Direction": null,
+                            "Variant": "wall-6"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 7,
+                            "Row": 1,
+                            "Letter": null,
+                            "Direction": "Right"
+                          },
+                          {
+                            "Kind": "RotatorTile",
+                            "Col": 1,
+                            "Row": 6,
+                            "Letter": null,
+                            "Direction": "Right",
+                            "Variant": "rotatortile-2"
+                          },
+                          {
+                            "Kind": "RotatorTile",
+                            "Col": 0,
+                            "Row": 6,
+                            "Letter": null,
+                            "Direction": "Right",
+                            "Variant": "rotatortile-2"
+                          },
+                          {
+                            "Kind": "RotatorTile",
+                            "Col": 2,
+                            "Row": 6,
+                            "Letter": null,
+                            "Direction": "Down",
+                            "Variant": "rotatortile-2"
+                          },
+                          {
+                            "Kind": "RotatorTile",
+                            "Col": 2,
+                            "Row": 7,
+                            "Letter": null,
+                            "Direction": "Left",
+                            "Variant": "rotatortile-2"
+                          },
+                          {
+                            "Kind": "RotatorTile",
+                            "Col": 1,
+                            "Row": 7,
+                            "Letter": null,
+                            "Direction": "Left",
+                            "Variant": "rotatortile-2"
+                          },
+                          {
+                            "Kind": "RotatorTile",
+                            "Col": 0,
+                            "Row": 7,
+                            "Letter": null,
+                            "Direction": "Up",
+                            "Variant": "rotatortile-2"
+                          },
+                          {
+                            "Kind": "Wall",
+                            "Col": 2,
+                            "Row": 8,
+                            "Letter": null,
+                            "Direction": null,
+                            "Variant": "wall-16"
+                          },
+                          {
+                            "Kind": "Wall",
                             "Col": 0,
                             "Row": 8,
                             "Letter": null,
+                            "Direction": null,
+                            "Variant": "wall-14"
+                          },
+                          {
+                            "Kind": "Wall",
+                            "Col": 0,
+                            "Row": 9,
+                            "Letter": null,
+                            "Direction": null,
+                            "Variant": "wall-15"
+                          },
+                          {
+                            "Kind": "Wall",
+                            "Col": 2,
+                            "Row": 9,
+                            "Letter": null,
+                            "Direction": null,
+                            "Variant": "wall-16"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 7,
+                            "Row": 6,
+                            "Letter": null,
+                            "Direction": "Down"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 6,
+                            "Row": 7,
+                            "Letter": null,
+                            "Direction": "Right"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 6,
+                            "Row": 8,
+                            "Letter": null,
+                            "Direction": "Right"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 6,
+                            "Row": 9,
+                            "Letter": null,
+                            "Direction": "Right"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 3,
+                            "Row": 7,
+                            "Letter": null,
+                            "Direction": "Left"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 3,
+                            "Row": 8,
+                            "Letter": null,
+                            "Direction": "Left"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 3,
+                            "Row": 9,
+                            "Letter": null,
+                            "Direction": "Left"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 6,
+                            "Row": 3,
+                            "Letter": null,
+                            "Direction": "Left"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 6,
+                            "Row": 4,
+                            "Letter": null,
+                            "Direction": "Left"
+                          },
+                          {
+                            "Kind": "Archeton",
+                            "Col": 1,
+                            "Row": 7,
+                            "Letter": null,
+                            "Direction": "Left",
+                            "Archeton": "reflect-mimic"
+                          },
+                          {
+                            "Kind": "Archeton",
+                            "Col": 6,
+                            "Row": 2,
+                            "Letter": null,
+                            "Direction": "Left",
+                            "Archeton": "reflect-mimic"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 2,
+                            "Row": 2,
+                            "Letter": null,
+                            "Direction": "Down"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 0,
+                            "Row": 2,
+                            "Letter": null,
+                            "Direction": "Down"
+                          },
+                          {
+                            "Kind": "Teleporter",
+                            "Col": 0,
+                            "Row": 7,
+                            "Letter": "A",
                             "Direction": null
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 7,
+                            "Row": 4,
+                            "Letter": null,
+                            "Direction": "Right"
+                          },
+                          {
+                            "Kind": "RotatorSwitch",
+                            "Col": 8,
+                            "Row": 1,
+                            "Letter": null,
+                            "Direction": null
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 5,
+                            "Row": 2,
+                            "Letter": null,
+                            "Direction": "Down"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 8,
+                            "Row": 2,
+                            "Letter": null,
+                            "Direction": "Up"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 7,
+                            "Row": 0,
+                            "Letter": null,
+                            "Direction": "Right"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 9,
+                            "Row": 1,
+                            "Letter": null,
+                            "Direction": "Left"
+                          },
+                          {
+                            "Kind": "Teleporter",
+                            "Col": 9,
+                            "Row": 0,
+                            "Letter": "A",
+                            "Direction": null
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 8,
+                            "Row": 0,
+                            "Letter": null,
+                            "Direction": "Right"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 9,
+                            "Row": 1,
+                            "Letter": null,
+                            "Direction": "Up"
+                          },
+                          {
+                            "Kind": "Teleporter",
+                            "Col": 9,
+                            "Row": 8,
+                            "Letter": "B",
+                            "Direction": null
+                          },
+                          {
+                            "Kind": "Teleporter",
+                            "Col": 0,
+                            "Row": 1,
+                            "Letter": "B",
+                            "Direction": null
+                          },
+                          {
+                            "Kind": "Gate",
+                            "Col": 0,
+                            "Row": 5,
+                            "Letter": "A",
+                            "Direction": null
+                          },
+                          {
+                            "Kind": "Gate",
+                            "Col": 1,
+                            "Row": 5,
+                            "Letter": "A",
+                            "Direction": null
+                          },
+                          {
+                            "Kind": "Gate",
+                            "Col": 2,
+                            "Row": 5,
+                            "Letter": "A",
+                            "Direction": null
+                          },
+                          {
+                            "Kind": "Gate",
+                            "Col": 3,
+                            "Row": 6,
+                            "Letter": "A",
+                            "Direction": null
+                          },
+                          {
+                            "Kind": "Switch",
+                            "Col": 5,
+                            "Row": 7,
+                            "Letter": "A",
+                            "Direction": null
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 8,
+                            "Row": 6,
+                            "Letter": null,
+                            "Direction": "Down"
+                          },
+                          {
+                            "Kind": "Archeton",
+                            "Col": 6,
+                            "Row": 6,
+                            "Letter": null,
+                            "Direction": "Left",
+                            "Archeton": "reflect-mimic"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 7,
+                            "Row": 5,
+                            "Letter": null,
+                            "Direction": "Right"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 8,
+                            "Row": 6,
+                            "Letter": null,
+                            "Direction": "Up"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 8,
+                            "Row": 8,
+                            "Letter": null,
+                            "Direction": "Right"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 9,
+                            "Row": 6,
+                            "Letter": null,
+                            "Direction": "Up"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 9,
+                            "Row": 7,
+                            "Letter": null,
+                            "Direction": "Down"
+                          },
+                          {
+                            "Kind": "Edge",
+                            "Col": 9,
+                            "Row": 6,
+                            "Letter": null,
+                            "Direction": "Down"
+                          },
+                          {
+                            "Kind": "JumpTile",
+                            "Col": 8,
+                            "Row": 7,
+                            "Letter": null,
+                            "Direction": "Up",
+                            "Variant": "jumptile-2"
+                          },
+                          {
+                            "Kind": "Archeton",
+                            "Col": 2,
+                            "Row": 6,
+                            "Letter": null,
+                            "Direction": "Left",
+                            "Archeton": "reflect-mimic"
                           }
                         ],
                         "Palette": {
                           "wall": "#ffffff",
+                          "edge": "#0059db",
                           "finish": "#0059db",
                           "gate": "#ddc57b",
                           "switch": "#ddc57b",
@@ -5270,6 +5564,8 @@
                           "block": "#694b00",
                           "jump": "#0059db",
                           "reset": "#0059db",
+                          "pipe": "#0059db",
+                          "archeton": "#0059db",
                           "outline": "#000060",
                           "light": "#ffffff"
                         },
@@ -5282,6 +5578,16 @@
                               "#ffffff"
                             ],
                             "Grain": "zzz0zzzzzzz000zzzzzzzzzzzz00zzzzzz0000zz0zzz0zzzzzz00zzzz000z0zzzzzzzzzzzzz0zzzzzz000zzzz0zzzzz0zzzzzzzzzzz00zzz0zzzzzzzzzzzzzzzzzzzzzz0zzzzzzzzzz00zzzzzzzzzzzzzzz0zzz000z0zzzzzzzzzzzzzzzz0zz00zzzzzzzzzzzzzzzzzzz00zz0zzzzzzzzzzzzz00zzzzzzzzz00zzzzzzzzzzzz00zzzzz00000zzzzzzzzzzzz00zzzzz00000zzzzzz00zz000zzzzzzz000zzzzzzzzzz000zzzzzzz0000zzzzzzzzz00zzzzzzzz0000zzzzzzzzzzzzzzzzzzzz0000zzzzzzzzzzzzzzzzzzzzz000zzzzzzzzzzzzzzz00zzz0000zzzzzzzzzzzzzz000zz00z0zzzzzzzzzzzzzzz00zz00zz0zzzzzzzzzzzzzzz00z00zzz0zzzzzzzzzzzzzz000z00zz00zzzzzzzzzzzzzz00zz00zz00zzzzzzzzzzzzzz00zz00zz00",
+                            "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+                          },
+                          "edge": {
+                            "Ramp": [
+                              "#0059db",
+                              "#0059db",
+                              "#0059db",
+                              "#0059db"
+                            ],
+                            "Grain": "0000zzdzzz0zdddddzzzdd0z0dddddddz00zzddddzzzdddz00ddddd000dzzddzzzdzdddd000zddd00dddddzzzddzzddd000zz00zz0dddzzzzzzzdddddddzzzzz00ddddzzzzdddddddddzzz0000ddddzzzddddddd00zzdz0000ddddzzddddddzzzzzzdddd00ddddzzdddddzzzzzzzzddd00zzdzzzddddzzzzzzzzzdddd00000zdddddzzzz0zzdzzddd00dd00dddz00zzzdzzddzzddd0dd00dddzz00zdddzzzzzdddd00z0ddddz000zdddzzzzzd0000zzdddddz00zzdddzzzz0000zzddddddzzzzzzddddd00000zzzzzzzzzzzzzzzdd000d000zzzzzzzzzzzzzzzz0000d000dddzzzzzzzzzzzzd000000000dddzddzzzzzzddddd000000000ddzzzzzzzzdddd000z0000000dzzzzzzzzdd00000z00z000dzzzzzzzzz00000000d0000zzzdzzzzzz",
                             "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
                           },
                           "finish": {
@@ -5383,6 +5689,26 @@
                             ],
                             "Grain": "0000zzdzzz0zdddddzzzdd0z0dddddddz00zzddddzzzdddz00ddddd000dzzddzzzdzdddd000zddd00dddddzzzddzzddd000zz00zz0dddzzzzzzzdddddddzzzzz00ddddzzzzdddddddddzzz0000ddddzzzddddddd00zzdz0000ddddzzddddddzzzzzzdddd00ddddzzdddddzzzzzzzzddd00zzdzzzddddzzzzzzzzzdddd00000zdddddzzzz0zzdzzddd00dd00dddz00zzzdzzddzzddd0dd00dddzz00zdddzzzzzdddd00z0ddddz000zdddzzzzzd0000zzdddddz00zzdddzzzz0000zzddddddzzzzzzddddd00000zzzzzzzzzzzzzzzdd000d000zzzzzzzzzzzzzzzz0000d000dddzzzzzzzzzzzzd000000000dddzddzzzzzzddddd000000000ddzzzzzzzzdddd000z0000000dzzzzzzzzdd00000z00z000dzzzzzzzzz00000000d0000zzzdzzzzzz",
                             "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+                          },
+                          "pipe": {
+                            "Ramp": [
+                              "#0059db",
+                              "#0059db",
+                              "#0059db",
+                              "#0059db"
+                            ],
+                            "Grain": "0000zzdzzz0zdddddzzzdd0z0dddddddz00zzddddzzzdddz00ddddd000dzzddzzzdzdddd000zddd00dddddzzzddzzddd000zz00zz0dddzzzzzzzdddddddzzzzz00ddddzzzzdddddddddzzz0000ddddzzzddddddd00zzdz0000ddddzzddddddzzzzzzdddd00ddddzzdddddzzzzzzzzddd00zzdzzzddddzzzzzzzzzdddd00000zdddddzzzz0zzdzzddd00dd00dddz00zzzdzzddzzddd0dd00dddzz00zdddzzzzzdddd00z0ddddz000zdddzzzzzd0000zzdddddz00zzdddzzzz0000zzddddddzzzzzzddddd00000zzzzzzzzzzzzzzzdd000d000zzzzzzzzzzzzzzzz0000d000dddzzzzzzzzzzzzd000000000dddzddzzzzzzddddd000000000ddzzzzzzzzdddd000z0000000dzzzzzzzzdd00000z00z000dzzzzzzzzz00000000d0000zzzdzzzzzz",
+                            "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+                          },
+                          "archeton": {
+                            "Ramp": [
+                              "#0059db",
+                              "#0059db",
+                              "#0059db",
+                              "#0059db"
+                            ],
+                            "Grain": "0000zzdzzz0zdddddzzzdd0z0dddddddz00zzddddzzzdddz00ddddd000dzzddzzzdzdddd000zddd00dddddzzzddzzddd000zz00zz0dddzzzzzzzdddddddzzzzz00ddddzzzzdddddddddzzz0000ddddzzzddddddd00zzdz0000ddddzzddddddzzzzzzdddd00ddddzzdddddzzzzzzzzddd00zzdzzzddddzzzzzzzzzdddd00000zdddddzzzz0zzdzzddd00dd00dddz00zzzdzzddzzddd0dd00dddzz00zdddzzzzzdddd00z0ddddz000zdddzzzzzd0000zzdddddz00zzdddzzzz0000zzddddddzzzzzzddddd00000zzzzzzzzzzzzzzzdd000d000zzzzzzzzzzzzzzzz0000d000dddzzzzzzzzzzzzd000000000dddzddzzzzzzddddd000000000ddzzzzzzzzdddd000z0000000dzzzzzzzzdd00000z00z000dzzzzzzzzz00000000d0000zzzdzzzzzz",
+                            "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
                           }
                         },
                         "PaletteSource": "img/pentura/glass-wall-gallery-4.png"
@@ -5409,14 +5735,6 @@
                       {
                         "Kind": "Archeton",
                         "Col": 4,
-                        "Row": 2,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Archeton": "reflect-mimic"
-                      },
-                      {
-                        "Kind": "Archeton",
-                        "Col": 5,
                         "Row": 2,
                         "Letter": null,
                         "Direction": "Down",
@@ -5478,38 +5796,6 @@
                         "Archeton": "reflect-mimic"
                       },
                       {
-                        "Kind": "Wall",
-                        "Col": 8,
-                        "Row": 4,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-11"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 2,
-                        "Row": 8,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-2"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 4,
-                        "Row": 7,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-10"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 5,
-                        "Row": 0,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-11"
-                      },
-                      {
                         "Kind": "Archeton",
                         "Col": 6,
                         "Row": 3,
@@ -5568,10 +5854,101 @@
                         "Row": 4,
                         "Letter": "B",
                         "Direction": null
+                      },
+                      {
+                        "Kind": "Edge",
+                        "Col": 1,
+                        "Row": 4,
+                        "Letter": null,
+                        "Direction": "Left"
+                      },
+                      {
+                        "Kind": "Edge",
+                        "Col": 0,
+                        "Row": 3,
+                        "Letter": null,
+                        "Direction": "Down"
+                      },
+                      {
+                        "Kind": "Edge",
+                        "Col": 0,
+                        "Row": 5,
+                        "Letter": null,
+                        "Direction": "Up"
+                      },
+                      {
+                        "Kind": "Pipe",
+                        "Col": 9,
+                        "Row": 1,
+                        "Letter": null,
+                        "Direction": "Left"
+                      },
+                      {
+                        "Kind": "PipeSwitch",
+                        "Col": 5,
+                        "Row": 1,
+                        "Letter": null,
+                        "Direction": null,
+                        "Variant": "pipeswitch-2"
+                      },
+                      {
+                        "Kind": "Wall",
+                        "Col": 5,
+                        "Row": 0,
+                        "Letter": null,
+                        "Direction": null,
+                        "Variant": "wall-4"
+                      },
+                      {
+                        "Kind": "Wall",
+                        "Col": 8,
+                        "Row": 4,
+                        "Letter": null,
+                        "Direction": null,
+                        "Variant": "wall-8"
+                      },
+                      {
+                        "Kind": "Wall",
+                        "Col": 4,
+                        "Row": 7,
+                        "Letter": null,
+                        "Direction": null,
+                        "Variant": "wall-7"
+                      },
+                      {
+                        "Kind": "Wall",
+                        "Col": 2,
+                        "Row": 8,
+                        "Letter": null,
+                        "Direction": null,
+                        "Variant": "wall-6"
+                      },
+                      {
+                        "Kind": "Edge",
+                        "Col": 4,
+                        "Row": 1,
+                        "Letter": null,
+                        "Direction": "Right"
+                      },
+                      {
+                        "Kind": "Edge",
+                        "Col": 6,
+                        "Row": 1,
+                        "Letter": null,
+                        "Direction": "Left"
+                      },
+                      {
+                        "Kind": "Archeton",
+                        "Col": 5,
+                        "Row": 2,
+                        "Letter": null,
+                        "Direction": "Down",
+                        "Archeton": "reflect-mimic"
                       }
                     ],
                     "Palette": {
                       "wall": "#fff6a8",
+                      "edge": "#ffad4b",
                       "finish": "#ffad4b",
                       "gate": "#ffad4b",
                       "switch": "#ffad4b",
@@ -5598,6 +5975,16 @@
                           "#fff6a8"
                         ],
                         "Grain": "zz00llllzzllzz00zz00ll00zzzzllzzzzzzllzzzzzz0000zzzzllzzzzzzllzzzzzz0000zzllllzzzz00zzllzz00zz00zzllllzzzz00zzllzz00zz00llzzllzzllzzllzzzzzz00zzllzzllzzllzzllzzzzzz00zzllllzzllllllzzllzzzzzz00llllzzllllllzzllzzzzzz00llzzzzzzzzzzllzzllzzllllllzzzzzzzzzzllzzllzzllllllllzzzzzz00zzllzzzzzzllllllzzzzzz00zzllzzzzzzllllzzllzzzzzzzzzzzzzzzzzzllzzllzzzzzzzzzzzzzzzzzzllllzzllzzllzz00llllzz00llllzzllzzllzz00llllzz0000zzllzzllzzllzzllzzzzzz00zzllzzllzzllzzllzzzzzzll00zzzzzzzzzzllzzllzzllll00zzzzzzzzzzllzzllzzll00zzllzzzzzzllzzzzzzzzll00zzllzzzzzzllzzzzzzzzllzz00zzllzzllllllllllzz00",
+                        "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+                      },
+                      "edge": {
+                        "Ramp": [
+                          "#ffad4b",
+                          "#ffad4b",
+                          "#ffad4b",
+                          "#ffad4b"
+                        ],
+                        "Grain": "00llll000000zz0000000000llllllll00zz00ll00ll00llllllllll00zz00ll00ll00llll00llllll00llll0000ll00ll00llllll00llll0000ll0000ll00llllllllll00llzzzz00ll00llllllllll00llzzzzll0000000000zz0000llzz00ll0000000000zz0000llzz00llll00llllzzllzzzzzzzzzzllll00llllzzllzzzzzzzzzzll00llllll00zzllzzllzz00ll00llllll00zzllzzllzz0000zzllzzzzzzllll00zzzzzz00zzllzzzzzzllll00zzzzzz0000zz00zzllll0000llzzll0000zz00zzllll0000llzzll00llllzz00ll00ll00ll00ll00llllzz00ll00ll00ll00llzz00ll00ll000000ll000000zz00ll00ll000000ll00000000zzllzzllzz00zzllll00ll00zzllzzllzz00zzllll00ll0000zz00zz00ll00ll00ll00",
                         "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
                       },
                       "finish": {
@@ -5985,13 +6372,6 @@
                     "Variant": "wall-2"
                   },
                   {
-                    "Kind": "PipeSwitch",
-                    "Col": 1,
-                    "Row": 7,
-                    "Letter": null,
-                    "Direction": null
-                  },
-                  {
                     "Kind": "JumpTile",
                     "Col": 1,
                     "Row": 1,
@@ -6012,13 +6392,6 @@
                     "Row": 7,
                     "Letter": null,
                     "Direction": "Up"
-                  },
-                  {
-                    "Kind": "PipeSwitch",
-                    "Col": 6,
-                    "Row": 1,
-                    "Letter": null,
-                    "Direction": null
                   },
                   {
                     "Kind": "Pipe",
@@ -6054,10 +6427,27 @@
                     "Row": 0,
                     "Letter": "B",
                     "Direction": null
+                  },
+                  {
+                    "Kind": "PipeSwitch",
+                    "Col": 6,
+                    "Row": 1,
+                    "Letter": null,
+                    "Direction": null,
+                    "Variant": "pipeswitch-2"
+                  },
+                  {
+                    "Kind": "PipeSwitch",
+                    "Col": 1,
+                    "Row": 7,
+                    "Letter": null,
+                    "Direction": null,
+                    "Variant": "pipeswitch-2"
                   }
                 ],
                 "Palette": {
                   "wall": "#d8dbe6",
+                  "edge": "#c1e9fc",
                   "finish": "#c1e9fc",
                   "gate": "#dbb9cc",
                   "switch": "#dbb9cc",
@@ -6085,6 +6475,16 @@
                     ],
                     "Grain": "qvp7qup6uuv6qvu6uvp6u7u6uvvqvuvvuvvuqv6uvu77uuuuq7q7q7q7v7v6r6vvv5u6v7u6vquqvqvqvvvqvvuv737vvu7uqvv7qqq7vvv7vvv7q0uvqvu7qqvwvvvvqv7qqq7qrkvqqquqv7r7r7v7v7qvq7q7q4qqqvqvvvvvvvvvvvvq7qvqqovqqqsqrvv7rvr7rvv8qvq8qqq8zvrqvvvurv7qvv77vrqqvsvqrrwqv8r5v8vvr7q8w7rqr9rvqqq8vwrnvwvr7rwvrrqrvrrrrqpvrvs2vwr8rww8srr8vwrvrvm8wr8kww88wr6wvswv8wrrwrlrs9wqs8w9s6swv8wwwww8rvmrxsws998xywws6wwwwwwswsprsxs7s9w9xww8wwwww9w9wwr6xxx8wxxwwwwwwwwx9wwrwxwsx9w9x9sxv9xxx9x9x9x8s9s99xx8xx99vsxxxxxxxwxwxxyssxsyxxs9w7sxs9s9s7x9s9x99ssussstlsstxtxyxxxxxsxsaaxay9t9k7s9sxtas9s9s9s799aa9aaa5xx9aaaaxxxx99ss",
                     "Pixels": "121012102220122022102020222122222222120222002222101010102020102220202020212121212221222200022202122011102220222010221220112222221201110111211121201020202012101010111212222222222221012111211121222022201220121011103221222222012200211122212231202020222010201121221110222122210222111121222112222022202220211022221210220122003202222202122212202120202022202222202212322211033322022222322212232021213230222221312220333033332232223312322322313131232133303130302020133033112233333333333332232333213023212120312031122222221222323333333232113131211021232121212120111111110331111133331122"
+                  },
+                  "edge": {
+                    "Ramp": [
+                      "#9cced5",
+                      "#b1dde0",
+                      "#c1e9fc",
+                      "#d9f8fe"
+                    ],
+                    "Grain": "kkikkkvkvkvkvkikvkvkvkjkkkkkkjkvyykkyikjjvkjyjkkkkvkykvkvkykykvkykvkvkvkkkkkkkkjkkkyyyjykkkjkyykykkkykkkjkykvkkkvkjkjkjkkkkkykkkkkkkkkkkkkkkkvkkkkkkykjkjkjkjkjkjkkkkkjklkkkkkkykkljlykjkykkkjjjjllljljlvlkkvljlwlyklkjlllllllllllllllllllllkkljlllllll0l0lll0l0lllkllylllllllllllllll0llllllllllkllllllylzljlllzll0lll0lllllllllllllzllllllllllllllllwlklllllwlzllllllllllllzzzlllllllllkllkllkklllwlzlwlzlllllllllkllllllllllllllllzlllllllllellllllllllzlllwlwlllzlnblllllllllllllllwlllllm5illllllllwlzlwlgllllllf54ll0lllllllllllklllllll5illl1lllljlllzmzllllllck5lllllllllllzzluynnnnlpm4",
+                    "Pixels": "000000303030300030303000011000133300300003103000113131303030303131303031111111101113330311101331311131110130310131010000111131111111111111111311111131010101010101111101111111131110131013111000011101013111310131311101111112112111111121111110122221202011202022111131222222222222220222222222212222223232022232202220222222222222232222222222222222320222223232222222222223332222222220220220022232323232222222220223222222222222232222222220222222222232223232223230222222222222222322222300222222223232330222222000220222222222221222222200222022220222333222222010222222222223323333332330"
                   },
                   "finish": {
                     "Ramp": [
@@ -6498,6 +6898,7 @@
             ],
             "Palette": {
               "wall": "#a8a8a9",
+              "edge": "#87888c",
               "finish": "#d7cdc7",
               "gate": "#a28a80",
               "switch": "#a28a80",
@@ -6525,6 +6926,16 @@
                 ],
                 "Grain": "cgcgcccdddee4eeefgfhggggccgcccccdddeeddeggjgggggcccccccccd4c5edgggfffgggccccccc3ccwdd4edggzgfeggccccccdccccd4dddegffgffgccccccgdccc3edcdeezffffg2c3cccccdwc3cddwedeffffgbbcccccddcwdccddbeddgfzf2b2b3ccdcccdd2befcdcaefkb2cccccccdwcd3cceeecc6zkcccccbcc3cccddddccccbdbgbcfcccfcccccdcccddcccdde3bbbbbac3aac323dbcaddcdeccb0cbaacca232bdbcdccccecc2abfba1ccbbb4ddccddcccac9cbccbac9baacdgdgg8avcbb1a2dcbbaaba1add9dccabcbcb2c3ccdcbcb2aabcbccccaa3122cccdhccehba9abcfcddbab2bcecdfjegge988b5eccace980eegffebef98199ab9baeeef888eebeb91bb7c98bcccdded587ddc4c422ded5dedee79fddd7b3cc9dbceedeeedde",
                 "Pixels": "232311222222022233333333223211122222222233333333222221112202022333233333222222102232202233333233222222222222022223333333122222322220221222333333010212222320222322233333111211122232222212223333010102222122201232211233101122222232202222222033111111120222222222121213113111322212222222121222011111110111000212122222111021111210001212222122110113110111110222222222110111211201112232330132110102211111101220222012111010222112100011121221100001112322231101123222101012212332332000102220120002233321230000001010222200022121001102001111222200022201000222022222002222010210212222222222"
+              },
+              "edge": {
+                "Ramp": [
+                  "#6c696f",
+                  "#797a7e",
+                  "#87888c",
+                  "#97989c"
+                ],
+                "Grain": "ijkhiiiljkhjjjagihihhjhgijiimbkkjkkjjjkgjkggxikilmhkkicjjkkkjjjklljjjigfikxhiijjjjkckjlljlmjjkiijmjihhgkiijjjlkkhkmmkkkhjkylilyjkixkkklkkkkjnlkkfhhiiijyjjixhjjkkkkkkiejhfjhiiiiijzjnhiimmmlkkkkeffggibmiyxzkjllijmlkjkifffggijjziwijlxlxlykjmxgghfgfghijkhjmxkijnjljjlnihlgggwgvgykkjjlllkkyjjebjgghhgugbgiijjkikljkjb9igf9ghiieeg7ijkkjkklkkjb9f8hiiihifeffjijckdkeedbghggjihgiihhffhjijlllckchgehhjhh9iiifiigbikhcccikhvhwiifhgikkhtiihjbdbjdigghfihhhhijjjkbajaabjbhkghggggghjwiiilii9a9gihikjjgig8fhehiiabaa9089jchhiihhhihjjhiicjcaa99hhhjgihgfiighihfaaacc99hca9jtgl9giiiwkhjhahchahajagl",
+                "Pixels": "222122232212220121211211222230222222222122113222331322022222222233222211223122222220223323322222232211122222233212332221223323322232223222223322111222232223122222222202102122212232312233332232000112032333223322332232111112223232233333332331111111122212332223232233213111313132222333223220021111131012222222322200211011220010223222232220010112212101122203020000111122112211001222333020110112110222022102210002213132211122213221200020211112111122222002000201211111111232223220001212222111001012200000000201122111212212202000001112121112211211000000010002313012223212101010102013"
               },
               "finish": {
                 "Ramp": [
@@ -7152,6 +7563,7 @@
             ],
             "Palette": {
               "wall": "#b8b5b9",
+              "edge": "#c2d368",
               "finish": "#c2d368",
               "gate": "#a2dcc7",
               "switch": "#a2dcc7",
@@ -7179,6 +7591,16 @@
                 ],
                 "Grain": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzqqqqqqqqqqqzqqqqqqqqqqqqqqqqqqqqqqqqqzqqqzqzqzqzqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzqqqzqqqqqqqqqqqqqqqqqqzqqqqqqqqqqqqqqqqoqzqqqzqzqzqzqzqqqzqqqqqqqqqqqqzqqqqqqqqqqqqqqqqoqqqqqzqzqzqzqqqqqqqqqqqqqqqqqqzqqqqqqqqqqqqqqqqoqzqqqzqzqzqzqzqqqzqqqzqqqqqqqqqqzqqqqqqqqqqqqqqqqqqqqqqqqqqzqzqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzqqqzqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzqzqqqqqqqqqqqqqzqqqqqqqoqqqqqqqqqqqqqqqqaqqqqqqqqqqqqqqqqqqqqqqq0",
                 "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+              },
+              "edge": {
+                "Ramp": [
+                  "#d3a068",
+                  "#c2d368",
+                  "#c2d368",
+                  "#c2d368"
+                ],
+                "Grain": "000dgngngngngnggp00000002022snsssnsssnsnnb00000002029snsnsnsssnsnz00000022206nsssssssssnsu000000020202nsnsnsnsnsng000000202222pnsssssnsns90000000202020znsnsnsnsn900000020202220ussssssns000200002020002usnsnsnsn0000000202020202zsssnsss0000000060202000hnsnsnsn00000002220202020zssssss000000000000006020unnnsn000000020202020202psnsss0000000n20202000202zsnsn0000000s920202020202ussw0062000ns02020202020unss0000000snn02020202020unw0000000nsn00000020002bsw0000000sssn20202000202nw0000000nsns900000000002w0000000snsss02000202020n0000000nsnsns000000000000000000snssss902020200020000000",
+                "Pixels": "000222222222222220000000202222222222222222000000020222222222222222000000222022222222222222000000020202222222222222000000202222222222222222000000020202022222222222000000202022202222222220002000020200022222222220000000202020202222222220000000020202000222222220000000222020202022222220000000000000020202222220000000202020202022222220000000220202000202222220000000222020202020222220022000220202020202022220000000222020202020202220000000222000000200022220000000222220202000202220000000222220000000000220000000222220200020202020000000222222000000000000000000222222202020200020000000"
               },
               "finish": {
                 "Ramp": [
@@ -7301,7 +7723,7 @@
                 "Pixels": "000222222222222220000000202222222222222222000000020222222222222222000000222022222222222222000000020202222222222222000000202222222222222222000000020202022222222222000000202022202222222220002000020200022222222220000000202020202222222220000000020202000222222220000000222020202022222220000000000000020202222220000000202020202022222220000000220202000202222220000000222020202020222220022000220202020202022220000000222020202020202220000000222000000200022220000000222220202000202220000000222220000000000220000000222220200020202020000000222222000000000000000000222222202020200020000000"
               }
             },
-            "PaletteSource": "img/pentura/cedarwood-high-clubrooms-4.png"
+            "PaletteSource": "img/pentura/cedarwood-high-clubrooms.png"
           }
         }
       ],
@@ -8878,6 +9300,47 @@
           "Percent": 15
         }
       ]
+    },
+    {
+      "Id": "pipeswitch-2",
+      "Kind": "PipeSwitch",
+      "Name": "Pipe Switch checker",
+      "Pixels": "......................................................OOOOOOOOOOOO..........OO111111111111OO.......O1113131313121211O......O1131212121212121O.....O113121212121212121O....O1312OOOOOOOOOO1211O....O112OOOOOOOOOOOOG21O....O13G2OOOOOOOOOO12O1O....O1O3121212121212OO1O....O1O1313131313131GO1O....O1OG2323232313131O1O....O1OO3232323232323O1O....O1OG2OOOOOOOOOO3G31O....O1GGOOOOOOOOOOOO321O....O1232OOOOOOOOOO3231O....O132323232323232321O.....O1323232323232321O......O1132323232323211O.......OO111111111111OO..........OOOOOOOOOOOO......................................................",
+      "Mix": [
+        {
+          "Role": "block",
+          "Shade": 1,
+          "Percent": 20
+        },
+        {
+          "Role": "archeton",
+          "Shade": 0,
+          "Percent": 40
+        },
+        {
+          "Role": "wall",
+          "Shade": 1,
+          "Percent": 40
+        }
+      ]
+    },
+    {
+      "Id": "jumptile-2",
+      "Kind": "JumpTile",
+      "Name": "Jump Tile speckle",
+      "Pixels": "......................................................OOOOOOOOOOOO..........OO222222222221OO.......O222222GOGG222211O......O222222OGOG222111O.....O22222GGGOGOG111111O....O11122GGGGOGOG11111O....O111OGGGG22OGOGG111O....O11OGOG22222OGOG111O....O112OGO22222GOGO111O....O222GO2O22111GOGO12O....O2222OGOGGGGGGOGOG2O....O222OGO22GGG1OGOGG2O....O11O2OGGGGGGOGOGG11O....O111OGGGGGGOGOGGG11O....O111GGGGGGOGOGGG111O....O111GGGGGO2OGGGG111O.....O22GGGGO2O2GGGG11O......O22GG21GO22GGGG21O.......OO211112221G21OO..........OOOOOOOOOOOO......................................................",
+      "Mix": [
+        {
+          "Role": "lantern",
+          "Shade": 1,
+          "Percent": 50
+        },
+        {
+          "Role": "rotator",
+          "Shade": 2,
+          "Percent": 50
+        }
+      ]
     }
   ],
   "PuzzleDrawingSets": [
@@ -8955,6 +9418,22 @@
       "Kind": "Stream",
       "Name": "Stream set 2",
       "Drawings": []
+    },
+    {
+      "Id": "pipeswitch-set-2",
+      "Kind": "PipeSwitch",
+      "Name": "Pipe Switch set",
+      "Drawings": [
+        "pipeswitch-2"
+      ]
+    },
+    {
+      "Id": "jumptile-set-1",
+      "Kind": "JumpTile",
+      "Name": "Jump Tile set 1",
+      "Drawings": [
+        "jumptile-2"
+      ]
     }
   ],
   "Archetons": [
