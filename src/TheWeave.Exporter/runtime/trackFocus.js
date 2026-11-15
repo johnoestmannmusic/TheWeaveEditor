@@ -737,8 +737,8 @@ function drawSightLines(){
   let tile = BOARD_TILE_PX;
   context.save();
   context.lineWidth = refused ? 2 : 1;
-  context.strokeStyle = refused ? 'rgba(255, 154, 60, 0.8)' : 'rgba(255, 154, 60, 0.2)';
-  context.setLineDash(refused ? [3, 2] : [2, 3]);
+  context.strokeStyle = refused ? 'rgba(255, 154, 60, 0.8)' : 'rgba(255, 154, 60, 0.1)';
+  context.setLineDash(refused ? [3, 2] : [3, 3]);
   context.beginPath();
   for (const reflection of reflections) {
     let line = WeavePuzzle.reflectionSightLine(reflection, ship, tile);
