@@ -365,8 +365,10 @@
     // settleReflections, which drops it, and formReflections, which makes it again.
     function reflectionsFollow(moverDirection){
       let direction = PUZZLE_DIRECTIONS[moverDirection];
-      return syncReflections().every(reflection => {
-        let mirrored = mirroredDirection(reflection.pane, direction);
+      let following = syncReflections();
+      let steps = reflectionSteps(direction);
+      return following.every(reflection => {
+        let mirrored = steps.get(reflection);
         let target = nextCell(reflection, mirrored);
         if (!onBoard(target)) return true;
         return canEnterAlone(reflection, target, MOVER_DIRECTIONS[mirrored]);
@@ -706,6 +708,24 @@
       return direction === 'Up' ? 'Down' : direction === 'Down' ? 'Up' : direction;
     }
 
+    // The way each reflection steps when the ship steps a direction: the way what it shows steps, mirrored across its
+    // own pane - so a chained reflection mirrors the reflection it hangs from rather than the ship, which is a flip per
+    // pane, and two panes on the same axis put it back in step with the ship. Working it out from the ship's step
+    // instead sends every chained reflection one flip too far - into the pane that shows it, when the panes lie flat in
+    // one column. The same rule as reflectionFacing's, which is what the drawing already goes by.
+    function reflectionSteps(direction){
+      let steps = new Map();
+      let stepOf = (reflection) => {
+        if (steps.has(reflection)) return steps.get(reflection);
+        let source = reflection.from?.pane ? stepOf(reflection.from) : direction;
+        let mirrored = mirroredDirection(reflection.pane, source);
+        steps.set(reflection, mirrored);
+        return mirrored;
+      };
+      for (const reflection of reflections) stepOf(reflection);
+      return steps;
+    }
+
     // Every reflection the board should be showing: from the ship outwards, a pane shows what's in its line, and what it
     // shows is in the line of other panes in turn, so panes facing each other bounce a reflection between them as far as
     // the board allows. Only where there's room to stand on the reflection's square - see canHoldReflection.
@@ -747,8 +767,9 @@
     function stepReflections(step){
       let events = null;
       if (!step) return events;
+      let steps = reflectionSteps(step.direction);
       for (const reflection of reflections.slice()) {
-        let direction = mirroredDirection(reflection.pane, step.direction);
+        let direction = steps.get(reflection);
         let target = nextCell(reflection, direction);
         if (!canEnterAlone(reflection, target, MOVER_DIRECTIONS[direction])) continue;
         let pushed = objectAt(target)?.kind === 'PushBlock' ? pushFrom(reflection, target, MOVER_DIRECTIONS[direction]) : null;
@@ -773,8 +794,10 @@
     function pushForReflections(moverDirection){
       let direction = PUZZLE_DIRECTIONS[moverDirection];
       let events = null;
-      for (const reflection of syncReflections()) {
-        let mirrored = mirroredDirection(reflection.pane, direction);
+      let shoving = syncReflections();
+      let steps = reflectionSteps(direction);
+      for (const reflection of shoving) {
+        let mirrored = steps.get(reflection);
         let target = nextCell(reflection, mirrored);
         if (objectAt(target)?.kind !== 'PushBlock') continue;
         events = mergeEvent(events, pushFrom(reflection, target, MOVER_DIRECTIONS[mirrored]));
@@ -790,8 +813,10 @@
     function reflectionObstacleInTheWay(from, to, moverDirection){
       if (!isAt(from, shipCell) || !canEnterAlone(from, to, moverDirection)) return null;
       let direction = PUZZLE_DIRECTIONS[moverDirection];
-      for (const reflection of syncReflections()) {
-        let mirrored = mirroredDirection(reflection.pane, direction);
+      let inLine = syncReflections();
+      let steps = reflectionSteps(direction);
+      for (const reflection of inLine) {
+        let mirrored = steps.get(reflection);
         let target = nextCell(reflection, mirrored);
         if (!onBoard(target) || canEnterAlone(reflection, target, MOVER_DIRECTIONS[mirrored])) continue;
         return { object: objectAt(target) ?? null };

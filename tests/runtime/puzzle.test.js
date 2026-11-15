@@ -1914,15 +1914,30 @@ test('the ship can\'t step where its reflection couldn\'t follow', () => {
 });
 
 test('a chained reflection that couldn\'t follow stops the ship, and one that leaves the board doesn\'t', () => {
+  // Two upright panes at 3 and 7, so the ship at 1 is shown at 5 across the first and at 9 across the second, and a
+  // Wall at 8: stepping left takes the second reflection onto it, and stepping right off the board.
   let g = withArchetons([REFLECT_MIMIC], mimic(3, 5), mimic(7, 5), obj('Start', 1, 5), obj('Wall', 8, 5));
   assert.deepEqual(cells(g).map(cell => cell.col).sort((a, b) => a - b), [5, 9], 'a reflection each');
-  assert.equal(g.canEnter(at(1, 5), at(2, 5), 'right'), false, 'a Wall in the second reflection\'s way stops the ship');
-  assert.equal(g.canEnter(at(1, 5), at(0, 5), 'left'), true, 'the board\'s edge isn\'t a Wall: the second would just go');
+  assert.equal(g.canEnter(at(1, 5), at(0, 5), 'left'), false, 'a Wall in the second reflection\'s way stops the ship');
+  assert.equal(g.canEnter(at(1, 5), at(2, 5), 'right'), true, 'the board\'s edge isn\'t a Wall: the second would just go');
 
-  g.placeShip(at(0, 5));
-  assert.deepEqual(cells(g).map(cell => cell.col), [6], 'the first steps with the ship, the second has no board left');
+  g.placeShip(at(2, 5));
+  assert.deepEqual(cells(g).map(cell => cell.col), [4], 'the first steps with the ship, the second has no board left');
   g.placeShip(at(1, 5));
   assert.deepEqual(cells(g).map(cell => cell.col).sort((a, b) => a - b), [5, 9], 'and it\'s back once there\'s board for it');
+});
+
+test('a chained reflection steps the way the reflection it shows steps, not the way the ship does', () => {
+  // Two panes lying flat in one column, one above the other: the ship at 9 is shown at 3, and that reflection at 1.
+  let g = withArchetons([REFLECT_MIMIC], mimic(5, 6, 'Down'), mimic(5, 2, 'Down'), obj('Start', 5, 9));
+  assert.deepEqual(cells(g), [at(5, 3), at(5, 1)], 'a reflection each, one pane above the other');
+
+  // Two flips of a row puts the second reflection back in step with the ship, so stepping up takes it up: the pane
+  // below it is not somewhere it steps into, and nothing about the step is the ship's to be refused for.
+  assert.equal(g.canEnter(at(5, 9), at(5, 8), 'up'), true, 'the ship steps up');
+  assert.equal(g.reflectionObstacleInTheWay(at(5, 9), at(5, 8), 'up'), null, 'and nothing is flashed for the reflection');
+  g.shipArrivedAt(at(5, 8));
+  assert.deepEqual(cells(g), [at(5, 4), at(5, 0)], 'the first reflection steps down with it, and the second up');
 });
 
 test('a reflection that would step off the board goes rather than stopping the ship', () => {
