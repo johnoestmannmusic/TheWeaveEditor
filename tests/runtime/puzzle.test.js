@@ -1751,3 +1751,90 @@ test('panes facing each other bounce a reflection between them, as far as the bo
   let g = withArchetons([REFLECT_MIMIC], mimic(3, 5), mimic(7, 5), obj('Start', 1, 5));
   assert.deepEqual(cells(g).map(cell => cell.col).sort((a, b) => a - b), [5, 9], '1 across 3 is 5, 5 across 7 is 9');
 });
+
+test('the reflection sets off a Switch it lands on, as the ship would', () => {
+  let gate = obj('Gate', 1, 1, { letter: 'A' });
+  let g = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Switch', 8, 5, { letter: 'A' }), gate);
+  let before = g.objects.find(o => o.kind === 'Gate').open;
+  g.placeShip(at(1, 5));
+  g.shipArrivedAt(at(2, 5));
+  assert.notEqual(g.objects.find(o => o.kind === 'Gate').open, before, 'the reflection stepped on the Switch');
+});
+
+test('the reflection sets off a Reset Switch, and the board comes back as it started', () => {
+  let g = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('ResetSwitch', 8, 5));
+  g.placeShip(at(1, 5));
+  let event = g.shipArrivedAt(at(2, 5));
+  assert.ok(event?.reset, 'the reflection set the Reset Switch off');
+});
+
+test('the reflection finishes the board, and takes Keys, as the ship would', () => {
+  let finish = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Finish', 8, 5));
+  finish.placeShip(at(1, 5));
+  finish.shipArrivedAt(at(2, 5));
+  assert.equal(finish.isSolved, true, 'the reflection reached the Finish');
+
+  let key = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Key', 8, 5, { letter: 'A' }));
+  key.placeShip(at(1, 5));
+  key.shipArrivedAt(at(2, 5));
+  assert.deepEqual(key.objects.filter(o => o.kind === 'Key'), [], 'the reflection took the Key');
+});
+
+test('a reflection another pane reflects sets things off in the same way', () => {
+  let g = withArchetons([REFLECT_MIMIC], mimic(3, 5), mimic(7, 5), obj('Start', 1, 5), obj('ResetSwitch', 9, 5));
+  g.placeShip(at(0, 5));
+  let event = g.shipArrivedAt(at(1, 5));
+  assert.deepEqual(cells(g).map(cell => cell.col).sort((a, b) => a - b), [5, 9], 'the second reflection is on the Reset Switch');
+  assert.ok(event?.reset, 'and it set it off');
+});
+
+test('a Teleporter or a Jump Tile is left until reflections have ships of their own', () => {
+  let teleport = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Teleporter', 8, 5, { letter: 'A' }), obj('Teleporter', 0, 0, { letter: 'A' }));
+  teleport.placeShip(at(1, 5));
+  teleport.shipArrivedAt(at(2, 5));
+  assert.deepEqual(teleport.shipCell, at(2, 5), 'the ship stayed where it walked to');
+
+  let blocks = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), block(8, 5));
+  blocks.placeShip(at(1, 5));
+  blocks.shipArrivedAt(at(2, 5));
+  assert.deepEqual(cells(blocks), [], 'a Push Block is not somewhere a reflection can be yet - see Phase D');
+  assert.deepEqual(blocks.objects.filter(o => o.kind === 'PushBlock').map(o => at(o.col, o.row)), [at(8, 5)], 'and it was not pushed');
+});
+
+test('being hurt through the reflection sends the ship back where it came from', () => {
+  const STINGER = { id: 'stinger', name: 'Stinger', parts: [{ kind: 'Sting' }] };
+  let stung = withArchetons([REFLECT_MIMIC, STINGER], mimic(5, 5), obj('Start', 2, 5), obj('Archeton', 8, 5, { archeton: 'stinger', direction: 'Right' }));
+  stung.placeShip(at(1, 5));
+  stung.shipArrivedAt(at(2, 5));
+  assert.equal(stung.carryDirection(at(2, 5)), 'left', 'a Sting on the reflection sends the ship back');
+
+  let shut = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Gate', 8, 5, { letter: 'A' }));
+  shut.placeShip(at(1, 5));
+  shut.shipArrivedAt(at(2, 5));
+  assert.equal(shut.carryDirection(at(2, 5)), 'left', 'so does a closed Gate');
+
+  let clear = withArchetons([REFLECT_MIMIC, STINGER], mimic(5, 5), obj('Start', 2, 5));
+  clear.placeShip(at(1, 5));
+  clear.shipArrivedAt(at(2, 5));
+  assert.equal(clear.carryDirection(at(2, 5)), null, 'nothing hurting it, nothing happens');
+});
+
+test('a reflection is drawn at its pane\'s mirror of where the ship is drawn, so it glides with it', () => {
+  const { reflectionPosition } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+  let g = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5));
+  let [reflection] = g.reflections;
+  assert.deepEqual(reflectionPosition(reflection, { x: 2.5 * TILE_PX, y: 5.5 * TILE_PX }, TILE_PX),
+    { x: 8.5 * TILE_PX, y: 5.5 * TILE_PX }, 'the middle of the mirrored square');
+
+  assert.deepEqual(reflectionPosition(reflection, { x: 2.0 * TILE_PX, y: 5.5 * TILE_PX }, TILE_PX),
+    { x: 9.0 * TILE_PX, y: 5.5 * TILE_PX }, 'mid-step, it moves the other way with the ship');
+
+  let flat = withArchetons([REFLECT_MIMIC], mimic(5, 5, 'Up'), obj('Start', 5, 2));
+  assert.deepEqual(reflectionPosition(flat.reflections[0], { x: 5.5 * TILE_PX, y: 2.5 * TILE_PX }, TILE_PX),
+    { x: 5.5 * TILE_PX, y: 8.5 * TILE_PX }, 'a pane lying flat mirrors rows instead');
+
+  let chain = withArchetons([REFLECT_MIMIC], mimic(3, 5), mimic(7, 5), obj('Start', 1, 5));
+  let second = chain.reflections.find(reflection => reflection.col === 9);
+  assert.deepEqual(reflectionPosition(second, { x: 1.5 * TILE_PX, y: 5.5 * TILE_PX }, TILE_PX),
+    { x: 9.5 * TILE_PX, y: 5.5 * TILE_PX }, 'a chained reflection mirrors the one it was made from');
+});

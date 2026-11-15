@@ -263,13 +263,33 @@
       if (!isAt(shipCell, cell)) return null;
       let away = hurtAwayFrom(cell);
       if (away === undefined) return null;
-      let back = previousShipCell;
-      let direction = null;
-      if (back && Math.abs(back.col - cell.col) + Math.abs(back.row - cell.row) === 1) {
-        let towardsBack = back.col > cell.col ? 'Right' : back.col < cell.col ? 'Left' : back.row > cell.row ? 'Down' : 'Up';
-        if (canEnter(cell, back, MOVER_DIRECTIONS[towardsBack])) direction = towardsBack;
-      }
+      let direction = backDirection(cell);
       if (!direction) direction = away.find(way => canEnter(cell, nextCell(cell, way), MOVER_DIRECTIONS[way])) ?? null;
+      if (direction) recovering = true;
+      return direction;
+    }
+
+    // The way back to the square the ship came from, if it can go that way - see hurtBack and hurtByReflection.
+    function backDirection(cell){
+      let back = previousShipCell;
+      if (!back || Math.abs(back.col - cell.col) + Math.abs(back.row - cell.row) !== 1) return null;
+      let towardsBack = back.col > cell.col ? 'Right' : back.col < cell.col ? 'Left' : back.row > cell.row ? 'Down' : 'Up';
+      return canEnter(cell, back, MOVER_DIRECTIONS[towardsBack]) ? towardsBack : null;
+    }
+
+    // Whether the ship's reflection is being hurt where it stands: a closed Gate shut on it, a Beam with a Block
+    // reaching it, or a Stinging Archeton sitting there. Hurt there, the ship is sent back to the square it came from,
+    // as it would be for being hurt itself - see carryDirection. One hurt reflection is enough, and only one way back.
+    function hurtByReflection(cell){
+      if (!isAt(shipCell, cell)) return null;
+      let hurt = reflectionCells(cell).some(reflection => {
+        let object = objectAt(reflection);
+        return (object?.kind === 'Gate' && !object.open)
+          || (object?.kind === 'Archeton' && hasPart(object, 'Sting'))
+          || blockedByBeam(reflection);
+      });
+      if (!hurt) return null;
+      let direction = backDirection(cell);
       if (direction) recovering = true;
       return direction;
     }
@@ -457,14 +477,10 @@
       return null;
     }
 
-    function shipArrives(cell, { jumped = false } = {}){
-      version++;
-      if (!isAt(shipCell, cell)) previousShipCell = shipCell;
-      shipCell = cell;
-      if (!jumped) jumpsInARow = 0;
-      let object = objectAt(cell);
-      if (!object) return null;
-
+    // What arriving on something does, whether it's the ship or its reflection arriving: a Switch, Lantern, Pipe Switch
+    // or Reset Switch set off, a Key taken, the Finish finishing, a Teleporter or a Jump Tile moving the ship. An event
+    // for the caller, or null. See shipArrives and reflectionArrivals.
+    function arriveOn(object){
       switch (object.kind) {
         case 'Switch':
         case 'Lantern':
@@ -499,6 +515,36 @@
       }
 
       return null;
+    }
+
+    // What the ship's reflection sets off where it stands, as the ship arriving would: Switches, Lanterns, Pipe
+    // Switches, Reset Switches, Keys and the Finish. Left for now: a Teleporter or a Jump Tile, which would leave the
+    // reflection somewhere its mirror isn't, and a Push Block, which only a ship of its own could move - see #132's
+    // Phase D. Nothing after a Reset counts, since the board has gone back to where it started.
+    function reflectionArrivals(){
+      let merged = null;
+      for (const reflection of reflectionCells(shipCell)) {
+        let object = objectAt(reflection);
+        if (!object || ['Teleporter', 'JumpTile', 'PushBlock'].includes(object.kind)) continue;
+        let event = arriveOn(object);
+        if (!event) continue;
+        merged = merged ? { ...merged, ...event } : event;
+        if (event.reset || event.finished) break;
+      }
+      return merged;
+    }
+
+    function shipArrives(cell, { jumped = false } = {}){
+      version++;
+      if (!isAt(shipCell, cell)) previousShipCell = shipCell;
+      shipCell = cell;
+      if (!jumped) jumpsInARow = 0;
+      let object = objectAt(cell);
+      let event = object ? arriveOn(object) : null;
+      // A Reset or a Finish ends the arrival there, and anything else has the reflection's own arrivals folded in.
+      if (event?.reset || event?.finished) return event;
+      let mirrored = reflectionArrivals();
+      return mirrored ? { ...event, ...mirrored } : event;
     }
 
     // Everything that last moved in a way that's had time to finish - a slide, or being passed back from a Gate - is
@@ -862,7 +908,7 @@
       // out of its reach, as long as it can go - see pushedByBeam and hurtBack. Either way the caller moves the
       // ship along, a square at a time.
       carryDirection(cell){
-        let direction = streams.get(cellKey(cell)) ?? pushedByBeam(cell) ?? hurtBack(cell);
+        let direction = streams.get(cellKey(cell)) ?? pushedByBeam(cell) ?? hurtBack(cell) ?? hurtByReflection(cell);
         return direction ? MOVER_DIRECTIONS[direction] : null;
       },
 
