@@ -57,7 +57,81 @@ function buildPlaytest() {
   return { objects, play, lastMs: null, drawnKey: null };
 }
 
-// The board as it's being played, then the ship, only drawn again when either would look any different.
+// A lighter, slightly orange copy of the ship, for a Reflect Mimic's reflection: the ship's own picture with an orange
+// wash over it, drawn at 40% opacity. Made once, when first asked for, and kept.
+function reflectionSprite() {
+  if (puzzleEditor.reflectionImage !== undefined || !puzzleEditor.shipImage) return puzzleEditor.reflectionImage;
+  const canvas = document.createElement('canvas');
+  canvas.width = PUZZLE_SHIP_WIDTH;
+  canvas.height = PUZZLE_SHIP_HEIGHT;
+  const context = canvas.getContext('2d');
+  context.imageSmoothingEnabled = false;
+  context.drawImage(puzzleEditor.shipImage, 0, 0, PUZZLE_SHIP_WIDTH, PUZZLE_SHIP_HEIGHT);
+  context.globalCompositeOperation = 'source-atop';
+  context.fillStyle = 'rgba(255, 170, 90, 0.65)';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  return puzzleEditor.reflectionImage = canvas;
+}
+
+// Whatever stopped the ship, drawn the way the reflection sees it: its own picture in the reflection's orange, on its own
+// and see-through everywhere else, for when it's what refused the step - see drawRefusedFlash.
+function refusedSilhouette(object, look) {
+  if (!look) return null;
+  const key = [object.kind, object.symbol, object.letter, object.archeton, object.direction, object.open].join('|');
+  puzzleEditor.refusedSilhouettes ??= new Map();
+  let silhouette = puzzleEditor.refusedSilhouettes.get(key);
+  if (silhouette) return silhouette;
+  silhouette = document.createElement('canvas');
+  silhouette.width = PUZZLE_ART_PX;
+  silhouette.height = PUZZLE_ART_PX;
+  const context = silhouette.getContext('2d');
+  const image = context.createImageData(PUZZLE_ART_PX, PUZZLE_ART_PX);
+  WeavePuzzle.renderBoard(image, [{ ...object, col: 0, row: 0, fromCol: 0, fromRow: 0 }], look, {});
+  context.putImageData(image, 0, 0);
+  context.globalCompositeOperation = 'source-in';
+  context.fillStyle = '#ff9a3c';
+  context.fillRect(0, 0, PUZZLE_ART_PX, PUZZLE_ART_PX);
+  puzzleEditor.refusedSilhouettes.set(key, silhouette);
+  return silhouette;
+}
+
+// The line of sight from the ship to each reflection, dotted and faint, so it's plain which pane is showing it and how
+// far away it is - and stronger when the reflection is what's refusing to let the ship move. A pane in line with the
+// ship but with something between can't show a reflection at all, so its line runs only as far as whatever's in the way.
+function drawSightLines(context, play, ship, reflections) {
+  const blocked = play.game.blockedSights;
+  const refused = play.refusedFlash;
+  if (!reflections.length && !blocked.length) return;
+  const tile = PUZZLE_TILE_PX;
+  context.save();
+  context.lineWidth = 2;
+  context.strokeStyle = refused ? 'rgba(255, 154, 60, 0.8)' : 'rgba(255, 154, 60, 0.1)';
+  context.setLineDash(refused ? [3, 2] : [3, 3]);
+  if (reflections.length) {
+    context.beginPath();
+    for (const reflection of reflections) {
+      const line = WeavePuzzle.reflectionSightLine(reflection, ship, tile);
+      context.moveTo(Math.round(line.from.x), Math.round(line.from.y));
+      context.lineTo(Math.round(line.to.x), Math.round(line.to.y));
+    }
+    context.stroke();
+  }
+
+  if (blocked.length) {
+    context.lineWidth = 1;
+    context.strokeStyle = 'rgba(255, 154, 60, 0.35)';
+    context.setLineDash([1, 2]);
+    context.beginPath();
+    for (const { blocker } of blocked) {
+      context.moveTo(Math.round(ship.x), Math.round(ship.y));
+      context.lineTo(Math.round((blocker.col + 0.5) * tile), Math.round((blocker.row + 0.5) * tile));
+    }
+    context.stroke();
+  }
+  context.restore();
+}
+
+// The board as it's being played, then the ship and its reflections, only drawn again when they'd look any different.
 function drawPlaytest(context, look, timeMs) {
   const playtest = puzzleEditor.playtest;
   const { play } = playtest;
@@ -68,7 +142,12 @@ function drawPlaytest(context, look, timeMs) {
 
   const { list, options, key } = play.frame(timeMs, { pushHints: play.finished ? [] : play.pushHints(timeMs) });
   const ship = play.shipPosition();
-  const drawnKey = `${key}|${Math.round(ship.x)},${Math.round(ship.y)},${play.mover.facing},${ship.spin.toFixed(2)},${ship.opacity.toFixed(2)}|${look === playtest.look}`;
+  const reflections = play.game.reflections;
+  const blockedSights = play.game.blockedSights;
+  const flash = play.refusedFlash;
+  const flashKey = flash ? `${flash.col},${flash.row},${Math.floor(flash.ms / 45)}` : '';
+  const sightKey = blockedSights.map(({ blocker }) => `${blocker.col},${blocker.row}`).join(';');
+  const drawnKey = `${key}|${Math.round(ship.x)},${Math.round(ship.y)},${play.mover.facing},${ship.spin.toFixed(2)},${ship.opacity.toFixed(2)}|${reflections.map((cell) => cell.col + ',' + cell.row).join(';')}|${sightKey}|${flashKey}|${look === playtest.look}`;
   if (drawnKey === playtest.drawnKey) return;
   playtest.drawnKey = drawnKey;
   playtest.look = look;
@@ -77,6 +156,7 @@ function drawPlaytest(context, look, timeMs) {
   puzzleEditor.image ??= context.createImageData(PUZZLE_ART_PX, PUZZLE_ART_PX);
   WeavePuzzle.renderBoard(puzzleEditor.image, list, look, options);
   context.putImageData(puzzleEditor.image, 0, 0);
+  drawSightLines(context, play, ship, reflections);
 
   if (!puzzleEditor.shipImage) return;
   context.save();
@@ -85,6 +165,40 @@ function drawPlaytest(context, look, timeMs) {
   context.rotate((PLAYTEST_SHIP_TURNS[play.mover.facing] ?? 0) + ship.spin);
   context.globalAlpha = ship.opacity;
   context.drawImage(puzzleEditor.shipImage, -PUZZLE_SHIP_WIDTH / 2, -PUZZLE_SHIP_HEIGHT / 2, PUZZLE_SHIP_WIDTH, PUZZLE_SHIP_HEIGHT);
+  context.restore();
+
+  // What any Reflect Mimic shows of the ship: the same picture, tinted and see-through, drawn where its pane mirrors
+  // where the ship is being drawn - so it glides with it rather than jumping between squares.
+  const reflection = reflectionSprite();
+  if (!reflection) return;
+  for (const cell of reflections) {
+    const mirrored = WeavePuzzle.reflectionPosition(cell, ship, PUZZLE_TILE_PX);
+    context.save();
+    context.imageSmoothingEnabled = false;
+    context.translate(Math.round(mirrored.x), Math.round(mirrored.y));
+    context.rotate(PLAYTEST_SHIP_TURNS[WeavePuzzle.reflectionFacing(cell, play.mover.facing)] ?? 0);
+    context.globalAlpha = 0.4;
+    context.drawImage(reflection, -PUZZLE_SHIP_WIDTH / 2, -PUZZLE_SHIP_HEIGHT / 2, PUZZLE_SHIP_WIDTH, PUZZLE_SHIP_HEIGHT);
+    context.restore();
+  }
+
+  // A step refused because a reflection couldn't follow leaves whatever stopped it flashing on the ship's side, on the
+  // square it tried to walk into, in the same orange as the reflection - so it's plain where the space is taken up.
+  if (!flash) return;
+  const tile = PUZZLE_TILE_PX;
+  const life = 1 - flash.ms / flash.durationMs;
+  const silhouette = flash.object ? refusedSilhouette(flash.object, look) : null;
+  const blink = Math.max(0, life) * (Math.floor(flash.ms / 90) % 2 === 0 ? 0.75 : 0.3);
+  context.save();
+  context.imageSmoothingEnabled = false;
+  if (silhouette) {
+    context.globalAlpha = blink;
+    context.drawImage(silhouette, 0, 0, tile, tile, Math.round(flash.col * tile), Math.round(flash.row * tile), tile, tile);
+  }
+  context.globalAlpha = Math.max(0, life);
+  context.strokeStyle = '#ff9a3c';
+  context.lineWidth = 2;
+  context.strokeRect(Math.round(flash.col * tile) + 1, Math.round(flash.row * tile) + 1, tile - 2, tile - 2);
   context.restore();
 }
 

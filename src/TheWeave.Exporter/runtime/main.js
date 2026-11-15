@@ -39,6 +39,9 @@ let trackFocusScale = 1; // scale the art is drawn at - see updateTrackFocusScal
 // The Sokoban board's own mover and ship while it's being played, null otherwise - see startBoardGame.
 let boardMover = null;
 let boardShipEl = null;
+// A box holding the Reflect Mimics' reflections of the ship, one picture each - see trackFocus.js's
+// renderBoardReflections.
+let boardReflectionsEl = null;
 let boardContrails = null;
 // While a track's puzzle is being played: its rules (see puzzle.js's createPuzzleGame), the canvas its
 // objects are drawn on, and how far through the current Stream tick it is. Null for a track with no puzzle.

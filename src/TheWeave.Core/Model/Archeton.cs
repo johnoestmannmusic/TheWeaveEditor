@@ -40,6 +40,14 @@ public enum ArchetonPartKind
     /// came from. It's still solid to everything else, so it stops beams, Slide Bugs and Push Blocks.
     /// </summary>
     Sting,
+
+    /// <summary>
+    /// A pane of glass: solid to the ship, Push Blocks and Archetons, but a Beam is photonic and passes straight
+    /// through it. While the ship is in its line - its row when it's placed facing Left or Right, its column facing Up
+    /// or Down - a shadowy reflection of the ship shows as far the other side of it, moving as the ship does, setting
+    /// off what it lands on, and hurting the ship when it's hurt. See runtime/puzzleRules.js's reflections.
+    /// </summary>
+    Reflect,
 }
 
 /// <summary>Which ways a Beam looks.</summary>
@@ -223,16 +231,76 @@ public static class ArchetonDefinitions
         ],
     };
 
+    /// <summary>
+    /// The fourth Archeton: a pane of glass that shows a shadowy reflection of the ship, mirrored across it while the
+    /// ship is in its line, so the reflection moves as the ship does. Solid to everything but a Beam, which is
+    /// photonic and passes through.
+    /// </summary>
+    public static ArchetonDefinition ReflectMimic() => new()
+    {
+        Id = "reflect-mimic",
+        Name = "Reflect Mimic",
+        Drawing = ReflectMimicDrawingId,
+        Parts = [new ArchetonPart { Kind = ArchetonPartKind.Reflect }],
+    };
+
+    public const string ReflectMimicDrawingId = "reflect-mimic";
+
+    /// <summary>
+    /// Reflect Mimic's drawing, a pane of glass 8 pixels wide down the middle of its square, upright, so that one
+    /// placed facing Left or Right stays upright and one facing Up or Down lies flat - see puzzleDrawing.js's
+    /// FLOW_TURNS. Its height is what makes a whole cell reflect, so it runs from edge to edge.
+    /// </summary>
+    public static PuzzleDrawing ReflectMimicDrawing() => new()
+    {
+        Id = ReflectMimicDrawingId,
+        Kind = PuzzleObjectKind.Archeton,
+        Name = "Reflect Mimic",
+        Pixels =
+        "........OOOOOOOO........" +
+        "........OHHHHHHO........" +
+        "........OHHHHHHO........" +
+        "........OHHHHHHO........" +
+        "........O1HHHHHO........" +
+        "........O1HHHHHO........" +
+        "........O1HHHHHO........" +
+        "........OH1HHHHO........" +
+        "........OH1HHHHO........" +
+        "........OH1HHHHO........" +
+        "........OHH1HHHO........" +
+        "........OHH1HHHO........" +
+        "........OHH1HHHO........" +
+        "........OHHH1HHO........" +
+        "........OHHH1HHO........" +
+        "........OHHH1HHO........" +
+        "........OHHHH1HO........" +
+        "........OHHHH1HO........" +
+        "........OHHHH1HO........" +
+        "........OHHHHH1O........" +
+        "........OHHHHHHO........" +
+        "........OHHHHHHO........" +
+        "........OHHHHHHO........" +
+        "........OOOOOOOO........",
+        Mix =
+        [
+            new PuzzleMixColour { Role = "archeton", Shade = 0, Percent = 15 },
+            new PuzzleMixColour { Role = "archeton", Shade = 1, Percent = 25 },
+            new PuzzleMixColour { Role = "archeton", Shade = 2, Percent = 45 },
+            new PuzzleMixColour { Role = "archeton", Shade = 3, Percent = 15 },
+        ],
+    };
+
     /// <summary>How many moves a Sequence can have.</summary>
     public const int MaxMoves = 32;
 
-    public static IReadOnlyList<Func<ArchetonDefinition>> ReadyMade { get; } = [Sentribeam, SlideBug, JumpbugA];
+    public static IReadOnlyList<Func<ArchetonDefinition>> ReadyMade { get; } = [Sentribeam, SlideBug, JumpbugA, ReflectMimic];
 
     /// <summary>The drawing a ready-made Archeton comes with, by its id, or null.</summary>
     public static PuzzleDrawing? ReadyMadeDrawing(string? id) => id switch
     {
         SlideBugDrawingId => SlideBugDrawing(),
         JumpbugDrawingId => JumpbugDrawing(),
+        ReflectMimicDrawingId => ReflectMimicDrawing(),
         _ => null,
     };
 

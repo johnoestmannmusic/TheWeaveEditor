@@ -85,6 +85,7 @@ function renderTrackFocus(){
       }
       board.appendChild(boardContrails.canvas);
       board.appendChild(buildBoardShip());
+      board.appendChild(buildBoardReflections());
     }
     slide.appendChild(board);
     if (lockedBy) frame.appendChild(buildArtLabel('Locked'));
@@ -518,8 +519,9 @@ function finishBoardLevel(){
 // Pushing off the edge of a board, between connected boards: from a part's Start back across to the part
 // before, onto its Finish, or from a solved Finish across to the next part again. So the ship can always cross
 // back and forth, whatever has moved around on either board since.
-function onBoardBlocked(cell, direction){
-  if (!boardGame || boardSolvedMs !== null || boardScroll) return;
+function onBoardBlocked(cell, to, direction){
+  // Only a step off the edge of the board crosses to another one; anything in the way on it isn't that.
+  if (to || !boardGame || boardSolvedMs !== null || boardScroll) return;
   let pushed = PUZZLE_DIRECTIONS[direction];
   let isAt = (object) => object && object.col === cell.col && object.row === cell.row;
   let here = nodeMeta.get(activeNode).puzzle;
@@ -633,6 +635,8 @@ function leaveBoardGame(){
   runFocusTransition(() => flipFocus(() => {
     boardMover = null;
     boardShipEl = null;
+    boardReflectionsEl = null;
+    boardRefusedSilhouettes = null;
     boardContrails = null;
     boardGame = null;
     boardPlay = null;
@@ -650,6 +654,16 @@ function buildBoardShip(){
   boardShipEl.className = 'trackFocusBoardShip';
   boardShipEl.src = 'img/ui/pilot-ship.png';
   return boardShipEl;
+}
+
+// A box for the reflections - one ship picture per pane showing one, tinted and see-through by main.css - panes facing
+// each other show two, and a reflection in another pane's line shows a third, so how many there are is only known once
+// the board's playing. See renderBoardReflections.
+function buildBoardReflections(){
+  boardReflectionsEl = document.createElement('div');
+  boardReflectionsEl.id = 'trackFocusBoardReflections';
+  boardReflectionsEl.className = 'boardReflections';
+  return boardReflectionsEl;
 }
 
 // How much bigger the ship looks at the top of a Jump Tile's leap - see board.js.
@@ -700,10 +714,100 @@ function drawBoardObjects(){
   if (!boardGame || !boardObjectsCanvas || !boardPuzzle) return;
 
   let { list, options, key } = boardPlay.frame(performance.now(), { pushHints: boardPushHints() });
-  if (key === boardDrawnKey) return;
-  boardDrawnKey = key;
+  // A flashing obstruction blinks, which isn't part of the frame's key, so the board is drawn every frame while it does.
+  let flashing = boardPlay.refusedFlash;
+  if (!flashing && key === boardDrawnKey) return;
+  if (!flashing) boardDrawnKey = key;
   WeavePuzzle.renderBoard(boardObjectsImage, list, boardPuzzle, options);
   boardObjectsCanvas.getContext('2d').putImageData(boardObjectsImage, 0, 0);
+  drawSightLines();
+  drawRefusedFlash();
+}
+
+// The line of sight from the ship to each reflection, dotted and faint, so it's plain which pane is showing it and how
+// far away it is - and stronger when the reflection is what's refusing to let the ship move. A pane in line with the
+// ship but with something between can't show a reflection at all, so its line runs only as far as whatever's in the way.
+function drawSightLines(){
+  let reflections = boardPlay.game?.reflections ?? [];
+  let blocked = boardPlay.game?.blockedSights ?? [];
+  if (!boardObjectsCanvas || (!reflections.length && !blocked.length)) return;
+  let context = boardObjectsCanvas.getContext('2d');
+  let ship = boardPlay.shipPosition();
+  let refused = boardPlay.refusedFlash;
+  let tile = BOARD_TILE_PX;
+  context.save();
+  context.lineWidth = 2;
+  context.strokeStyle = refused ? 'rgba(255, 154, 60, 0.8)' : 'rgba(255, 154, 60, 0.1)';
+  context.setLineDash(refused ? [3, 2] : [3, 3]);
+  if (reflections.length) {
+    context.beginPath();
+    for (const reflection of reflections) {
+      const line = WeavePuzzle.reflectionSightLine(reflection, ship, tile);
+      context.moveTo(Math.round(line.from.x), Math.round(line.from.y));
+      context.lineTo(Math.round(line.to.x), Math.round(line.to.y));
+    }
+    context.stroke();
+  }
+
+  if (blocked.length) {
+    context.lineWidth = 1;
+    context.strokeStyle = 'rgba(255, 154, 60, 0.35)';
+    context.setLineDash([1, 2]);
+    context.beginPath();
+    for (const { blocker } of blocked) {
+      context.moveTo(Math.round(ship.x), Math.round(ship.y));
+      context.lineTo(Math.round((blocker.col + 0.5) * tile), Math.round((blocker.row + 0.5) * tile));
+    }
+    context.stroke();
+  }
+  context.restore();
+}
+
+// A step refused because a reflection couldn't follow leaves whatever stopped it flashing on the ship's side, on the
+// square it tried to walk into, in the same orange as the reflection - so it's plain where the space is taken up.
+function drawRefusedFlash(){
+  let flash = boardPlay?.refusedFlash;
+  if (!flash) return;
+  let context = boardObjectsCanvas.getContext('2d');
+  let tile = BOARD_TILE_PX;
+  let life = 1 - flash.ms / flash.durationMs;
+  let silhouette = flash.object ? refusedSilhouette(flash.object, boardPuzzle) : null;
+  let blink = Math.max(0, life) * (Math.floor(flash.ms / 90) % 2 === 0 ? 0.75 : 0.3);
+  context.save();
+  context.imageSmoothingEnabled = false;
+  if (silhouette) {
+    context.globalAlpha = blink;
+    context.drawImage(silhouette, 0, 0, tile, tile, Math.round(flash.col * tile), Math.round(flash.row * tile), tile, tile);
+  }
+  context.globalAlpha = Math.max(0, life);
+  context.strokeStyle = '#ff9a3c';
+  context.lineWidth = 2;
+  context.strokeRect(Math.round(flash.col * tile) + 1, Math.round(flash.row * tile) + 1, tile - 2, tile - 2);
+  context.restore();
+}
+
+// Whatever stopped the ship, as the reflection sees it, for that flash: its own picture in the reflection's orange, on
+// its own and see-through everywhere else. Kept once drawn, since a flash always shows the same thing.
+let boardRefusedSilhouettes = null;
+
+function refusedSilhouette(object, look){
+  if (!look) return null;
+  boardRefusedSilhouettes ??= new Map();
+  let key = [object.kind, object.symbol, object.letter, object.archeton, object.direction, object.open].join('|');
+  let silhouette = boardRefusedSilhouettes.get(key);
+  if (silhouette) return silhouette;
+  silhouette = document.createElement('canvas');
+  silhouette.width = WeavePuzzle.ART_PX;
+  silhouette.height = WeavePuzzle.ART_PX;
+  let context = silhouette.getContext('2d');
+  let image = context.createImageData(WeavePuzzle.ART_PX, WeavePuzzle.ART_PX);
+  WeavePuzzle.renderBoard(image, [{ ...object, col: 0, row: 0, fromCol: 0, fromRow: 0 }], look, {});
+  context.putImageData(image, 0, 0);
+  context.globalCompositeOperation = 'source-in';
+  context.fillStyle = '#ff9a3c';
+  context.fillRect(0, 0, WeavePuzzle.ART_PX, WeavePuzzle.ART_PX);
+  boardRefusedSilhouettes.set(key, silhouette);
+  return silhouette;
 }
 
 function updateBoardContrails(dtMs){
@@ -748,4 +852,36 @@ function renderBoardShip(){
   // Sprite's forward points "up" at rest, same as the map ship - see renderShip.
   boardShipEl.style.transform = "rotate(" + (FACING_ANGLES[boardMover.facing] + Math.PI / 2 + spin) + "rad) scale(" + leap + ")";
   boardShipEl.style.opacity = opacity;
+  renderBoardReflections();
+}
+
+// Where a Reflect Mimic shows the ship's reflection, from puzzleRules.js's reflections and reflectionPosition: each moved
+// to wherever its pane mirrors where its source is being drawn, so the whole chain glides with the ship. Extra pictures
+// keep their element and hide, so a board that shows three and then one doesn't rebuild them every frame.
+function renderBoardReflections(){
+  if (!boardReflectionsEl || !boardPlay) return;
+  let reflections = boardPlay.game?.reflections ?? [];
+  let position = boardPlay.shipPosition();
+  let width = Math.round(BOARD_SHIP_WIDTH * trackFocusScale);
+  let height = Math.round(BOARD_SHIP_HEIGHT * trackFocusScale);
+  while (boardReflectionsEl.children.length < reflections.length) {
+    let image = document.createElement('img');
+    image.className = 'trackFocusBoardShip boardReflection';
+    image.src = 'img/ui/pilot-ship.png';
+    boardReflectionsEl.appendChild(image);
+  }
+  for (let index = 0; index < boardReflectionsEl.children.length; index++) {
+    let image = boardReflectionsEl.children[index];
+    let reflection = reflections[index];
+    image.style.display = reflection ? "" : "none";
+    if (!reflection) continue;
+    let mirrored = WeavePuzzle.reflectionPosition(reflection, position, BOARD_TILE_PX);
+    image.style.width = width + "px";
+    image.style.height = height + "px";
+    image.style.left = (mirrored.x * trackFocusScale - width / 2) + "px";
+    image.style.top = (mirrored.y * trackFocusScale - height / 2) + "px";
+    // Facing back at the ship when it faces the pane, and the way it's going when it walks along the pane's line: its
+    // picture points up at rest, as the ship's does - see puzzleRules.js's reflectionFacing.
+    image.style.transform = "rotate(" + (FACING_ANGLES[WeavePuzzle.reflectionFacing(reflection, boardMover.facing)] + Math.PI / 2) + "rad)";
+  }
 }
