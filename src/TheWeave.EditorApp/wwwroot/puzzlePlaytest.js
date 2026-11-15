@@ -73,25 +73,25 @@ function reflectionSprite() {
   return puzzleEditor.reflectionImage = canvas;
 }
 
-// A Push Block as the reflection sees it, for when it's the block that stopped the ship: the block's own picture in the
-// reflection's orange, on its own and see-through everywhere else - see drawBlockFlash.
-function blockSilhouette(block, look) {
+// Whatever stopped the ship, drawn the way the reflection sees it: its own picture in the reflection's orange, on its own
+// and see-through everywhere else, for when it's what refused the step - see drawRefusedFlash.
+function refusedSilhouette(object, look) {
   if (!look) return null;
-  const key = block.symbol ?? '';
-  puzzleEditor.blockSilhouettes ??= new Map();
-  let silhouette = puzzleEditor.blockSilhouettes.get(key);
+  const key = [object.kind, object.symbol, object.letter, object.archeton, object.direction, object.open].join('|');
+  puzzleEditor.refusedSilhouettes ??= new Map();
+  let silhouette = puzzleEditor.refusedSilhouettes.get(key);
   if (silhouette) return silhouette;
   silhouette = document.createElement('canvas');
   silhouette.width = PUZZLE_ART_PX;
   silhouette.height = PUZZLE_ART_PX;
   const context = silhouette.getContext('2d');
   const image = context.createImageData(PUZZLE_ART_PX, PUZZLE_ART_PX);
-  WeavePuzzle.renderBoard(image, [{ ...block, col: 0, row: 0, fromCol: 0, fromRow: 0 }], look, {});
+  WeavePuzzle.renderBoard(image, [{ ...object, col: 0, row: 0, fromCol: 0, fromRow: 0 }], look, {});
   context.putImageData(image, 0, 0);
   context.globalCompositeOperation = 'source-in';
   context.fillStyle = '#ff9a3c';
   context.fillRect(0, 0, PUZZLE_ART_PX, PUZZLE_ART_PX);
-  puzzleEditor.blockSilhouettes.set(key, silhouette);
+  puzzleEditor.refusedSilhouettes.set(key, silhouette);
   return silhouette;
 }
 
@@ -107,7 +107,7 @@ function drawPlaytest(context, look, timeMs) {
   const { list, options, key } = play.frame(timeMs, { pushHints: play.finished ? [] : play.pushHints(timeMs) });
   const ship = play.shipPosition();
   const reflections = play.game.reflections;
-  const flash = play.blockFlash;
+  const flash = play.refusedFlash;
   const flashKey = flash ? `${flash.col},${flash.row},${Math.floor(flash.ms / 45)}` : '';
   const drawnKey = `${key}|${Math.round(ship.x)},${Math.round(ship.y)},${play.mover.facing},${ship.spin.toFixed(2)},${ship.opacity.toFixed(2)}|${reflections.map((cell) => cell.col + ',' + cell.row).join(';')}|${flashKey}|${look === playtest.look}`;
   if (drawnKey === playtest.drawnKey) return;
@@ -143,17 +143,19 @@ function drawPlaytest(context, look, timeMs) {
     context.restore();
   }
 
-  // A step refused because a reflection couldn't follow leaves the block that stopped it flashing on the ship's side, on
-  // the square it tried to walk into, in the same orange as the reflection - so it's plain where the space is taken up.
+  // A step refused because a reflection couldn't follow leaves whatever stopped it flashing on the ship's side, on the
+  // square it tried to walk into, in the same orange as the reflection - so it's plain where the space is taken up.
   if (!flash) return;
   const tile = PUZZLE_TILE_PX;
   const life = 1 - flash.ms / flash.durationMs;
-  const silhouette = blockSilhouette(flash.block, look);
-  if (!silhouette) return;
+  const silhouette = flash.object ? refusedSilhouette(flash.object, look) : null;
+  const blink = Math.max(0, life) * (Math.floor(flash.ms / 90) % 2 === 0 ? 0.75 : 0.3);
   context.save();
   context.imageSmoothingEnabled = false;
-  context.globalAlpha = Math.max(0, life) * (Math.floor(flash.ms / 90) % 2 === 0 ? 0.75 : 0.3);
-  context.drawImage(silhouette, 0, 0, tile, tile, Math.round(flash.col * tile), Math.round(flash.row * tile), tile, tile);
+  if (silhouette) {
+    context.globalAlpha = blink;
+    context.drawImage(silhouette, 0, 0, tile, tile, Math.round(flash.col * tile), Math.round(flash.row * tile), tile, tile);
+  }
   context.globalAlpha = Math.max(0, life);
   context.strokeStyle = '#ff9a3c';
   context.lineWidth = 2;

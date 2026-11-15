@@ -1942,24 +1942,48 @@ test('a reflection\'s push starts with the ship\'s step, so the block glides alo
   assert.deepEqual(cells(g).map(cell => cell.col), [8], 'the reflection ends up where the block was');
 });
 
-test('the block that stopped the ship by being on the reflection\'s side is reported, for the flash', () => {
-  // The ship at 1 is shown at 9: stepping right sends the reflection left, onto the block at 8.
+test('whatever blocked the step from the reflection\'s side is reported, for the flash', () => {
+  // The ship at 1 is shown at 9: stepping right sends the reflection left, onto the square at 8.
   let g = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), block(8, 5), obj('Wall', 7, 5));
   g.placeShip(at(1, 5));
-  assert.equal(g.canEnter(at(1, 5), at(2, 5), 'right'), false, 'the ship can\'t step: the block won\'t go');
-  let stopper = g.reflectionBlockInTheWay(at(1, 5), at(2, 5), 'right');
-  assert.equal(stopper?.kind, 'PushBlock', 'and the block that stopped it is the one reported');
-  assert.deepEqual([stopper.col, stopper.row], [8, 5], 'on the reflection\'s side of the pane');
+  assert.equal(g.canEnter(at(1, 5), at(2, 5), 'right'), false, 'a block that won\'t go stops the ship');
+  let stopper = g.reflectionObstacleInTheWay(at(1, 5), at(2, 5), 'right');
+  assert.equal(stopper?.object?.kind, 'PushBlock', 'and the block is what\'s reported');
+  assert.deepEqual([stopper.object.col, stopper.object.row], [8, 5], 'on the reflection\'s side of the pane');
 
-  let open = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), block(8, 5));
+  let walled = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Wall', 8, 5));
+  walled.placeShip(at(1, 5));
+  assert.equal(walled.canEnter(at(1, 5), at(2, 5), 'right'), false, 'a Wall does as well');
+  assert.equal(walled.reflectionObstacleInTheWay(at(1, 5), at(2, 5), 'right')?.object?.kind, 'Wall', 'and a Wall is what\'s reported');
+
+  let shut = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Gate', 8, 5, { letter: 'A' }));
+  shut.placeShip(at(1, 5));
+  assert.equal(shut.reflectionObstacleInTheWay(at(1, 5), at(2, 5), 'right')?.object?.kind, 'Gate', 'so is a shut Gate');
+
+  // A reflection with no room to step because the board ends there: there's a square to point at, but nothing to draw.
+  let edged = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5));
+  edged.placeShip(at(1, 5));
+  let edge = edged.reflectionObstacleInTheWay(at(1, 5), at(0, 5), 'left');
+  assert.deepEqual(edge, { object: null }, 'the reflection would leave the board, so the ship can\'t go either');
+  assert.equal(edged.canEnter(at(1, 5), at(0, 5), 'left'), false);
+
+  const STINGER = { id: 'stinger', name: 'Stinger', parts: [{ kind: 'Sting' }] };
+  let stung = withArchetons([REFLECT_MIMIC, STINGER], mimic(5, 5), obj('Start', 2, 5), obj('Archeton', 8, 5, { archeton: 'stinger', direction: 'Right' }));
+  stung.placeShip(at(1, 5));
+  assert.equal(stung.canEnter(at(1, 5), at(2, 5), 'right'), true, 'a Stinging Archeton doesn\'t refuse the step, it hurts');
+  assert.equal(stung.reflectionObstacleInTheWay(at(1, 5), at(2, 5), 'right'), null, 'so there\'s nothing to flash');
+
+  let open = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5));
   open.placeShip(at(1, 5));
-  assert.equal(open.canEnter(at(1, 5), at(2, 5), 'right'), true, 'a block that can be shoved doesn\'t stop it');
-  assert.equal(open.reflectionBlockInTheWay(at(1, 5), at(2, 5), 'right'), null, 'so there\'s nothing to flash');
+  assert.equal(open.canEnter(at(1, 5), at(2, 5), 'right'), true, 'a step nothing refuses');
+  assert.equal(open.reflectionObstacleInTheWay(at(1, 5), at(2, 5), 'right'), null, 'has nothing to flash');
 
-  let wall = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Wall', 8, 5));
-  wall.placeShip(at(1, 5));
-  assert.equal(wall.canEnter(at(1, 5), at(2, 5), 'right'), false, 'a Wall there stops it just as a block would');
-  assert.equal(wall.reflectionBlockInTheWay(at(1, 5), at(2, 5), 'right'), null, 'but there\'s no block to flash');
+  // A Wall on the ship's own side refuses the step by itself, so the reflection isn't the reason and there's nothing to
+  // put on the ship's side of the pane.
+  let own = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), obj('Wall', 2, 5));
+  own.placeShip(at(1, 5));
+  assert.equal(own.canEnter(at(1, 5), at(2, 5), 'right'), false, 'the ship can\'t step into its own Wall');
+  assert.equal(own.reflectionObstacleInTheWay(at(1, 5), at(2, 5), 'right'), null, 'and nothing is flashed for it');
 });
 
 test('a Push Block drawn on its own gives the flash its shape, with nothing behind it', () => {

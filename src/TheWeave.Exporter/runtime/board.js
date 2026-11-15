@@ -21,8 +21,8 @@
   const TILE_PX = WeavePuzzle.TILE_PX;
   // How long one cycle of each animation takes, as puzzle.js's renderBoard has them, for telling when a frame would
   // look any different from the last - see frame.
-  // How long the reflection side's blocking block flashes on the ship's side of the pane, once a step is refused for it.
-  const BLOCK_FLASH_MS = 520;
+  // How long whatever blocked a step on the reflection's side flashes on the ship's side of the pane.
+  const REFUSED_FLASH_MS = 520;
   const STREAM_CYCLE_MS = 900;
   const ROTATOR_CYCLE_MS = 1000;
   const FINISH_ARROW_CYCLE_MS = 1200;
@@ -59,10 +59,10 @@
       pipeTurnMs: null,
       returnMs: null,
       slideMs: null, // how long ago Slide Bugs last slid, for their glide
-      // { col, row, block, ms } while a step is being refused because of a Push Block on the reflection's side: the block
-      // is drawn on the square the ship tried to walk into, so it's plain the space is taken over there - see the
-      // renderers and puzzleRules.js's reflectionBlockInTheWay.
-      blockFlash: null,
+      // { col, row, object, ms } while a step is being refused because of something on the reflection's side - a Wall, a
+      // shut Gate, an Archeton, a Push Block that wouldn't move: it's drawn on the square the ship tried to walk into, so
+      // it's plain where the space is taken - see the renderers and puzzleRules.js's reflectionObstacleInTheWay.
+      refusedFlash: null,
       hopMs: null, // how long ago Archetons with a Move Sequence last hopped
       sinking: [],
       pulses: [],
@@ -140,10 +140,10 @@
           onEvent(game.pushForReflections(direction));
         } : undefined,
         onBlocked: (blockedCell, direction) => {
-          // A step refused because a reflection couldn't follow leaves the block that stopped it flashing on the ship's
-          // side of the pane, on the square it tried to walk into.
-          let block = game ? game.reflectionBlockInTheWay(play.mover.cell, blockedCell, direction) : null;
-          if (block) play.blockFlash = { col: blockedCell.col, row: blockedCell.row, block, ms: 0, durationMs: BLOCK_FLASH_MS };
+          // A step refused because a reflection couldn't follow leaves whatever stopped it flashing on the ship's side of
+          // the pane, on the square it tried to walk into.
+          let refused = game ? game.reflectionObstacleInTheWay(play.mover.cell, blockedCell, direction) : null;
+          if (refused) play.refusedFlash = { col: blockedCell.col, row: blockedCell.row, object: refused.object, ms: 0, durationMs: REFUSED_FLASH_MS };
           hooks.onBlocked?.(blockedCell, direction);
         },
       }
@@ -160,9 +160,9 @@
       if (play.returnMs !== null) play.returnMs += dtMs;
       if (play.slideMs !== null) play.slideMs += dtMs;
       if (play.hopMs !== null) play.hopMs += dtMs;
-      if (play.blockFlash) {
-        play.blockFlash.ms += dtMs;
-        if (play.blockFlash.ms >= play.blockFlash.durationMs) play.blockFlash = null;
+      if (play.refusedFlash) {
+        play.refusedFlash.ms += dtMs;
+        if (play.refusedFlash.ms >= play.refusedFlash.durationMs) play.refusedFlash = null;
       }
     };
 

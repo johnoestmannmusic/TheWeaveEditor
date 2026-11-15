@@ -753,17 +753,20 @@
       return events;
     }
 
-    // The Push Block that stopped the ship stepping this way by being in the way on the reflection's side - the one a
-    // reflection would have had to shove and couldn't. Mirrored back across its pane that block is on the square the ship
-    // was trying to walk into, which is where the callers flash it - see board.js's blockFlash.
-    function reflectionBlockInTheWay(from, to, moverDirection){
-      if (!isAt(from, shipCell)) return null;
+    // Whatever stopped the ship stepping this way by being in the way on the reflection's side: a Wall, a shut Gate, an
+    // Archeton, or a Push Block it couldn't shove. Mirrored back across its pane it stands on the square the ship was
+    // trying to walk into, which is where the callers flash it - see board.js's refusedFlash. { object } with no object
+    // when the reflection had no room to step because the board ends there, since there's still a square to point at.
+    // Null if the ship couldn't have stepped there anyway: then the reason is on the ship's own side, not the
+    // reflection's, and nothing should be shown on it.
+    function reflectionObstacleInTheWay(from, to, moverDirection){
+      if (!isAt(from, shipCell) || !canEnterAlone(from, to, moverDirection)) return null;
       let direction = PUZZLE_DIRECTIONS[moverDirection];
       for (const reflection of syncReflections()) {
         let mirrored = mirroredDirection(reflection.pane, direction);
-        let object = objectAt(nextCell(reflection, mirrored));
-        if (object?.kind !== 'PushBlock' || pushedTo(object, mirrored)) continue;
-        return object;
+        let target = nextCell(reflection, mirrored);
+        if (canEnterAlone(reflection, target, MOVER_DIRECTIONS[mirrored])) continue;
+        return { object: objectAt(target) ?? null };
       }
       return null;
     }
@@ -1070,7 +1073,7 @@
       // the ship - see renderBoard's pushAlong. Returns { sank } if that brought matching blocks together.
       pushFrom,
       pushForReflections,
-      reflectionBlockInTheWay,
+      reflectionObstacleInTheWay,
 
       // Once a push has finished gliding, the block is simply where it is.
       settlePushes(){

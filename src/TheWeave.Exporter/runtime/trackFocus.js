@@ -635,7 +635,7 @@ function leaveBoardGame(){
     boardMover = null;
     boardShipEl = null;
     boardReflectionsEl = null;
-    boardBlockSilhouettes = null;
+    boardRefusedSilhouettes = null;
     boardContrails = null;
     boardGame = null;
     boardPlay = null;
@@ -713,29 +713,31 @@ function drawBoardObjects(){
   if (!boardGame || !boardObjectsCanvas || !boardPuzzle) return;
 
   let { list, options, key } = boardPlay.frame(performance.now(), { pushHints: boardPushHints() });
-  // A flashing block blinks, which isn't part of the frame's key, so the board is drawn every frame while it does.
-  let flashing = boardPlay.blockFlash;
+  // A flashing obstruction blinks, which isn't part of the frame's key, so the board is drawn every frame while it does.
+  let flashing = boardPlay.refusedFlash;
   if (!flashing && key === boardDrawnKey) return;
   if (!flashing) boardDrawnKey = key;
   WeavePuzzle.renderBoard(boardObjectsImage, list, boardPuzzle, options);
   boardObjectsCanvas.getContext('2d').putImageData(boardObjectsImage, 0, 0);
-  drawBoardBlockFlash();
+  drawRefusedFlash();
 }
 
-// A step refused because a reflection couldn't follow leaves the block that stopped it flashing on the ship's side, on the
+// A step refused because a reflection couldn't follow leaves whatever stopped it flashing on the ship's side, on the
 // square it tried to walk into, in the same orange as the reflection - so it's plain where the space is taken up.
-function drawBoardBlockFlash(){
-  let flash = boardPlay?.blockFlash;
+function drawRefusedFlash(){
+  let flash = boardPlay?.refusedFlash;
   if (!flash) return;
   let context = boardObjectsCanvas.getContext('2d');
   let tile = BOARD_TILE_PX;
   let life = 1 - flash.ms / flash.durationMs;
-  let silhouette = blockSilhouette(flash.block, boardPuzzle);
-  if (!silhouette) return;
+  let silhouette = flash.object ? refusedSilhouette(flash.object, boardPuzzle) : null;
+  let blink = Math.max(0, life) * (Math.floor(flash.ms / 90) % 2 === 0 ? 0.75 : 0.3);
   context.save();
   context.imageSmoothingEnabled = false;
-  context.globalAlpha = Math.max(0, life) * (Math.floor(flash.ms / 90) % 2 === 0 ? 0.75 : 0.3);
-  context.drawImage(silhouette, 0, 0, tile, tile, Math.round(flash.col * tile), Math.round(flash.row * tile), tile, tile);
+  if (silhouette) {
+    context.globalAlpha = blink;
+    context.drawImage(silhouette, 0, 0, tile, tile, Math.round(flash.col * tile), Math.round(flash.row * tile), tile, tile);
+  }
   context.globalAlpha = Math.max(0, life);
   context.strokeStyle = '#ff9a3c';
   context.lineWidth = 2;
@@ -743,27 +745,27 @@ function drawBoardBlockFlash(){
   context.restore();
 }
 
-// A Push Block as the reflection sees it, for that flash: the block's own picture in the reflection's orange, on its own
-// and see-through everywhere else. Kept once drawn, since a flash always shows the same block.
-let boardBlockSilhouettes = null;
+// Whatever stopped the ship, as the reflection sees it, for that flash: its own picture in the reflection's orange, on
+// its own and see-through everywhere else. Kept once drawn, since a flash always shows the same thing.
+let boardRefusedSilhouettes = null;
 
-function blockSilhouette(block, look){
+function refusedSilhouette(object, look){
   if (!look) return null;
-  boardBlockSilhouettes ??= new Map();
-  let key = block.symbol ?? '';
-  let silhouette = boardBlockSilhouettes.get(key);
+  boardRefusedSilhouettes ??= new Map();
+  let key = [object.kind, object.symbol, object.letter, object.archeton, object.direction, object.open].join('|');
+  let silhouette = boardRefusedSilhouettes.get(key);
   if (silhouette) return silhouette;
   silhouette = document.createElement('canvas');
   silhouette.width = WeavePuzzle.ART_PX;
   silhouette.height = WeavePuzzle.ART_PX;
   let context = silhouette.getContext('2d');
   let image = context.createImageData(WeavePuzzle.ART_PX, WeavePuzzle.ART_PX);
-  WeavePuzzle.renderBoard(image, [{ ...block, col: 0, row: 0, fromCol: 0, fromRow: 0 }], look, {});
+  WeavePuzzle.renderBoard(image, [{ ...object, col: 0, row: 0, fromCol: 0, fromRow: 0 }], look, {});
   context.putImageData(image, 0, 0);
   context.globalCompositeOperation = 'source-in';
   context.fillStyle = '#ff9a3c';
   context.fillRect(0, 0, WeavePuzzle.ART_PX, WeavePuzzle.ART_PX);
-  boardBlockSilhouettes.set(key, silhouette);
+  boardRefusedSilhouettes.set(key, silhouette);
   return silhouette;
 }
 
