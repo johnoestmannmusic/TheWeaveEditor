@@ -131,6 +131,29 @@ test('a step refused by the reflection\'s side flashes what stopped it, on the s
   assert.equal(play.refusedFlash, null, 'then fades');
 });
 
+test('a chained reflection doesn\'t hold the ship back from stepping towards its pane', () => {
+  const REFLECT = { id: 'reflect-mimic', name: 'Reflect Mimic', parts: [{ kind: 'Reflect' }] };
+  // Two panes lying flat in one column, so the ship at 5,9 is shown at 5,3 and that reflection at 5,1. Stepping up
+  // takes the first reflection down and the second up, and there is nothing in the way of either.
+  let play = createBoardPlay({
+    puzzle: {
+      objects: [
+        obj('Archeton', 5, 6, { archeton: 'reflect-mimic', direction: 'Down' }),
+        obj('Archeton', 5, 2, { archeton: 'reflect-mimic', direction: 'Down' }),
+        obj('Start', 5, 9),
+      ],
+      archetons: [REFLECT],
+    },
+  });
+  play.mover.press('up');
+  play.mover.release('up');
+  run(play, 40);
+  assert.deepEqual(play.mover.cell, at(5, 8), 'the ship steps up');
+  run(play, BOARD_TIMING.stepMs);
+  assert.equal(play.refusedFlash, null, 'and nothing is refused for it');
+  assert.deepEqual(play.game.reflections.map(cell => at(cell.col, cell.row)), [at(5, 4), at(5, 0)], 'both reflections step with it');
+});
+
 test('a step nothing refuses shows nothing', () => {
   const REFLECT = { id: 'reflect-mimic', name: 'Reflect Mimic', parts: [{ kind: 'Reflect' }] };
   let play = createBoardPlay({
