@@ -5472,23 +5472,7 @@
                       {
                         "Kind": "Archeton",
                         "Col": 6,
-                        "Row": 3,
-                        "Letter": null,
-                        "Direction": "Left",
-                        "Archeton": "reflect-mimic"
-                      },
-                      {
-                        "Kind": "Archeton",
-                        "Col": 6,
                         "Row": 4,
-                        "Letter": null,
-                        "Direction": "Left",
-                        "Archeton": "reflect-mimic"
-                      },
-                      {
-                        "Kind": "Archeton",
-                        "Col": 6,
-                        "Row": 5,
                         "Letter": null,
                         "Direction": "Left",
                         "Archeton": "reflect-mimic"
@@ -5524,6 +5508,66 @@
                         "Letter": null,
                         "Direction": null,
                         "Variant": "wall-11"
+                      },
+                      {
+                        "Kind": "Archeton",
+                        "Col": 6,
+                        "Row": 3,
+                        "Letter": null,
+                        "Direction": "Left",
+                        "Archeton": "reflect-mimic"
+                      },
+                      {
+                        "Kind": "Teleporter",
+                        "Col": 5,
+                        "Row": 5,
+                        "Letter": "A",
+                        "Direction": null
+                      },
+                      {
+                        "Kind": "Teleporter",
+                        "Col": 6,
+                        "Row": 0,
+                        "Letter": "A",
+                        "Direction": null
+                      },
+                      {
+                        "Kind": "Wall",
+                        "Col": 7,
+                        "Row": 0,
+                        "Letter": null,
+                        "Direction": null,
+                        "Variant": "wall-17"
+                      },
+                      {
+                        "Kind": "Wall",
+                        "Col": 7,
+                        "Row": 1,
+                        "Letter": null,
+                        "Direction": null,
+                        "Variant": "wall-12"
+                      },
+                      {
+                        "Kind": "Wall",
+                        "Col": 8,
+                        "Row": 1,
+                        "Letter": null,
+                        "Direction": null,
+                        "Variant": "wall-12"
+                      },
+                      {
+                        "Kind": "Teleporter",
+                        "Col": 8,
+                        "Row": 3,
+                        "Letter": "B",
+                        "Direction": null
+                      },
+                      {
+                        "Kind": "Teleporter",
+                        "Col": 0,
+                        "Row": 4,
+                        "Letter": "B",
+                        "Direction": null
                       }
                     ],
                     "Palette": {
