@@ -339,7 +339,7 @@ internal static class ProjectEditing
             if (!usesLetter)
                 obj.Letter = null;
 
-            var pointsSomewhere = IsFloorTile(obj) || obj.Kind is PuzzleObjectKind.JumpTile or PuzzleObjectKind.Archeton;
+            var pointsSomewhere = IsFloorTile(obj) || obj.Kind is PuzzleObjectKind.JumpTile or PuzzleObjectKind.Archeton or PuzzleObjectKind.Edge;
             if (pointsSomewhere && obj.Direction is null)
                 throw new InvalidOperationException($"A {obj.Kind} needs a direction.");
             if (!pointsSomewhere)
@@ -366,11 +366,18 @@ internal static class ProjectEditing
                 obj.Variant = null;
         }
 
+        // A square holds one object and one floor tile - and an Edge on each of its sides, since an Edge is only on
+        // one side of the square it's on, and a raised area's corner needs two.
         var crowded = puzzle.Objects
-            .GroupBy(o => (o.Col, o.Row, IsFloor: IsFloorTile(o)))
+            .GroupBy(o => (o.Col, o.Row, IsFloor: IsFloorTile(o), Side: o.Kind == PuzzleObjectKind.Edge ? o.Direction : null))
             .FirstOrDefault(g => g.Count() > 1);
         if (crowded is not null)
-            throw new InvalidOperationException($"Column {crowded.Key.Col}, row {crowded.Key.Row} holds more than one {(crowded.Key.IsFloor ? "floor tile" : "object")}.");
+        {
+            var what = crowded.Key.IsFloor ? "floor tile"
+                : crowded.Key.Side is { } side ? $"Edge facing {side}"
+                : "object";
+            throw new InvalidOperationException($"Column {crowded.Key.Col}, row {crowded.Key.Row} holds more than one {what}.");
+        }
 
         if (puzzle.Objects.Count(o => o.Kind == PuzzleObjectKind.Start) > 1)
             throw new InvalidOperationException("A puzzle can only have one Start.");

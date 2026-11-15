@@ -168,3 +168,56 @@ test('a step nothing refuses shows nothing', () => {
   assert.deepEqual(play.mover.cell, at(1, 5), 'the ship walks on');
   assert.equal(play.refusedFlash, null);
 });
+
+test('stepping off a ledge drops the ship down it, and is drawn as a small jump', () => {
+  // The high ground at (4, 5), and a ledge facing up at it on the square below.
+  let play = createBoardPlay({ puzzle: { objects: [obj('Start', 4, 5), obj('Edge', 4, 6, { direction: 'Up' })] } });
+  assert.equal(play.shipPosition().t, null, 'standing still, nothing to arc');
+
+  play.mover.press('down');
+  play.mover.release('down');
+  run(play, 16);
+  assert.equal(play.mover.isMoving, true);
+  assert.notEqual(play.shipPosition().t, null, 'mid-drop, arced as a jump');
+
+  run(play, BOARD_TIMING.stepMs);
+  assert.deepEqual(play.mover.cell, at(4, 6), 'and it lands on the low square');
+  assert.equal(play.shipPosition().t, null, 'the arc over');
+
+  play.mover.press('up');
+  play.mover.release('up');
+  run(play, BOARD_TIMING.stepMs * 2);
+  assert.deepEqual(play.mover.cell, at(4, 6), 'and it cannot climb back up the ledge');
+  assert.equal(play.shipPosition().t, null, 'a refused step never leaves the ground');
+});
+
+test('a step along the flat is not drawn as a jump', () => {
+  let play = createBoardPlay({ puzzle: { objects: [obj('Start', 4, 5)] } });
+  play.mover.press('down');
+  play.mover.release('down');
+  run(play, 16);
+  assert.equal(play.mover.isMoving, true);
+  assert.equal(play.shipPosition().t, null, 'a plain step glides, it does not arc');
+});
+
+test('a Push Block shoved off a ledge falls, so it can be drawn hopping down it', () => {
+  let play = createBoardPlay({ puzzle: { objects: [obj('Start', 4, 5), obj('PushBlock', 4, 6, { symbol: 'Circle' }), obj('Edge', 4, 7, { direction: 'Up' })] } });
+  let block = () => play.game.objects.find(object => object.kind === 'PushBlock');
+
+  play.mover.press('down');
+  play.mover.release('down');
+  run(play, 16);
+  assert.equal(block().falls, true, 'off the ledge at (4, 7)');
+
+  run(play, BOARD_TIMING.stepMs);
+  assert.deepEqual(at(block().col, block().row), at(4, 7), 'it goes off it');
+  assert.equal(block().falls, false, 'and once it has landed it is simply where it is');
+});
+
+test('a Push Block shoved along the flat does not fall', () => {
+  let play = createBoardPlay({ puzzle: { objects: [obj('Start', 4, 5), obj('PushBlock', 4, 6, { symbol: 'Circle' })] } });
+  play.mover.press('down');
+  play.mover.release('down');
+  run(play, 16);
+  assert.equal(play.game.objects.find(object => object.kind === 'PushBlock').falls, false);
+});

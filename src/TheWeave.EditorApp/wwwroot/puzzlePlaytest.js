@@ -11,6 +11,9 @@ const PLAYTEST_KEYS = {
 };
 // The ship's picture points up, so it's turned this far for each way it can face.
 const PLAYTEST_SHIP_TURNS = { up: 0, right: Math.PI / 2, down: Math.PI, left: -Math.PI / 2 };
+// How much bigger the ship is drawn at the middle of a jump - a Jump Tile's launch, or dropping off a ledge - as the
+// game draws it. See board.js's shipPosition.
+const PLAYTEST_JUMP_RISE = 0.4;
 
 function startPlaytest() {
   if (!puzzleEditor || puzzleEditor.playtest || puzzleEditor.drawings) return;
@@ -159,10 +162,14 @@ function drawPlaytest(context, look, timeMs) {
   drawSightLines(context, play, ship, reflections);
 
   if (!puzzleEditor.shipImage) return;
+  // In mid-air from a Jump Tile, or hopping down off a ledge: growing towards the middle of it, as the game draws it -
+  // see board.js's shipPosition.
+  const leap = ship.t === null ? 1 : 1 + PLAYTEST_JUMP_RISE * Math.sin(Math.PI * ship.t);
   context.save();
   context.imageSmoothingEnabled = false;
   context.translate(Math.round(ship.x), Math.round(ship.y));
   context.rotate((PLAYTEST_SHIP_TURNS[play.mover.facing] ?? 0) + ship.spin);
+  context.scale(leap, leap);
   context.globalAlpha = ship.opacity;
   context.drawImage(puzzleEditor.shipImage, -PUZZLE_SHIP_WIDTH / 2, -PUZZLE_SHIP_HEIGHT / 2, PUZZLE_SHIP_WIDTH, PUZZLE_SHIP_HEIGHT);
   context.restore();
@@ -177,6 +184,7 @@ function drawPlaytest(context, look, timeMs) {
     context.imageSmoothingEnabled = false;
     context.translate(Math.round(mirrored.x), Math.round(mirrored.y));
     context.rotate(PLAYTEST_SHIP_TURNS[WeavePuzzle.reflectionFacing(cell, play.mover.facing)] ?? 0);
+    context.scale(leap, leap);
     context.globalAlpha = 0.4;
     context.drawImage(reflection, -PUZZLE_SHIP_WIDTH / 2, -PUZZLE_SHIP_HEIGHT / 2, PUZZLE_SHIP_WIDTH, PUZZLE_SHIP_HEIGHT);
     context.restore();

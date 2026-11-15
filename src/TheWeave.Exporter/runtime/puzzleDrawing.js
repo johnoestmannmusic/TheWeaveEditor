@@ -80,7 +80,7 @@
   };
 
   const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
-  const SPRITE_ROLES = { Wall: 'wall', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton' };
+  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton' };
 
   function maskOf(test){
     let mask = [];
@@ -127,7 +127,7 @@
   const ANIMATED_KINDS = ['Stream', 'RotatorTile'];
 
   // Objects with a direction, drawn pointing right and turned the way they point, as animated tiles are.
-  const TURNED_KINDS = ['JumpTile', 'Pipe', 'Archeton', 'Laser'];
+  const TURNED_KINDS = ['JumpTile', 'Pipe', 'Archeton', 'Laser', 'Edge'];
 
   // Every kind of object drawn from a drawing.
   const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', ...ANIMATED_KINDS, 'Laser'];
@@ -157,6 +157,7 @@
       else if (kind === 'Laser') drawing = { id: kind, kind, name: 'Standard', pixels: standardLaserPixels(), mix: standardMix('archeton') };
       else if (kind === 'Archeton') drawing = { id: kind, kind, name: 'Standard', pixels: standardArchetonPixels(), mix: standardMix('archeton') };
       else if (kind === 'PipeSwitch') drawing = { id: kind, kind, name: 'Standard', pixels: standardPipeSwitchPixels(), mix: standardMix('pipe') };
+      else if (kind === 'Edge') drawing = { id: kind, kind, name: 'Standard', pixels: standardEdgePixels(), mix: standardMix('edge') };
       else {
         let body = SHAPES[SPRITE_SHAPES[kind]];
         drawing = { id: kind, kind, name: 'Standard', pixels: pixelsOf(body), mix: standardMix(SPRITE_ROLES[kind]) };
@@ -234,6 +235,16 @@
       // Brushed: faint lighter streaks running across it.
       return v % 4 === 2 && (u * 5 + v) % 7 > 2 ? '4' : '3';
     });
+  }
+
+  // An Edge's Standard drawing, drawn pointing right: a ledge running along the square's leading side, an outline on
+  // the very edge of it, a lit lip inside that, and the mix behind. Turned to whichever side of its square the Edge is
+  // on, so a run of them along a row reads as one ledge.
+  function standardEdgePixels(){
+    return layerOf((u) => u >= TILE_PX - 1 ? PAINTS.outline
+      : u >= TILE_PX - 3 ? PAINTS.light
+      : u >= TILE_PX - 6 ? PAINTS.grain
+      : PAINTS.clear);
   }
 
   // A Jump Tile's Standard drawing, pointing right: a pad lying on the floor with a double chevron on it, each with
@@ -428,7 +439,11 @@
     if (object.spin) sprite = spunBy(sprite, object.spin);
 
     let solid = object.kind === 'Wall' || object.kind === 'PushBlock' || object.kind === 'Archeton' || (object.kind === 'Gate' && !isOpenGate);
-    return addDepth(sprite, look, solid, mix, outline, light);
+    // An Edge at the foot of a step shows its face to the way the board is seen from - it's the ledge the higher
+    // ground is above, so the step reads as one - and stands up like a Wall. The ones on the other sides of a raised
+    // area have their faces turned away, so they lie flat.
+    let raised = object.kind === 'Edge' ? (object.direction === 'Up' ? RAISED_PX : 0) : null;
+    return addDepth(sprite, look, solid, mix, outline, light, raised);
   }
 
   function glowing(sprite, light){
@@ -530,11 +545,12 @@
   }
 
   // A sprite with depth added. One that rises above its square has extra rows on top, how many being its rise.
-  function addDepth(flat, look, solid, mix, outline, light){
+  // raised is how far something rises that isn't solid at all, as an Edge at the foot of a step does.
+  function addDepth(flat, look, solid, mix, outline, light, raised = null){
     if (look.depth === 'flat') return flat;
 
     let { lit, dark } = depthShades(mix, outline, light);
-    let rise = solid ? RAISED_PX : 0;
+    let rise = raised ?? (solid ? RAISED_PX : 0);
     let sprite = new Array(TILE_PX * (TILE_PX + rise)).fill(null);
     // x and y in the square's own pixels, y going negative into the rows above it.
     let flatAt = (x, y) => x >= 0 && x < TILE_PX && y >= 0 && y < TILE_PX ? flat[y * TILE_PX + x] : null;
@@ -741,13 +757,21 @@
   // A sprite that rises above its square starts that many rows higher. Nothing is drawn from below clipBottom, which
   // is how something sinking into its square disappears into the ground. opacity below 1 lays it over whatever's
   // already there, partly see-through, which is how something fades in or out.
-  function blit(image, sprite, left, top, clipBottom = Infinity, opacity = 1){
+  // A sprite drawn into the image. grow makes it bigger around its middle, spilling over the square it's on, as the
+  // ship's own leap does - see renderBoard.
+  function blit(image, sprite, left, top, clipBottom = Infinity, opacity = 1, grow = 1){
     let { data, width, height } = image;
     top -= sprite.rise ?? 0;
-    for (let y = 0; y < sprite.length / TILE_PX; y++) {
-      for (let x = 0; x < TILE_PX; x++) {
-        let color = sprite[y * TILE_PX + x];
-        let px = left + x, py = top + y;
+    let rows = sprite.length / TILE_PX;
+    // Grown, it's wider and taller than its square, so it starts up and to the left of where it otherwise would.
+    let across = Math.round(TILE_PX * grow), down = Math.round(rows * grow);
+    let fromLeft = left - Math.floor((across - TILE_PX) / 2);
+    let fromTop = top - Math.floor((down - rows) / 2);
+    for (let y = 0; y < down; y++) {
+      let row = Math.min(rows - 1, Math.floor(y / grow)) * TILE_PX;
+      for (let x = 0; x < across; x++) {
+        let color = sprite[row + Math.min(TILE_PX - 1, Math.floor(x / grow))];
+        let px = fromLeft + x, py = fromTop + y;
         if (!color || px < 0 || px >= width || py < 0 || py >= height || py >= clipBottom) continue;
         let i = (py * width + px) * 4;
         if (opacity >= 1) {
@@ -821,13 +845,16 @@
       let row = object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * along;
       // A hop rises a little on its way, as a jump does.
       if (object.glide === 'hop' && along < 1 && (object.fromCol !== object.col || object.fromRow !== object.row)) row -= HOP_RISE * Math.sin(Math.PI * along);
+      // A Push Block shoved off a ledge leaps down it as the ship does off a Jump Tile: it keeps to the straight line it
+      // was going along, and grows towards the middle of it - see puzzleRules.js's pushFrom, and trackFocus.js's leap.
+      let grow = object.glide === 'push' && object.falls && along < 1 ? 1 + LEDGE_JUMP_RISE * Math.sin(Math.PI * along) : 1;
       let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase);
       let top = Math.round(row * TILE_PX) + (options.originY ?? 0);
       let sunk = Math.round((object.sink ?? 0) * TILE_PX);
       // An open Gate is half see-through, so it reads as something the ship can pass through.
       let opacity = (object.fade ?? 1) * (object.kind === 'Gate' && object.open ? OPEN_GATE_OPACITY : 1);
       if (opacity <= 0) continue;
-      blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX), top + sunk, object.sink ? top + TILE_PX : Infinity, opacity);
+      blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX), top + sunk, object.sink ? top + TILE_PX : Infinity, opacity, grow);
     }
 
     for (const hint of options.pushHints ?? (options.pushHint ? [options.pushHint] : [])) drawPushHint(image, hint, look, options.originY ?? 0);
@@ -881,6 +908,11 @@
 
   // How high a hopping Archeton rises at the middle of its hop, in squares - see renderBoard.
   const HOP_RISE = 0.35;
+
+  // How much bigger a Push Block looks at the top of its drop off a ledge - a smaller leap than the ship's 0.4, so that
+  // a block dropping off one reads as the block falling rather than being thrown. See renderBoard, and board.js's
+  // shipPosition for the ship's.
+  const LEDGE_JUMP_RISE = 0.25;
 
   // How much of an open Gate shows - see renderBoard.
   const OPEN_GATE_OPACITY = 0.5;

@@ -141,9 +141,12 @@
     let reset = choose(different);
     let pipe = choose(different);
     let archeton = choose(different);
+    // A ledge, after all the others, so that they keep the colours they've always had.
+    let edge = choose(different);
 
     return {
       wall: toHex(wall),
+      edge: toHex(edge),
       finish: toHex(finish),
       gate: toHex(gate),
       switch: toHex(gate),
@@ -170,7 +173,7 @@
   const ART_PX = TILE_PX * BOARD_SIZE;
 
   // Every role that has a texture of its own. A Switch shares its Gate's, as it does its colour.
-  const TEXTURE_ROLES = ['wall', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'block', 'jump', 'reset', 'pipe', 'archeton'];
+  const TEXTURE_ROLES = ['wall', 'edge', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'block', 'jump', 'reset', 'pipe', 'archeton'];
   // The 4 shades of a role's colour, darkest first: how far each is aimed from the main colour in lightness,
   // and how much of an object it covers unless a drawing's mix says otherwise. A shade the art has nothing
   // like is filled in by its neighbour towards the main colour.

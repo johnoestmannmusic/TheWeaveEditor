@@ -139,6 +139,7 @@ public class ProjectValidatorTests
 
     private static PuzzleObject Block(PuzzleSymbol symbol, int col, int row) => new() { Kind = PuzzleObjectKind.PushBlock, Symbol = symbol, Col = col, Row = row };
     private static PuzzleObject Jump(int col, int row, PuzzleDirection direction) => new() { Kind = PuzzleObjectKind.JumpTile, Col = col, Row = row, Direction = direction };
+    private static PuzzleObject Edge(int col, int row, PuzzleDirection direction) => new() { Kind = PuzzleObjectKind.Edge, Col = col, Row = row, Direction = direction };
 
     [Fact]
     public void ALonePushBlock_AndOnesStartingSideBySide_AreReported()
@@ -164,6 +165,20 @@ public class ProjectValidatorTests
         Assert.Contains("the Jump Tile at column 10, row 4 has nowhere to land, so it does nothing.", problems);
         Assert.Contains("the Jump Tile at column 3, row 7 has nowhere to land, so it does nothing.", problems);
         Assert.DoesNotContain(problems, p => p.Contains("column 5, row 5"));
+    }
+
+    [Fact]
+    public void AnEdgeFacingOffTheBoard_IsReported()
+    {
+        var problems = PuzzleProblems(Finish,
+            Edge(4, 0, PuzzleDirection.Up), // the higher ground it leads up to would be off the top of the board
+            Edge(9, 4, PuzzleDirection.Right),
+            Edge(2, 6, PuzzleDirection.Up), // a square above it, so it does something
+            Edge(2, 6, PuzzleDirection.Left));
+
+        Assert.Contains("the Edge at column 5, row 1 faces off the board, so there's no higher ground for it to lead up to and it does nothing.", problems);
+        Assert.Contains("the Edge at column 10, row 5 faces off the board, so there's no higher ground for it to lead up to and it does nothing.", problems);
+        Assert.DoesNotContain(problems, p => p.Contains("column 3, row 7"));
     }
     private static PuzzleObject Lettered(PuzzleObjectKind kind, string letter) => new() { Kind = kind, Letter = letter };
 

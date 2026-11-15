@@ -5035,7 +5035,7 @@
                         "Objects": [
                           {
                             "Kind": "Start",
-                            "Col": 6,
+                            "Col": 8,
                             "Row": 9,
                             "Letter": null,
                             "Direction": null
@@ -5393,535 +5393,180 @@
                     "Objects": [
                       {
                         "Kind": "Start",
-                        "Col": 9,
-                        "Row": 2,
+                        "Col": 0,
+                        "Row": 1,
                         "Letter": null,
                         "Direction": null
                       },
                       {
-                        "Kind": "Wall",
-                        "Col": 5,
-                        "Row": 9,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-12"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 7,
-                        "Row": 9,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-12"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 7,
-                        "Row": 8,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-12"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 5,
-                        "Row": 8,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-13"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 4,
-                        "Row": 8,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-12"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 8,
-                        "Row": 8,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-12"
-                      },
-                      {
-                        "Kind": "RotatorSwitch",
-                        "Col": 6,
-                        "Row": 7,
-                        "Letter": null,
-                        "Direction": null
-                      },
-                      {
-                        "Kind": "RotatorTile",
-                        "Col": 8,
-                        "Row": 6,
-                        "Letter": null,
-                        "Direction": "Left",
-                        "Variant": "rotatortile-2"
-                      },
-                      {
-                        "Kind": "RotatorTile",
-                        "Col": 7,
-                        "Row": 6,
-                        "Letter": null,
-                        "Direction": "Left",
-                        "Variant": "rotatortile-2"
-                      },
-                      {
-                        "Kind": "RotatorTile",
-                        "Col": 6,
-                        "Row": 6,
-                        "Letter": null,
-                        "Direction": "Left",
-                        "Variant": "rotatortile-2"
-                      },
-                      {
-                        "Kind": "RotatorTile",
-                        "Col": 5,
-                        "Row": 6,
-                        "Letter": null,
-                        "Direction": "Left",
-                        "Variant": "rotatortile-2"
-                      },
-                      {
-                        "Kind": "RotatorTile",
-                        "Col": 4,
-                        "Row": 6,
-                        "Letter": null,
-                        "Direction": "Up",
-                        "Variant": "rotatortile-2"
-                      },
-                      {
-                        "Kind": "RotatorTile",
-                        "Col": 8,
-                        "Row": 5,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "rotatortile-2"
-                      },
-                      {
-                        "Kind": "RotatorTile",
-                        "Col": 4,
-                        "Row": 5,
-                        "Letter": null,
-                        "Direction": "Right",
-                        "Variant": "rotatortile-2"
-                      },
-                      {
-                        "Kind": "RotatorTile",
-                        "Col": 5,
-                        "Row": 5,
-                        "Letter": null,
-                        "Direction": "Right",
-                        "Variant": "rotatortile-2"
-                      },
-                      {
-                        "Kind": "RotatorTile",
-                        "Col": 6,
-                        "Row": 5,
-                        "Letter": null,
-                        "Direction": "Right",
-                        "Variant": "rotatortile-2"
-                      },
-                      {
-                        "Kind": "RotatorTile",
-                        "Col": 7,
-                        "Row": 5,
-                        "Letter": null,
-                        "Direction": "Right",
-                        "Variant": "rotatortile-2"
-                      },
-                      {
-                        "Kind": "PushBlock",
-                        "Col": 6,
-                        "Row": 6,
-                        "Letter": null,
-                        "Direction": null,
-                        "Symbol": "Circle"
-                      },
-                      {
-                        "Kind": "PushBlock",
-                        "Col": 7,
-                        "Row": 6,
-                        "Letter": null,
-                        "Direction": null,
-                        "Symbol": "Cross"
-                      },
-                      {
-                        "Kind": "PushBlock",
-                        "Col": 8,
-                        "Row": 6,
-                        "Letter": null,
-                        "Direction": null,
-                        "Symbol": "Triangle"
-                      },
-                      {
-                        "Kind": "PushBlock",
-                        "Col": 5,
-                        "Row": 6,
-                        "Letter": null,
-                        "Direction": null,
-                        "Symbol": "Square"
-                      },
-                      {
-                        "Kind": "PushBlock",
-                        "Col": 4,
-                        "Row": 6,
-                        "Letter": null,
-                        "Direction": null,
-                        "Symbol": "Star"
-                      },
-                      {
-                        "Kind": "PushBlock",
-                        "Col": 4,
-                        "Row": 4,
-                        "Letter": null,
-                        "Direction": null,
-                        "Symbol": "Circle"
-                      },
-                      {
-                        "Kind": "PushBlock",
-                        "Col": 5,
-                        "Row": 4,
-                        "Letter": null,
-                        "Direction": null,
-                        "Symbol": "Cross"
-                      },
-                      {
-                        "Kind": "PushBlock",
-                        "Col": 6,
-                        "Row": 4,
-                        "Letter": null,
-                        "Direction": null,
-                        "Symbol": "Triangle"
-                      },
-                      {
-                        "Kind": "PushBlock",
-                        "Col": 7,
-                        "Row": 4,
-                        "Letter": null,
-                        "Direction": null,
-                        "Symbol": "Square"
-                      },
-                      {
-                        "Kind": "PushBlock",
-                        "Col": 8,
-                        "Row": 4,
-                        "Letter": null,
-                        "Direction": null,
-                        "Symbol": "Star"
-                      },
-                      {
-                        "Kind": "Wall",
+                        "Kind": "Archeton",
                         "Col": 3,
-                        "Row": 7,
+                        "Row": 2,
                         "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-13"
+                        "Direction": "Down",
+                        "Archeton": "reflect-mimic"
                       },
                       {
-                        "Kind": "Wall",
-                        "Col": 3,
-                        "Row": 6,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-12"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 3,
-                        "Row": 5,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-13"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 3,
-                        "Row": 4,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-13"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 9,
-                        "Row": 7,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-13"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 9,
-                        "Row": 6,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-12"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 9,
-                        "Row": 5,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-12"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 9,
-                        "Row": 4,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-13"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 3,
-                        "Row": 3,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-12"
-                      },
-                      {
-                        "Kind": "Wall",
+                        "Kind": "Archeton",
                         "Col": 4,
                         "Row": 2,
                         "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-12"
+                        "Direction": "Down",
+                        "Archeton": "reflect-mimic"
                       },
                       {
-                        "Kind": "Wall",
-                        "Col": 9,
-                        "Row": 3,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-13"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 8,
-                        "Row": 2,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-12"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 7,
-                        "Row": 2,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-12"
-                      },
-                      {
-                        "Kind": "Wall",
+                        "Kind": "Archeton",
                         "Col": 5,
                         "Row": 2,
                         "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-13"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 5,
-                        "Row": 1,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-13"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 5,
-                        "Row": 0,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-12"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 7,
-                        "Row": 1,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-12"
-                      },
-                      {
-                        "Kind": "Wall",
-                        "Col": 7,
-                        "Row": 0,
-                        "Letter": null,
-                        "Direction": null,
-                        "Variant": "wall-12"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 1,
-                        "Row": 0,
-                        "Letter": null,
                         "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 1,
-                        "Row": 1,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 1,
-                        "Row": 2,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 1,
-                        "Row": 3,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 1,
-                        "Row": 4,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 1,
-                        "Row": 5,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 1,
-                        "Row": 6,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 1,
-                        "Row": 7,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 1,
-                        "Row": 8,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 1,
-                        "Row": 9,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 0,
-                        "Row": 0,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 0,
-                        "Row": 1,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 0,
-                        "Row": 2,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 0,
-                        "Row": 3,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 0,
-                        "Row": 4,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 0,
-                        "Row": 5,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 0,
-                        "Row": 6,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 0,
-                        "Row": 7,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 0,
-                        "Row": 8,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
-                      },
-                      {
-                        "Kind": "Stream",
-                        "Col": 0,
-                        "Row": 9,
-                        "Letter": null,
-                        "Direction": "Down",
-                        "Variant": "stream-2"
+                        "Archeton": "reflect-mimic"
                       },
                       {
                         "Kind": "Finish",
-                        "Col": 6,
+                        "Col": 8,
                         "Row": 0,
                         "Letter": null,
+                        "Direction": null
+                      },
+                      {
+                        "Kind": "Archeton",
+                        "Col": 3,
+                        "Row": 6,
+                        "Letter": null,
+                        "Direction": "Down",
+                        "Archeton": "reflect-mimic"
+                      },
+                      {
+                        "Kind": "Archeton",
+                        "Col": 4,
+                        "Row": 6,
+                        "Letter": null,
+                        "Direction": "Down",
+                        "Archeton": "reflect-mimic"
+                      },
+                      {
+                        "Kind": "Archeton",
+                        "Col": 5,
+                        "Row": 6,
+                        "Letter": null,
+                        "Direction": "Down",
+                        "Archeton": "reflect-mimic"
+                      },
+                      {
+                        "Kind": "Archeton",
+                        "Col": 2,
+                        "Row": 2,
+                        "Letter": null,
+                        "Direction": "Down",
+                        "Archeton": "reflect-mimic"
+                      },
+                      {
+                        "Kind": "Archeton",
+                        "Col": 2,
+                        "Row": 6,
+                        "Letter": null,
+                        "Direction": "Down",
+                        "Archeton": "reflect-mimic"
+                      },
+                      {
+                        "Kind": "Archeton",
+                        "Col": 6,
+                        "Row": 4,
+                        "Letter": null,
+                        "Direction": "Left",
+                        "Archeton": "reflect-mimic"
+                      },
+                      {
+                        "Kind": "Wall",
+                        "Col": 8,
+                        "Row": 4,
+                        "Letter": null,
+                        "Direction": null,
+                        "Variant": "wall-11"
+                      },
+                      {
+                        "Kind": "Wall",
+                        "Col": 2,
+                        "Row": 8,
+                        "Letter": null,
+                        "Direction": null,
+                        "Variant": "wall-2"
+                      },
+                      {
+                        "Kind": "Wall",
+                        "Col": 4,
+                        "Row": 7,
+                        "Letter": null,
+                        "Direction": null,
+                        "Variant": "wall-10"
+                      },
+                      {
+                        "Kind": "Wall",
+                        "Col": 5,
+                        "Row": 0,
+                        "Letter": null,
+                        "Direction": null,
+                        "Variant": "wall-11"
+                      },
+                      {
+                        "Kind": "Archeton",
+                        "Col": 6,
+                        "Row": 3,
+                        "Letter": null,
+                        "Direction": "Left",
+                        "Archeton": "reflect-mimic"
+                      },
+                      {
+                        "Kind": "Teleporter",
+                        "Col": 5,
+                        "Row": 5,
+                        "Letter": "A",
+                        "Direction": null
+                      },
+                      {
+                        "Kind": "Teleporter",
+                        "Col": 6,
+                        "Row": 0,
+                        "Letter": "A",
+                        "Direction": null
+                      },
+                      {
+                        "Kind": "Wall",
+                        "Col": 7,
+                        "Row": 0,
+                        "Letter": null,
+                        "Direction": null,
+                        "Variant": "wall-17"
+                      },
+                      {
+                        "Kind": "Wall",
+                        "Col": 7,
+                        "Row": 1,
+                        "Letter": null,
+                        "Direction": null,
+                        "Variant": "wall-12"
+                      },
+                      {
+                        "Kind": "Wall",
+                        "Col": 8,
+                        "Row": 1,
+                        "Letter": null,
+                        "Direction": null,
+                        "Variant": "wall-12"
+                      },
+                      {
+                        "Kind": "Teleporter",
+                        "Col": 8,
+                        "Row": 3,
+                        "Letter": "B",
+                        "Direction": null
+                      },
+                      {
+                        "Kind": "Teleporter",
+                        "Col": 0,
+                        "Row": 4,
+                        "Letter": "B",
                         "Direction": null
                       }
                     ],
@@ -5938,6 +5583,9 @@
                       "lantern": "#ffad4b",
                       "block": "#a2b6ff",
                       "jump": "#ffad4b",
+                      "reset": "#ffad4b",
+                      "pipe": "#ffad4b",
+                      "archeton": "#ffad4b",
                       "outline": "#292929",
                       "light": "#fff6a8"
                     },
@@ -6041,6 +5689,36 @@
                         ],
                         "Grain": "00llll000000zz0000000000llllllll00zz00ll00ll00llllllllll00zz00ll00ll00llll00llllll00llll0000ll00ll00llllll00llll0000ll0000ll00llllllllll00llzzzz00ll00llllllllll00llzzzzll0000000000zz0000llzz00ll0000000000zz0000llzz00llll00llllzzllzzzzzzzzzzllll00llllzzllzzzzzzzzzzll00llllll00zzllzzllzz00ll00llllll00zzllzzllzz0000zzllzzzzzzllll00zzzzzz00zzllzzzzzzllll00zzzzzz0000zz00zzllll0000llzzll0000zz00zzllll0000llzzll00llllzz00ll00ll00ll00ll00llllzz00ll00ll00ll00llzz00ll00ll000000ll000000zz00ll00ll000000ll00000000zzllzzllzz00zzllll00ll00zzllzzllzz00zzllll00ll0000zz00zz00ll00ll00ll00",
                         "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+                      },
+                      "reset": {
+                        "Ramp": [
+                          "#ffad4b",
+                          "#ffad4b",
+                          "#ffad4b",
+                          "#ffad4b"
+                        ],
+                        "Grain": "00llll000000zz0000000000llllllll00zz00ll00ll00llllllllll00zz00ll00ll00llll00llllll00llll0000ll00ll00llllll00llll0000ll0000ll00llllllllll00llzzzz00ll00llllllllll00llzzzzll0000000000zz0000llzz00ll0000000000zz0000llzz00llll00llllzzllzzzzzzzzzzllll00llllzzllzzzzzzzzzzll00llllll00zzllzzllzz00ll00llllll00zzllzzllzz0000zzllzzzzzzllll00zzzzzz00zzllzzzzzzllll00zzzzzz0000zz00zzllll0000llzzll0000zz00zzllll0000llzzll00llllzz00ll00ll00ll00ll00llllzz00ll00ll00ll00llzz00ll00ll000000ll000000zz00ll00ll000000ll00000000zzllzzllzz00zzllll00ll00zzllzzllzz00zzllll00ll0000zz00zz00ll00ll00ll00",
+                        "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+                      },
+                      "pipe": {
+                        "Ramp": [
+                          "#ffad4b",
+                          "#ffad4b",
+                          "#ffad4b",
+                          "#ffad4b"
+                        ],
+                        "Grain": "00llll000000zz0000000000llllllll00zz00ll00ll00llllllllll00zz00ll00ll00llll00llllll00llll0000ll00ll00llllll00llll0000ll0000ll00llllllllll00llzzzz00ll00llllllllll00llzzzzll0000000000zz0000llzz00ll0000000000zz0000llzz00llll00llllzzllzzzzzzzzzzllll00llllzzllzzzzzzzzzzll00llllll00zzllzzllzz00ll00llllll00zzllzzllzz0000zzllzzzzzzllll00zzzzzz00zzllzzzzzzllll00zzzzzz0000zz00zzllll0000llzzll0000zz00zzllll0000llzzll00llllzz00ll00ll00ll00ll00llllzz00ll00ll00ll00llzz00ll00ll000000ll000000zz00ll00ll000000ll00000000zzllzzllzz00zzllll00ll00zzllzzllzz00zzllll00ll0000zz00zz00ll00ll00ll00",
+                        "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+                      },
+                      "archeton": {
+                        "Ramp": [
+                          "#ffad4b",
+                          "#ffad4b",
+                          "#ffad4b",
+                          "#ffad4b"
+                        ],
+                        "Grain": "00llll000000zz0000000000llllllll00zz00ll00ll00llllllllll00zz00ll00ll00llll00llllll00llll0000ll00ll00llllll00llll0000ll0000ll00llllllllll00llzzzz00ll00llllllllll00llzzzzll0000000000zz0000llzz00ll0000000000zz0000llzz00llll00llllzzllzzzzzzzzzzllll00llllzzllzzzzzzzzzzll00llllll00zzllzzllzz00ll00llllll00zzllzzllzz0000zzllzzzzzzllll00zzzzzz00zzllzzzzzzllll00zzzzzz0000zz00zzllll0000llzzll0000zz00zzllll0000llzzll00llllzz00ll00ll00ll00ll00llllzz00ll00ll00ll00llzz00ll00ll000000ll000000zz00ll00ll000000ll00000000zzllzzllzz00zzllll00ll00zzllzzllzz00zzllll00ll0000zz00zz00ll00ll00ll00",
+                        "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
                       }
                     },
                     "PaletteSource": "img/pentura/glass-wall-gallery-3.png"
@@ -6051,63 +5729,31 @@
                 "Objects": [
                   {
                     "Kind": "Start",
-                    "Col": 6,
+                    "Col": 7,
                     "Row": 9,
                     "Letter": null,
                     "Direction": null
                   },
                   {
                     "Kind": "Wall",
-                    "Col": 5,
+                    "Col": 8,
                     "Row": 9,
                     "Letter": null,
                     "Direction": null,
-                    "Variant": "wall-9"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 7,
-                    "Row": 9,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-3"
+                    "Variant": "wall-8"
                   },
                   {
                     "Kind": "Archeton",
-                    "Col": 4,
-                    "Row": 8,
+                    "Col": 0,
+                    "Row": 2,
                     "Letter": null,
-                    "Direction": "Right",
+                    "Direction": "Down",
                     "Archeton": "reflect-mimic"
                   },
                   {
                     "Kind": "Archeton",
-                    "Col": 4,
-                    "Row": 7,
-                    "Letter": null,
-                    "Direction": "Right",
-                    "Archeton": "reflect-mimic"
-                  },
-                  {
-                    "Kind": "Archeton",
-                    "Col": 4,
-                    "Row": 6,
-                    "Letter": null,
-                    "Direction": "Right",
-                    "Archeton": "reflect-mimic"
-                  },
-                  {
-                    "Kind": "Archeton",
-                    "Col": 4,
-                    "Row": 5,
-                    "Letter": null,
-                    "Direction": "Right",
-                    "Archeton": "reflect-mimic"
-                  },
-                  {
-                    "Kind": "Archeton",
-                    "Col": 5,
-                    "Row": 3,
+                    "Col": 3,
+                    "Row": 2,
                     "Letter": null,
                     "Direction": "Down",
                     "Archeton": "reflect-mimic"
@@ -6115,304 +5761,297 @@
                   {
                     "Kind": "Archeton",
                     "Col": 6,
-                    "Row": 3,
-                    "Letter": null,
-                    "Direction": "Down",
-                    "Archeton": "reflect-mimic"
-                  },
-                  {
-                    "Kind": "Archeton",
-                    "Col": 7,
-                    "Row": 3,
-                    "Letter": null,
-                    "Direction": "Down",
-                    "Archeton": "reflect-mimic"
-                  },
-                  {
-                    "Kind": "Archeton",
-                    "Col": 8,
-                    "Row": 3,
-                    "Letter": null,
-                    "Direction": "Down",
-                    "Archeton": "reflect-mimic"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 0,
-                    "Row": 1,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-9"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 0,
-                    "Row": 3,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-2"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 4,
-                    "Row": 9,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-3"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 3,
-                    "Row": 9,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-10"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 2,
-                    "Row": 9,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-2"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 1,
-                    "Row": 9,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-10"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 1,
-                    "Row": 0,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-2"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 2,
-                    "Row": 0,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-11"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 3,
-                    "Row": 0,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-2"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 9,
-                    "Row": 1,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-3"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 9,
-                    "Row": 3,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-10"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 9,
-                    "Row": 4,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-10"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 9,
-                    "Row": 5,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-11"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 9,
-                    "Row": 7,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-9"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 9,
-                    "Row": 8,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-9"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 8,
-                    "Row": 9,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-10"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 0,
                     "Row": 2,
                     "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-3"
+                    "Direction": "Down",
+                    "Archeton": "reflect-mimic"
+                  },
+                  {
+                    "Kind": "Archeton",
+                    "Col": 8,
+                    "Row": 2,
+                    "Letter": null,
+                    "Direction": "Down",
+                    "Archeton": "reflect-mimic"
+                  },
+                  {
+                    "Kind": "Archeton",
+                    "Col": 9,
+                    "Row": 2,
+                    "Letter": null,
+                    "Direction": "Down",
+                    "Archeton": "reflect-mimic"
                   },
                   {
                     "Kind": "Finish",
-                    "Col": 0,
-                    "Row": 4,
+                    "Col": 9,
+                    "Row": 1,
                     "Letter": null,
                     "Direction": null
                   },
                   {
-                    "Kind": "Wall",
-                    "Col": 1,
-                    "Row": 3,
+                    "Kind": "Archeton",
+                    "Col": 4,
+                    "Row": 2,
                     "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-10"
+                    "Direction": "Down",
+                    "Archeton": "reflect-mimic"
                   },
                   {
-                    "Kind": "PushBlock",
+                    "Kind": "Archeton",
                     "Col": 5,
                     "Row": 2,
                     "Letter": null,
-                    "Direction": null,
-                    "Symbol": "Circle"
+                    "Direction": "Down",
+                    "Archeton": "reflect-mimic"
+                  },
+                  {
+                    "Kind": "Archeton",
+                    "Col": 9,
+                    "Row": 6,
+                    "Letter": null,
+                    "Direction": "Down",
+                    "Archeton": "reflect-mimic"
+                  },
+                  {
+                    "Kind": "Archeton",
+                    "Col": 8,
+                    "Row": 6,
+                    "Letter": null,
+                    "Direction": "Down",
+                    "Archeton": "reflect-mimic"
+                  },
+                  {
+                    "Kind": "Archeton",
+                    "Col": 6,
+                    "Row": 6,
+                    "Letter": null,
+                    "Direction": "Down",
+                    "Archeton": "reflect-mimic"
+                  },
+                  {
+                    "Kind": "Archeton",
+                    "Col": 5,
+                    "Row": 6,
+                    "Letter": null,
+                    "Direction": "Down",
+                    "Archeton": "reflect-mimic"
+                  },
+                  {
+                    "Kind": "Archeton",
+                    "Col": 4,
+                    "Row": 6,
+                    "Letter": null,
+                    "Direction": "Down",
+                    "Archeton": "reflect-mimic"
+                  },
+                  {
+                    "Kind": "Archeton",
+                    "Col": 3,
+                    "Row": 6,
+                    "Letter": null,
+                    "Direction": "Down",
+                    "Archeton": "reflect-mimic"
+                  },
+                  {
+                    "Kind": "Archeton",
+                    "Col": 1,
+                    "Row": 6,
+                    "Letter": null,
+                    "Direction": "Down",
+                    "Archeton": "reflect-mimic"
+                  },
+                  {
+                    "Kind": "Archeton",
+                    "Col": 0,
+                    "Row": 6,
+                    "Letter": null,
+                    "Direction": "Down",
+                    "Archeton": "reflect-mimic"
                   },
                   {
                     "Kind": "Wall",
                     "Col": 2,
-                    "Row": 4,
+                    "Row": 6,
                     "Letter": null,
                     "Direction": null,
-                    "Variant": "wall-14"
-                  },
-                  {
-                    "Kind": "Gate",
-                    "Col": 5,
-                    "Row": 5,
-                    "Letter": "B",
-                    "Direction": null,
-                    "Open": true
-                  },
-                  {
-                    "Kind": "Switch",
-                    "Col": 4,
-                    "Row": 4,
-                    "Letter": "B",
-                    "Direction": null
+                    "Variant": "wall-9"
                   },
                   {
                     "Kind": "Wall",
-                    "Col": 4,
-                    "Row": 0,
+                    "Col": 2,
+                    "Row": 2,
                     "Letter": null,
                     "Direction": null,
                     "Variant": "wall-2"
                   },
                   {
-                    "Kind": "Gate",
-                    "Col": 5,
-                    "Row": 6,
-                    "Letter": "B",
+                    "Kind": "Wall",
+                    "Col": 4,
+                    "Row": 4,
+                    "Letter": null,
                     "Direction": null,
-                    "Open": true
+                    "Variant": "wall-9"
                   },
                   {
                     "Kind": "Wall",
-                    "Col": 9,
-                    "Row": 2,
+                    "Col": 4,
+                    "Row": 5,
                     "Letter": null,
                     "Direction": null,
                     "Variant": "wall-11"
                   },
                   {
+                    "Kind": "Wall",
+                    "Col": 3,
+                    "Row": 0,
+                    "Letter": null,
+                    "Direction": null,
+                    "Variant": "wall-10"
+                  },
+                  {
+                    "Kind": "JumpTile",
+                    "Col": 3,
+                    "Row": 7,
+                    "Letter": null,
+                    "Direction": "Up"
+                  },
+                  {
+                    "Kind": "JumpTile",
+                    "Col": 0,
+                    "Row": 3,
+                    "Letter": null,
+                    "Direction": "Up"
+                  },
+                  {
+                    "Kind": "Wall",
+                    "Col": 9,
+                    "Row": 5,
+                    "Letter": null,
+                    "Direction": null,
+                    "Variant": "wall-6"
+                  },
+                  {
+                    "Kind": "Wall",
+                    "Col": 9,
+                    "Row": 7,
+                    "Letter": null,
+                    "Direction": null,
+                    "Variant": "wall-8"
+                  },
+                  {
+                    "Kind": "Wall",
+                    "Col": 7,
+                    "Row": 6,
+                    "Letter": null,
+                    "Direction": null,
+                    "Variant": "wall-9"
+                  },
+                  {
+                    "Kind": "Archeton",
+                    "Col": 7,
+                    "Row": 2,
+                    "Letter": null,
+                    "Direction": "Down",
+                    "Archeton": "reflect-mimic"
+                  },
+                  {
                     "Kind": "Gate",
-                    "Col": 8,
+                    "Col": 0,
                     "Row": 4,
-                    "Letter": "B",
+                    "Letter": "A",
                     "Direction": null
                   },
                   {
                     "Kind": "Gate",
-                    "Col": 8,
-                    "Row": 1,
+                    "Col": 1,
+                    "Row": 3,
                     "Letter": "A",
                     "Direction": null
                   },
                   {
                     "Kind": "Switch",
-                    "Col": 9,
-                    "Row": 0,
-                    "Letter": "C",
-                    "Direction": null
-                  },
-                  {
-                    "Kind": "Gate",
-                    "Col": 0,
+                    "Col": 7,
                     "Row": 5,
-                    "Letter": "C",
+                    "Letter": "A",
                     "Direction": null
                   },
                   {
                     "Kind": "Wall",
-                    "Col": 0,
-                    "Row": 7,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-15"
-                  },
-                  {
-                    "Kind": "Gate",
-                    "Col": 1,
-                    "Row": 4,
-                    "Letter": "C",
-                    "Direction": null
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 2,
-                    "Row": 5,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-15"
-                  },
-                  {
-                    "Kind": "Wall",
-                    "Col": 1,
-                    "Row": 7,
-                    "Letter": null,
-                    "Direction": null,
-                    "Variant": "wall-14"
-                  },
-                  {
-                    "Kind": "PushBlock",
-                    "Col": 8,
-                    "Row": 0,
-                    "Letter": null,
-                    "Direction": null,
-                    "Symbol": "Circle"
-                  },
-                  {
-                    "Kind": "Gate",
                     "Col": 6,
                     "Row": 5,
+                    "Letter": null,
+                    "Direction": null,
+                    "Variant": "wall-2"
+                  },
+                  {
+                    "Kind": "PipeSwitch",
+                    "Col": 1,
+                    "Row": 7,
+                    "Letter": null,
+                    "Direction": null
+                  },
+                  {
+                    "Kind": "JumpTile",
+                    "Col": 1,
+                    "Row": 1,
+                    "Letter": null,
+                    "Direction": "Down"
+                  },
+                  {
+                    "Kind": "Archeton",
+                    "Col": 1,
+                    "Row": 2,
+                    "Letter": null,
+                    "Direction": "Down",
+                    "Archeton": "reflect-mimic"
+                  },
+                  {
+                    "Kind": "Pipe",
+                    "Col": 2,
+                    "Row": 7,
+                    "Letter": null,
+                    "Direction": "Up"
+                  },
+                  {
+                    "Kind": "PipeSwitch",
+                    "Col": 6,
+                    "Row": 1,
+                    "Letter": null,
+                    "Direction": null
+                  },
+                  {
+                    "Kind": "Pipe",
+                    "Col": 6,
+                    "Row": 1,
+                    "Letter": null,
+                    "Direction": "Left"
+                  },
+                  {
+                    "Kind": "Pipe",
+                    "Col": 6,
+                    "Row": 4,
+                    "Letter": null,
+                    "Direction": "Left"
+                  },
+                  {
+                    "Kind": "Pipe",
+                    "Col": 9,
+                    "Row": 3,
+                    "Letter": null,
+                    "Direction": "Down"
+                  },
+                  {
+                    "Kind": "Gate",
+                    "Col": 9,
+                    "Row": 4,
+                    "Letter": "B",
+                    "Direction": null
+                  },
+                  {
+                    "Kind": "Switch",
+                    "Col": 2,
+                    "Row": 0,
                     "Letter": "B",
                     "Direction": null
                   }
@@ -6575,79 +6214,167 @@
           "Puzzle": {
             "Objects": [
               {
-                "Kind": "Start",
+                "Kind": "Archeton",
+                "Col": 2,
+                "Row": 6,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 2,
+                "Row": 5,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 2,
+                "Row": 3,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 2,
+                "Row": 4,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 2,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 6,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 6,
+                "Row": 3,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 6,
+                "Row": 4,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 6,
+                "Row": 6,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 6,
+                "Row": 5,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 6,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 6,
+                "Row": 8,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Wall",
                 "Col": 2,
                 "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Finish",
+                "Col": 7,
+                "Row": 0,
                 "Letter": null,
                 "Direction": null
               },
               {
-                "Kind": "Wall",
-                "Col": 1,
-                "Row": 0,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-2"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 0,
+                "Kind": "Archeton",
+                "Col": 6,
                 "Row": 1,
                 "Letter": null,
-                "Direction": null,
-                "Variant": "wall-10"
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 6,
+                "Row": 0,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 2,
+                "Row": 1,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 2,
+                "Row": 0,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
               },
               {
                 "Kind": "Wall",
-                "Col": 0,
-                "Row": 2,
+                "Col": 5,
+                "Row": 8,
                 "Letter": null,
                 "Direction": null,
-                "Variant": "wall-11"
+                "Variant": "wall-6"
               },
               {
                 "Kind": "Wall",
-                "Col": 0,
-                "Row": 3,
+                "Col": 3,
+                "Row": 8,
                 "Letter": null,
                 "Direction": null,
-                "Variant": "wall-2"
+                "Variant": "wall-7"
               },
               {
                 "Kind": "Wall",
-                "Col": 0,
-                "Row": 4,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-10"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 0,
-                "Row": 5,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-2"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 0,
-                "Row": 6,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-11"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 0,
-                "Row": 7,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-3"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 0,
+                "Col": 2,
                 "Row": 8,
                 "Letter": null,
                 "Direction": null,
@@ -6655,11 +6382,26 @@
               },
               {
                 "Kind": "Wall",
-                "Col": 1,
+                "Col": 2,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 6,
                 "Row": 9,
                 "Letter": null,
                 "Direction": null,
                 "Variant": "wall-2"
+              },
+              {
+                "Kind": "Start",
+                "Col": 4,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null
               },
               {
                 "Kind": "Wall",
@@ -6667,63 +6409,7 @@
                 "Row": 9,
                 "Letter": null,
                 "Direction": null,
-                "Variant": "wall-10"
-              },
-              {
-                "Kind": "Archeton",
-                "Col": 4,
-                "Row": 0,
-                "Letter": null,
-                "Direction": "Right",
-                "Archeton": "reflect-mimic"
-              },
-              {
-                "Kind": "Archeton",
-                "Col": 4,
-                "Row": 1,
-                "Letter": null,
-                "Direction": "Right",
-                "Archeton": "reflect-mimic"
-              },
-              {
-                "Kind": "Archeton",
-                "Col": 4,
-                "Row": 2,
-                "Letter": null,
-                "Direction": "Right",
-                "Archeton": "reflect-mimic"
-              },
-              {
-                "Kind": "Archeton",
-                "Col": 4,
-                "Row": 3,
-                "Letter": null,
-                "Direction": "Right",
-                "Archeton": "reflect-mimic"
-              },
-              {
-                "Kind": "Archeton",
-                "Col": 4,
-                "Row": 4,
-                "Letter": null,
-                "Direction": "Right",
-                "Archeton": "reflect-mimic"
-              },
-              {
-                "Kind": "Archeton",
-                "Col": 4,
-                "Row": 5,
-                "Letter": null,
-                "Direction": "Right",
-                "Archeton": "reflect-mimic"
-              },
-              {
-                "Kind": "Archeton",
-                "Col": 4,
-                "Row": 7,
-                "Letter": null,
-                "Direction": "Right",
-                "Archeton": "reflect-mimic"
+                "Variant": "wall-11"
               },
               {
                 "Kind": "Wall",
@@ -6735,178 +6421,79 @@
               },
               {
                 "Kind": "Wall",
-                "Col": 7,
-                "Row": 9,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-9"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 8,
-                "Row": 8,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-3"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 8,
-                "Row": 7,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-11"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 8,
-                "Row": 6,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-11"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 8,
+                "Col": 0,
                 "Row": 5,
                 "Letter": null,
                 "Direction": null,
-                "Variant": "wall-3"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 8,
-                "Row": 4,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-11"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 8,
-                "Row": 3,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-9"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 8,
-                "Row": 2,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-3"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 8,
-                "Row": 1,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-3"
+                "Variant": "wall-14"
               },
               {
                 "Kind": "Wall",
                 "Col": 7,
-                "Row": 0,
+                "Row": 1,
                 "Letter": null,
                 "Direction": null,
-                "Variant": "wall-9"
+                "Variant": "wall-14"
               },
               {
-                "Kind": "Finish",
-                "Col": 6,
-                "Row": 0,
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 1,
                 "Letter": null,
+                "Direction": null,
+                "Variant": "wall-15"
+              },
+              {
+                "Kind": "Switch",
+                "Col": 7,
+                "Row": 7,
+                "Letter": "A",
+                "Direction": null
+              },
+              {
+                "Kind": "Wall",
+                "Col": 5,
+                "Row": 6,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-14"
+              },
+              {
+                "Kind": "Gate",
+                "Col": 8,
+                "Row": 1,
+                "Letter": "A",
+                "Direction": null
+              },
+              {
+                "Kind": "Gate",
+                "Col": 5,
+                "Row": 7,
+                "Letter": "B",
+                "Direction": null
+              },
+              {
+                "Kind": "Switch",
+                "Col": 0,
+                "Row": 2,
+                "Letter": "B",
                 "Direction": null
               },
               {
                 "Kind": "Wall",
                 "Col": 4,
-                "Row": 8,
+                "Row": 4,
                 "Letter": null,
                 "Direction": null,
                 "Variant": "wall-16"
               },
               {
-                "Kind": "Archeton",
+                "Kind": "Wall",
                 "Col": 4,
-                "Row": 6,
-                "Letter": null,
-                "Direction": "Right",
-                "Archeton": "reflect-mimic"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 1,
-                "Row": 1,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-16"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 2,
-                "Row": 1,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-14"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 6,
-                "Row": 1,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-14"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 7,
-                "Row": 1,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-14"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 7,
-                "Row": 6,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-3"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 6,
-                "Row": 6,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-10"
-              },
-              {
-                "Kind": "PushBlock",
-                "Col": 5,
                 "Row": 3,
                 "Letter": null,
                 "Direction": null,
-                "Symbol": "Circle"
-              },
-              {
-                "Kind": "PushBlock",
-                "Col": 2,
-                "Row": 3,
-                "Letter": null,
-                "Direction": null,
-                "Symbol": "Cross"
-              },
-              {
-                "Kind": "PushBlock",
-                "Col": 1,
-                "Row": 3,
-                "Letter": null,
-                "Direction": null,
-                "Symbol": "Triangle"
+                "Variant": "wall-14"
               }
             ],
             "Palette": {
