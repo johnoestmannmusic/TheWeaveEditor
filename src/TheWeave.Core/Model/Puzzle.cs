@@ -62,6 +62,13 @@ public enum PuzzleObjectKind
     Archeton,
 
     /// <summary>
+    /// A one-way wall along one side of a square: the ship can drop off the ledge that way, but can't climb back up
+    /// it. Its Direction is the side of its square it's on, which is also the way the higher ground is. A square can
+    /// hold one on each of its sides, so a raised area's corner takes two. See runtime/puzzleRules.js's ledgeAt.
+    /// </summary>
+    Edge,
+
+    /// <summary>
     /// Not placed on a board: an Archeton's laser, one square of it drawn pointing right, repeated along the beam - see
     /// ArchetonDefinition.LaserDrawing. A kind so that it can be drawn in the Drawings view like anything else.
     /// </summary>
@@ -98,7 +105,7 @@ public sealed class PuzzleObject
     /// <summary>Gate, Switch and Teleporter only. Gates and Switches pair up by letter, and Teleporters do separately.</summary>
     public string? Letter { get; set; }
 
-    /// <summary>Stream, RotatorTile, JumpTile, Pipe and Archeton only.</summary>
+    /// <summary>Stream, RotatorTile, JumpTile, Pipe, Archeton and Edge only.</summary>
     public PuzzleDirection? Direction { get; set; }
 
     /// <summary>Archeton only: the id of its ArchetonDefinition in WeaveProject.Archetons.</summary>
@@ -218,7 +225,7 @@ public static class PuzzleDrawings
     /// </summary>
     public const string Paints = ".OHG1234";
 
-    public static readonly IReadOnlyList<string> Roles = ["wall", "finish", "gate", "teleporter", "stream", "key", "rotator", "lantern", "block", "jump", "reset", "pipe", "archeton", "outline", "light"];
+    public static readonly IReadOnlyList<string> Roles = ["wall", "edge", "finish", "gate", "teleporter", "stream", "key", "rotator", "lantern", "block", "jump", "reset", "pipe", "archeton", "outline", "light"];
 
     /// <summary>Every kind drawn from a drawing.</summary>
     public static readonly IReadOnlySet<PuzzleObjectKind> DrawnKinds = new HashSet<PuzzleObjectKind>
@@ -226,7 +233,7 @@ public static class PuzzleDrawings
         PuzzleObjectKind.Wall, PuzzleObjectKind.Finish, PuzzleObjectKind.Gate, PuzzleObjectKind.Switch,
         PuzzleObjectKind.Teleporter, PuzzleObjectKind.Key, PuzzleObjectKind.RotatorSwitch, PuzzleObjectKind.Lantern,
         PuzzleObjectKind.Stream, PuzzleObjectKind.RotatorTile, PuzzleObjectKind.PushBlock, PuzzleObjectKind.JumpTile,
-        PuzzleObjectKind.ResetSwitch, PuzzleObjectKind.Pipe, PuzzleObjectKind.PipeSwitch,
+        PuzzleObjectKind.ResetSwitch, PuzzleObjectKind.Pipe, PuzzleObjectKind.PipeSwitch, PuzzleObjectKind.Edge,
         PuzzleObjectKind.Archeton, PuzzleObjectKind.Laser,
     };
 

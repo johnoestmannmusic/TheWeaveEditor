@@ -2082,3 +2082,121 @@ test('a pane whose sight is blocked is reported, so the line can stop where it d
   let outOfLine = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 4));
   assert.deepEqual(outOfLine.blockedSights, [], 'a pane the ship isn\'t in line with has no sight to block');
 });
+
+// ---------- Edges ----------
+
+// An Edge is along one side of its square, and its direction is the side it's on - which is also the way the higher
+// ground is. So the ship can drop off it that way, and can't climb back up it.
+const edge = (col, row, direction) => obj('Edge', col, row, { direction });
+
+test('a ledge refuses the step up it, and lets the ship drop off it the other way', () => {
+  // The ship is on the high ground at (4, 5), and (4, 6) is the low ground below, with a ledge facing up at it.
+  let g = game(obj('Start', 4, 5), edge(4, 6, 'Up'));
+  assert.equal(g.canEnter(at(4, 5), at(4, 6), 'down'), true, 'dropping off the ledge is a step like any other');
+  assert.equal(g.canEnter(at(4, 6), at(4, 5), 'up'), false, 'climbing back up it is refused');
+  assert.equal(g.canEnter(at(4, 6), at(5, 6), 'right'), true, 'and it only refuses that one way out of its square');
+});
+
+test('a ledge is not solid: the ship can stand on it and walk about its square', () => {
+  let g = game(obj('Start', 4, 6), edge(4, 6, 'Up'), edge(4, 6, 'Left'));
+  assert.deepEqual(at(g.shipCell.col, g.shipCell.row), at(4, 6));
+  assert.equal(g.canEnter(at(4, 6), at(5, 6), 'right'), true);
+  assert.equal(g.canEnter(at(4, 6), at(4, 7), 'down'), true);
+  assert.equal(g.canEnter(at(4, 6), at(3, 6), 'left'), false, 'and a square can hold one on each of its sides');
+});
+
+test('a ledge is only a ledge from its low side: a Beam stops at it one way and goes over the other', () => {
+  let archetons = [{ id: 'beamer', name: 'Beamer', parts: [{ kind: 'Beam', look: 'Facing', range: 3 }] }];
+  let beamer = (col, row, direction) => obj('Archeton', col, row, { archeton: 'beamer', direction });
+  let reaches = (g) => g.reaches.map(cell => `${cell.col},${cell.row}`).sort();
+
+  // Facing up from the low ground, at the ledge: stopped by its face.
+  let below = createPuzzleGame({ objects: [beamer(4, 6, 'Up'), edge(4, 6, 'Up')], palette: {}, archetons });
+  assert.deepEqual(reaches(below), [], 'the ledge stops the beam at its own square');
+
+  // Facing down onto the same ledge from above it: over the top.
+  let above = createPuzzleGame({ objects: [beamer(4, 3, 'Down'), edge(4, 6, 'Up')], palette: {}, archetons });
+  assert.deepEqual(reaches(above), ['4,4', '4,5', '4,6'], 'a beam from the high side passes over it');
+});
+
+test('a ledge hides what is beyond it from its low side, and not from its high side', () => {
+  // A ledge at (5, 5) facing right: the high ground is (6, 5), and the low ground (4, 5).
+  let fromBelow = createPuzzleGame({ objects: [mimic(6, 5), edge(5, 5, 'Right'), obj('Start', 4, 5)], palette: {}, archetons: [REFLECT_MIMIC] });
+  assert.deepEqual(cells(fromBelow), [], 'the ship below the ledge is hidden by it');
+  assert.equal(fromBelow.blockedSights.length, 1, 'and the pane reports what is in the way');
+  assert.deepEqual(at(fromBelow.blockedSights[0].blocker.col, fromBelow.blockedSights[0].blocker.row), at(5, 5), 'the ledge itself');
+
+  let fromAbove = createPuzzleGame({ objects: [mimic(4, 5), edge(5, 5, 'Right'), obj('Start', 6, 5)], palette: {}, archetons: [REFLECT_MIMIC] });
+  assert.deepEqual(cells(fromAbove), [at(2, 5)], 'from the high side the pane sees over the ledge');
+  assert.deepEqual(fromAbove.blockedSights, []);
+});
+
+test('a Push Block is shoved off a ledge, but not up one', () => {
+  let down = game(obj('Start', 4, 5), obj('PushBlock', 4, 6, { symbol: 'Circle' }), edge(4, 7, 'Up'));
+  assert.equal(down.canEnter(at(4, 5), at(4, 6), 'down'), true, 'pushed onto the ledge square');
+  assert.equal(down.canEnter(at(4, 6), at(4, 7), 'down'), true, 'and on off it');
+
+  let up = game(obj('Start', 4, 8), obj('PushBlock', 4, 7, { symbol: 'Circle' }), edge(4, 7, 'Up'));
+  assert.equal(up.canEnter(at(4, 8), at(4, 7), 'up'), false, 'but a block will not go up one');
+});
+
+test('a square holds an Edge on each of its sides, and erasing takes the side chosen', () => {
+  let board = placeObject([edge(1, 1, 'Up')], edge(1, 1, 'Left'));
+  assert.deepEqual(board.map(o => o.direction).sort(), ['Left', 'Up']);
+  board = placeObject(board, edge(1, 1, 'Up'));
+  assert.equal(board.filter(o => o.kind === 'Edge').length, 2, 'placing one already there replaces it');
+  assert.deepEqual(eraseObject(board, at(1, 1), 'Up').map(o => o.direction), ['Left']);
+  assert.deepEqual(eraseObject(board, at(1, 1)).length, 1, 'and without a side, one of them goes');
+  // An Edge is along a side rather than on the square, so it sits under a floor tile rather than taking its place.
+  let onStream = placeObject([stream(2, 2)], edge(2, 2, 'Up'));
+  assert.deepEqual(onStream.map(o => o.kind).sort(), ['Edge', 'Stream']);
+});
+
+test('the ledge at the foot of a step is drawn raised, and the others flat', () => {
+  let { look } = artLook();
+  let rowsFor = (direction) => {
+    let image = blank();
+    renderBoard(image, [edge(1, 2, direction)], look);
+    return rowsDrawn(image, 1);
+  };
+  // The one the higher ground is above shows its face to the way the board is seen from, so it stands up like a Wall.
+  assert.equal(Math.min(...rowsFor('Up')), 2 * TILE_PX - RAISED_PX);
+  assert.ok(Math.min(...rowsFor('Down')) >= 2 * TILE_PX, 'the others lie flat, in their own square');
+  // And a ledge is a strip along its square's side, not a block filling it.
+  let image = blank();
+  renderBoard(image, [edge(1, 2, 'Down')], { ...look, depth: 'flat' });
+  assert.equal(pixelAt(image, 1 * TILE_PX + 12, 2 * TILE_PX + 2)[3], 0, 'nothing drawn away from the ledge');
+  assert.equal(pixelAt(image, 1 * TILE_PX + 12, 2 * TILE_PX + 22)[3], 255, 'and the ledge itself drawn');
+});
+
+test('an Edge is turned to the side of the square it is on, so a run of them joins up', () => {
+  let { look } = artLook();
+  let draw = (direction) => { let image = blank(); renderBoard(image, [edge(1, 1, direction)], { ...look, depth: 'flat' }); return image; };
+  // Drawn with its ledge on the right, and turned: the same pixels, one way round or another.
+  let column = (image, x) => { let out = []; for (let y = TILE_PX; y < 2 * TILE_PX; y++) out.push(pixelAt(image, x, y).join()); return out.join('|'); };
+  let row = (image, y) => { let out = []; for (let x = TILE_PX; x < 2 * TILE_PX; x++) out.push(pixelAt(image, x, y).join()); return out; };
+  assert.ok(row(draw('Up'), TILE_PX).some(pixel => pixel.endsWith(',255')), 'facing up, the ledge runs along the top');
+  assert.ok(row(draw('Down'), 2 * TILE_PX - 1).some(pixel => pixel.endsWith(',255')), 'facing down, along the bottom');
+  assert.ok(column(draw('Left'), TILE_PX).length > 0);
+  assert.notEqual(tile(draw('Up'), 1, 1), tile(draw('Down'), 1, 1));
+});
+
+test('a Push Block shoved off a ledge leaps down it, growing towards the middle as the ship does', () => {
+  let { look } = artLook();
+  // How wide the block is drawn, in pixels: only it is on the board, so its edges are the image's.
+  let width = (falls, pushAlong) => {
+    let image = blank();
+    renderBoard(image, [obj('PushBlock', 3, 2, { symbol: 'Circle', fromCol: 2, fromRow: 2, glide: 'push', falls })], look, { pushAlong, along: 0 });
+    let left = Infinity, right = -Infinity;
+    for (let x = 0; x < TILE_PX * 6; x++) {
+      for (let y = 0; y < TILE_PX * 3; y++) {
+        if (pixelAt(image, x, y)[3] === 0) continue;
+        left = Math.min(left, x);
+        right = Math.max(right, x);
+      }
+    }
+    return right - left + 1;
+  };
+  assert.ok(width(true, 0.5) > width(false, 0.5), 'mid-leap, so drawn bigger than the glide alone would');
+  assert.equal(width(true, 1), width(false, 1), 'and its own size again once it has landed');
+});
