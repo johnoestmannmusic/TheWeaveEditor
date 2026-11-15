@@ -29,6 +29,7 @@ document.getElementById('btn-undo').addEventListener('click', () => send('undo')
 document.getElementById('btn-redo').addEventListener('click', () => send('redo'));
 document.getElementById('btn-new').addEventListener('click', () => send('new-project'));
 document.getElementById('btn-open').addEventListener('click', () => send('open-project'));
+document.getElementById('btn-save-as').addEventListener('click', () => send('save-project-as'));
 document.getElementById('btn-import').addEventListener('click', () => send('import-legacy-site'));
 document.getElementById('btn-export').addEventListener('click', () => send('export-site'));
 document.getElementById('btn-change-export-path').addEventListener('click', () => send('change-export-path'));

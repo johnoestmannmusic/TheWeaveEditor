@@ -24,12 +24,17 @@ internal static class FileDialogs
         return path is null ? Array.Empty<string>() : new[] { path };
     }
 
-    public static string? ShowSaveFile(PhotinoWindow window, string title, (string Name, string[] Extensions)[] filters)
+    /// <param name="suggestedFolder">Where the dialog starts, when that's known - the folder the thing being saved
+    /// already lives in. Photino's own dialog is left to remember its last folder, as everywhere else here.</param>
+    /// <param name="suggestedName">The file name it starts with, so saving a project again means choosing a folder
+    /// rather than retyping its name.</param>
+    public static string? ShowSaveFile(PhotinoWindow window, string title, (string Name, string[] Extensions)[] filters,
+        string? suggestedFolder = null, string? suggestedName = null)
     {
         if (!OperatingSystem.IsLinux())
             return window.ShowSaveFile(title: title, filters: filters);
 
-        return RunOnMainThread(window, () => Gtk.Run(title, Gtk.ActionSave, "_Save", filters));
+        return RunOnMainThread(window, () => Gtk.Run(title, Gtk.ActionSave, "_Save", filters, suggestedFolder, suggestedName));
     }
 
     public static string[] ShowOpenFolder(PhotinoWindow window, string title)
@@ -61,7 +66,8 @@ internal static class FileDialogs
         private const int PositionCenter = 1;
         private const int PositionCenterOnParent = 4;
 
-        public static string? Run(string title, int action, string acceptLabel, (string Name, string[] Extensions)[] filters)
+        public static string? Run(string title, int action, string acceptLabel, (string Name, string[] Extensions)[] filters,
+            string? suggestedFolder = null, string? suggestedName = null)
         {
             var parent = FindEditorWindow();
             var dialog = gtk_file_chooser_dialog_new(title, parent, action, IntPtr.Zero);
@@ -86,6 +92,13 @@ internal static class FileDialogs
                         gtk_file_filter_add_pattern(filter, extension);
                     gtk_file_chooser_add_filter(dialog, filter);
                 }
+
+                // Where it starts, and what it suggests, before it's shown - GTK takes both only up to the point the
+                // dialog appears.
+                if (!string.IsNullOrEmpty(suggestedFolder))
+                    gtk_file_chooser_set_current_folder(dialog, suggestedFolder);
+                if (!string.IsNullOrEmpty(suggestedName))
+                    gtk_file_chooser_set_current_name(dialog, suggestedName);
 
                 // A default size wouldn't do here: GTK puts back the size this kind of dialog was last left
                 // at as it appears, however large that was, so this has to come after.
@@ -154,6 +167,8 @@ internal static class FileDialogs
         [DllImport(LibGtk)] private static extern void gtk_widget_show(IntPtr widget);
         [DllImport(LibGtk)] private static extern void gtk_widget_destroy(IntPtr widget);
         [DllImport(LibGtk)] private static extern void gtk_file_chooser_set_do_overwrite_confirmation(IntPtr chooser, [MarshalAs(UnmanagedType.Bool)] bool confirm);
+        [DllImport(LibGtk)] private static extern void gtk_file_chooser_set_current_folder(IntPtr chooser, [MarshalAs(UnmanagedType.LPUTF8Str)] string folder);
+        [DllImport(LibGtk)] private static extern void gtk_file_chooser_set_current_name(IntPtr chooser, [MarshalAs(UnmanagedType.LPUTF8Str)] string name);
         [DllImport(LibGtk)] private static extern void gtk_file_chooser_add_filter(IntPtr chooser, IntPtr filter);
         [DllImport(LibGtk)] private static extern IntPtr gtk_file_chooser_get_filename(IntPtr chooser);
         [DllImport(LibGtk)] private static extern IntPtr gtk_file_filter_new();
