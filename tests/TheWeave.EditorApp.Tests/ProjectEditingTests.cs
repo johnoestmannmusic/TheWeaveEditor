@@ -1255,9 +1255,9 @@ public class ProjectEditingTests
         var project = new WeaveProject();
         ProjectEditing.SeedArchetons(project);
 
-        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish"], project.Archetons!.Select(a => a.Id));
-        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish"], project.ArchetonsOffered);
-        Assert.Equal(["slide-bug", "jumpbug", "reflect-mimic", "swim-fish"], project.PuzzleDrawings!.Select(d => d.Id));
+        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish", "warp-wisp"], project.Archetons!.Select(a => a.Id));
+        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish", "warp-wisp"], project.ArchetonsOffered);
+        Assert.Equal(["slide-bug", "jumpbug", "reflect-mimic", "swim-fish", "warp-wisp"], project.PuzzleDrawings!.Select(d => d.Id));
         Assert.All(project.PuzzleDrawings!, drawing =>
         {
             Assert.Equal(PuzzleObjectKind.Archeton, drawing.Kind);
@@ -1276,12 +1276,12 @@ public class ProjectEditingTests
     {
         var project = new WeaveProject { Archetons = [ArchetonDefinitions.Sentribeam()] };
         ProjectEditing.SeedArchetons(project);
-        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish"], project.Archetons!.Select(a => a.Id));
+        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish", "warp-wisp"], project.Archetons!.Select(a => a.Id));
 
         project.Archetons = [];
         ProjectEditing.SeedArchetons(project);
         Assert.Empty(project.Archetons);
-        Assert.Equal(4, project.PuzzleDrawings!.Count);
+        Assert.Equal(5, project.PuzzleDrawings!.Count);
     }
 
     [Fact]

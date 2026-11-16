@@ -31,6 +31,8 @@
   const GEM_SHOT_MS = 260;
   const GEM_SHAKE_MS = 240;
   const GEM_SPIN_CYCLE_MS = 1400;
+  // How long a Warp Wisp's white flash washes the board out for.
+  const WARP_FLASH_MS = 200;
   // A Gem's turn is drawn in steps, so that the sprites it goes through are a handful rather than one a frame.
   const GEM_SPIN_STEPS = 16;
   // How many turns a pulse made of three is: the last Gem in opens the Gate with a burst rather than a single ring.
@@ -82,6 +84,7 @@
       gemShots: [], // { from, to, ms, last } while a collected Gem is on its way to the Gem Gate
       gemShakeMs: null, // how long ago the Gem Gate was last hit, for its rattle
       gemClockMs: 0, // how long a Gem has been turning on the spot, for its spin
+      warpFlashMs: null, // how long ago the ship was warped, for the board's white flash
     };
 
     // A Stream carries the ship along, whatever's being pressed, and an Archeton's laser can push or send it back.
@@ -102,6 +105,15 @@
         play.mover.releaseAll();
         play.teleport = { from, to: event.teleportTo, ms: 0, durationMs: TELEPORT_MS + squares * TELEPORT_MS_PER_SQUARE };
         hooks.onTeleport?.(from, event.teleportTo);
+      }
+      // A warp is instant: the ship is simply there, with the board flashing white to show it went. Nothing is walked
+      // through, so there's no travelling to draw - see renderBoard's warpFlash.
+      if (event.warpedTo) {
+        play.mover.releaseAll();
+        play.mover.teleport(event.warpedTo);
+        play.warpFlashMs = 0;
+        hooks.onWarp?.(event.warpedTo);
+        carry();
       }
       // Push Blocks that matched sink together, once whichever of them is moving has finished gliding into place.
       let glideOf = (object) => {
@@ -194,6 +206,7 @@
       if (play.hopMs !== null) play.hopMs += dtMs;
       play.gemClockMs += dtMs;
       if (play.gemShakeMs !== null) play.gemShakeMs += dtMs;
+      if (play.warpFlashMs !== null) play.warpFlashMs += dtMs;
       for (const shot of play.gemShots) shot.ms += dtMs;
       // A Gem that's arrived rattles the Gate and sets off its pulse: one ring, or three when it was the last one, which
       // is the Gate opening - see puzzleRules.js's Gem case, which opens it as the Gem is collected.
@@ -366,6 +379,9 @@
       let gate = play.gemShakeMs === null || play.gemShakeMs >= GEM_SHAKE_MS ? null : game.objects.find(object => object.kind === 'GemGate');
       let shake = gate ? { col: gate.col, row: gate.row, dx: Math.round(Math.sin(play.gemShakeMs / 18) * 2 * (1 - play.gemShakeMs / GEM_SHAKE_MS)) } : null;
       if (shake) key.push('k', shake.dx);
+      // A warp's white flash, fading out over its WARP_FLASH_MS.
+      let warpFlash = play.warpFlashMs === null || play.warpFlashMs >= WARP_FLASH_MS ? 0 : 1 - play.warpFlashMs / WARP_FLASH_MS;
+      if (warpFlash > 0) key.push('w', Math.round(warpFlash * 10));
 
       let hideUnreached = (list) => unreached.size === 0 ? list : list.map(thing => unreached.has(thing) ? { ...thing, revealed: false } : thing);
       floors = hideUnreached(floors);
@@ -385,6 +401,7 @@
         gemPhase: gemStep / GEM_SPIN_STEPS,
         gemShots,
         gateShake: shake,
+        warpFlash,
         pulses,
         gateBeams: play.gateBeams.map(beam => ({
           from: beam.from,

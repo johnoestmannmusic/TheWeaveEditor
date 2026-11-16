@@ -80,7 +80,7 @@
   };
 
   const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', GemGate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
-  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Gem: 'gem', GemGate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton' };
+  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Gem: 'gem', GemGate: 'gate', WarpOut: 'archeton', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton' };
 
   function maskOf(test){
     let mask = [];
@@ -130,7 +130,7 @@
   const TURNED_KINDS = ['JumpTile', 'Pipe', 'Archeton', 'Laser', 'Edge'];
 
   // Every kind of object drawn from a drawing.
-  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'Gem', 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', ...ANIMATED_KINDS, 'Laser'];
+  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'Gem', 'WarpOut', 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', ...ANIMATED_KINDS, 'Laser'];
 
   const standardDrawings = new Map();
 
@@ -154,6 +154,37 @@
       }
     }
     return paints;
+  }
+
+  // A Warp Out Square's standard drawing: the outline of a square, and the outline of a Wisp's firewall in the middle
+  // of it - a ragged ring with a gap in it and a lick of flame off the top.
+  function standardWarpOutPixels(){
+    return [
+      "........................",
+      "........................",
+      "........................",
+      "...HHHHHHHHHHHHHHHHHH...",
+      "...H................H...",
+      "...H........H.......H...",
+      "...H........H.......H...",
+      "...H.....HHHHH......H...",
+      "...H....HH...HH.....H...",
+      "...H...HH.....HH....H...",
+      "...H...H.......H....H...",
+      "...H...H.......H....H...",
+      "...H...H.......H....H...",
+      "...H...HH.....HH....H...",
+      "...H....HH...HH.....H...",
+      "...H.....H...H......H...",
+      "...H................H...",
+      "...H................H...",
+      "...H................H...",
+      "...H................H...",
+      "...HHHHHHHHHHHHHHHHHH...",
+      "........................",
+      "........................",
+      "........................",
+    ].join('');
   }
 
   // How wide a Gem is drawn as it turns on the spot: front on, edge on, front on again, twice around. It never quite
@@ -229,6 +260,7 @@
       else if (kind === 'PipeSwitch') drawing = { id: kind, kind, name: 'Standard', pixels: standardPipeSwitchPixels(), mix: standardMix('pipe') };
       else if (kind === 'Edge') drawing = { id: kind, kind, name: 'Standard', pixels: standardEdgePixels(), mix: standardMix('edge') };
       else if (kind === 'Gem') drawing = { id: kind, kind, name: 'Standard', pixels: standardGemPixels(), mix: standardMix('gem') };
+      else if (kind === 'WarpOut') drawing = { id: kind, kind, name: 'Standard', pixels: standardWarpOutPixels(), mix: standardMix('archeton') };
       else {
         let body = SHAPES[SPRITE_SHAPES[kind]];
         drawing = { id: kind, kind, name: 'Standard', pixels: pixelsOf(body), mix: standardMix(SPRITE_ROLES[kind]) };
@@ -894,6 +926,7 @@
   // - gemPhase (0 to 1) how far round a Gem is in its turn on the spot, and gemShots ([{ from, to, along }]) the Gems
   //   on their way to a Gem Gate, along being how far each has come.
   // - gateShake ({ col, row, dx }) rattles the Gem Gate on that square dx pixels to the side.
+  // - warpFlash (0 to 1) washes the whole board out white, as a Warp Wisp's does.
   // - pulses ([{ col, row, radius }]) draws each lit Lantern's pulse: a ring radius pixels out from its square's middle.
   // - pushHints ([{ col, row, direction, bob }], or one as pushHint) show that the Push Block on each square can be
   //   pushed: an arrow just
@@ -968,6 +1001,21 @@
     for (const pulse of options.pulses ?? []) drawPulse(image, pulse, look, options.originY ?? 0);
     for (const cell of options.reaches ?? []) drawReach(image, cell, look, options.originY ?? 0);
     for (const beam of options.beams ?? []) drawBeam(image, beam, look, options.originY ?? 0);
+
+    // A Warp Wisp's white flash, over the lot: the whole board washed out for a moment, so that the ship appearing
+    // somewhere else reads as something that happened rather than as a glitch.
+    if (options.warpFlash > 0) {
+      let { data } = image;
+      let opacity = Math.min(1, options.warpFlash);
+      for (let i = 0; i < data.length; i += 4) {
+        let under = data[i + 3] / 255 * (1 - opacity);
+        let total = opacity + under;
+        data[i] = (255 * opacity + data[i] * under) / total;
+        data[i + 1] = (255 * opacity + data[i + 1] * under) / total;
+        data[i + 2] = (255 * opacity + data[i + 2] * under) / total;
+        data[i + 3] = total * 255;
+      }
+    }
   }
 
   // A square an Archeton's Beam reaches, outlined just inside its edge in the light colour, with the outline colour

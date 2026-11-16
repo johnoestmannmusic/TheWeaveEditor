@@ -151,14 +151,34 @@ public static class ProjectValidator
                 if (library.All(a => a.Id != obj.Archeton))
                     Warn($"Location '{node.Id}''s puzzle has an Archeton at column {obj.Col + 1}, row {obj.Row + 1} that isn't in the project's Archetons ('{obj.Archeton}'), so it's left out.");
             }
+
+            // A Warp Wisp and its Warp Out Square are only any use together: one without the other never warps anything.
+            if (node.Puzzle is { } puzzle)
+            {
+                bool warps(string? id) => library.Any(a => a.Id == id && a.Parts.Any(p => p.Kind == ArchetonPartKind.Warp));
+                foreach (var wisp in puzzle.Objects.Where(o => o.Kind == PuzzleObjectKind.Archeton && warps(o.Archeton)))
+                {
+                    if (wisp.Letter is not { Length: > 0 } letter)
+                        Warn($"Location '{node.Id}''s puzzle has a Warp Wisp at column {wisp.Col + 1}, row {wisp.Row + 1} with no Warp Out Square to send the ship to, so touching it does nothing.");
+                    else if (!puzzle.Objects.Any(o => o.Kind == PuzzleObjectKind.WarpOut && o.Letter == letter))
+                        Warn($"Location '{node.Id}''s puzzle has a Warp Wisp at column {wisp.Col + 1}, row {wisp.Row + 1} with no Warp Out Square of letter {letter}, so touching it does nothing.");
+                }
+
+                foreach (var square in puzzle.Objects.Where(o => o.Kind == PuzzleObjectKind.WarpOut))
+                {
+                    if (square.Letter is not { Length: > 0 } letter || !puzzle.Objects.Any(o => o.Kind == PuzzleObjectKind.Archeton && warps(o.Archeton) && o.Letter == letter))
+                        Warn($"Location '{node.Id}''s puzzle has a Warp Out Square at column {square.Col + 1}, row {square.Row + 1} that no Warp Wisp sends the ship to.");
+                }
+            }
         }
 
         foreach (var archeton in library)
         {
             var sees = archeton.Parts.Any(p => p.Kind == ArchetonPartKind.Beam);
-            var acts = archeton.Parts.Any(p => p.Kind is ArchetonPartKind.Push or ArchetonPartKind.Block);
+            // A Warp is something done to the ship, whether or not the Archeton can see or move.
+            var acts = archeton.Parts.Any(p => p.Kind is ArchetonPartKind.Push or ArchetonPartKind.Block or ArchetonPartKind.Warp);
             var moves = archeton.Parts.Any(p => p.Kind is ArchetonPartKind.Slide or ArchetonPartKind.Sequence);
-            if (!sees && !moves)
+            if (!sees && !moves && !acts)
                 Warn($"Archeton '{archeton.Name}' has no Beam to see the ship with, nor a Slide or Move Sequence to move with, so it does nothing.");
             else if (sees && !acts)
                 Warn($"Archeton '{archeton.Name}' sees the ship, but has nothing like a Block or a Push to do about it.");

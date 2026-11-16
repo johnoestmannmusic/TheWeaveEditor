@@ -1770,6 +1770,62 @@ test('what stands on a square is drawn over the Switch built into it, not under 
   }
 });
 
+// ---------- Warp Wisps ----------
+
+// A Wisp that steps one square right each time the ship does, so its move is easy to follow.
+const WARP_WISP = { id: 'warp-wisp', name: 'Warp Wisp', parts: [{ kind: 'Sequence', moves: ['Right'] }, { kind: 'Warp' }] };
+const wisp = (col, row, letter = 'A') => obj('Archeton', col, row, { archeton: 'warp-wisp', letter });
+const warpOut = (col, row, letter = 'A') => obj('WarpOut', col, row, { letter });
+
+test('the ship stepping into a Warp Wisp is sent to its Warp Out Square, and isn\'t hurt', () => {
+  let g = withArchetons([WARP_WISP], wisp(5, 5), warpOut(2, 2));
+  g.placeShip(at(5, 6));
+  let event = g.shipArrivedAt(at(5, 5));
+  assert.deepEqual(g.shipCell, at(2, 2), 'warped out');
+  assert.deepEqual(event.warpedTo, at(2, 2));
+  assert.equal(event.returned, undefined, 'and not sent back the way it came');
+});
+
+test('a Warp Wisp that lands on the ship warps it too', () => {
+  let g = withArchetons([WARP_WISP], wisp(4, 5), warpOut(2, 2));
+  g.placeShip(at(5, 5));
+  g.shipArrivedAt(at(5, 5));
+  assert.deepEqual(g.shipCell, at(2, 2), 'the Wisp reached it, so it went');
+});
+
+test('a Warp Wisp goes over walls and anything else in its way', () => {
+  let g = withArchetons([WARP_WISP], wisp(4, 5), obj('Wall', 5, 5), block(6, 5), warpOut(2, 2));
+  g.placeShip(at(9, 9));
+  g.shipArrivedAt(at(9, 9));
+  assert.deepEqual(g.objects.find(o => o.archeton === 'warp-wisp') && { col: g.objects.find(o => o.archeton === 'warp-wisp').col, row: g.objects.find(o => o.archeton === 'warp-wisp').row }, at(5, 5), 'over the wall');
+});
+
+test('nothing but the ship can be moved onto a Warp Out Square', () => {
+  let g = withArchetons([WARP_WISP], warpOut(6, 5), block(5, 5));
+  g.placeShip(at(4, 5));
+  g.shipArrivedAt(at(5, 5));
+  assert.deepEqual(g.objects.filter(o => o.kind === 'PushBlock').map(o => `${o.col},${o.row}`), ['5,5'], 'the block stays put');
+});
+
+test('erasing a Warp Wisp takes its Warp Out Square with it, and the other way round', () => {
+  let objects = [wisp(2, 2, 'A'), warpOut(6, 6, 'A'), wisp(4, 8, 'B'), warpOut(9, 1, 'B')];
+  let withoutWisp = eraseObject(objects, at(2, 2)).map(o => `${o.kind}${o.letter}`).sort();
+  assert.deepEqual(withoutWisp, ['ArchetonB', 'WarpOutB']);
+  let withoutOut = eraseObject(objects, at(9, 1)).map(o => `${o.kind}${o.letter}`).sort();
+  assert.deepEqual(withoutOut, ['ArchetonA', 'WarpOutA']);
+  // A Gate's letter is nothing to do with a Warp Out Square, so erasing one leaves the other pair alone.
+  let withGate = [...objects, obj('Gate', 1, 9, { letter: 'B' }), obj('Switch', 3, 9, { letter: 'B' })];
+  assert.equal(eraseObject(withGate, at(1, 9)).length, withGate.length - 1);
+});
+
+test('a Warp Wisp with no Warp Out Square of its letter leaves the ship where it is', () => {
+  let g = withArchetons([WARP_WISP], wisp(5, 5, 'A'), warpOut(2, 2, 'B'));
+  g.placeShip(at(5, 6));
+  let event = g.shipArrivedAt(at(5, 5));
+  assert.deepEqual(g.shipCell, at(5, 5), 'no pair, so nowhere to go');
+  assert.equal(event?.warpedTo, undefined);
+});
+
 // ---------- Slide Bugs ----------
 
 const SLIDE_BUG = { id: 'slide-bug', name: 'Slide Bug', parts: [{ kind: 'Slide' }] };
