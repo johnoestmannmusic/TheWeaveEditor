@@ -294,3 +294,31 @@ test('a Gem turns on the spot, so a board with one on it is never still', () => 
   assert.notEqual(play.frame(0, {}).key, first, 'the picture changes with the Gem');
   assert.ok(play.frame(0, {}).options.gemPhase >= 0, 'drawn at some point in its turn');
 });
+
+test('a warp puts the ship at the Warp Out Square and flashes the board white for 200 ms', () => {
+  const WARP_WISP = { id: 'warp-wisp', name: 'Warp Wisp', parts: [{ kind: 'Sequence', moves: ['Right'] }, { kind: 'Warp' }] };
+  let play = createBoardPlay({
+    puzzle: { archetons: [WARP_WISP], objects: [obj('Start', 5, 8), obj('Archeton', 5, 7, { archeton: 'warp-wisp', letter: 'A' }), obj('WarpOut', 2, 2, { letter: 'A' })] },
+  });
+  play.mover.press('up');
+  play.mover.release('up');
+  run(play, BOARD_TIMING.stepMs);
+  let { options } = play.frame(0, {});
+  assert.deepEqual(play.mover.cell, at(2, 2), 'the ship is at the Warp Out Square');
+  assert.ok(options.warpFlash > 0, 'and the board is washed out white');
+
+  run(play, 220);
+  assert.equal(play.frame(0, {}).options.warpFlash, 0, 'and the flash is over');
+});
+
+test('a Warp Wisp drifts on the spot, so a board with one on it is never still', () => {
+  const WARP_WISP = { id: 'warp-wisp', name: 'Warp Wisp', parts: [{ kind: 'Sequence', moves: ['Right'] }, { kind: 'Warp' }] };
+  let play = createBoardPlay({
+    puzzle: { archetons: [WARP_WISP], objects: [obj('Start', 5, 8), obj('Archeton', 5, 5, { archeton: 'warp-wisp', letter: 'A' })] },
+  });
+  let first = play.frame(0, {});
+  run(play, 120);
+  let later = play.frame(0, {});
+  assert.notEqual(later.options.wispDrift, first.options.wispDrift, 'it has moved on');
+  assert.notEqual(later.key, first.key, 'so the board redraws itself');
+});

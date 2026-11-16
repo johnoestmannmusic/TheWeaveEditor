@@ -1250,14 +1250,51 @@ public class ProjectEditingTests
     }
 
     [Fact]
+    public void ValidatePuzzle_KeepsTheLetterOnAWarpWispAndItsWarpOutSquare_ButOnlyOnTheirs()
+    {
+        var puzzle = new Puzzle
+        {
+            Objects =
+            [
+                new PuzzleObject { Kind = PuzzleObjectKind.Finish, Letter = "A" },
+                new PuzzleObject { Kind = PuzzleObjectKind.Archeton, Archeton = "warp-wisp", Letter = "B", Direction = PuzzleDirection.Right, Col = 1, Row = 1 },
+                new PuzzleObject { Kind = PuzzleObjectKind.WarpOut, Letter = "B", Col = 2, Row = 2 },
+                new PuzzleObject { Kind = PuzzleObjectKind.Archeton, Archeton = "slide-bug", Direction = PuzzleDirection.Right, Col = 3, Row = 3 },
+                new PuzzleObject { Kind = PuzzleObjectKind.Wall, Letter = "C", Col = 4, Row = 4 },
+            ],
+        };
+
+        ProjectEditing.ValidatePuzzle(puzzle);
+
+        // A Wisp and its square keep the letter that pairs them, or neither of them can ever find the other.
+        Assert.Equal("B", puzzle.Objects[1].Letter);
+        Assert.Equal("B", puzzle.Objects[2].Letter);
+        // Everything else has its letter taken away, as it always has.
+        Assert.Null(puzzle.Objects[0].Letter);
+        Assert.Null(puzzle.Objects[3].Letter);
+        Assert.Null(puzzle.Objects[4].Letter);
+    }
+
+    [Fact]
+    public void ValidatePuzzle_RefusesALetterThatIsNotOne_OnAPairThatMayHaveOne()
+    {
+        var puzzle = new Puzzle
+        {
+            Objects = [new PuzzleObject { Kind = PuzzleObjectKind.WarpOut, Letter = "pair", Col = 2, Row = 2 }],
+        };
+
+        Assert.Throws<InvalidOperationException>(() => ProjectEditing.ValidatePuzzle(puzzle));
+    }
+
+    [Fact]
     public void SeedArchetons_NewProject_GetsEveryReadyMadeArcheton_WithTheirDrawings()
     {
         var project = new WeaveProject();
         ProjectEditing.SeedArchetons(project);
 
-        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish"], project.Archetons!.Select(a => a.Id));
-        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish"], project.ArchetonsOffered);
-        Assert.Equal(["slide-bug", "jumpbug", "reflect-mimic", "swim-fish"], project.PuzzleDrawings!.Select(d => d.Id));
+        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish", "warp-wisp"], project.Archetons!.Select(a => a.Id));
+        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish", "warp-wisp"], project.ArchetonsOffered);
+        Assert.Equal(["slide-bug", "jumpbug", "reflect-mimic", "swim-fish", "warp-wisp"], project.PuzzleDrawings!.Select(d => d.Id));
         Assert.All(project.PuzzleDrawings!, drawing =>
         {
             Assert.Equal(PuzzleObjectKind.Archeton, drawing.Kind);
@@ -1276,12 +1313,12 @@ public class ProjectEditingTests
     {
         var project = new WeaveProject { Archetons = [ArchetonDefinitions.Sentribeam()] };
         ProjectEditing.SeedArchetons(project);
-        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish"], project.Archetons!.Select(a => a.Id));
+        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish", "warp-wisp"], project.Archetons!.Select(a => a.Id));
 
         project.Archetons = [];
         ProjectEditing.SeedArchetons(project);
         Assert.Empty(project.Archetons);
-        Assert.Equal(4, project.PuzzleDrawings!.Count);
+        Assert.Equal(5, project.PuzzleDrawings!.Count);
     }
 
     [Fact]

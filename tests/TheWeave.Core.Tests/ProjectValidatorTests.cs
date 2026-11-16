@@ -144,6 +144,43 @@ public class ProjectValidatorTests
     private static PuzzleObject GemGate(int col, int row) => new() { Kind = PuzzleObjectKind.GemGate, Col = col, Row = row };
 
     [Fact]
+    public void AWarpWispWithoutItsWarpOutSquare_AndAWarpOutSquareWithoutItsWisp_AreReported()
+    {
+        var wisp = new ArchetonDefinition
+        {
+            Id = "warp-wisp",
+            Name = "Warp Wisp",
+            Parts = [new ArchetonPart { Kind = ArchetonPartKind.Warp }],
+        };
+
+        List<string> Problems(params PuzzleObject[] objects)
+        {
+            var node = new Node
+            {
+                Id = "track",
+                Card = new Card { CoverImagePath = "img/track.png", Audio = new AudioRef { Url = "track.ogg" } },
+                Puzzle = new Puzzle
+                {
+                    PaletteSource = "img/track.png",
+                    Objects = [Finish, .. objects],
+                    Textures = { ["wall"] = new PuzzleTexture() },
+                },
+            };
+            var project = new WeaveProject { Pages = { MakePage("ouros", node) }, Archetons = [wisp] };
+            return ProjectValidator.Validate(project).Select(i => i.Message).ToList();
+        }
+
+        static PuzzleObject Wisp(string? letter) => new() { Kind = PuzzleObjectKind.Archeton, Archeton = "warp-wisp", Letter = letter, Col = 2, Row = 2 };
+        static PuzzleObject Out(string? letter) => new() { Kind = PuzzleObjectKind.WarpOut, Letter = letter, Col = 6, Row = 6 };
+
+        Assert.Contains(Problems(Wisp("A")), p => p.Contains("with no Warp Out Square of letter A, so touching it does nothing."));
+        Assert.Contains(Problems(Wisp(null)), p => p.Contains("with no Warp Out Square to send the ship to, so touching it does nothing."));
+        Assert.Contains(Problems(Wisp("A"), Out("B")), p => p.Contains("with no Warp Out Square of letter A"));
+        Assert.DoesNotContain(Problems(Wisp("A"), Out("A")), p => p.Contains("Warp"));
+        Assert.Contains(Problems(Out("A")), p => p.Contains("that no Warp Wisp sends the ship to."));
+    }
+
+    [Fact]
     public void AGemGateWithNoGems_AndMoreThanOneGemGate_AreReported()
     {
         Assert.Contains("its Gem Gate has no Gems on the board, so it can never be opened.",

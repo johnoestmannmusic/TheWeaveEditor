@@ -36,6 +36,13 @@ public enum ArchetonPartKind
     Sequence,
 
     /// <summary>
+    /// An effect: touching it warps the ship to the Warp Out Square with the same letter, without hurting it. Either way
+    /// round counts - the ship stepping into it, or it landing on the ship. It's solid to everything else, but the ship
+    /// can step into it. A Wisp is never obstructed: it goes over walls, blocks and anything else in its way.
+    /// </summary>
+    Warp,
+
+    /// <summary>
     /// Touching it hurts: the ship stepping into it, or it landing on the ship, sends the ship back to the square it
     /// came from. It's still solid to everything else, so it stops beams, Slide Bugs and Push Blocks.
     /// </summary>
@@ -235,6 +242,69 @@ public static class ArchetonDefinitions
         ],
     };
 
+    /// <summary>The fifth Archeton: a fiery orb that patrols a path, warping the ship to its Warp Out Square.</summary>
+    public static ArchetonDefinition WarpWisp() => new()
+    {
+        Id = "warp-wisp",
+        Name = "Warp Wisp",
+        Drawing = WarpWispDrawingId,
+        Parts =
+        [
+            new ArchetonPart
+            {
+                Kind = ArchetonPartKind.Sequence,
+                Moves =
+                [
+                    PuzzleDirection.Right, PuzzleDirection.Right, PuzzleDirection.Down, PuzzleDirection.Down,
+                    PuzzleDirection.Left, PuzzleDirection.Left, PuzzleDirection.Up, PuzzleDirection.Up,
+                ],
+            },
+            new ArchetonPart { Kind = ArchetonPartKind.Warp },
+        ],
+    };
+
+    public const string WarpWispDrawingId = "warp-wisp";
+
+    /// <summary>Warp Wisp's drawing: a burning orb, ragged at the edge, with licks of flame off the top.</summary>
+    public static PuzzleDrawing WarpWispDrawing() => new()
+    {
+        Id = WarpWispDrawingId,
+        Kind = PuzzleObjectKind.Archeton,
+        Name = "Warp Wisp",
+        Pixels =
+        "........................" +
+        "............O..........." +
+        "............3.OO........" +
+        "........OO..3O2OO......." +
+        "......OO23OO32232O......" +
+        "....OOO2232222232O......" +
+        "....O222233333322OO....." +
+        "...O22223333333322OO...." +
+        "....O223333HH333322O...." +
+        "....O2333HHHHHH3332O...." +
+        "....OO333HHHHHH3332O...." +
+        "....O233HHHHHHHH3322O..." +
+        "...O2233HHHHHHHH33222O.." +
+        "..O222333HHHHHH333222OO." +
+        "..O222333HHHHHH333222O.." +
+        "...O2223333HH333322OO..." +
+        "....O2223333333322O....." +
+        "....OO22233333322O......" +
+        ".....OOOOO222222OO......" +
+        ".........O22222OO......." +
+        "..........O222O........." +
+        "...........OOO.........." +
+        "............O..........." +
+        "........................",
+        Mix =
+        [
+            new PuzzleMixColour { Role = "archeton", Shade = 0, Percent = 10 },
+            new PuzzleMixColour { Role = "archeton", Shade = 1, Percent = 30 },
+            new PuzzleMixColour { Role = "archeton", Shade = 2, Percent = 40 },
+            new PuzzleMixColour { Role = "archeton", Shade = 3, Percent = 20 },
+        ],
+    };
+
     /// <summary>The ready-made Archetons, each offered to a project once - see WeaveProject.ArchetonsOffered.</summary>
     /// <summary>The third Archeton: a spider that hops round its starting square, up, down, left and right, and stings.</summary>
     public static ArchetonDefinition JumpbugA() => new()
@@ -357,7 +427,7 @@ public static class ArchetonDefinitions
     /// <summary>How many moves a Sequence can have.</summary>
     public const int MaxMoves = 32;
 
-    public static IReadOnlyList<Func<ArchetonDefinition>> ReadyMade { get; } = [Sentribeam, SlideBug, JumpbugA, ReflectMimic, SwimFish];
+    public static IReadOnlyList<Func<ArchetonDefinition>> ReadyMade { get; } = [Sentribeam, SlideBug, JumpbugA, ReflectMimic, SwimFish, WarpWisp];
 
     /// <summary>The drawing a ready-made Archeton comes with, by its id, or null.</summary>
     public static PuzzleDrawing? ReadyMadeDrawing(string? id) => id switch
@@ -366,6 +436,7 @@ public static class ArchetonDefinitions
         JumpbugDrawingId => JumpbugDrawing(),
         ReflectMimicDrawingId => ReflectMimicDrawing(),
         SwimFishDrawingId => SwimFishDrawing(),
+        WarpWispDrawingId => WarpWispDrawing(),
         _ => null,
     };
 

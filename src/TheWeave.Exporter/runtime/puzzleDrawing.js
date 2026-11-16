@@ -80,7 +80,7 @@
   };
 
   const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', GemGate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
-  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Gem: 'gem', GemGate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton' };
+  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Gem: 'gem', GemGate: 'gate', WarpOut: 'archeton', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton' };
 
   function maskOf(test){
     let mask = [];
@@ -114,6 +114,23 @@
     }
   }
 
+  // A letter small enough to sit in the corner of a square without covering what it's beside. Only the editor draws
+  // these, to say which Warp Wisp goes with which Warp Out Square - see renderBoard's pairLetters.
+  function drawCornerLetter(sprite, letter, color, halo){
+    let rows = PIXEL_LETTERS[letter]?.split(' ');
+    if (!rows) return;
+
+    let left = 1, top = 1;
+    let isLetter = (x, y) => rows[y - top]?.[x - left] === '1';
+
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        if (isLetter(x, y)) sprite[y * TILE_PX + x] = color;
+        else if (halo && (isLetter(x - 1, y) || isLetter(x + 1, y) || isLetter(x, y - 1) || isLetter(x, y + 1))) sprite[y * TILE_PX + x] = halo;
+      }
+    }
+  }
+
   // ---------- drawings ----------
 
   // What each character of a drawing paints: nothing, the outline colour, the light colour, the drawing's mix
@@ -130,7 +147,7 @@
   const TURNED_KINDS = ['JumpTile', 'Pipe', 'Archeton', 'Laser', 'Edge'];
 
   // Every kind of object drawn from a drawing.
-  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'Gem', 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', ...ANIMATED_KINDS, 'Laser'];
+  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'Gem', 'WarpOut', 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', ...ANIMATED_KINDS, 'Laser'];
 
   const standardDrawings = new Map();
 
@@ -154,6 +171,37 @@
       }
     }
     return paints;
+  }
+
+  // A Warp Out Square's standard drawing: the outline of a square, and the outline of a Wisp's firewall in the middle
+  // of it - a ragged ring with a gap in it and a lick of flame off the top.
+  function standardWarpOutPixels(){
+    return [
+      "........................",
+      "........................",
+      "........................",
+      "...HHHHHHHHHHHHHHHHHH...",
+      "...H................H...",
+      "...H........H.......H...",
+      "...H........H.......H...",
+      "...H.....HHHHH......H...",
+      "...H....HH...HH.....H...",
+      "...H...HH.....HH....H...",
+      "...H...H.......H....H...",
+      "...H...H.......H....H...",
+      "...H...H.......H....H...",
+      "...H...HH.....HH....H...",
+      "...H....HH...HH.....H...",
+      "...H.....H...H......H...",
+      "...H................H...",
+      "...H................H...",
+      "...H................H...",
+      "...H................H...",
+      "...HHHHHHHHHHHHHHHHHH...",
+      "........................",
+      "........................",
+      "........................",
+    ].join('');
   }
 
   // How wide a Gem is drawn as it turns on the spot: front on, edge on, front on again, twice around. It never quite
@@ -229,6 +277,7 @@
       else if (kind === 'PipeSwitch') drawing = { id: kind, kind, name: 'Standard', pixels: standardPipeSwitchPixels(), mix: standardMix('pipe') };
       else if (kind === 'Edge') drawing = { id: kind, kind, name: 'Standard', pixels: standardEdgePixels(), mix: standardMix('edge') };
       else if (kind === 'Gem') drawing = { id: kind, kind, name: 'Standard', pixels: standardGemPixels(), mix: standardMix('gem') };
+      else if (kind === 'WarpOut') drawing = { id: kind, kind, name: 'Standard', pixels: standardWarpOutPixels(), mix: standardMix('archeton') };
       else {
         let body = SHAPES[SPRITE_SHAPES[kind]];
         drawing = { id: kind, kind, name: 'Standard', pixels: pixelsOf(body), mix: standardMix(SPRITE_ROLES[kind]) };
@@ -894,6 +943,10 @@
   // - gemPhase (0 to 1) how far round a Gem is in its turn on the spot, and gemShots ([{ from, to, along }]) the Gems
   //   on their way to a Gem Gate, along being how far each has come.
   // - gateShake ({ col, row, dx }) rattles the Gem Gate on that square dx pixels to the side.
+  // - warpFlash (0 to 1) washes the whole board out white, as a Warp Wisp's does.
+  // - wispDrift (0 to 1) is how far round its slow up-and-down a Warp Wisp has got.
+  // - pairLetters says which Warp Wisp goes with which Warp Out Square, as a letter in the corner of each. The editor
+  //   wants that; gameplay doesn't.
   // - pulses ([{ col, row, radius }]) draws each lit Lantern's pulse: a ring radius pixels out from its square's middle.
   // - pushHints ([{ col, row, direction, bob }], or one as pushHint) show that the Push Block on each square can be
   //   pushed: an arrow just
@@ -920,6 +973,10 @@
       : object.glide === 'hop' ? options.hopAlong : object.glide === 'swim' ? options.swimAlong
       : options.along) ?? 1;
     let drawnRow = (object) => object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * alongFor(object);
+    // An Archeton that warps drifts rather than hops: it floats up and down on the spot however still it is, and slides
+    // between squares instead of rising on the way - see board.js's WISP_DRIFT_CYCLE_MS.
+    let floatingOn = (object) => object.kind === 'Archeton'
+      && (look.archetons?.find(definition => definition.id === object.archeton)?.parts ?? []).some(part => part.kind === 'Warp');
     let floorsFirst = objects
       .filter(object => object.kind !== 'Start')
       // What's standing on a square is drawn over what's built into it - an Archeton or a Push Block over the Switch,
@@ -936,8 +993,12 @@
       let along = alongFor(object);
       let col = object.fromCol === undefined ? object.col : object.fromCol + (object.col - object.fromCol) * along;
       let row = object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * along;
-      // A hop rises a little on its way, as a jump does.
-      if (object.glide === 'hop' && along < 1 && (object.fromCol !== object.col || object.fromRow !== object.row)) row -= HOP_RISE * Math.sin(Math.PI * along);
+      // A hop rises a little on its way, as a jump does - but a Wisp never rises, it drifts.
+      let floating = floatingOn(object);
+      if (object.glide === 'hop' && !floating && along < 1 && (object.fromCol !== object.col || object.fromRow !== object.row)) row -= HOP_RISE * Math.sin(Math.PI * along);
+      // A Wisp drifts slowly up and down about its square, moving or not, so it reads as something floating rather than
+      // something standing that occasionally arrives.
+      if (floating) row -= WISP_DRIFT * Math.sin(2 * Math.PI * (options.wispDrift ?? 0));
       // A Push Block shoved off a ledge leaps down it as the ship does off a Jump Tile: it keeps to the straight line it
       // was going along, and grows towards the middle of it - see puzzleRules.js's pushFrom, and trackFocus.js's leap.
       let grow = object.glide === 'push' && object.falls && along < 1 ? 1 + LEDGE_JUMP_RISE * Math.sin(Math.PI * along) : 1;
@@ -949,6 +1010,10 @@
       let sunk = Math.round((object.sink ?? 0) * TILE_PX);
       // An open Gate is half see-through, so it reads as something the ship can pass through.
       let opacity = (object.fade ?? 1) * ((object.kind === 'Gate' || object.kind === 'GemGate') && object.open ? OPEN_GATE_OPACITY : 1);
+      // A Wisp fades in and out as it drifts, in step with its rise and fall: solid at the top of it, thinner at the
+      // bottom, between 90% and 60% of solid.
+      if (floating) opacity *= (WISP_FADE_TOP + WISP_FADE_BOTTOM) / 2
+        + (WISP_FADE_TOP - WISP_FADE_BOTTOM) / 2 * Math.sin(2 * Math.PI * (options.wispDrift ?? 0));
       if (opacity <= 0) continue;
       blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX) + shake, top + sunk, object.sink ? top + TILE_PX : Infinity, opacity, grow);
     }
@@ -968,6 +1033,40 @@
     for (const pulse of options.pulses ?? []) drawPulse(image, pulse, look, options.originY ?? 0);
     for (const cell of options.reaches ?? []) drawReach(image, cell, look, options.originY ?? 0);
     for (const beam of options.beams ?? []) drawBeam(image, beam, look, options.originY ?? 0);
+
+    // Which Warp Wisp goes with which Warp Out Square, as a small letter in the corner of each: the editor asks for
+    // this and gameplay doesn't, so a player never sees it.
+    if (options.pairLetters) {
+      let light = hexToColor(look.palette.light);
+      let outline = hexToColor(look.palette.outline);
+      for (const object of objects) {
+        if (!object.letter) continue;
+        let floating = floatingOn(object);
+        if (object.kind !== 'WarpOut' && !floating) continue;
+        let along = alongFor(object);
+        let col = object.fromCol === undefined ? object.col : object.fromCol + (object.col - object.fromCol) * along;
+        let row = object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * along;
+        if (floating) row -= WISP_DRIFT * Math.sin(2 * Math.PI * (options.wispDrift ?? 0));
+        let sprite = new Array(TILE_PX * TILE_PX);
+        drawCornerLetter(sprite, object.letter, light, outline);
+        blit(image, sprite, Math.round(col * TILE_PX), Math.round(row * TILE_PX) + (options.originY ?? 0));
+      }
+    }
+
+    // A Warp Wisp's white flash, over the lot: the whole board washed out for a moment, so that the ship appearing
+    // somewhere else reads as something that happened rather than as a glitch.
+    if (options.warpFlash > 0) {
+      let { data } = image;
+      let opacity = Math.min(1, options.warpFlash);
+      for (let i = 0; i < data.length; i += 4) {
+        let under = data[i + 3] / 255 * (1 - opacity);
+        let total = opacity + under;
+        data[i] = (255 * opacity + data[i] * under) / total;
+        data[i + 1] = (255 * opacity + data[i + 1] * under) / total;
+        data[i + 2] = (255 * opacity + data[i + 2] * under) / total;
+        data[i + 3] = total * 255;
+      }
+    }
   }
 
   // A square an Archeton's Beam reaches, outlined just inside its edge in the light colour, with the outline colour
@@ -1089,6 +1188,11 @@
 
   // How high a hopping Archeton rises at the middle of its hop, in squares - see renderBoard.
   const HOP_RISE = 0.35;
+  // How far a Warp Wisp drifts either side of its square, in squares: a few pixels, slowly.
+  const WISP_DRIFT = 0.12;
+  // How see-through a Warp Wisp drifts between, fading in and out as it rises and falls.
+  const WISP_FADE_TOP = 0.9;
+  const WISP_FADE_BOTTOM = 0.6;
 
   // How much bigger a Push Block looks at the top of its drop off a ledge - a smaller leap than the ship's 0.4, so that
   // a block dropping off one reads as the block falling rather than being thrown. See renderBoard, and board.js's

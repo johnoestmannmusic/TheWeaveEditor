@@ -62,7 +62,14 @@
     let here = objects.filter(other => isAt(other, cell) && other.kind !== 'Start');
     let chosen = direction ? here.find(other => other.kind === 'Edge' && other.direction === direction) : null;
     let top = chosen ?? here.find(other => !isFloor(other)) ?? here[0];
-    return objects.filter(other => other !== top);
+    // A Warp Wisp and its Warp Out Square only make sense as a pair, so erasing either takes the other with it. An
+    // Archeton has a letter only when it's one half of that pair, so the letter is what says so.
+    let pair = null;
+    if (top?.letter) {
+      if (top.kind === 'WarpOut') pair = objects.find(other => other.kind === 'Archeton' && other.letter === top.letter) ?? null;
+      else if (top.kind === 'Archeton') pair = objects.find(other => other.kind === 'WarpOut' && other.letter === top.letter) ?? null;
+    }
+    return objects.filter(other => other !== top && other !== pair);
   }
 
   // ---------- connected boards ----------
@@ -213,6 +220,7 @@
 
     function isSolid(object){
       return object.kind === 'Wall' || object.kind === 'PushBlock' || object.kind === 'Archeton'
+        || object.kind === 'WarpOut'
         || ((object.kind === 'Gate' || object.kind === 'GemGate') && !object.open);
     }
 
@@ -394,8 +402,12 @@
       if (blockedByBeam(to)) return false;
       let object = objectAt(to);
       if (object?.kind === 'PushBlock') return !!pushedTo(object, direction);
+      // A Warp Out Square is the ship's alone, so it's solid to everything else - see isSolid.
+      if (object?.kind === 'WarpOut') return true;
       // An Archeton with a Sting is solid to everything but the ship, which can step into it - and is hurt.
       if (object?.kind === 'Archeton' && hasPart(object, 'Sting')) return true;
+      // So is a Warp Wisp, which sends the ship to its Warp Out Square instead.
+      if (object?.kind === 'Archeton' && hasPart(object, 'Warp')) return true;
       return !(object && isSolid(object));
     }
 
@@ -587,6 +599,9 @@
     // or Reset Switch set off, a Key taken, the Finish finishing, a Teleporter or a Jump Tile moving the ship. An event
     // for the caller, or null. See shipArrives and reflectionArrivals.
     function arriveOn(object){
+      // A Warp Wisp isn't stood on: it sends the ship to its Warp Out Square, without hurting it.
+      if (object.kind === 'Archeton' && hasPart(object, 'Warp')) return warpFrom(object);
+
       switch (object.kind) {
         case 'Switch':
         case 'Lantern':
@@ -1112,6 +1127,21 @@
       return { ...set, swam };
     }
 
+    // Where a Warp Wisp sends the ship: the Warp Out Square sharing its letter, or null if it hasn't got one - or if
+    // the ship is already there, which a Wisp coming back round to its own square would otherwise do for ever. Nothing
+    // else can be on a Warp Out Square, so there's nothing to find in the way.
+    function warpFrom(wisp){
+      // A Wisp with no letter of its own has no square to go to: without this it would match any Warp Out Square that
+      // hasn't got one either, and every such Wisp on the board would pile onto the first of them.
+      if (!wisp.letter) return null;
+      let out = objects.find(other => other.kind === 'WarpOut' && other.letter === wisp.letter) ?? null;
+      if (!out) return null;
+      let destination = { col: out.col, row: out.row };
+      if (isAt(shipCell, destination)) return null;
+      shipCell = destination;
+      return { warpedTo: destination };
+    }
+
     // Where a Teleporter's pair is, or null if it hasn't got one.
     function teleporterPair(teleporter){
       let partners = objects.filter(other => other.kind === 'Teleporter' && other.letter === teleporter.letter);
@@ -1139,9 +1169,12 @@
         let target = { col: bug.homeCol, row: bug.homeRow };
         for (let i = 0; i <= beat; i++) target = nextCell(target, moves[i]);
         if (isAt(bug, target) || !onBoard(target)) continue;
-        let there = objects.find(other => other !== bug && isAt(other, target) && isSolid(other));
-        if (there) continue;
-        if (isAt(shipCell, target) && !(hasPart(bug, 'Sting') && canBeSentBack(target, wayFrom(bug, target)))) continue;
+        // A Warp Wisp is never obstructed: it goes over walls, blocks and anything else on its way.
+        let wisp = hasPart(bug, 'Warp');
+        if (!wisp && objects.find(other => other !== bug && isAt(other, target) && isSolid(other))) continue;
+        // Reaching the ship warps it, which a Wisp does rather than being stopped by it - see warpFrom.
+        let warp = wisp && isAt(shipCell, target) ? warpFrom(bug) : null;
+        if (!warp && isAt(shipCell, target) && !(hasPart(bug, 'Sting') && canBeSentBack(target, wayFrom(bug, target)))) continue;
 
         leaving(bug);
         bug.fromCol = bug.col;
@@ -1152,6 +1185,7 @@
         hopped.push(bug);
         let under = objects.find(other => other !== bug && isAt(other, target));
         if (under) Object.assign(set, trigger(under) ?? {});
+        if (warp) Object.assign(set, warp);
         if (set.reset) break;
       }
       if (hopped.length === 0) return null;

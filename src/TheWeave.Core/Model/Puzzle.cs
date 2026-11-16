@@ -82,6 +82,12 @@ public enum PuzzleObjectKind
     /// stays a wall. Looks like a Gate, with a Gem where the letter goes. A puzzle has at most one.
     /// </summary>
     GemGate,
+
+    /// <summary>
+    /// Where a Warp Wisp sends the ship: the square drawn with a Wisp's firewall in its middle, sharing the Wisp's
+    /// letter. The ship can stand on it and walk off it; nothing else can be moved onto it.
+    /// </summary>
+    WarpOut,
 }
 
 /// <summary>A Push Block's symbol, drawn on it as a hollow outline - see runtime/puzzle.js's SYMBOLS.</summary>
@@ -244,6 +250,7 @@ public static class PuzzleDrawings
         PuzzleObjectKind.Stream, PuzzleObjectKind.RotatorTile, PuzzleObjectKind.PushBlock, PuzzleObjectKind.JumpTile,
         PuzzleObjectKind.ResetSwitch, PuzzleObjectKind.Pipe, PuzzleObjectKind.PipeSwitch, PuzzleObjectKind.Edge,
         PuzzleObjectKind.Archeton, PuzzleObjectKind.Laser, PuzzleObjectKind.Gem, PuzzleObjectKind.GemGate,
+        PuzzleObjectKind.WarpOut,
     };
 
     /// <summary>The kinds animated as they flow: a Still layer, and a Flow layer that moves along it.</summary>
