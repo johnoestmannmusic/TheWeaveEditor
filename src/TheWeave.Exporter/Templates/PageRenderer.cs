@@ -229,8 +229,22 @@ public sealed class PageRenderer
         if (card.Size == CardSize.Modal)
             sb.AppendLine($"{pad}  </div>");
 
-        foreach (var panel in card.ExtraPanels)
-            RenderStaticPanel(sb, panel, indent, inFlow: card.Size == CardSize.Modal);
+        // A modal's Updates panel is generated from the project's update history - the same entries updatelog.html is
+        // built from (see UpdateHistory and UpdateLogPageRenderer) - so the two can't drift apart, and the newest
+        // entries are in the modal without being typed twice. A project with no history at all keeps whatever the card
+        // has, so nothing changes for one that hasn't used it.
+        var updates = card.Size == CardSize.Modal ? GeneratedUpdatesPanel(card) : null;
+
+        if (updates is not null)
+        {
+            if (updates.Lines.Count > 0)
+                RenderStaticPanel(sb, updates, indent, inFlow: true);
+        }
+        else
+        {
+            foreach (var panel in card.ExtraPanels)
+                RenderStaticPanel(sb, panel, indent, inFlow: card.Size == CardSize.Modal);
+        }
 
         foreach (var child in node.Children)
             RenderNode(sb, sourcePage, child, isNested: true, indent);
@@ -461,6 +475,26 @@ public sealed class PageRenderer
     // inFlow puts the panel in the card's own layout instead of at its authored spot: a modal sizes to its content
     // (see BuildCardStyle), and an absolutely positioned panel would add nothing to that - see main.css's
     // .floatInfo[data-modal] rules, which give it a column of its own.
+    /// <summary>
+    /// The modal's Updates panel as the export shows it: the card's own panel (its heading and offset, or a default
+    /// "Updates:" one) with its lines replaced by the newest entries of the project's history plus the link to the full
+    /// page. Null when the project has no history, which leaves the card's own panel exactly as authored.
+    /// </summary>
+    private StaticTextBlock? GeneratedUpdatesPanel(Card card)
+    {
+        if (!UpdateHistory.HasEntries(_project.UpdateHistory)) return null;
+
+        var count = _project.UpdateHistoryModalCount ?? UpdateHistory.DefaultModalEntryCount;
+        var authored = card.ExtraPanels.FirstOrDefault();
+
+        return new StaticTextBlock
+        {
+            HeadingText = string.IsNullOrWhiteSpace(authored?.HeadingText) ? "Updates:" : authored!.HeadingText,
+            Offset = authored?.Offset ?? new Offset { Top = 0, Left = 260 },
+            Lines = UpdateHistory.PanelLines(_project.UpdateHistory, count),
+        };
+    }
+
     private void RenderStaticPanel(StringBuilder sb, StaticTextBlock panel, int indent, bool inFlow = false)
     {
         var pad = new string(' ', indent);

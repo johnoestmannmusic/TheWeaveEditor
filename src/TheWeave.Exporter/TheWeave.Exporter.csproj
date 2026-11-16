@@ -17,7 +17,6 @@
          UpdateLogPageRenderer) - kept at the root, next to README.md/LICENSE, rather than copied
          into this project's own directory, so they stay the single editable source of truth. -->
     <EmbeddedResource Include="..\..\aadd.md" LogicalName="TheWeave.Exporter.aadd.md" />
-    <EmbeddedResource Include="..\..\updatelog.md" LogicalName="TheWeave.Exporter.updatelog.md" />
   </ItemGroup>
 
   <PropertyGroup>

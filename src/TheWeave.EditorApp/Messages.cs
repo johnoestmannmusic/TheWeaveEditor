@@ -18,6 +18,7 @@ public sealed class EditorMessage
     public string? EffectId { get; set; }
     public EffectEditRequest? Effect { get; set; }
     public TutorialModalEditRequest? TutorialModal { get; set; }
+    public UpdateHistoryEditRequest? UpdateHistory { get; set; }
 
     /// <summary>Used only by "add-node": where on the canvas the new node was placed.</summary>
     public double? X { get; set; }
@@ -164,6 +165,20 @@ public sealed class EffectEditRequest
 /// isn't a real world location (see main.js's modalQueue), so editing it through the generic
 /// Node form read like a location it isn't.
 /// </summary>
+/// Everything the Inspector's "Update History" tab edits: the site's changelog, kept on the project (see
+/// WeaveProject.UpdateHistory). The exported updatelog.html is generated from it, and so is the Tutorial Modal's
+/// Updates panel - its newest entries - so there's one list to keep up to date rather than a page and a panel that
+/// have to be made to agree by hand.
+/// </summary>
+public sealed class UpdateHistoryEditRequest
+{
+    /// <summary>The entries, one per line - "[DATE] headline", with indented lines as that entry's sub-items.</summary>
+    public List<string> Lines { get; set; } = new();
+
+    /// <summary>How many of them the Tutorial Modal's Updates panel shows.</summary>
+    public int ModalCount { get; set; } = UpdateHistory.DefaultModalEntryCount;
+}
+
 public sealed class TutorialModalEditRequest
 {
     public string HeadingText { get; set; } = "";
