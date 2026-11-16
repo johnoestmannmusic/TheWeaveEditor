@@ -1640,6 +1640,18 @@ test('a Swim Fish is jumped by a Jump Tile and sent on by a Teleporter, as the s
   assert.deepEqual(swimmersIn(sent), ['8,8'], 'out of its pair');
 });
 
+test('a Swim Fish that has finished its swim is drawn where it is, not still gliding on the Stream tick', () => {
+  let { look } = artLook();
+  // Settled on (4, 2), having swum there from (5, 2): its own glide is over, so it belongs on its own square whatever
+  // the Stream tick is doing. Falling through to the Stream's along draws it part way between the two, for ever.
+  let fish = obj('Archeton', 4, 2, { archeton: 'swim-fish', direction: 'Left', fromCol: 5, fromRow: 2, glide: 'swim' });
+  let image = blank();
+  renderBoard(image, [fish], look, { swimAlong: 1, along: 0.5 });
+
+  assert.ok(rowsDrawn(image, 4).length > 0, 'drawn on its own square');
+  assert.equal(rowsDrawn(image, 5).length, 0, 'and not still part way back towards the one it came from');
+});
+
 // ---------- Slide Bugs ----------
 
 const SLIDE_BUG = { id: 'slide-bug', name: 'Slide Bug', parts: [{ kind: 'Slide' }] };

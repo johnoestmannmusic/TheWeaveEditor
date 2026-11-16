@@ -829,7 +829,8 @@
 
     let alongFor = (object) => (object.glide === 'rotator' ? options.rotatorAlong : object.glide === 'push' ? options.pushAlong
       : object.glide === 'return' ? options.returnAlong : object.glide === 'slide' ? options.slideAlong
-      : object.glide === 'hop' ? options.hopAlong : options.along) ?? 1;
+      : object.glide === 'hop' ? options.hopAlong : object.glide === 'swim' ? options.swimAlong
+      : options.along) ?? 1;
     let drawnRow = (object) => object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * alongFor(object);
     let floorsFirst = objects
       .filter(object => object.kind !== 'Start')
