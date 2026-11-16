@@ -1652,6 +1652,24 @@ test('a Swim Fish that has finished its swim is drawn where it is, not still gli
   assert.equal(rowsDrawn(image, 5).length, 0, 'and not still part way back towards the one it came from');
 });
 
+test('what stands on a square is drawn over the Switch built into it, not under it', () => {
+  let { look } = artLook();
+  // A Swim Fish on a Switch is what surfaced this, and a Push Block on one is the same rule.
+  for (const standing of [obj('Archeton', 4, 4, { archeton: 'swim-fish', direction: 'Left' }), obj('PushBlock', 4, 4)]) {
+    let alone = blank();
+    renderBoard(alone, [standing], look, {});
+    // The Switch comes after it in the list, which is the order that used to win.
+    let together = blank();
+    renderBoard(together, [standing, obj('Switch', 4, 4, { letter: 'A' })], look, {});
+
+    // The body and the eye: what's standing on the square belongs over what's built into it.
+    for (const [x, y] of [[12, 12], [16, 10], [13, 13]]) {
+      assert.deepEqual(pixelAt(together, 4 * TILE_PX + x, 4 * TILE_PX + y), pixelAt(alone, 4 * TILE_PX + x, 4 * TILE_PX + y),
+        `the ${standing.kind} shows at ${x},${y}`);
+    }
+  }
+});
+
 // ---------- Slide Bugs ----------
 
 const SLIDE_BUG = { id: 'slide-bug', name: 'Slide Bug', parts: [{ kind: 'Slide' }] };
