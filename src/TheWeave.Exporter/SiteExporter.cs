@@ -64,12 +64,18 @@ public sealed class SiteExporter
         }
 
         // Written unconditionally, same as the shared runtime below - every export gets the
-        // AI-assisted-development disclosure page and the changelog regardless of project content.
+        // AI-assisted-development disclosure page regardless of project content.
         File.WriteAllText(Path.Combine(outputDir, DisclosurePageRenderer.OutputFileName), DisclosurePageRenderer.Render());
         written.Add(DisclosurePageRenderer.OutputFileName);
 
-        File.WriteAllText(Path.Combine(outputDir, UpdateLogPageRenderer.OutputFileName), UpdateLogPageRenderer.Render());
-        written.Add(UpdateLogPageRenderer.OutputFileName);
+        // The changelog is the project's own update history now (the Editor's Update History tab), so a project with
+        // none leaves the page out entirely rather than exporting an empty one - and nothing links to it, since the
+        // Tutorial Modal's Updates panel is generated from the same history and only appears with it.
+        if (UpdateHistory.HasEntries(project.UpdateHistory))
+        {
+            File.WriteAllText(Path.Combine(outputDir, UpdateLogPageRenderer.OutputFileName), UpdateLogPageRenderer.Render(project.UpdateHistory));
+            written.Add(UpdateLogPageRenderer.OutputFileName);
+        }
 
         written.UnionWith(AssetCopier.CopyRuntime(project, outputDir));
 

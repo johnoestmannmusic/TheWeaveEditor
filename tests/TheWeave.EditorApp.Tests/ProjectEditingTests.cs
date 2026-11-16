@@ -1182,6 +1182,50 @@ public class ProjectEditingTests
     }
 
     [Fact]
+    public void ApplyUpdateHistoryEdit_KeepsTheEntriesAndTheModalCount()
+    {
+        var project = new WeaveProject();
+
+        ProjectEditing.ApplyUpdateHistoryEdit(project, new UpdateHistoryEditRequest
+        {
+            Lines = ["[17NOV26] First", "    a sub-item", "", "  ", "[01NOV26] Second"],
+            ModalCount = 4,
+        });
+
+        // Blank and whitespace-only lines separate entries rather than being any, so they aren't kept.
+        Assert.Equal(["[17NOV26] First", "    a sub-item", "[01NOV26] Second"], project.UpdateHistory);
+        Assert.Equal(4, project.UpdateHistoryModalCount);
+    }
+
+    [Fact]
+    public void ApplyUpdateHistoryEdit_WithNothingInIt_StoresNoHistoryAtAll()
+    {
+        // Null, not an empty list, so a project that has never used the tab is saved exactly as it was - and an export
+        // then leaves updatelog.html out (see SiteExporter).
+        var project = new WeaveProject { UpdateHistory = ["[17NOV26] First"] };
+
+        ProjectEditing.ApplyUpdateHistoryEdit(project, new UpdateHistoryEditRequest { Lines = ["", "   "], ModalCount = 0 });
+
+        Assert.Null(project.UpdateHistory);
+        Assert.Equal(0, project.UpdateHistoryModalCount);
+    }
+
+    [Fact]
+    public void ApplyUpdateHistoryEdit_KeepsTheSubItemsIndent()
+    {
+        var project = new WeaveProject();
+
+        ProjectEditing.ApplyUpdateHistoryEdit(project, new UpdateHistoryEditRequest
+        {
+            Lines = ["[07JUL26] Ouros is now open:", "    A mysterious radio signal"],
+        });
+
+        // The indent is what makes it a sub-item of the entry above rather than an entry of its own.
+        Assert.True(project.UpdateHistory![1].StartsWith("    ", StringComparison.Ordinal), project.UpdateHistory[1]);
+        Assert.Equal("    A mysterious radio signal", project.UpdateHistory[1]);
+    }
+
+    [Fact]
     public void ApplyTutorialModalEdit_NoHomePageId_Throws()
     {
         var project = new WeaveProject();

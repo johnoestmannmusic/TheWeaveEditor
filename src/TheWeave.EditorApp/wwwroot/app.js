@@ -14,6 +14,7 @@ let contentRoot = null; // absolute folder the project's img/fnt paths are relat
 let selectedPageId = null;
 let selectedNodeId = null; // null = the page itself is selected, not a node within it
 let showingTutorialModal = false; // true = the Tutorial Modal tab is showing instead of Page/Node
+let showingUpdateHistory = false; // true = the Update History tab is showing instead of Page/Node
 const expandedPageIds = new Set();
 const expandedNodeIds = new Set();
 const canvasViewByPage = new Map(); // pageId -> { scale, offsetX, offsetY, worldW, worldH }
@@ -222,6 +223,7 @@ function selectPage(pageId) {
   selectedPageId = pageId;
   selectedNodeId = null;
   showingTutorialModal = false;
+  showingUpdateHistory = false;
   effectFormState = null;
   expandedPageIds.add(pageId);
   renderAll();
@@ -231,6 +233,7 @@ function selectNode(pageId, nodeId) {
   selectedPageId = pageId;
   selectedNodeId = nodeId;
   showingTutorialModal = false;
+  showingUpdateHistory = false;
   effectFormState = null;
   expandedPageIds.add(pageId);
   renderAll();
@@ -240,6 +243,19 @@ function selectTutorialModal() {
   selectedPageId = null;
   selectedNodeId = null;
   showingTutorialModal = true;
+  showingUpdateHistory = false;
+  effectFormState = null;
+  renderAll();
+}
+
+// The site's changelog, which the export writes as updatelog.html - and which the Tutorial Modal's
+// Updates panel shows the newest of (see renderTutorialModalInspector's count field). Not a page or a
+// node, so it gets its own row and inspector like the Tutorial Modal does.
+function selectUpdateHistory() {
+  selectedPageId = null;
+  selectedNodeId = null;
+  showingTutorialModal = false;
+  showingUpdateHistory = true;
   effectFormState = null;
   renderAll();
 }
@@ -319,6 +335,10 @@ function renderTree() {
   modalRowEl.hidden = !project;
   modalRowEl.classList.toggle('selected', showingTutorialModal);
 
+  const historyRowEl = document.getElementById('update-history-row');
+  historyRowEl.hidden = !project;
+  historyRowEl.classList.toggle('selected', showingUpdateHistory);
+
   if (!project) {
     emptyEl.hidden = false;
     treeEl.hidden = true;
@@ -335,6 +355,7 @@ function renderTree() {
 }
 
 document.getElementById('tutorial-modal-row').addEventListener('click', selectTutorialModal);
+document.getElementById('update-history-row').addEventListener('click', selectUpdateHistory);
 
 function renderPageRow(page) {
   const li = document.createElement('li');
@@ -472,13 +493,18 @@ function renderInspector() {
   const pageEl = document.getElementById('inspector-page');
   const nodeEl = document.getElementById('inspector-node');
   const modalEl = document.getElementById('inspector-tutorial-modal');
+  const historyEl = document.getElementById('inspector-update-history');
 
   emptyEl.hidden = true;
   pageEl.hidden = true;
   nodeEl.hidden = true;
   modalEl.hidden = true;
+  historyEl.hidden = true;
 
-  if (showingTutorialModal) {
+  if (showingUpdateHistory) {
+    historyEl.hidden = false;
+    renderUpdateHistoryInspector(historyEl);
+  } else if (showingTutorialModal) {
     modalEl.hidden = false;
     renderTutorialModalInspector(modalEl);
   } else if (selectedNodeId) {
@@ -630,14 +656,17 @@ function renderTutorialModalInspector(container) {
     </fieldset>
 
     <fieldset>
-      <legend>Updates</legend>
+      <legend>Updates panel</legend>
+      <p class="field-hint">The panel's entries come from the <strong>Update History</strong> tab - its newest ones -
+      so there's one list to keep up to date. ${historyNote()}</p>
       <div class="field">
         <label>Heading</label>
         <input type="text" id="f-tm-updates-heading" value="${escapeAttr(updates.headingText ?? 'Updates:')}">
       </div>
       <div class="field">
-        <label>Lines (one per line)</label>
-        <textarea id="f-tm-updates-lines">${escapeHtml((updates.lines ?? []).join('\n'))}</textarea>
+        <label>Entries shown</label>
+        <input type="number" id="f-tm-updates-count" min="0" step="1"
+               value="${project.updateHistoryModalCount ?? 6}">
       </div>
     </fieldset>
   `;
@@ -653,12 +682,69 @@ function renderTutorialModalInspector(container) {
       audioUrl: document.getElementById('f-tm-audio').value,
       poetryLines: document.getElementById('f-tm-poetry').value.split('\n').filter((l) => l.length > 0),
       updatesHeadingText: document.getElementById('f-tm-updates-heading').value,
-      updatesLines: document.getElementById('f-tm-updates-lines').value.split('\n').filter((l) => l.length > 0),
     },
   });
 
-  for (const id of ['f-tm-heading', 'f-tm-cover', 'f-tm-audio', 'f-tm-poetry', 'f-tm-updates-heading', 'f-tm-updates-lines'])
+  for (const id of ['f-tm-heading', 'f-tm-cover', 'f-tm-audio', 'f-tm-poetry', 'f-tm-updates-heading'])
     document.getElementById(id).addEventListener('blur', saveTutorialModal);
+
+  // The count belongs to the history, not to the card: it's how many of those entries the panel shows. The lines
+  // themselves aren't on this tab, so they're sent back exactly as the project has them.
+  document.getElementById('f-tm-updates-count').addEventListener('blur', () => {
+    const count = Number.parseInt(document.getElementById('f-tm-updates-count').value, 10) || 0;
+    sendUpdateHistory(project?.updateHistory ?? [], count);
+  });
+}
+
+// One line under the Tutorial Modal's Updates fieldset saying what the panel will actually show.
+function historyNote() {
+  const entries = historyEntryCount();
+  if (entries === 0)
+    return 'There are no entries yet, so the panel (and the full page) are left out of the export.';
+  return `The history has ${entries} ${entries === 1 ? 'entry' : 'entries'}.`;
+}
+
+// How many entries the history holds: every line at the margin is one, indented lines being their sub-items.
+// Only for this note and the tab's own summary - the reading that matters is UpdateHistory.Parse's, on export.
+function historyEntryCount() {
+  return (project?.updateHistory ?? []).filter((line) => line.trim().length > 0 && !/^\s/.test(line)).length;
+}
+
+function sendUpdateHistory(lines, modalCount) {
+  send('update-update-history', {
+    updateHistory: {
+      lines: lines.map((l) => l.trimEnd()).filter((l) => l.length > 0),
+      modalCount,
+    },
+  });
+}
+
+// The Update History tab: the site's changelog, one entry per line. Writes the exported updatelog.html and feeds
+// the Tutorial Modal's Updates panel - see UpdateHistory on the C# side for the reading of it.
+function renderUpdateHistoryInspector(container) {
+  const lines = project?.updateHistory ?? [];
+  const entries = historyEntryCount();
+
+  container.innerHTML = `
+    <h2>Update History</h2>
+    <p class="field-hint">One entry per line, newest first, starting with a date in brackets -
+    <code>[26AUG26] Locations now Auto-Play</code>. Indent a line under an entry (four spaces) to make it a sub-item of
+    that entry rather than a new one. Blank lines are ignored.</p>
+    <p class="field-hint">This writes the site's <code>updatelog.html</code>, and the newest
+    ${project?.updateHistoryModalCount ?? 6} of its entries are shown in the Tutorial Modal's Updates panel.
+    ${entries === 0 ? 'With no entries, neither is exported.' : ''}</p>
+
+    <div class="field">
+      <label>Entries</label>
+      <textarea id="f-history-lines" rows="22" spellcheck="false">${escapeHtml(lines.join('\n'))}</textarea>
+    </div>
+  `;
+
+  document.getElementById('f-history-lines').addEventListener('blur', () => {
+    // Split but not trimmed: a leading indent is what makes a line a sub-item of the entry above it.
+    sendUpdateHistory(document.getElementById('f-history-lines').value.split('\n'),
+      project?.updateHistoryModalCount ?? 6);
+  });
 }
 
 function effectSummary(fx) {

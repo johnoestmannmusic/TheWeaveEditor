@@ -714,6 +714,20 @@ internal static class ProjectEditing
         return node;
     }
 
+    /// <summary>
+    /// Applies the Update History tab's form to the project: the entries the exported updatelog.html is built from,
+    /// and how many of them the Tutorial Modal's Updates panel shows (see UpdateHistory). Lines that are only
+    /// whitespace are dropped - they separate entries rather than being any - and a history with nothing left in it is
+    /// stored as null, so a project that has never used the tab is saved exactly as it was.
+    /// </summary>
+    public static void ApplyUpdateHistoryEdit(WeaveProject project, UpdateHistoryEditRequest edit)
+    {
+        var lines = (edit.Lines ?? new()).Select(line => line.TrimEnd()).Where(line => line.Length > 0).ToList();
+
+        project.UpdateHistory = lines.Count > 0 ? lines : null;
+        project.UpdateHistoryModalCount = Math.Max(0, edit.ModalCount);
+    }
+
     public static PageEffect AddEffect(Page page, EffectEditRequest edit)
     {
         var effect = BuildEffect(GenerateEffectId(page, edit.Kind), edit);

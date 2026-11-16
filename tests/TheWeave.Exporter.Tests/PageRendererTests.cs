@@ -417,6 +417,66 @@ public class PageRendererTests
     }
 
     [Fact]
+    public void RenderPage_ModalCard_TakesItsUpdatesPanelFromTheProjectsHistory()
+    {
+        var project = new WeaveProject
+        {
+            UpdateHistory = ["[17NOV26] First", "    a sub-item", "[01NOV26] Second", "[26AUG26] Third"],
+            UpdateHistoryModalCount = 2,
+        };
+        var page = MakePage("index", "index.html");
+        page.Nodes.Add(new Node
+        {
+            Id = "tutorial",
+            Persistent = true,
+            Card = new Card
+            {
+                Size = CardSize.Modal,
+                HeadingText = "Tutorial:",
+                // Whatever is hand-typed here is ignored while the project has a history - the panel is generated, so
+                // there's one list to keep up to date rather than two that have to agree.
+                ExtraPanels = { new StaticTextBlock { HeadingText = "Updates:", Lines = { "[01JAN20] Hand-typed" } } },
+            },
+        });
+        project.Pages.Add(page);
+
+        var html = new PageRenderer(project).RenderPage(page);
+
+        Assert.Contains("<h3>Updates:</h3>", html);
+        Assert.Contains("[17NOV26] First", html);
+        Assert.Contains("a sub-item", html);
+        Assert.Contains("[01NOV26] Second", html);
+        Assert.DoesNotContain("[26AUG26] Third", html);
+        Assert.DoesNotContain("Hand-typed", html);
+        Assert.Contains(UpdateHistory.FullLogLinkLine, html);
+    }
+
+    [Fact]
+    public void RenderPage_ModalCard_WithNoHistory_KeepsItsOwnUpdatesPanel()
+    {
+        // A project that has never used the Update History tab exports exactly as it did before it existed.
+        var project = new WeaveProject();
+        var page = MakePage("index", "index.html");
+        page.Nodes.Add(new Node
+        {
+            Id = "tutorial",
+            Persistent = true,
+            Card = new Card
+            {
+                Size = CardSize.Modal,
+                HeadingText = "Tutorial:",
+                ExtraPanels = { new StaticTextBlock { HeadingText = "Updates:", Lines = { "[01JAN20] Hand-typed" } } },
+            },
+        });
+        project.Pages.Add(page);
+
+        var html = new PageRenderer(project).RenderPage(page);
+
+        Assert.Contains("[01JAN20] Hand-typed", html);
+        Assert.DoesNotContain(UpdateHistory.FullLogLinkLine, html);
+    }
+
+    [Fact]
     public void RenderPage_ModalCardWithPanels_IsAsWideAsItsColumns()
     {
         var panel = new StaticTextBlock { HeadingText = "Updates:", Lines = { "One" } };

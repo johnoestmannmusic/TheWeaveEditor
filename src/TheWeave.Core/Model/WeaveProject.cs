@@ -72,6 +72,22 @@ public sealed class WeaveProject
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<string>? ArchetonsOffered { get; set; }
 
+    /// <summary>
+    /// The site's update history, one line per entry - see UpdateHistory, which reads it. The exported updatelog.html
+    /// is generated from these and the Tutorial Modal's Updates panel from the first few of them, so there's one list to
+    /// maintain instead of a hand-typed panel and a changelog file. Null rather than empty while there are none, so a
+    /// project that has never used it is saved exactly as before - and an export then leaves the page out.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<string>? UpdateHistory { get; set; }
+
+    /// <summary>
+    /// How many of those entries the Tutorial Modal's Updates panel shows (see UpdateHistory.PanelLines). Null means
+    /// the renderer's default. Only meaningful when UpdateHistory has entries.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? UpdateHistoryModalCount { get; set; }
+
     /// <summary>Every location on every page, each followed by its parts, theirs included.</summary>
     public IEnumerable<Node> AllNodes() => Pages.SelectMany(p => Node.WithParts(p.Nodes));
 

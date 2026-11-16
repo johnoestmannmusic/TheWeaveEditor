@@ -219,6 +219,11 @@ public static class Program
                     ApplyMutation(window, () => ProjectEditing.ApplyProjectEdit(_project!, message.Project ?? new ProjectEditRequest()));
                     break;
 
+                case "update-update-history":
+                    RequireProject();
+                    ApplyMutation(window, () => ProjectEditing.ApplyUpdateHistoryEdit(_project!, message.UpdateHistory ?? new UpdateHistoryEditRequest()));
+                    break;
+
                 case "update-tutorial-modal":
                     RequireProject();
                     ApplyMutation(window, () => ProjectEditing.ApplyTutorialModalEdit(_project!, message.TutorialModal ?? new TutorialModalEditRequest()));

@@ -54,9 +54,13 @@ public class SiteExporterTests
     }
 
     [Fact]
-    public void Export_AlwaysWritesTheUpdateLogPage()
+    public void Export_WithUpdateHistory_WritesTheUpdateLogPageFromIt()
     {
-        var project = new WeaveProject { Title = "Test" };
+        var project = new WeaveProject
+        {
+            Title = "Test",
+            UpdateHistory = ["[26AUG26] Locations now Auto-Play and various other fixes!", "    a sub-item"],
+        };
         project.Pages.Add(new Page
         {
             Id = "index",
@@ -71,7 +75,35 @@ public class SiteExporterTests
 
         var path = Path.Combine(outDir.Path, "updatelog.html");
         Assert.True(File.Exists(path));
-        Assert.StartsWith("<!DOCTYPE html>", File.ReadAllText(path));
+
+        var html = File.ReadAllText(path);
+        Assert.StartsWith("<!DOCTYPE html>", html);
+        Assert.Contains("<span class=\"date\">26AUG26</span>Locations now Auto-Play", html);
+        Assert.Contains("<li>a sub-item</li>", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Export_WithNoUpdateHistory_LeavesTheUpdateLogPageOut()
+    {
+        // The changelog is the project's own history now, so a project without one doesn't get an empty page - and
+        // nothing links to one, since the Tutorial Modal's Updates panel is generated from the same history.
+        var project = new WeaveProject { Title = "Test" };
+        project.Pages.Add(new Page
+        {
+            Id = "index",
+            Title = "Index",
+            OutputFileName = "index.html",
+            Background = new ImageRef { ImagePath = "img/x.png" },
+        });
+
+        using var outDir = new TempDirectory();
+
+        new SiteExporter().Export(project, outDir.Path);
+
+        Assert.False(File.Exists(Path.Combine(outDir.Path, "updatelog.html")));
+
+        // The disclosure page is still unconditional - only the changelog follows the project.
+        Assert.True(File.Exists(Path.Combine(outDir.Path, "aadd.html")));
     }
 
     [Fact]
