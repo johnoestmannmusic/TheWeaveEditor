@@ -388,7 +388,11 @@ public class PageRendererTests
         var html = new PageRenderer(project).RenderPage(page);
 
         Assert.Contains("<div class=\"node\" data-persistent=\"true\" data-modal=\"true\" data-modal-id=\"tutorial\"", html);
-        Assert.Contains("<div class=\"floatInfo\" data-modal=\"true\" style=\"width: 520px; height: 560px; overflow-y: auto; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); display:none\">", html);
+        // As tall as its content, and no taller: a modal with three lines of text used to sit in a fixed 560px
+        // box with a hand's width of empty space under it. 560 is now the point where it stops growing and
+        // scrolls instead. display is left to main.css, which hides it and shows it as a grid.
+        Assert.Contains("<div class=\"floatInfo\" data-modal=\"true\" style=\"width: 520px; height: auto; max-height: 560px; overflow-y: auto; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%)\">", html);
+        Assert.DoesNotContain("display:none", html);
         // A Modal card's top/left are never Card.Offset-derived - the switch's usual shared
         // tail (which would silently override the centering transform above, since later
         // declarations win within one inline style attribute) must not run for it.
@@ -409,7 +413,88 @@ public class PageRendererTests
 
         var html = new PageRenderer(project).RenderPage(page);
 
-        Assert.Contains("width: 640px; height: 480px; overflow-y: auto; position: fixed", html);
+        Assert.Contains("width: 640px; height: 480px; max-height: 480px; overflow-y: auto; position: fixed", html);
+    }
+
+    [Fact]
+    public void RenderPage_ModalCardWithPanels_IsAsWideAsItsColumns()
+    {
+        var panel = new StaticTextBlock { HeadingText = "Updates:", Lines = { "One" } };
+
+        var project = new WeaveProject();
+        var page = MakePage("index", "index.html");
+        page.Nodes.Add(new Node
+        {
+            Id = "tutorial",
+            Persistent = true,
+            Card = new Card { Size = CardSize.Modal, HeadingText = "Tutorial:", ExtraPanels = { panel } },
+        });
+        project.Pages.Add(page);
+
+        var html = new PageRenderer(project).RenderPage(page);
+
+        // 250 for the text plus the panel's own 252 is all the card needs; a fixed 520 left a strip of empty
+        // space down its right edge (main.css's second column is the panel's width, not the leftover). A modal
+        // with no panels keeps 520, and CustomWidthPx wins over both.
+        Assert.Contains("style=\"width: max-content; height: auto;", html);
+        Assert.DoesNotContain("width: 520px", html);
+    }
+
+    [Fact]
+    public void RenderPage_ModalCardWithNoPanels_KeepsItsDefaultWidth()
+    {
+        var project = new WeaveProject();
+        var page = MakePage("index", "index.html");
+        page.Nodes.Add(new Node
+        {
+            Id = "tutorial",
+            Persistent = true,
+            Card = new Card { Size = CardSize.Modal, HeadingText = "Tutorial:" },
+        });
+        project.Pages.Add(page);
+
+        var html = new PageRenderer(project).RenderPage(page);
+
+        // Text only, with nothing beside it: max-content would be the 250px text column alone, half the card
+        // it has always been.
+        Assert.Contains("style=\"width: 520px; height: auto;", html);
+    }
+
+    [Fact]
+    public void RenderPage_ModalCard_PutsItsPanelsInFlow_SoTheCardCanBeAsTallAsThem()
+    {
+        var panel = new StaticTextBlock { HeadingText = "Updates:", Lines = { "One" }, Offset = new Offset { Top = 0, Left = 260 } };
+
+        var modalProject = new WeaveProject();
+        var modalPage = MakePage("index", "index.html");
+        modalPage.Nodes.Add(new Node
+        {
+            Id = "tutorial",
+            Card = new Card { Size = CardSize.Modal, HeadingText = "Tutorial:", ExtraPanels = { panel } },
+        });
+        modalProject.Pages.Add(modalPage);
+        var modalHtml = new PageRenderer(modalProject).RenderPage(modalPage);
+
+        // The text is wrapped in the left column, and the panel follows it with no position of its own: an
+        // absolutely positioned panel contributes nothing to the card's height, which is what made this a fixed
+        // height in the first place (see main.css's .floatInfo[data-modal] rules).
+        Assert.Contains("<div class=\"modalText\">", modalHtml);
+        Assert.Contains("<div class=\"floatInfo\">", modalHtml);
+        Assert.DoesNotContain("position: absolute; left: 260px", modalHtml);
+
+        // An ordinary card keeps its panels where it author them, absolutely positioned on the card.
+        var standardProject = new WeaveProject();
+        var standardPage = MakePage("index", "index.html");
+        standardPage.Nodes.Add(new Node
+        {
+            Id = "location",
+            Card = new Card { Size = CardSize.Standard, HeadingText = "Location:", ExtraPanels = { panel } },
+        });
+        standardProject.Pages.Add(standardPage);
+        var standardHtml = new PageRenderer(standardProject).RenderPage(standardPage);
+
+        Assert.DoesNotContain("<div class=\"modalText\">", standardHtml);
+        Assert.Contains("style=\"position: absolute; left: 260px; top: 0px;\"", standardHtml);
     }
 
     [Fact]

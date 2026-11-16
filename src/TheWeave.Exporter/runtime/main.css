@@ -479,6 +479,49 @@ h3 {
 .floatInfo[data-modal="true"] {
   z-index: 2001;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+  /* The card is as tall as what's on it (BuildCardStyle sets height:auto and no fixed height), so
+     anything beside the text has to take up room in the card's own layout - an absolutely
+     positioned child would add nothing to its height and hang out under the bottom edge. Two
+     columns: the text, and whatever panels the card has. */
+  display: none;
+  /* The second column is the panel's own width, not the leftover of a fixed card: with the card sized to its
+     content (BuildCardStyle), a flexible column would leave the loose space as a gap down the right edge. */
+  grid-template-columns: 250px max-content;
+  /* A safety net for a very wide panel; centring already keeps it on screen. */
+  max-width: calc(100vw - 32px);
+  align-content: start;
+  align-items: start;
+}
+
+/* Open (see cards.js's showCurrentModal), which is also where the grid actually takes effect. */
+.floatInfo[data-modal="true"].modalOpen {
+  display: grid;
+}
+
+/* A modal's writing - cover, audio, heading, poetry and the close key - in the left column. It's
+   wrapped into one cell by PageRenderer so that the grid is a single row of two columns, and the
+   card's auto height comes out as the taller of them. */
+.floatInfo[data-modal="true"] > .modalText {
+  grid-column: 1;
+  /* This file's universal `* { position: absolute }` default would take the cell out of the grid's
+     own height, which is the whole point of the card being auto-height. */
+  position: static;
+}
+
+/* A panel (see PageRenderer's RenderStaticPanel, which drops its authored offset for a modal) in the
+   right column, beside the text rather than after it. */
+.floatInfo[data-modal="true"] > .floatInfo {
+  grid-column: 2;
+  position: static;
+}
+
+/* h3 and .poetry-text are indented with `position: relative; left: 10px`, which slides the box sideways
+   rather than narrowing it, so a panel's own heading runs ~9px past the card's right edge - it used to be
+   swallowed by the modal's leftover width, and now that the card is sized to its columns it would show as a
+   scrollbar. Narrow the box by the same 10px instead. */
+.floatInfo[data-modal="true"] > .floatInfo > h3,
+.floatInfo[data-modal="true"] > .floatInfo > .poetry-text {
+  width: calc(100% - 10px);
 }
 
 /* Track Focus (see main.js's openTrackFocus): album art on the left, title and poetry on the right,

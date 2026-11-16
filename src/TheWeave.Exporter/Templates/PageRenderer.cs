@@ -163,6 +163,11 @@ public sealed class PageRenderer
 
         sb.AppendLine($"{pad}<div class=\"{cardClass}\"{modalAttr} style=\"{BuildCardStyle(card)}\">");
 
+        // A modal is laid out as two columns so that the card can be as tall as the taller of them (see
+        // BuildCardStyle): the text, in this wrapper, and any panels beside it (see RenderStaticPanel's inFlow).
+        if (card.Size == CardSize.Modal)
+            sb.AppendLine($"{pad}  <div class=\"modalText\">");
+
         if (!string.IsNullOrEmpty(card.CoverImagePath))
             sb.AppendLine($"{pad}  <img class=\"songCover\" src=\"{EscapeAttr(ResolveAsset(card.CoverImagePath))}\">");
 
@@ -221,8 +226,11 @@ public sealed class PageRenderer
 
         sb.AppendLine($"{pad}  </div>");
 
+        if (card.Size == CardSize.Modal)
+            sb.AppendLine($"{pad}  </div>");
+
         foreach (var panel in card.ExtraPanels)
-            RenderStaticPanel(sb, panel, indent);
+            RenderStaticPanel(sb, panel, indent, inFlow: card.Size == CardSize.Modal);
 
         foreach (var child in node.Children)
             RenderNode(sb, sourcePage, child, isNested: true, indent);
@@ -450,12 +458,16 @@ public sealed class PageRenderer
         return matches.Count == 1 ? (matches[0].X, matches[0].Y) : null;
     }
 
-    private void RenderStaticPanel(StringBuilder sb, StaticTextBlock panel, int indent)
+    // inFlow puts the panel in the card's own layout instead of at its authored spot: a modal sizes to its content
+    // (see BuildCardStyle), and an absolutely positioned panel would add nothing to that - see main.css's
+    // .floatInfo[data-modal] rules, which give it a column of its own.
+    private void RenderStaticPanel(StringBuilder sb, StaticTextBlock panel, int indent, bool inFlow = false)
     {
         var pad = new string(' ', indent);
+        var style = inFlow ? "" : $" style=\"position: absolute; left: {Px(panel.Offset.Left)}px; top: {Px(panel.Offset.Top)}px;\"";
 
         sb.AppendLine($"{pad}<!-- {SafeComment(panel.HeadingText)} -->");
-        sb.AppendLine($"{pad}<div class=\"floatInfo\" style=\"position: absolute; left: {Px(panel.Offset.Left)}px; top: {Px(panel.Offset.Top)}px;\">");
+        sb.AppendLine($"{pad}<div class=\"floatInfo\"{style}>");
         sb.AppendLine($"{pad}  <h3>{EscapeText(panel.HeadingText)}</h3>");
         sb.AppendLine($"{pad}  <div class=\"poetry-text\">");
 
@@ -475,26 +487,37 @@ public sealed class PageRenderer
     {
         if (card.Size == CardSize.Modal)
         {
-            // height:auto (sizing to content) was tried here and reverted: it doesn't work for
-            // this card's real shape. An ExtraPanel (e.g. the tutorial's own "Updates:" column -
-            // see RenderStaticPanel) is deliberately position:absolute so it can sit in its own
-            // spot beside the main poetry-text column - but per the CSS spec, an absolutely
-            // positioned descendant never contributes to an auto-height ancestor's own size. The
-            // result was a box that shrank to fit only the in-flow column while the absolutely
-            // positioned one hung out past it, unclipped - worse than what this replaced.
-            // 560px is generous enough for a typical tutorial+updates card without needing
-            // CustomHeightPx set by hand; overflow-y:auto is the safety net for anything longer
-            // (or for whatever explicit CustomHeightPx someone sets instead).
+            // height:auto, so the card is as tall as what's on it: a modal with three lines of text
+            // used to sit in a fixed 560px box with a hand's width of empty space under it.
+            //
+            // height:auto alone wasn't enough, which is why this was fixed-height for a while: an
+            // ExtraPanel (e.g. the tutorial's own "Updates:" column - see RenderStaticPanel) was
+            // position:absolute so it could sit in its own spot beside the poetry column, and an
+            // absolutely positioned descendant contributes nothing to its parent's height - the box
+            // shrank to the text and the panel hung out past it. So a modal's panels are laid out in
+            // flow instead (see RenderStaticPanel's inFlow), and main.css's .floatInfo[data-modal]
+            // rules put them in a column of their own beside the text.
+            //
+            // max-height keeps the old 560px as the point where it stops growing and starts
+            // scrolling, which is also what an explicit CustomHeightPx means.
             var modalParts = new List<string>
             {
-                $"width: {card.CustomWidthPx ?? 520}px",
-                $"height: {card.CustomHeightPx ?? 560}px",
+                // As wide as its own columns when there are panels beside the text (250 for the text, the panel's
+                // own 252), rather than a bare 520 that left a strip of empty space down the right edge. A modal
+                // with only text keeps 520, and CustomWidthPx still wins over both.
+                $"width: {(card.CustomWidthPx is { } width
+                    ? $"{width}px"
+                    : card.ExtraPanels.Count > 0 ? "max-content" : "520px")}",
+                card.CustomHeightPx is { } height ? $"height: {height}px" : "height: auto",
+                card.CustomHeightPx is { } tallest ? $"max-height: {tallest}px" : "max-height: 560px",
                 "overflow-y: auto",
                 "position: fixed",
                 "top: 50%",
                 "left: 50%",
                 "transform: translate(-50%, -50%)",
-                "display:none",
+                // Not hidden inline: main.css's .floatInfo[data-modal] rules hide it and its own grid layout
+                // shows it once cards.js's showCurrentModal adds the open class - an inline display would win
+                // over those rules and take the grid with it.
             };
             return string.Join("; ", modalParts);
         }
