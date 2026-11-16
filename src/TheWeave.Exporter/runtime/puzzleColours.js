@@ -143,6 +143,8 @@
     let archeton = choose(different);
     // A ledge, after all the others, so that they keep the colours they've always had.
     let edge = choose(different);
+    // A Gem, after them too: its own colour, so that it reads as something worth collecting rather than as a Key.
+    let gem = choose(different);
 
     return {
       wall: toHex(wall),
@@ -161,6 +163,7 @@
       reset: toHex(reset),
       pipe: toHex(pipe),
       archeton: toHex(archeton),
+      gem: toHex(gem),
       outline: toHex(outline),
       light: toHex(light),
     };
@@ -173,7 +176,7 @@
   const ART_PX = TILE_PX * BOARD_SIZE;
 
   // Every role that has a texture of its own. A Switch shares its Gate's, as it does its colour.
-  const TEXTURE_ROLES = ['wall', 'edge', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'block', 'jump', 'reset', 'pipe', 'archeton'];
+  const TEXTURE_ROLES = ['wall', 'edge', 'finish', 'gate', 'teleporter', 'stream', 'key', 'rotator', 'lantern', 'block', 'jump', 'reset', 'pipe', 'archeton', 'gem'];
   // The 4 shades of a role's colour, darkest first: how far each is aimed from the main colour in lightness,
   // and how much of an object it covers unless a drawing's mix says otherwise. A shade the art has nothing
   // like is filled in by its neighbour towards the main colour.

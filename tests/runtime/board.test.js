@@ -259,3 +259,38 @@ test('a Swim Fish swims a square each step the ship takes, drawn gliding as it g
   let { options } = play.frame(0, {});
   assert.ok(options.swimAlong < 1, 'and drawn part way there');
 });
+
+test('a collected Gem flies to the Gem Gate, which rattles and pulses when it lands', () => {
+  let play = createBoardPlay({ puzzle: { objects: [obj('Start', 5, 8), obj('GemGate', 5, 2), obj('Gem', 5, 7)] } });
+  play.mover.press('up');
+  play.mover.release('up');
+  run(play, BOARD_TIMING.stepMs);
+  let { options } = play.frame(0, {});
+  assert.equal(options.gemShots.length, 1, 'on its way to the Gate');
+  assert.ok(options.gemShots[0].along < 1, 'and part way there');
+  assert.deepEqual(options.gemShots[0].to, at(5, 2));
+
+  run(play, 280);
+  ({ options } = play.frame(0, {}));
+  assert.equal(options.gemShots.length, 0, 'arrived');
+  assert.ok(options.gateShake, 'the Gate rattles');
+  assert.equal(options.pulses.length, 3, 'and it was the last Gem, so it pulses three times');
+});
+
+test('a Gem that isn\'t the last one pulses the Gate once, and the Gate stays shut', () => {
+  let play = createBoardPlay({ puzzle: { objects: [obj('Start', 5, 8), obj('GemGate', 5, 2), obj('Gem', 5, 7), obj('Gem', 8, 8)] } });
+  play.mover.press('up');
+  play.mover.release('up');
+  run(play, BOARD_TIMING.stepMs + 280);
+  let { options } = play.frame(0, {});
+  assert.equal(options.pulses.length, 1, 'a single ring');
+  assert.equal(play.game.objects.find(object => object.kind === 'GemGate').open, false, 'still shut');
+});
+
+test('a Gem turns on the spot, so a board with one on it is never still', () => {
+  let play = createBoardPlay({ puzzle: { objects: [obj('Start', 5, 8), obj('Gem', 2, 2)] } });
+  let first = play.frame(0, {}).key;
+  run(play, 200);
+  assert.notEqual(play.frame(0, {}).key, first, 'the picture changes with the Gem');
+  assert.ok(play.frame(0, {}).options.gemPhase >= 0, 'drawn at some point in its turn');
+});

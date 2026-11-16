@@ -73,6 +73,15 @@ public enum PuzzleObjectKind
     /// ArchetonDefinition.LaserDrawing. A kind so that it can be drawn in the Drawings view like anything else.
     /// </summary>
     Laser,
+
+    /// <summary>Stepping on this collects it, and collecting the last one on the board opens its GemGate.</summary>
+    Gem,
+
+    /// <summary>
+    /// Blocks the way until every Gem on the board has been collected. A board with no Gems never opens one, so it
+    /// stays a wall. Looks like a Gate, with a Gem where the letter goes. A puzzle has at most one.
+    /// </summary>
+    GemGate,
 }
 
 /// <summary>A Push Block's symbol, drawn on it as a hollow outline - see runtime/puzzle.js's SYMBOLS.</summary>
@@ -225,7 +234,7 @@ public static class PuzzleDrawings
     /// </summary>
     public const string Paints = ".OHG1234";
 
-    public static readonly IReadOnlyList<string> Roles = ["wall", "edge", "finish", "gate", "teleporter", "stream", "key", "rotator", "lantern", "block", "jump", "reset", "pipe", "archeton", "outline", "light"];
+    public static readonly IReadOnlyList<string> Roles = ["wall", "edge", "finish", "gate", "teleporter", "stream", "key", "rotator", "lantern", "block", "jump", "reset", "pipe", "archeton", "gem", "outline", "light"];
 
     /// <summary>Every kind drawn from a drawing.</summary>
     public static readonly IReadOnlySet<PuzzleObjectKind> DrawnKinds = new HashSet<PuzzleObjectKind>
@@ -234,7 +243,7 @@ public static class PuzzleDrawings
         PuzzleObjectKind.Teleporter, PuzzleObjectKind.Key, PuzzleObjectKind.RotatorSwitch, PuzzleObjectKind.Lantern,
         PuzzleObjectKind.Stream, PuzzleObjectKind.RotatorTile, PuzzleObjectKind.PushBlock, PuzzleObjectKind.JumpTile,
         PuzzleObjectKind.ResetSwitch, PuzzleObjectKind.Pipe, PuzzleObjectKind.PipeSwitch, PuzzleObjectKind.Edge,
-        PuzzleObjectKind.Archeton, PuzzleObjectKind.Laser,
+        PuzzleObjectKind.Archeton, PuzzleObjectKind.Laser, PuzzleObjectKind.Gem, PuzzleObjectKind.GemGate,
     };
 
     /// <summary>The kinds animated as they flow: a Still layer, and a Flow layer that moves along it.</summary>

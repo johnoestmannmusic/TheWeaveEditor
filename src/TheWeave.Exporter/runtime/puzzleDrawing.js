@@ -79,8 +79,8 @@
     star: (dx, dy) => Math.abs(dx) <= 11.5 && Math.abs(dy) <= 11.5 && Math.sqrt(Math.abs(dx)) + Math.sqrt(Math.abs(dy)) <= 4.1,
   };
 
-  const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
-  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton' };
+  const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', GemGate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
+  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Gem: 'gem', GemGate: 'gate', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton' };
 
   function maskOf(test){
     let mask = [];
@@ -130,9 +130,79 @@
   const TURNED_KINDS = ['JumpTile', 'Pipe', 'Archeton', 'Laser', 'Edge'];
 
   // Every kind of object drawn from a drawing.
-  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', ...ANIMATED_KINDS, 'Laser'];
+  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'Gem', 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', ...ANIMATED_KINDS, 'Laser'];
 
   const standardDrawings = new Map();
+
+  // A Gem's standard drawing: a tall diamond, its edge in the outline colour and its body cut into two facets, the
+  // left one brighter. Its width is narrowed as it turns on the spot - see squashed.
+  function standardGemPixels(){
+    let half = TILE_PX / 2;
+    let inside = (u, v) => {
+      let dx = Math.abs(u + 0.5 - half), dy = Math.abs(v + 0.5 - half);
+      return dy <= 11 && dx <= 6 * (1 - dy / 12);
+    };
+    let paints = '';
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        if (!inside(x, y)) { paints += PAINTS.clear; continue; }
+        if (!inside(x - 1, y) || !inside(x + 1, y) || !inside(x, y - 1) || !inside(x, y + 1)) { paints += PAINTS.outline; continue; }
+        // Cut into two facets either side of the middle, the left one the brighter, with a shine down it.
+        let facet = x + 0.5 < half ? PAINTS.colors[3] : PAINTS.colors[0];
+        let shine = x + 0.5 < half - 2 && Math.abs(y + 0.5 - half) < 5;
+        paints += shine ? PAINTS.light : facet;
+      }
+    }
+    return paints;
+  }
+
+  // How wide a Gem is drawn as it turns on the spot: front on, edge on, front on again, twice around. It never quite
+  // narrows to nothing, or it would flicker out at the turn.
+  const GEM_MIN_WIDTH = 0.45;
+  function gemWidthAt(phase){
+    return GEM_MIN_WIDTH + (1 - GEM_MIN_WIDTH) * Math.abs(Math.cos(Math.PI * phase * 2));
+  }
+
+  // A sprite narrowed about its middle, sampling back into itself, as a Gem is to look like it's turning where it is.
+  function squashed(sprite, width){
+    let narrow = new Array(TILE_PX * TILE_PX).fill(null);
+    let middle = (TILE_PX - 1) / 2;
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        let from = Math.round(middle + (x - middle) / width);
+        if (from >= 0 && from < TILE_PX) narrow[y * TILE_PX + x] = sprite[y * TILE_PX + from];
+      }
+    }
+    return narrow;
+  }
+
+  // A Gem, 7 pixels across and 8 tall, standing where a Gate has its letter.
+  const PIXEL_GEM = [
+    '....O....',
+    '...OHO...',
+    '..OHHHO..',
+    '.OHHHHHO.',
+    'OHHHHHHHO',
+    'OHHHHHHHO',
+    '.OHHHHHO.',
+    '..OHHHO..',
+    '...OHO...',
+    '....O....',
+  ];
+
+  // A solid glyph, as a letter is, and - where it has to stand over the art behind an open Gate - an outline of the
+  // halo colour around the outside of it only, so its middle stays solid and it still reads as a Gem.
+  function drawPixelGem(sprite, color, halo){
+    let left = Math.floor((TILE_PX - 9) / 2), top = Math.floor((TILE_PX - PIXEL_GEM.length) / 2);
+    let paintAt = (x, y) => PIXEL_GEM[y - top]?.[x - left];
+    let isGem = (x, y) => paintAt(x, y) === 'H' || paintAt(x, y) === 'O';
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        if (isGem(x, y)) sprite[y * TILE_PX + x] = color;
+        else if (halo && (isGem(x - 1, y) || isGem(x + 1, y) || isGem(x, y - 1) || isGem(x, y + 1))) sprite[y * TILE_PX + x] = halo;
+      }
+    }
+  }
 
   // The drawing each kind has unless the project's library redraws it: its shape, outlined, in its standard
   // mix. Its id is the kind's own name, which is also how a library tells its redrawn Standard ones apart.
@@ -158,10 +228,11 @@
       else if (kind === 'Archeton') drawing = { id: kind, kind, name: 'Standard', pixels: standardArchetonPixels(), mix: standardMix('archeton') };
       else if (kind === 'PipeSwitch') drawing = { id: kind, kind, name: 'Standard', pixels: standardPipeSwitchPixels(), mix: standardMix('pipe') };
       else if (kind === 'Edge') drawing = { id: kind, kind, name: 'Standard', pixels: standardEdgePixels(), mix: standardMix('edge') };
+      else if (kind === 'Gem') drawing = { id: kind, kind, name: 'Standard', pixels: standardGemPixels(), mix: standardMix('gem') };
       else {
         let body = SHAPES[SPRITE_SHAPES[kind]];
         drawing = { id: kind, kind, name: 'Standard', pixels: pixelsOf(body), mix: standardMix(SPRITE_ROLES[kind]) };
-        if (kind === 'Gate') drawing.openPixels = pixelsOf((dx, dy) => body(dx, dy) && !SHAPES.octagonHole(dx, dy));
+        if (kind === 'Gate' || kind === 'GemGate') drawing.openPixels = pixelsOf((dx, dy) => body(dx, dy) && !SHAPES.octagonHole(dx, dy));
       }
       standardDrawings.set(kind, drawing);
     }
@@ -389,12 +460,12 @@
   }
 
   // A square's worth of pixels for one object: a colour per pixel, or null where it's see-through.
-  function buildSprite(object, look, switchesActive){
+  function buildSprite(object, look, switchesActive, gemPhase = 0){
     let sprite = new Array(TILE_PX * TILE_PX).fill(null);
     let outline = hexToColor(look.palette.outline);
     let light = hexToColor(look.palette.light);
 
-    let isOpenGate = object.kind === 'Gate' && object.open;
+    let isOpenGate = (object.kind === 'Gate' || object.kind === 'GemGate') && object.open;
     let isDim = object.kind === 'Switch' && !switchesActive;
 
     let drawing = drawingFor(look, object);
@@ -434,6 +505,16 @@
 
     // A lit Lantern glows: a halo of the light colour just outside it, and a fainter, dithered one beyond that.
     if (object.kind === 'Lantern' && object.lit) sprite = glowing(sprite, light);
+
+    // A Gem Gate has a Gem where a Gate has its letter, in the same colours, so it reads from the same distance.
+    if (object.kind === 'GemGate') {
+      let fill = mix.colors[mix.main];
+      let useDark = Math.abs(lightnessOf(fill) - lightnessOf(outline)) >= Math.abs(lightnessOf(fill) - lightnessOf(light));
+      drawPixelGem(sprite, isOpenGate || !useDark ? light : outline, isOpenGate ? outline : null);
+    }
+
+    // A Gem is drawn narrowed about its middle as it turns on the spot.
+    if (object.kind === 'Gem') sprite = squashed(sprite, gemWidthAt(gemPhase));
 
     // Turned before its depth is added, so that its raised edge stays at the bottom whichever way round it is.
     if (object.spin) sprite = spunBy(sprite, object.spin);
@@ -673,13 +754,14 @@
   // Sprites are only worth working out once per look, since there are only so many things to be drawn.
   const spriteCaches = new WeakMap();
 
-  function spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins){
+  function spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins, gemPhase){
     if (object.kind === 'Stream') return `Stream|${object.variant ?? ''}|${object.direction}|${streamPhase}|${joins.back}|${joins.left}|${joins.right}`;
     if (object.kind === 'RotatorTile') return `RotatorTile|${object.variant ?? ''}|${object.direction}|${rotatorPhase}`;
-    return `${object.kind}|${object.variant ?? ''}|${object.letter ?? ''}|${object.symbol ?? ''}|${object.direction ?? ''}|${object.kind === 'Gate' && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}|${object.spin ?? 0}|${object.archeton ?? ''}`;
+    if (object.kind === 'Gem') return `Gem|${object.variant ?? ''}|${gemPhase}`;
+    return `${object.kind}|${object.variant ?? ''}|${object.letter ?? ''}|${object.symbol ?? ''}|${object.direction ?? ''}|${(object.kind === 'Gate' || object.kind === 'GemGate') && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}|${object.spin ?? 0}|${object.archeton ?? ''}`;
   }
 
-  function spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase = 0){
+  function spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase = 0, gemPhase = 0){
     let cache = spriteCaches.get(look);
     if (!cache) spriteCaches.set(look, cache = new Map());
 
@@ -687,12 +769,12 @@
     // A Finish on an edge has arrows running towards it - see withFinishArrows.
     let exit = object.kind === 'Finish' ? exitDirectionOf({ col: Math.round(object.col), row: Math.round(object.row) }) : null;
     let arrowPhase = exit ? finishPhase % FINISH_ARROW_SPACING : 0;
-    let key = spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins) + (exit ? `|${exit}|${arrowPhase}` : '');
+    let key = spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins, gemPhase) + (exit ? `|${exit}|${arrowPhase}` : '');
     let sprite = cache.get(key);
     if (!sprite) {
       if (object.kind === 'Stream') sprite = buildAnimatedSprite(object, look, streamPhase, joins);
       else if (object.kind === 'RotatorTile') sprite = buildAnimatedSprite(object, look, rotatorPhase);
-      else sprite = buildSprite(object, look, switchesActive);
+      else sprite = buildSprite(object, look, switchesActive, gemPhase);
       if (exit) sprite = withFinishArrows(sprite, look, exit, arrowPhase);
       cache.set(key, sprite);
     }
@@ -809,6 +891,9 @@
   // - An object's own fade, from 0 to 1, is how much of it shows, as a Reset Switch's sweep passes - see resetSweepAt.
   // - beams ([{ from, to }]) draws an Archeton's laser from one square to another - see createPuzzleGame's beams.
   // - reaches ([{ col, row }]) outlines each square an Archeton's Beam reaches - see createPuzzleGame's reaches.
+  // - gemPhase (0 to 1) how far round a Gem is in its turn on the spot, and gemShots ([{ from, to, along }]) the Gems
+  //   on their way to a Gem Gate, along being how far each has come.
+  // - gateShake ({ col, row, dx }) rattles the Gem Gate on that square dx pixels to the side.
   // - pulses ([{ col, row, radius }]) draws each lit Lantern's pulse: a ring radius pixels out from its square's middle.
   // - pushHints ([{ col, row, direction, bob }], or one as pushHint) show that the Push Block on each square can be
   //   pushed: an arrow just
@@ -856,13 +941,25 @@
       // A Push Block shoved off a ledge leaps down it as the ship does off a Jump Tile: it keeps to the straight line it
       // was going along, and grows towards the middle of it - see puzzleRules.js's pushFrom, and trackFocus.js's leap.
       let grow = object.glide === 'push' && object.falls && along < 1 ? 1 + LEDGE_JUMP_RISE * Math.sin(Math.PI * along) : 1;
-      let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase);
+      let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase, options.gemPhase ?? 0);
+      // A Gem Gate rattles where it stands when a Gem hits it, a pixel either side of itself.
+      let shake = object.kind === 'GemGate' && options.gateShake
+        && object.col === options.gateShake.col && object.row === options.gateShake.row ? Math.round(options.gateShake.dx) : 0;
       let top = Math.round(row * TILE_PX) + (options.originY ?? 0);
       let sunk = Math.round((object.sink ?? 0) * TILE_PX);
       // An open Gate is half see-through, so it reads as something the ship can pass through.
-      let opacity = (object.fade ?? 1) * (object.kind === 'Gate' && object.open ? OPEN_GATE_OPACITY : 1);
+      let opacity = (object.fade ?? 1) * ((object.kind === 'Gate' || object.kind === 'GemGate') && object.open ? OPEN_GATE_OPACITY : 1);
       if (opacity <= 0) continue;
-      blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX), top + sunk, object.sink ? top + TILE_PX : Infinity, opacity, grow);
+      blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX) + shake, top + sunk, object.sink ? top + TILE_PX : Infinity, opacity, grow);
+    }
+
+    // Gems on their way to the Gate, over the board: each one the sprite the board draws, moving along a straight
+    // line from the square it was collected on to the Gate's.
+    for (const shot of options.gemShots ?? []) {
+      let gem = spriteFor({ kind: 'Gem' }, look, true, 0, 0, null, 0, options.gemPhase ?? 0);
+      let col = shot.from.col + (shot.to.col - shot.from.col) * shot.along;
+      let row = shot.from.row + (shot.to.row - shot.from.row) * shot.along;
+      blit(image, gem, Math.round(col * TILE_PX), Math.round(row * TILE_PX) + (options.originY ?? 0));
     }
 
     // A Gate Switch's Beams, over the board and under everything else drawn on top of it.

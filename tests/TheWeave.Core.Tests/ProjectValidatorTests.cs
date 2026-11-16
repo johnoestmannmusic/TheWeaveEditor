@@ -140,6 +140,17 @@ public class ProjectValidatorTests
     private static PuzzleObject Block(PuzzleSymbol symbol, int col, int row) => new() { Kind = PuzzleObjectKind.PushBlock, Symbol = symbol, Col = col, Row = row };
     private static PuzzleObject Jump(int col, int row, PuzzleDirection direction) => new() { Kind = PuzzleObjectKind.JumpTile, Col = col, Row = row, Direction = direction };
     private static PuzzleObject Edge(int col, int row, PuzzleDirection direction) => new() { Kind = PuzzleObjectKind.Edge, Col = col, Row = row, Direction = direction };
+    private static PuzzleObject Gem(int col, int row) => new() { Kind = PuzzleObjectKind.Gem, Col = col, Row = row };
+    private static PuzzleObject GemGate(int col, int row) => new() { Kind = PuzzleObjectKind.GemGate, Col = col, Row = row };
+
+    [Fact]
+    public void AGemGateWithNoGems_AndMoreThanOneGemGate_AreReported()
+    {
+        Assert.Contains("its Gem Gate has no Gems on the board, so it can never be opened.",
+            PuzzleProblems(Finish, GemGate(4, 4)));
+        Assert.DoesNotContain(PuzzleProblems(Finish, GemGate(4, 4), Gem(2, 2)), p => p.Contains("Gem Gate"));
+        Assert.Contains(PuzzleProblems(Finish, GemGate(4, 4), GemGate(7, 7), Gem(2, 2)), p => p.Contains("more than one Gem Gate"));
+    }
 
     [Fact]
     public void ALonePushBlock_AndOnesStartingSideBySide_AreReported()

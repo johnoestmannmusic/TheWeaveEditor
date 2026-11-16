@@ -24,6 +24,8 @@ const PUZZLE_TOOLS = [
   { kind: 'Pipe', label: 'Pipe', hint: 'The ship and objects can only go into and through it along it: across while it points left or right, up and down while it points up or down. Drag to paint.', paints: true, direction: true, canHide: true },
   { kind: 'PipeSwitch', label: 'Pipe Switch', hint: 'Stepping on this turns every Pipe a quarter turn anticlockwise, and again each second the ship stays on it.', canHide: true },
   { kind: 'Archeton', label: 'Archeton…', hint: 'A mechanical enemy, built from parts. Opens the Archetons, to choose one to place or make a new one. Placed facing a direction, which matters for Beams that look the way it faces.', direction: true, canHide: true, archeton: true },
+  { kind: 'Gem', label: 'Gem', hint: 'Stepping on this collects it. Collecting the last Gem on the board opens its Gem Gate.', canHide: true },
+  { kind: 'GemGate', label: 'Gem Gate', hint: 'Blocks the way until every Gem on the board has been collected. A board with no Gems never opens it. There\'s only one.', canHide: true },
   { kind: 'Start', label: 'Start', hint: 'Where the ship begins. There\'s only one.' },
   { kind: 'Erase', label: 'Erase', hint: 'Removes the top thing on a square. Drag to paint.', paints: true },
 ];

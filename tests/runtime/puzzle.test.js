@@ -210,6 +210,106 @@ test('a Reset Switch takes any Beam still in flight with it', () => {
   assert.equal(find(g, 'Gate').open, false);
 });
 
+// ---------- Gems and the Gem Gate ----------
+
+test('a Gem Gate blocks the way until every Gem on the board has been collected', () => {
+  let g = game(obj('GemGate', 1, 0), obj('Gem', 5, 5), obj('Gem', 7, 5));
+  assert.equal(g.canEnter(at(1, 1), at(1, 0), 'up'), false, 'shut to begin with');
+  g.shipArrivedAt(at(5, 5));
+  assert.equal(g.canEnter(at(1, 1), at(1, 0), 'up'), false, 'still shut with one Gem left');
+  g.shipArrivedAt(at(7, 5));
+  assert.equal(g.canEnter(at(1, 1), at(1, 0), 'up'), true, 'open once the last one is collected');
+});
+
+test('a board with no Gems never opens its Gem Gate', () => {
+  let g = game(obj('GemGate', 1, 0), obj('Switch', 5, 5, { letter: 'A' }));
+  g.shipArrivedAt(at(5, 5));
+  land(g);
+  assert.equal(g.canEnter(at(1, 1), at(1, 0), 'up'), false, 'a wall, since there was never anything to collect');
+});
+
+test('a Gem is collected by the ship stepping on it, and says where it went', () => {
+  let g = game(obj('GemGate', 1, 0), obj('Gem', 5, 5));
+  assert.equal(g.objects.filter(o => o.kind === 'Gem').length, 1);
+  g.placeShip(at(5, 6));
+  let event = g.shipArrivedAt(at(5, 5));
+  assert.equal(g.objects.filter(o => o.kind === 'Gem').length, 0, 'gone from the board');
+  assert.deepEqual(event.gem, { col: 5, row: 5, to: at(1, 0), last: true }, 'and its shot has somewhere to go');
+});
+
+test('a Push Block shoved onto a Gem leaves it there for the ship', () => {
+  let g = game(obj('GemGate', 1, 0), obj('Gem', 6, 5), block(5, 5));
+  g.placeShip(at(4, 5));
+  g.shipArrivedAt(at(5, 5));
+  assert.equal(g.objects.filter(o => o.kind === 'Gem').length, 1, 'only the ship collects it');
+});
+
+test('a Gem is drawn turning on the spot: full width front on, narrower at the turn, and never quite gone', () => {
+  let { look } = artLook();
+  let drawn = (phase) => {
+    let image = blank();
+    renderBoard(image, [obj('Gem', 3, 3)], look, { gemPhase: phase });
+    let count = 0;
+    for (let y = 3 * TILE_PX; y < 4 * TILE_PX; y++) for (let x = 3 * TILE_PX; x < 4 * TILE_PX; x++) if (pixelAt(image, x, y)[3]) count++;
+    return count;
+  };
+  assert.ok(drawn(0) > drawn(0.25), 'narrower at the turn than front on');
+  assert.ok(drawn(0.25) > 0, 'but never gone, which would read as a flicker');
+  assert.equal(drawn(0.5), drawn(0), 'and front on again, half way round');
+});
+
+test('a Gem is drawn with nothing around it, and a Gem Gate carries a Gem where a Gate carries its letter', () => {
+  let { look } = artLook();
+  let image = blank();
+  renderBoard(image, [obj('Gem', 3, 3)], look, { gemPhase: 0 });
+  // Just above the tip of the diamond: nothing. Any glow is the drawing's own, painted in the Drawings view.
+  assert.equal(pixelAt(image, 3 * TILE_PX + 12, 3 * TILE_PX)[3], 0, 'no halo around it');
+
+  // No letter, so two placed with different ones are drawn the same...
+  let one = blank();
+  renderBoard(one, [obj('GemGate', 3, 3, { letter: 'A' })], look, {});
+  let other = blank();
+  renderBoard(other, [obj('GemGate', 3, 3, { letter: 'B' })], look, {});
+  assert.equal(tile(one, 3, 3), tile(other, 3, 3), 'a Gem Gate has no letter on it');
+  // ...and opening it changes how it's drawn, with nothing else about it changed: a board that has had its Gem Gate
+  // on it all along mustn't keep showing the shut one out of its sprite cache.
+  let shut = blank();
+  renderBoard(shut, [obj('GemGate', 3, 3)], look, {});
+  let open = blank();
+  renderBoard(open, [obj('GemGate', 3, 3, { open: true })], look, {});
+  assert.notEqual(tile(shut, 3, 3), tile(open, 3, 3), 'an open one is drawn open');
+});
+
+test('an open Gem Gate is see-through by as much as an open Gate is', () => {
+  let { look } = artLook();
+  let alphaAt = (object) => {
+    let image = blank();
+    renderBoard(image, [object], look, {});
+    // The top of the ring, which both are drawn with: how much of what's behind them shows through.
+    return pixelAt(image, 3 * TILE_PX + 12, 3 * TILE_PX + 2)[3];
+  };
+  let gate = alphaAt(obj('Gate', 3, 3, { letter: 'A', open: true }));
+  assert.ok(gate > 0 && gate < 255, 'an open Gate is part see-through');
+  assert.equal(alphaAt(obj('GemGate', 3, 3, { open: true })), gate, 'and an open Gem Gate by the same amount');
+  assert.equal(alphaAt(obj('GemGate', 3, 3)), 255, 'while a shut one is solid');
+});
+
+test('a Gem on its way to the Gate is drawn between the two squares', () => {
+  let { look } = artLook();
+  let image = blank();
+  renderBoard(image, [obj('GemGate', 3, 2)], look, { gemPhase: 0, gemShots: [{ from: at(3, 5), to: at(3, 2), along: 0.5 }] });
+  // Half way is a square and a half below the Gate: drawn there, and not on either square it's between.
+  assert.ok(rowsDrawn(image, 3).length > 0);
+  let between = [];
+  for (let y = 3 * TILE_PX + 12; y < 4 * TILE_PX + 12; y++) if (pixelAt(image, 3 * TILE_PX + 12, y)[3]) between.push(y);
+  assert.ok(between.length > 0, 'drawn part way there');
+});
+
+test('a puzzle has one Gem Gate, so placing a second moves the first', () => {
+  let objects = placeObject([obj('GemGate', 1, 1)], obj('GemGate', 6, 6));
+  assert.deepEqual(objects.filter(o => o.kind === 'GemGate').map(o => `${o.col},${o.row}`), ['6,6']);
+});
+
 test('a Gate blocks until its own Switch opens it', () => {
   let g = game(obj('Gate', 1, 0, { letter: 'A' }), obj('Gate', 2, 0, { letter: 'B' }), obj('Switch', 5, 5, { letter: 'A' }));
   assert.equal(g.canEnter(at(1, 1), at(1, 0), 'up'), false);

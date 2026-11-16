@@ -26,6 +26,16 @@
   const STREAM_CYCLE_MS = 900;
   const ROTATOR_CYCLE_MS = 1000;
   const FINISH_ARROW_CYCLE_MS = 1200;
+  // A collected Gem's flight to the Gate, how long the Gate rattles for once it's hit, and how long one turn of a Gem
+  // on the spot takes.
+  const GEM_SHOT_MS = 260;
+  const GEM_SHAKE_MS = 240;
+  const GEM_SPIN_CYCLE_MS = 1400;
+  // A Gem's turn is drawn in steps, so that the sprites it goes through are a handful rather than one a frame.
+  const GEM_SPIN_STEPS = 16;
+  // How many turns a pulse made of three is: the last Gem in opens the Gate with a burst rather than a single ring.
+  const GEM_PULSE_COUNT = 3;
+  const GEM_PULSE_GAP_MS = 90;
 
   // The ship starts out facing into the board, away from whichever edge it starts on: up from the bottom edge, and
   // so on. Up anywhere else, or in a corner.
@@ -69,6 +79,9 @@
       sinking: [],
       pulses: [],
       gateBeams: [], // a Gate Switch's Beams, for as long as they're drawn - see advanceGateBeams
+      gemShots: [], // { from, to, ms, last } while a collected Gem is on its way to the Gem Gate
+      gemShakeMs: null, // how long ago the Gem Gate was last hit, for its rattle
+      gemClockMs: 0, // how long a Gem has been turning on the spot, for its spin
     };
 
     // A Stream carries the ship along, whatever's being pressed, and an Archeton's laser can push or send it back.
@@ -110,6 +123,8 @@
       if (event.hopped) play.hopMs = 0;
       if (event.lit) play.pulses.push({ ...event.lit, ms: 0, revealed: event.revealed ?? [] });
       if (event.gateBeam) play.gateBeams.push({ ...event.gateBeam, ms: 0 });
+      // A Gem that has somewhere to go flies there; one collected with no Gem Gate on the board just goes.
+      if (event.gem?.to) play.gemShots.push({ from: { col: event.gem.col, row: event.gem.row }, to: event.gem.to, ms: 0, last: event.gem.last });
       if (event.pipesTurned) {
         play.pipeTurnMs = 0;
         play.pipeActiveMs = 0;
@@ -177,6 +192,19 @@
       if (play.slideMs !== null) play.slideMs += dtMs;
       if (play.swimMs !== null) play.swimMs += dtMs;
       if (play.hopMs !== null) play.hopMs += dtMs;
+      play.gemClockMs += dtMs;
+      if (play.gemShakeMs !== null) play.gemShakeMs += dtMs;
+      for (const shot of play.gemShots) shot.ms += dtMs;
+      // A Gem that's arrived rattles the Gate and sets off its pulse: one ring, or three when it was the last one, which
+      // is the Gate opening - see puzzleRules.js's Gem case, which opens it as the Gem is collected.
+      for (const shot of play.gemShots.filter(shot => shot.ms >= GEM_SHOT_MS)) {
+        play.gemShakeMs = 0;
+        for (let i = 0; i < (shot.last ? GEM_PULSE_COUNT : 1); i++) {
+          play.pulses.push({ ...shot.to, ms: -i * GEM_PULSE_GAP_MS, revealed: [] });
+        }
+        hooks.onGemHit?.(shot.to);
+      }
+      play.gemShots = play.gemShots.filter(shot => shot.ms < GEM_SHOT_MS);
       if (play.refusedFlash) {
         play.refusedFlash.ms += dtMs;
         if (play.refusedFlash.ms >= play.refusedFlash.durationMs) play.refusedFlash = null;
@@ -329,6 +357,16 @@
           if (Math.hypot(thing.col - pulse.col, thing.row - pulse.row) * TILE_PX > pulses[i].radius) unreached.add(thing);
         }
       });
+      // A Gem turns on the spot all the while, so a board with one on it is never still.
+      let gemStep = Math.floor(play.gemClockMs / (GEM_SPIN_CYCLE_MS / GEM_SPIN_STEPS)) % GEM_SPIN_STEPS;
+      if (game.objects.some(object => object.kind === 'Gem')) key.push('g', gemStep);
+      let gemShots = play.gemShots.map(shot => ({ from: shot.from, to: shot.to, along: Math.min(1, shot.ms / GEM_SHOT_MS) }));
+      for (const shot of gemShots) key.push('m', Math.round(shot.along * TILE_PX));
+      // The Gate rattles when a Gem hits it, a pixel either side of itself, settling as it goes.
+      let gate = play.gemShakeMs === null || play.gemShakeMs >= GEM_SHAKE_MS ? null : game.objects.find(object => object.kind === 'GemGate');
+      let shake = gate ? { col: gate.col, row: gate.row, dx: Math.round(Math.sin(play.gemShakeMs / 18) * 2 * (1 - play.gemShakeMs / GEM_SHAKE_MS)) } : null;
+      if (shake) key.push('k', shake.dx);
+
       let hideUnreached = (list) => unreached.size === 0 ? list : list.map(thing => unreached.has(thing) ? { ...thing, revealed: false } : thing);
       floors = hideUnreached(floors);
       objects = hideUnreached(objects);
@@ -344,6 +382,9 @@
         slideAlong: play.slideMs === null ? 1 : Math.min(1, play.slideMs / TIMING.stepMs),
         swimAlong: play.swimMs === null ? 1 : Math.min(1, play.swimMs / TIMING.stepMs),
         hopAlong: play.hopMs === null ? 1 : Math.min(1, play.hopMs / TIMING.stepMs),
+        gemPhase: gemStep / GEM_SPIN_STEPS,
+        gemShots,
+        gateShake: shake,
         pulses,
         gateBeams: play.gateBeams.map(beam => ({
           from: beam.from,

@@ -46,6 +46,8 @@
     return [
       ...objects.filter(other => {
         if (object.kind === 'Start' && other.kind === 'Start') return false;
+        // A puzzle has one Gem Gate at most, so placing another moves it rather than being refused.
+        if (object.kind === 'GemGate' && other.kind === 'GemGate') return false;
         if (!(isAt(other, object) && isFloor(other) === floor)) return true;
         return object.kind === 'Edge' && other.kind === 'Edge' && other.direction !== object.direction;
       }),
@@ -200,7 +202,7 @@
     // shoved onto a ledge's square, and a Switch under one still works.
     function objectAt(cell){
       return objects.find(object => isAt(object, cell) && isSolid(object))
-        ?? objects.find(object => isAt(object, cell) && object.kind !== 'Gate' && object.kind !== 'Edge')
+        ?? objects.find(object => isAt(object, cell) && object.kind !== 'Gate' && object.kind !== 'GemGate' && object.kind !== 'Edge')
         ?? objects.find(object => isAt(object, cell) && object.kind !== 'Edge')
         ?? null;
     }
@@ -210,7 +212,8 @@
     }
 
     function isSolid(object){
-      return object.kind === 'Wall' || object.kind === 'PushBlock' || object.kind === 'Archeton' || (object.kind === 'Gate' && !object.open);
+      return object.kind === 'Wall' || object.kind === 'PushBlock' || object.kind === 'Archeton'
+        || ((object.kind === 'Gate' || object.kind === 'GemGate') && !object.open);
     }
 
     // ---------- Edges ----------
@@ -594,6 +597,16 @@
         case 'Key':
           objects.splice(objects.indexOf(object), 1);
           return null;
+
+        // The last Gem on the board opens every Gem Gate there and then: the Gate's shake and its pulse show the Gem
+        // arriving, they don't decide it. A board with no Gems never gets here, so its Gem Gate stays shut for good.
+        case 'Gem': {
+          objects.splice(objects.indexOf(object), 1);
+          let gate = objects.find(other => other.kind === 'GemGate') ?? null;
+          let last = !objects.some(other => other.kind === 'Gem');
+          if (last) for (const other of objects) if (other.kind === 'GemGate') other.open = true;
+          return { gem: { col: object.col, row: object.row, to: gate ? { col: gate.col, row: gate.row } : null, last } };
+        }
 
         case 'Teleporter': {
           let partners = objects.filter(other => other.kind === 'Teleporter' && other.letter === object.letter);
