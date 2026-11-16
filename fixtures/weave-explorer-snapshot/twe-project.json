@@ -795,7 +795,7 @@
           },
           "Children": [],
           "Requirements": [
-            "wooden-castle"
+            "glass-wall-gallery-lobby"
           ]
         },
         {
@@ -4755,7 +4755,7 @@
             "PaletteSource": "img/pentura/wooden-castle.png"
           },
           "Requirements": [
-            "glass-wall-gallery-lobby"
+            "cedarwood-high-clubrooms"
           ]
         },
         {
@@ -4800,9 +4800,7 @@
             "ExtraPanels": []
           },
           "Children": [],
-          "Requirements": [
-            "glass-wall-gallery-lobby"
-          ]
+          "LockMessage": "Coming in a future version.."
         },
         {
           "Id": "clockwork-lighthouse",
@@ -4846,9 +4844,7 @@
             "ExtraPanels": []
           },
           "Children": [],
-          "Requirements": [
-            "cedarwood-high-clubrooms"
-          ]
+          "LockMessage": "Coming in a future version.."
         },
         {
           "Id": "gestalt-canals",
@@ -4892,9 +4888,475 @@
             "ExtraPanels": []
           },
           "Children": [],
-          "Requirements": [
-            "cedarwood-high-clubrooms"
-          ]
+          "Puzzle": {
+            "Objects": [
+              {
+                "Kind": "Start",
+                "Col": 5,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Wall",
+                "Col": 4,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-13"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 6,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-18"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 4,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-13"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 6,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-17"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 3,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-18"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 7,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-13"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 8,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-17"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-18"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 6,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-13"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 5,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Circle"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 4,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Circle"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 5,
+                "Row": 6,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Circle"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 6,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Circle"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 1,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Cross"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 2,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Triangle"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 3,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Triangle"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 2,
+                "Row": 3,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Cross"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 9,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Triangle"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 8,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Square"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 8,
+                "Row": 3,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Square"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 7,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Star"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 6,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-17"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-18"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 2,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-13"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-18"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 2,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-12"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-12"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 4,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-13"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 3,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-13"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 6,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-13"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 7,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-13"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 8,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-17"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 2,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-17"
+              },
+              {
+                "Kind": "Finish",
+                "Col": 0,
+                "Row": 3,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-17"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 3,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-17"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 2,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Star"
+              }
+            ],
+            "Palette": {
+              "wall": "#c7dcd0",
+              "edge": "#f57d4a",
+              "finish": "#f9c22b",
+              "gate": "#ed8099",
+              "switch": "#ed8099",
+              "teleporter": "#ea4f36",
+              "stream": "#fdcbb0",
+              "key": "#ffffff",
+              "rotator": "#e6904e",
+              "rotatorSwitch": "#e6904e",
+              "lantern": "#d5e04b",
+              "block": "#7f708a",
+              "jump": "#fbb954",
+              "reset": "#b2ba90",
+              "pipe": "#fca790",
+              "archeton": "#cf657f",
+              "outline": "#2e222f",
+              "light": "#ffffff"
+            },
+            "Textures": {
+              "wall": {
+                "Ramp": [
+                  "#c7dcd0",
+                  "#c7dcd0",
+                  "#c7dcd0",
+                  "#c7dcd0"
+                ],
+                "Grain": "slssninnnnnnnnnnidddttttntztzinnnnsnsttntttdttztttttssnnisizttttttllttttttztzsnnnnittttttlt6dtltnttttzinindtlnindkl66tlzktztzsnnniinzdinikl66lttdttttznnsnintdinikll6ktldtztztzssnlizlnnn8nl6dzl3ntttttttn8ittinndltlllt6kttttzttlddtttttnllt6lt3ktttsttttdkitknindtl6dt8dttzsttztkkntliniknt3dt8ltltstztttlitliii8tn3dtknsssntttttnittiiiintl6tindntzstttttkttididnnn8l6tnsnkssztttlktlnnlknlkn3nitniitttttllllnnnnklk86dnttinzztttlnnnnknnlkd63dntssntttttknnnlnknid366kttztstztttntnknlnkl3300dntttntttttnndkinid330333kklkltttttnndininid03306dkilktttnli68dinini86k38kdkkkllklik68diininikd",
+                "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+              },
+              "edge": {
+                "Ramp": [
+                  "#cd683d",
+                  "#fb6b1d",
+                  "#f57d4a",
+                  "#f79617"
+                ],
+                "Grain": "o1bphpjpjphhfkqpqpkhppppt1bpphhhhhhhhhpppphfppppo11pbhhhhhhhhhppppfhjpppo11phhhhhhjcjhppppfbhhppj11thhhhhhhfbfppppfbbhppj11hhhhhhhooohppppfbhfppo31hhhhhhhjhjpppppfbbhppz31hhhhhhhpoohppqphbhhppo63hhhhhhhhhhhppkpkbbhpptd1jhhhhhhhhhjooof831111ob3j831111313131111111113333333110317dhhpjhbhfppd131jpjhhhhhbhjppppfbbjpho1bphhhhhhhhbhppppbbbppbt16jpfhhhhhhhhppppfbbhpco11pphhhhhhhhopzppfbbhp6o11kphhhhhhhhjpqppf8bfp8j11hhhhhhhhhhhpppzfbbhp8j11bfhhhhhhhhhpqppfbbfpec13hbhhhhhhhhhppppfbbop4c13bbbhfhhhbhhpqpphbfpp8763bbfhhhhhhhhpppzhbhpp76d3bfhjhhhhhhhpqppjfopp87j3hfhhjhhhhhhpppzjhppp",
+                "Pixels": "201212222211123232212222301221111111112222112222200211111111112222112222200211111121212222111122200311111111112222111122200111111122212222111122200111111121222222111122300111111122212232111122200111111111112222211122310211111111122221000000210200000000000000000000000000000000011122111122100022211111112222211122120121111111111222211122130022111111111222211112120022111111112232211112020022111111112232210112020011111111111222311112020011111111111232211112110011111111111222211122010011111111111232211122000011111111111222311122001011121111111232221222002011112111111222321222"
+              },
+              "finish": {
+                "Ramp": [
+                  "#f79617",
+                  "#f9c22b",
+                  "#f9c22b",
+                  "#d5e04b"
+                ],
+                "Grain": "tzzzzzzzzzzzzzj33nni99e6zzzzzzzzzzzzzzn34nicc9j6tzzzzzzzzzzzssj83xfc9cd4zzzszszzzzsnppnd4piccci3jppnsnnnjpppiijj4pic9994xpfnspppppppifnn4ip9ccc3ppcnspppppppjpjn4ijiide3ppcizpxnpfc55334a4444444433333333333334404eiipj933357ennnnnjpii843nfc9c7npffnppppppppppj33pfcc9cppfcippppppppppj33pfifiiipfccppppppppppj33pppppppppppppppppppppj83pppppppppppppppppppppn93pppppppppppppppppppppnj3pppppppppppppppppppkfji3kppppppppppppppppppfijs3ipppppppppppppppppiiinn37jkiffpkkffffcfcfcccccs33cfippcccfffcccijppppsj33xsppxxxxxxxpinxxxxxxxn35pxpxpxxsxspcipxppxxpxj33pspppxxxppiipxpxpxxxxn38ppkip",
+                "Pixels": "333333333333332002220020333333333333332002200020333333333333332003200020333333333332222202200020222232222222222202200000332232222222222202200000220232322232222202222220220232322200000000000000000000000000000000222220000002222222222000220000222222222232222200220000222022222223222200222222222002323232333200222232222223333323332200232322223232333333333200233232222323232222222220222222222222323222322220233332222222232323222230232222322222222222222220022222222222202020000030002222000222000222222320033223333333222333333320023232333333022322332320023222333222223232333320022222"
+              },
+              "gate": {
+                "Ramp": [
+                  "#cf657f",
+                  "#ed8099",
+                  "#ed8099",
+                  "#ed8099"
+                ],
+                "Grain": "3335344343353433357ekppt50558357kktttqqjiiiikiikttpzq73qqtpqmmjpiiikikiktptpqf5kqppjjjmpkikkkikitpppkg3iqqjjfmmpiiipkpiitpppqi5iqqjfjmkkpikkkkkipppppt3iqqjjfkipkqikikiipppptp5cqqjjkipppqkikkkijjkpqp3aqqkkkjppkqiikkikppppqi55qiiktjpjpqiippkikkkpqi35qikttppkkqiiipikkkppqi53qqtttptppqqikkkkdkkpqi33qqpttpptpqiiikikkkkqqk53qktttptttkiiikpkkpiqpq33iqptttkjficiikkkpkiqzq53qqpptpjcmdiikkppkjitzt55iqikkpfddiciikkkkkitzlc3ikpttpjmjiiiikkkkkcppq75ipktttfmmkcdikiikiipzqk3iqpttptuqpiikikkcdktqqi5cqptttjjdkciiiikkkkppqq3ckpttpjjmfiiqikippkkpqq3cqqtptjuutiqkqkktppktqt37qqkpptjk7a55333",
+                "Pixels": "000000000000000000002222000000002222222000002002222220022222220200020202222220022220002220222020222220002200022200022200222220002200022220222220222222002200020222020200222222002200202222202220002222002222202222002202222220002002202022002220222220002022222222000202222220002222222222202222022220002222222222000202222222002222222222000222220222000222222000000222220222002222220020002222200222000202220000000222220222000222220200000222220222000222220222000200200222200222222222002022002222000222220002000002222222200222220020002020222222200222220222022222222222200222222020000000"
+              },
+              "teleporter": {
+                "Ramp": [
+                  "#b33831",
+                  "#e83b3b",
+                  "#ea4f36",
+                  "#cd683d"
+                ],
+                "Grain": "fpjjjjjj87j3sppiipjpppnsipijjjsj87n3ipsppkppnnnnficjejji55n39finppkppjnnifijjdcc75s35fjnsppjspzsjfcjec9c57s33ijssnppfsnspiiii9cc77s33ijssfsspjppjf9ccc9de8n33icnncfpjnlnic99icjjj8j33iinncinnnnjcc99cjjnjjn34nji79953334nii7333334444043333332200404220202024einpnippnppeccdjnsssen73jpppjippnsncicdjssss7ii4pppiccjfjjniiccsssss8ii3ipnnciiinsijpciijjnn77j3ipnjjicicijnpiijijpn77j4fpjpjiiccccfpkpjpjpp75n37ppjpfc9c9cippppjnnn77n37pnnc99ccd6spijjjnsne5s35pfcieccc9iniinssssse7s33pfcsz9ccciiicjjsnsne3s33cc9cf99c9jncinnnnnse8n54cnnji9c9icnijpjjinni3n54c953583333fc9973334388444383434343",
+                "Pixels": "222222221120322222222223222222321120223222222222221222221120122222222222222221111130122232223233221221111130022332222323222221111130022332332222221111111120021221222222211121222120022221222222111112222220022211110000222100000000000000000000000000000000012222222222111122333121022222222232121123333122022221122222221133333122022221222232221222222112022222212122222222222112022222221111222222222112012222211111222222222112012221111111322222232113012212211112222233333113002213311112221223232103001111211112212222223112101222211121222222222202101110110000211110000011000010000000"
+              },
+              "stream": {
+                "Ramp": [
+                  "#fca790",
+                  "#fdcbb0",
+                  "#fdcbb0",
+                  "#fdcbb0"
+                ],
+                "Grain": "lnnis83isiisisnnnttsjnpnnnsisd6innpsssstttzsppsslsnisl4injissssssssspssssssnst6isninjnsszssppsssssniss4ipicsjeisssnspssssssisi6ipcinssnjsnssssssssnisz2iii9iiiiinsnssssxnnsiss6incccppnsssssssxxsnnjsn4cjjpnnsnssssxxxxxnnsisn47snssxnxxxxxxxnppnnnlss37xxnxxxxxxxppjijpnjnlss35xxxxxxxpppppppppnjnnss33pppxsppppnnnnnnnninnss33nnppsppppsppnjnjnjinis03jpkpssnsnnssnjjjidjnin43njipzsplpsnnnnnjiinsnn43ipipsstzttsnfc53snsnsn6435334464446443434344442444442238ejjjjjij23disn643iijssppztttspninsnsisi4ijfjstttlqqqssnnnnnnjss4iniisttttqqqsnsnnninisn4ipjjszltlqqqsnjnssnnnnn4ijjnsstni8437788",
+                "Pixels": "020020002002022002220222002020002222222222222222020020002002222222222222222222002202022222222222220022002002000222222222222020002002222022222222220022000000000022222222202022002000222222222222222022000022222222222222222022002222222222222222220022002222222222220002202022002222222222222222200022002222222222222222202022002222222222222020200002000202222222222000000002002002222022222220002222000202222222220000202222000000000000000000000000000000000000000000000022000000222222222220220202000000222202222222222002200200222222222222220202000200220202222202222222200002222000000000"
+              },
+              "key": {
+                "Ramp": [
+                  "#ffffff",
+                  "#ffffff",
+                  "#ffffff",
+                  "#ffffff"
+                ],
+                "Grain": "dlkllli6d8kk6336i0000000kllllln0000000000jnnn286dl00000nnnnszzzzzzzzzn4l00zzzzzzzzzzzzzzzzzzzn46zzzzzzzzzzzzzzzzzzzzzn36zzzzzzzzzzzzzzzzzzzzzj33zzzzzzzzzzzzzzzzzztldd44zzzzsned9888e8e8d8d66d848e8e8e888e7iejjnjszzzsd3jjnnszzzzzzzzzzzzzzzzsn3zzzzzzzzszzzzzzzzzzzzzn6zzzzzzzzztzzzzzzzzzzzzs4tzzzzzzzszzzzzzzzzzzzzn6dzzzzzzszzzzzzzzzzzzzzs34zzzzzssszzzzzzzzzzzzzn34ezzzzzszzzzzzzzzzzzzzn34eezzssztzzzzzzzzzzzzzj347cisssszzzzzzzzzzzzzzn3499nzsettzzzzzzzzzzzssj847czzjcnzzzszszzzzsnppnd4eezzicijppnsnnnjpppiijj47izznipxpfnspppppppifnn48dzzsffppcnspppppppjpjn48ezzsc9ppcizpxnpfc55334",
+                "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+              },
+              "rotator": {
+                "Ramp": [
+                  "#cd683d",
+                  "#f57d4a",
+                  "#e6904e",
+                  "#e6904e"
+                ],
+                "Grain": "o1bphpjpjphhfkqpqpkhppppt1bpphhhhhhhhhpppphfppppo11pbhhhhhhhhhppppfhjpppo11phhhhhhjcjhppppfbhhppj11thhhhhhhfbfppppfbbhppj11hhhhhhhooohppppfbhfppo31hhhhhhhjhjpppppfbbhppz31hhhhhhhpoohppqphbhhppo63hhhhhhhhhhhppkpkbbhpptd1jhhhhhhhhhjooof831111ob3j831111313131111111113333333110317dhhpjhbhfppd131jpjhhhhhbhjppppfbbjpho1bphhhhhhhhbhppppbbbppbt16jpfhhhhhhhhppppfbbhpco11pphhhhhhhhopzppfbbhp6o11kphhhhhhhhjpqppf8bfp8j11hhhhhhhhhhhpppzfbbhp8j11bfhhhhhhhhhpqppfbbfpec13hbhhhhhhhhhppppfbbop4c13bbbhfhhhbhhpqpphbfpp8763bbfhhhhhhhhpppzhbhpp76d3bfhjhhhhhhhpqppjfopp87j3hfhhjhhhhhhpppzjhppp",
+                "Pixels": "200212222211122222212222200221111111112222112222200201111111112222112222200211111121212222101122200211111111012222100122200111111122212222101122200111111121222222100122200111111122212222101122200111111111112222200122210211111111122221000000200200000000000000000000000000000000011122101122100022211111012222210022120021111111101222200022020022111111111222210012120022111111112222210012020022111111112222210012020011111111111222210012020001111111111222210012110010111111111222210022010000011111011222210122000000111111111222210122001001121111111222221222002011112111111222221222"
+              },
+              "lantern": {
+                "Ramp": [
+                  "#fbb954",
+                  "#f9c22b",
+                  "#d5e04b",
+                  "#d5e04b"
+                ],
+                "Grain": "otoopp56ppjopztzpttztjditttttpc2oooozzzztzzzthiiitotozc6jpphtztpzztzthdioototzj2ppppzzzzztztzhiihttttzj6jpptzzztoztzthiohjottpo2pjppzzzzzpztzioohioijzp6hpppzztpqzttzoithioiopo6hhptzzzoozztoitohioooto6hekztzpzzztpjooohhooopz6ajpzzzzpttzptttohiioopt65pjzzzphpztpotoohhiiopo65optzzzppzzpooiihhhippo60topea200626020460224242404262606000chio040005540hhhhhhhhhhhhihiiiihihh66htzzzztzzzjhhhhiiaiotpc0jpzzztttztpahhoihhhootc6ozzztztztzhaaopiphhiopj2htztphzzzphabiioiihooth6hzzztozzzphaioihihhhpop2hzztzzztttoaiioiiohiitp6hzzzztzzttihjpohooohooo2htzzztztzoihihipioihitp6ezzzzztztiihhbd",
+                "Pixels": "121122002211222222222101222222001111222222222011121212001220222222222001112122102222222222222011022222101222222212222011011222102122222222222111011112200222222222222112011112100022222112221121011112100012222222221111001112200122222222222221011112200212222022221211001112100122222222221111000122100212000000000000000000000000000000000011000000000000000000000101111010000022222222210000110112200122222222220001100011200122222222200012120011210022220222200011111011200022221222200111010002120022222222210111111011220022222222210121011101110022222222110101211101220022222222110000"
+              },
+              "block": {
+                "Ramp": [
+                  "#694f62",
+                  "#4d65b4",
+                  "#7f708a",
+                  "#7f708a"
+                ],
+                "Grain": "cacacacaca7a7a7a7cca5acaacaaaagaacgaa7aaaca7a7a7caca7a7aaacaca7aaa7a7acaacaaaagagaaagaaagaaaaaaa5aagcacacacacacg777acacaacacaagagagagagagcgaa7aaaacaagagcg7aagaaagaaag7aaagagggagggagagagagagaga777gcgagcgggcgagcgag7g7gaagagggggcgggagggagggagaagcgggagagagggagagagagaggaggggggnggggggagagagagacgggggaaggggggagcgagaaaggaggggggnggggggggagggagaagcggngggngngnggggagagagggggngngggggngggnggggggaaggggggngggnggggggagagagggngggnnngngngnggggggggggggggngnnngnnnggggggggggggggnnnnnnnnnngntntnnaa3gggnntztoo96330000000000300000000030303030300030000000000000000000000000300030000000000030003000",
+                "Pixels": "111111111101010101110111111111211121101111101010111101011111110111010111111111212111211121111111011211111111111200011111111111212121212121211011111112121201121112111201112122212221212121212121000212121222121212120202112122222122212221222121121222121212221212121212212222222222222121212121122222112222221212121112212222222222222221222121121222222222222222121212222222222222222222222221122222222222222222121212222222222222222222222222222222222222222222222222222222222222222222222110222222222210000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+              },
+              "jump": {
+                "Ramp": [
+                  "#e6904e",
+                  "#fca790",
+                  "#fbb954",
+                  "#cddf6c"
+                ],
+                "Grain": "i00ppppzpzpzkhhppppzppppo02pppzpzpzphhppppzpzpzpo00ppppppzpphhpppppppzppt06pppzpzpphhjzpzpppzpzpp00ppppppppheppppppppppzz62ppppppphhppzpppppppzppc0pppppppahpppppzpzppppzd2pppppphhhzpppzpohh882pc0opoha2200000000020002022020202020006chhooopoo0220hpjoopjoppppppppppppzo05pppkhhppzzzpzpzpzpzpqo02qpphappppppppppppzpzpi00pqphhpzpzpzzzpzpppzppo00ppphhppppppppzpppzpzpo00pppkppzpzpppppzpzppppo00pppppppzpzpzpppppppzpo60ppppppppppppppppzpzzpt60pppppzpppppzpppppppzpoi0opzpppppzpzpzzzpzzzzppi0hppppppppppppppppzpzppo0hpppzpzpppppppppppzpppo0apqppppppppppztzpppzppo05pppzpzzzppppppppppp",
+                "Pixels": "100111131313100111131111100111313131001111313131100111111311001111111311300111313110013131113131100111111110011111111113300111111100113111111131100111111100111113131111300111111000311131100000100111000000000000000000000000000000000000111111000001111111111111111111310011110011333131313131210021100111111111111313110012100131313331311131110011100111111113111313110011111131311111313111110011111113131311111113110011111111111111113133130011111311111311111113111011311111313133313333111001111111111111111313111001113131111111111131111001211111111113331113111001113133311111111111"
+              },
+              "reset": {
+                "Ramp": [
+                  "#ab947a",
+                  "#9babb2",
+                  "#b2ba90",
+                  "#b2ba90"
+                ],
+                "Grain": "daininnniini833iaidkdindsdnninsindsii36kinidiilnninnisnnninid636isnkkldnninnnnsnnnsin66ltsslttttninnnnnnnnnnidddttttltltzinnnnsnsttntttdttzttkiissnnisizttttttllttttddinzsnnnnittttttlt6dtltkkiitzinindtlnindkl66tlzdkiizsnnniinzdinikl66lttlkkitznnsnintdinikll6ktlllltztzssnlizlnnn8nl6dzlzttttttttn8ittinndltlllttkkdttzttlddtttttnllt6ltnlkitsttttdkitknindtl6dtitdnzsttztkkntliniknt3dtntkitstztttlitliii8tn3dtltdnsntttttnittiiiintl6ttklktzstttttkttididnnn8ltdlnnkssztttlktlnnlknlkntntkniitttttllllnnnnklk8klnntinzztttlnnnnknnlkd6nntlssntttttknnnlnknid36ntttztstztttntnknlnkl330nktt",
+                "Pixels": "000101120010000000010010202101201020000101000011102102121010000002211101102111221120100122212222102212212111000022221212202221212221222022222100222202022222221122220001221211022222212002121100220201021201011002120100221120012001011001221110221121012002011101211112222221102111101100212222222221002201101211122110222221002222211120121110222222010211010210020201222222111210101120021210222222210210000210021201212222210220000121022111222222221220000111012011112222221121111111112121100222221111111111101111201222221111111111001121221222221111111100001222222222221211111110001122"
+              },
+              "pipe": {
+                "Ramp": [
+                  "#ed8099",
+                  "#fca790",
+                  "#fca790",
+                  "#fbb954"
+                ],
+                "Grain": "6cpnjpssssttjsniijiiipnp85nnijsszttnnnnjjjnijjsp87pjipssstlnnnjpinnninnn83npppssnnnnnjnppjnjijsp23ppjpnzszsnnsnpjijjfjnx33ppppsssssnsnnpninnjjsx38nsnpnsnnnsnsnpnijnjjnx84pnssssnnssstspnjnnninp86ipinnsjstpntspjjijiijpd4injjnnsttpsssjnjnjninpi6ipjppsnttsstnpppinjijpn6ipffnsiltsslnpnnjjnnnpn6isifpsittsjljpjjijjppxs4ipsppsinnnplnnjjjjnnnss6cpipnsdienlljpijnjjnjxs6ipnjpniejjllnpinsjnnnpn67pjipsdejnltsncnnj8835s38njii864646664a46443634623464446443338ijjnjjii436enjjjjjjjjjnjjnssninpe23nssssijnstttjcnssnpnxs04jijpnjnnjnijjijsnppxxs33ijpjsinnnltjjinnnippxz34ipipsnnsttttnppppnnxp",
+                "Pixels": "003223333333232002000323002202333332222222202233003203333322222302220222002333332222222332220233003323233332232320220223003333333332322320222233002323232223232320222223003233332233333322222023000302232333233322020023000222223333333222222023200323332333332333022023200300232233322322222223200300332333222322022333300333332222322222222223300303230202222302222223300322322022222302322223200320330022233202220000300220000000000000000000000000000000000002222200000022222222222222332023000233332223333202332323300202322222222202323333300023232222232202220333300030332233333233332233"
+              },
+              "archeton": {
+                "Ramp": [
+                  "#a24b6f",
+                  "#f04f78",
+                  "#cf657f",
+                  "#cf657f"
+                ],
+                "Grain": "ojfjd33ikqqtpzzttziiijjjjfkjj35ikgqttzzzzqkikkjjjjejj64ipiitzztttzfiikjptoffjd4ikkptzzztzpjiidpfpoffff4ikiqqtzpzzpfdckfjtopqtp5iqiqqzzzzzkmfdktpttdffp4iiglqzzqtqkdkckkptojfkp3cpgqqztzzzjmkikppttdfip4cpikztkqzqfjpcdkktojfkk57kiqzzqzzqcmpifpkopfffp35pgqztqtzkmmpiffktppfkk33tkqzztztpdmjdfkkopkfii33qqqzqqzzfmdjafdktppfkk33qqzzztzqjjjfifkkptkpjt33pttzqqtpjmdfcddktjpfff33ppztqzzkjmmkidkfjjjjei33ipzqqztpuumfaffdodjjic53iqzzztzijjdfdcicjdjmkk33iqzqzzqkjjdfccckojjjpke3iqzqzzttmjmjkcijofjjkpi3cqtqzzptjjjjkikptdjjkpp3aqqgga5333344433040444040333334202003afj20303af43tpipiccicdkpipp",
+                "Pixels": "211110012222222222111111112110012122222222212211111110012112222222111212221111012222222222111021221111012122222222100211222222012122222222210222221112011122222222120222221122002122222221221222221112002122222221120022221122002122222220221122221112002122222222221112222122002222222221210122222111002222222212110102222122002222222211111122222212002222222212110002212111002222222212221021111111001222222222210110211110001222222111110010111222001222222211110002211122101222222221212011211122100222222211112122211122200221100000000000000000000000000000000011000000100221210010022122"
+              }
+            },
+            "PaletteSource": "img/pentura/gestalt-canals.png"
+          }
         },
         {
           "Id": "glass-wall-gallery-lobby",
@@ -7134,7 +7596,7 @@
             "PaletteSource": "img/pentura/glass-wall-gallery.png"
           },
           "Requirements": [
-            "cedarwood-high-clubrooms"
+            "wooden-castle"
           ]
         },
         {
@@ -7179,9 +7641,7 @@
             "ExtraPanels": []
           },
           "Children": [],
-          "Requirements": [
-            "glass-wall-gallery-lobby"
-          ]
+          "LockMessage": "Coming in a future version.."
         },
         {
           "Id": "cedarwood-high-clubrooms",
