@@ -479,6 +479,36 @@ h3 {
 .floatInfo[data-modal="true"] {
   z-index: 2001;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+  /* The card is as tall as what's on it (BuildCardStyle sets height:auto and no fixed height), so
+     anything beside the text has to take up room in the card's own layout - an absolutely
+     positioned child would add nothing to its height and hang out under the bottom edge. Two
+     columns: the text, and whatever panels the card has. */
+  display: none;
+  grid-template-columns: 250px 1fr;
+  align-content: start;
+  align-items: start;
+}
+
+/* Open (see cards.js's showCurrentModal), which is also where the grid actually takes effect. */
+.floatInfo[data-modal="true"].modalOpen {
+  display: grid;
+}
+
+/* A modal's writing - cover, audio, heading, poetry and the close key - in the left column. It's
+   wrapped into one cell by PageRenderer so that the grid is a single row of two columns, and the
+   card's auto height comes out as the taller of them. */
+.floatInfo[data-modal="true"] > .modalText {
+  grid-column: 1;
+  /* This file's universal `* { position: absolute }` default would take the cell out of the grid's
+     own height, which is the whole point of the card being auto-height. */
+  position: static;
+}
+
+/* A panel (see PageRenderer's RenderStaticPanel, which drops its authored offset for a modal) in the
+   right column, beside the text rather than after it. */
+.floatInfo[data-modal="true"] > .floatInfo {
+  grid-column: 2;
+  position: static;
 }
 
 /* Track Focus (see main.js's openTrackFocus): album art on the left, title and poetry on the right,

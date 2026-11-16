@@ -40,7 +40,9 @@ function showCurrentModal(){
     document.documentElement.appendChild(modalBackdrop);
   }
 
-  nodeMeta.get(modalQueue[0]).info.style.display = '';
+  // The card's display comes from main.css's .floatInfo[data-modal] rules - a grid, now that the
+  // card sizes to its content - so it's opened with a class rather than by clearing an inline style.
+  nodeMeta.get(modalQueue[0]).info.classList.add('modalOpen');
 }
 
 // Dismisses modalQueue[0] and reveals the next queued modal, if any; removes the backdrop once
@@ -51,7 +53,7 @@ function closeCurrentModal(){
   if (modalQueue.length === 0) return;
 
   let meta = nodeMeta.get(modalQueue[0]);
-  meta.info.style.display = 'none';
+  meta.info.classList.remove('modalOpen');
   markModalSeen(meta.modalId);
   modalQueue.shift();
 
