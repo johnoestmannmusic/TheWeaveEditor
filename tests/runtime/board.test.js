@@ -243,3 +243,19 @@ test('a Switch press sends a Beam out, and its Gates change when it lands rather
   run(play, BOARD_TIMING.gateBeamMs);
   assert.deepEqual(play.gateBeams, [], 'and the Beam is taken down after it');
 });
+
+test('a Swim Fish swims a square each step the ship takes, drawn gliding as it goes', () => {
+  const SWIM_FISH = { id: 'swim-fish', name: 'Swim Fish', parts: [{ kind: 'Swim' }, { kind: 'Sting' }] };
+  let play = createBoardPlay({
+    puzzle: { archetons: [SWIM_FISH], objects: [obj('Start', 5, 8), obj('Archeton', 5, 5, { archeton: 'swim-fish', direction: 'Left' })] },
+  });
+  let fish = () => play.game.objects.find(object => object.archeton === 'swim-fish');
+
+  play.mover.press('up');
+  play.mover.release('up');
+  run(play, BOARD_TIMING.stepMs);
+  assert.equal(fish().col, 4, 'swum a square the way it was placed');
+  assert.equal(fish().glide, 'swim', 'gliding, not snapping');
+  let { options } = play.frame(0, {});
+  assert.ok(options.swimAlong < 1, 'and drawn part way there');
+});

@@ -48,6 +48,15 @@ public enum ArchetonPartKind
     /// off what it lands on, and hurting the ship when it's hurt. See runtime/puzzleRules.js's reflections.
     /// </summary>
     Reflect,
+
+    /// <summary>
+    /// A movement: each time the ship takes a step, swims a square the way it faces, and turns round at a wall, a Push
+    /// Block or anything else solid - and at the board's edge - so it goes back and forth along its line. Placed facing
+    /// Left or Right it swims across, facing Up or Down up and down. A Jump Tile jumps it as it would the ship, and a
+    /// Teleporter sends it to its pair. It triggers what it lands on, as the ship would: Switches, Lanterns, Pipe
+    /// Switches and Reset Switches.
+    /// </summary>
+    Swim,
 }
 
 /// <summary>Which ways a Beam looks.</summary>
@@ -161,6 +170,61 @@ public static class ArchetonDefinitions
         "....O1H1O.OHHO.O1H1O...." +
         ".....O1O..O11O..O1O....." +
         "......O....OO....O......" +
+        "........................",
+        Mix =
+        [
+            new PuzzleMixColour { Role = "archeton", Shade = 0, Percent = 15 },
+            new PuzzleMixColour { Role = "archeton", Shade = 1, Percent = 25 },
+            new PuzzleMixColour { Role = "archeton", Shade = 2, Percent = 45 },
+            new PuzzleMixColour { Role = "archeton", Shade = 3, Percent = 15 },
+        ],
+    };
+
+    /// <summary>The fourth Archeton: a fish that swims along its line, turning round at whatever stops it, and stings.</summary>
+    public static ArchetonDefinition SwimFish() => new()
+    {
+        Id = "swim-fish",
+        Name = "Swim Fish",
+        Drawing = SwimFishDrawingId,
+        Parts =
+        [
+            new ArchetonPart { Kind = ArchetonPartKind.Swim },
+            new ArchetonPart { Kind = ArchetonPartKind.Sting },
+        ],
+    };
+
+    public const string SwimFishDrawingId = "swim-fish";
+
+    /// <summary>Swim Fish's drawing, facing right: a body with a forked tail behind it, a fin above and below, and an eye.</summary>
+    public static PuzzleDrawing SwimFishDrawing() => new()
+    {
+        Id = SwimFishDrawingId,
+        Kind = PuzzleObjectKind.Archeton,
+        Name = "Swim Fish",
+        Pixels =
+        "........................" +
+        "........................" +
+        "........................" +
+        "........................" +
+        "........................" +
+        "...........OOO.........." +
+        "..........O444O........." +
+        "..........O44G4OO......." +
+        "........OO44G444GOO....." +
+        ".......O444G444G4O4O...." +
+        "..OOOOO444G444G4OHO4O..." +
+        "...O22444G444G444O444O.." +
+        "...O2233G3333G3333G33O.." +
+        "...O223G3333G3333G333O.." +
+        "..OOOOO3333G3333G333O..." +
+        ".......O33G3333G333O...." +
+        "........OO3333G33OO....." +
+        "..........O33GOOO......." +
+        "..........O3GO.........." +
+        "...........OO..........." +
+        "........................" +
+        "........................" +
+        "........................" +
         "........................",
         Mix =
         [
@@ -293,7 +357,7 @@ public static class ArchetonDefinitions
     /// <summary>How many moves a Sequence can have.</summary>
     public const int MaxMoves = 32;
 
-    public static IReadOnlyList<Func<ArchetonDefinition>> ReadyMade { get; } = [Sentribeam, SlideBug, JumpbugA, ReflectMimic];
+    public static IReadOnlyList<Func<ArchetonDefinition>> ReadyMade { get; } = [Sentribeam, SlideBug, JumpbugA, ReflectMimic, SwimFish];
 
     /// <summary>The drawing a ready-made Archeton comes with, by its id, or null.</summary>
     public static PuzzleDrawing? ReadyMadeDrawing(string? id) => id switch
@@ -301,6 +365,7 @@ public static class ArchetonDefinitions
         SlideBugDrawingId => SlideBugDrawing(),
         JumpbugDrawingId => JumpbugDrawing(),
         ReflectMimicDrawingId => ReflectMimicDrawing(),
+        SwimFishDrawingId => SwimFishDrawing(),
         _ => null,
     };
 

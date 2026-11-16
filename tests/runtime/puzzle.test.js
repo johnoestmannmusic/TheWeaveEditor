@@ -1567,6 +1567,109 @@ test('a Gate closing on a Push Block sends it back to the square it was pushed f
   assert.deepEqual(blocksIn(taken), ['Circle@3,5', 'Star@2,5'], 'with its square taken, it stays in the closed Gate');
 });
 
+// ---------- Swim Fish ----------
+
+const SWIM_FISH = { id: 'swim-fish', name: 'Swim Fish', parts: [{ kind: 'Swim' }, { kind: 'Sting' }] };
+const swimmer = (col, row, direction = 'Left') => obj('Archeton', col, row, { archeton: 'swim-fish', direction });
+const swimmersIn = (g) => g.objects.filter(o => o.archeton === 'swim-fish').map(o => `${o.col},${o.row}`);
+const facingOf = (g) => g.objects.find(o => o.archeton === 'swim-fish').direction;
+
+test('a Swim Fish swims a square the way it faces each step the ship takes, and turns round at a wall', () => {
+  let g = withArchetons([SWIM_FISH], swimmer(5, 5), obj('Wall', 2, 5));
+  g.shipArrivedAt(at(5, 8));
+  assert.deepEqual(swimmersIn(g), ['4,5'], 'left, the way it was placed');
+  g.shipArrivedAt(at(5, 8));
+  assert.deepEqual(swimmersIn(g), ['3,5']);
+  // The wall's next: it turns round instead of moving, and swims back the other way.
+  g.shipArrivedAt(at(5, 8));
+  assert.deepEqual(swimmersIn(g), ['3,5'], 'stopped by the wall');
+  assert.equal(facingOf(g), 'Right', 'and turned round');
+  g.shipArrivedAt(at(5, 8));
+  assert.deepEqual(swimmersIn(g), ['4,5'], 'back the way it came');
+});
+
+test('a Swim Fish turns round at the board\'s edge, and swims up and down when it\'s placed facing up or down', () => {
+  let edge = withArchetons([SWIM_FISH], swimmer(0, 5, 'Left'));
+  edge.shipArrivedAt(at(5, 8));
+  assert.deepEqual(swimmersIn(edge), ['0,5'], 'nowhere to go, so it stays');
+  assert.equal(facingOf(edge), 'Right');
+  edge.shipArrivedAt(at(5, 8));
+  assert.deepEqual(swimmersIn(edge), ['1,5']);
+
+  let down = withArchetons([SWIM_FISH], swimmer(5, 2, 'Down'));
+  down.shipArrivedAt(at(8, 8));
+  assert.deepEqual(swimmersIn(down), ['5,3'], 'down, not across');
+});
+
+test('a Swim Fish turns round at a Push Block rather than shoving it', () => {
+  let g = withArchetons([SWIM_FISH], swimmer(5, 5), block(3, 5));
+  g.shipArrivedAt(at(9, 9));
+  g.shipArrivedAt(at(9, 9));
+  assert.deepEqual(swimmersIn(g), ['4,5']);
+  assert.deepEqual(g.objects.filter(o => o.kind === 'PushBlock').map(o => `${o.col},${o.row}`), ['3,5'], 'the block hasn\'t moved');
+  g.shipArrivedAt(at(9, 9));
+  assert.equal(facingOf(g), 'Right', 'and it turns round rather than going through it');
+});
+
+test('a Swim Fish sets off the Switch it lands on, as a Slide Bug does', () => {
+  let g = withArchetons([SWIM_FISH], swimmer(5, 5), obj('Switch', 3, 5, { letter: 'A' }), obj('Gate', 9, 9, { letter: 'A' }));
+  g.shipArrivedAt(at(9, 2));
+  g.shipArrivedAt(at(9, 2));
+  assert.deepEqual(swimmersIn(g), ['3,5'], 'on the Switch');
+  assert.equal(find(g, 'Gate').open, false, 'its Beam is on its way');
+  land(g);
+  assert.equal(find(g, 'Gate').open, true, 'and its Gates change when it lands');
+});
+
+test('a Swim Fish swimming into the ship stings it, sending it back the way the fish came', () => {
+  let g = withArchetons([SWIM_FISH], swimmer(4, 5, 'Left'));
+  g.placeShip(at(3, 5));
+  g.shipArrivedAt(at(3, 5));
+  assert.deepEqual(swimmersIn(g), ['3,5'], 'onto the ship');
+  assert.equal(g.carryDirection(at(3, 5)), 'left', 'and the ship is sent on the way the fish was going');
+});
+
+test('a Swim Fish is jumped by a Jump Tile and sent on by a Teleporter, as the ship would be', () => {
+  let jumped = withArchetons([SWIM_FISH], swimmer(4, 5, 'Right'), obj('JumpTile', 5, 5, { direction: 'Right' }));
+  jumped.shipArrivedAt(at(9, 9));
+  assert.deepEqual(swimmersIn(jumped), ['7,5'], 'on over the tile, two squares the way it points');
+
+  let sent = withArchetons([SWIM_FISH], swimmer(4, 5, 'Right'),
+    obj('Teleporter', 5, 5, { letter: 'A' }), obj('Teleporter', 8, 8, { letter: 'A' }));
+  sent.shipArrivedAt(at(9, 9));
+  assert.deepEqual(swimmersIn(sent), ['8,8'], 'out of its pair');
+});
+
+test('a Swim Fish that has finished its swim is drawn where it is, not still gliding on the Stream tick', () => {
+  let { look } = artLook();
+  // Settled on (4, 2), having swum there from (5, 2): its own glide is over, so it belongs on its own square whatever
+  // the Stream tick is doing. Falling through to the Stream's along draws it part way between the two, for ever.
+  let fish = obj('Archeton', 4, 2, { archeton: 'swim-fish', direction: 'Left', fromCol: 5, fromRow: 2, glide: 'swim' });
+  let image = blank();
+  renderBoard(image, [fish], look, { swimAlong: 1, along: 0.5 });
+
+  assert.ok(rowsDrawn(image, 4).length > 0, 'drawn on its own square');
+  assert.equal(rowsDrawn(image, 5).length, 0, 'and not still part way back towards the one it came from');
+});
+
+test('what stands on a square is drawn over the Switch built into it, not under it', () => {
+  let { look } = artLook();
+  // A Swim Fish on a Switch is what surfaced this, and a Push Block on one is the same rule.
+  for (const standing of [obj('Archeton', 4, 4, { archeton: 'swim-fish', direction: 'Left' }), obj('PushBlock', 4, 4)]) {
+    let alone = blank();
+    renderBoard(alone, [standing], look, {});
+    // The Switch comes after it in the list, which is the order that used to win.
+    let together = blank();
+    renderBoard(together, [standing, obj('Switch', 4, 4, { letter: 'A' })], look, {});
+
+    // The body and the eye: what's standing on the square belongs over what's built into it.
+    for (const [x, y] of [[12, 12], [16, 10], [13, 13]]) {
+      assert.deepEqual(pixelAt(together, 4 * TILE_PX + x, 4 * TILE_PX + y), pixelAt(alone, 4 * TILE_PX + x, 4 * TILE_PX + y),
+        `the ${standing.kind} shows at ${x},${y}`);
+    }
+  }
+});
+
 // ---------- Slide Bugs ----------
 
 const SLIDE_BUG = { id: 'slide-bug', name: 'Slide Bug', parts: [{ kind: 'Slide' }] };

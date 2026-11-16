@@ -823,18 +823,26 @@
     let streamPhase = phaseOf(options.timeMs, STREAM_CYCLE_MS);
     let rotatorPhase = phaseOf(options.rotatorTimeMs, ROTATOR_CYCLE_MS);
     let finishPhase = phaseOf(options.timeMs, FINISH_ARROW_CYCLE_MS);
-    // Where every Stream is, and which way it flows, for how they join up - see streamJoins.
+    // What moves about the board and so stands on what it's over, rather than being part of the square.
+  const STANDS_ON = new Set(['Archeton', 'PushBlock']);
+
+  // Where every Stream is, and which way it flows, for how they join up - see streamJoins.
     let streams = new Map(objects.filter(object => object.kind === 'Stream').map(object => [object.col + ',' + object.row, object.direction]));
     let switchesActive = options.switchesActive ?? true;
 
     let alongFor = (object) => (object.glide === 'rotator' ? options.rotatorAlong : object.glide === 'push' ? options.pushAlong
       : object.glide === 'return' ? options.returnAlong : object.glide === 'slide' ? options.slideAlong
-      : object.glide === 'hop' ? options.hopAlong : options.along) ?? 1;
+      : object.glide === 'hop' ? options.hopAlong : object.glide === 'swim' ? options.swimAlong
+      : options.along) ?? 1;
     let drawnRow = (object) => object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * alongFor(object);
     let floorsFirst = objects
       .filter(object => object.kind !== 'Start')
-      // A Gate goes under a Push Block sitting in it.
-      .sort((a, b) => isFloor(b) - isFloor(a) || drawnRow(a) - drawnRow(b) || (b.kind === 'Gate') - (a.kind === 'Gate'));
+      // What's standing on a square is drawn over what's built into it - an Archeton or a Push Block over the Switch,
+      // Lantern or Gate it's on, and a Gate under a Push Block sitting in it - so a fish swimming onto a Switch isn't
+      // hidden by it. Within each of those it's the row that decides, so things further down the board come forward.
+      .sort((a, b) => isFloor(b) - isFloor(a) || drawnRow(a) - drawnRow(b)
+        || (STANDS_ON.has(a.kind) ? 1 : 0) - (STANDS_ON.has(b.kind) ? 1 : 0)
+        || (b.kind === 'Gate') - (a.kind === 'Gate'));
 
     for (const object of floorsFirst) {
       let hidden = object.invisible && !object.revealed;

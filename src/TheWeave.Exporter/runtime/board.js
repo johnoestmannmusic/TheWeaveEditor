@@ -60,6 +60,7 @@
       pipeTurnMs: null,
       returnMs: null,
       slideMs: null, // how long ago Slide Bugs last slid, for their glide
+      swimMs: null, // how long ago Swim Fish last swam, for theirs
       // { col, row, object, ms } while a step is being refused because of something on the reflection's side - a Wall, a
       // shut Gate, an Archeton, a Push Block that wouldn't move: it's drawn on the square the ship tried to walk into, so
       // it's plain where the space is taken - see the renderers and puzzleRules.js's reflectionObstacleInTheWay.
@@ -105,6 +106,7 @@
       }
       if (event.returned) play.returnMs = 0;
       if (event.slid) play.slideMs = 0;
+      if (event.swam) play.swimMs = 0;
       if (event.hopped) play.hopMs = 0;
       if (event.lit) play.pulses.push({ ...event.lit, ms: 0, revealed: event.revealed ?? [] });
       if (event.gateBeam) play.gateBeams.push({ ...event.gateBeam, ms: 0 });
@@ -173,6 +175,7 @@
       if (play.pipeTurnMs !== null) play.pipeTurnMs += dtMs;
       if (play.returnMs !== null) play.returnMs += dtMs;
       if (play.slideMs !== null) play.slideMs += dtMs;
+      if (play.swimMs !== null) play.swimMs += dtMs;
       if (play.hopMs !== null) play.hopMs += dtMs;
       if (play.refusedFlash) {
         play.refusedFlash.ms += dtMs;
@@ -339,6 +342,7 @@
         pushAlong: mover.progress,
         returnAlong: play.returnMs === null ? 1 : Math.min(1, play.returnMs / TIMING.stepMs),
         slideAlong: play.slideMs === null ? 1 : Math.min(1, play.slideMs / TIMING.stepMs),
+        swimAlong: play.swimMs === null ? 1 : Math.min(1, play.swimMs / TIMING.stepMs),
         hopAlong: play.hopMs === null ? 1 : Math.min(1, play.hopMs / TIMING.stepMs),
         pulses,
         gateBeams: play.gateBeams.map(beam => ({
@@ -360,7 +364,7 @@
       // Only what's actually moving or animating goes into the key: anything gliding, in whole pixels, and the
       // phase of any animation the board has.
       let gliding = (glide) => game.objects.some(o => o.glide === glide && o.fromCol !== undefined && (o.fromCol !== o.col || o.fromRow !== o.row));
-      for (const [glide, along] of [['stream', options.along], ['rotator', options.rotatorAlong], ['push', options.pushAlong], ['return', options.returnAlong], ['slide', options.slideAlong], ['hop', options.hopAlong]]) {
+      for (const [glide, along] of [['stream', options.along], ['rotator', options.rotatorAlong], ['push', options.pushAlong], ['return', options.returnAlong], ['slide', options.slideAlong], ['hop', options.hopAlong], ['swim', options.swimAlong]]) {
         if (gliding(glide)) key.push(glide, Math.round(Math.min(1, along) * TILE_PX));
       }
       let phase = (ms, cycle) => Math.floor((((ms ?? 0) % cycle) / cycle) * TILE_PX);
