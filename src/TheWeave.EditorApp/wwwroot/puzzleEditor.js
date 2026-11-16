@@ -25,7 +25,9 @@ const PUZZLE_TOOLS = [
   { kind: 'PipeSwitch', label: 'Pipe Switch', hint: 'Stepping on this turns every Pipe a quarter turn anticlockwise, and again each second the ship stays on it.', canHide: true },
   { kind: 'Archeton', label: 'Archeton…', hint: 'A mechanical enemy, built from parts. Opens the Archetons, to choose one to place or make a new one. Placed facing a direction, which matters for Beams that look the way it faces.', direction: true, canHide: true, archeton: true },
   { kind: 'Gem', label: 'Gem', hint: 'Stepping on this collects it. Collecting the last Gem on the board opens its Gem Gate.', canHide: true },
-  { kind: 'WarpOut', label: 'Warp Out', hint: 'Where a Warp Wisp sends the ship. Placing a Warp Wisp moves on to placing its Warp Out Square, and erasing either takes the other with it. The ship can stand on it; nothing else can be moved onto it.', canHide: true },
+  // Placed only as part of a Warp Wisp, so it never appears in the tray - see applyPuzzleTool. It's here at all so that
+  // choosing a tool, and naming one, still finds it.
+  { kind: 'WarpOut', label: 'Warp Out', hint: 'Where the Warp Wisp just placed sends the ship. The ship can stand on it; nothing else can be moved onto it.', hidden: true },
   { kind: 'GemGate', label: 'Gem Gate', hint: 'Blocks the way until every Gem on the board has been collected. A board with no Gems never opens it. There\'s only one.', canHide: true },
   { kind: 'Start', label: 'Start', hint: 'Where the ship begins. There\'s only one.' },
   { kind: 'Erase', label: 'Erase', hint: 'Removes the top thing on a square. Drag to paint.', paints: true },
@@ -271,7 +273,7 @@ function lineUpStart(objects) {
 
 function renderPuzzleTools() {
   const buttons = document.getElementById('pe-tool-buttons');
-  buttons.replaceChildren(...PUZZLE_TOOLS.map((tool) => {
+  buttons.replaceChildren(...PUZZLE_TOOLS.filter((tool) => !tool.hidden).map((tool) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.dataset.tool = tool.kind;
@@ -369,7 +371,8 @@ function currentPuzzleTool() {
 }
 
 function updateSuggestedLetter() {
-  if (!currentPuzzleTool().letter || puzzleEditor.letterChosen) return;
+  const tool = currentPuzzleTool();
+  if (!tool?.letter || puzzleEditor.letterChosen) return;
   puzzleEditor.letter = WeavePuzzle.suggestLetter(puzzleEditor.objects, puzzleEditor.tool);
   showPuzzleTool();
 }
@@ -632,7 +635,8 @@ function isWarpWisp(id) {
 
 // A letter nothing else on the board is using: a Warp Wisp and its Warp Out Square have to share one to themselves.
 function freeWarpLetter() {
-  const used = new Set((puzzleEditor.objects ?? []).map((object) => object.letter).filter(Boolean));
+  const pair = (puzzleEditor.objects ?? []).filter((object) => object.kind === 'WarpOut' || isWarpWisp(object.archeton));
+  const used = new Set(pair.map((object) => object.letter).filter(Boolean));
   return WeavePuzzle.LETTERS.find((letter) => !used.has(letter)) ?? WeavePuzzle.LETTERS[0];
 }
 
@@ -671,19 +675,25 @@ function applyPuzzleTool(cell, erasing) {
   // An Edge is on one side of a square, and a square can have one on each, so erasing with the Edge tool takes the one
   // on the side chosen - see puzzle.js's eraseObject.
   const side = puzzleEditor.tool === 'Edge' ? puzzleEditor.direction : null;
+
+  // A Warp Wisp and its Warp Out Square are placed as one pair and can't be placed any other way, so the two can never
+  // come apart: the Wisp takes a letter no other pair is using, and the square that answers it is placed next.
+  const wisp = !erasing && puzzleEditor.tool === 'Archeton' && isWarpWisp(puzzleEditor.archeton);
+  const square = !erasing && puzzleEditor.tool === 'WarpOut';
+  if (square && !puzzleEditor.warpLetter) return;
+  if (wisp) puzzleEditor.warpLetter = freeWarpLetter();
+
   puzzleEditor.objects = erasing
     ? WeavePuzzle.eraseObject(objects, cell, side)
     : WeavePuzzle.placeObject(objects, buildPuzzleObject(cell));
 
-  // A Warp Wisp is no use without a Warp Out Square to send the ship to, so placing one moves the tool on to placing its
-  // pair, and the tool comes back to the Archeton once that's down - see the Archeton window, which picks the letter.
-  if (!erasing && puzzleEditor.tool === 'Archeton' && isWarpWisp(puzzleEditor.archeton)) {
+  if (wisp) {
     puzzleEditor.tool = 'WarpOut';
     showPuzzleTool();
     renderToolTray();
-  } else if (!erasing && puzzleEditor.tool === 'WarpOut') {
+  } else if (square) {
     puzzleEditor.tool = 'Archeton';
-    puzzleEditor.warpLetter = freeWarpLetter();
+    puzzleEditor.warpLetter = null;
     showPuzzleTool();
     renderToolTray();
   }

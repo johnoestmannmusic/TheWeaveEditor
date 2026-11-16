@@ -140,8 +140,9 @@ function renderArchetonActions(side, selected) {
 function placeArcheton(id) {
   puzzleEditor.archeton = id;
   puzzleEditor.tool = 'Archeton';
-  // A Warp Wisp walks the tool on to placing its Warp Out Square once it's down, so the pair shares a letter picked here.
-  puzzleEditor.warpLetter = isWarpWisp(id) ? freeWarpLetter() : null;
+  // A Warp Wisp walks the tool on to placing its Warp Out Square once it's down. The pair's letter is picked as the Wisp
+  // is placed, not here - see applyPuzzleTool, which is the only place a Warp Out Square is ever placed.
+  puzzleEditor.warpLetter = null;
   closeArchetons();
   showPuzzleTool();
   renderToolTray();

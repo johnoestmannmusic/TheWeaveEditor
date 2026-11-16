@@ -1131,6 +1131,9 @@
     // the ship is already there, which a Wisp coming back round to its own square would otherwise do for ever. Nothing
     // else can be on a Warp Out Square, so there's nothing to find in the way.
     function warpFrom(wisp){
+      // A Wisp with no letter of its own has no square to go to: without this it would match any Warp Out Square that
+      // hasn't got one either, and every such Wisp on the board would pile onto the first of them.
+      if (!wisp.letter) return null;
       let out = objects.find(other => other.kind === 'WarpOut' && other.letter === wisp.letter) ?? null;
       if (!out) return null;
       let destination = { col: out.col, row: out.row };

@@ -927,6 +927,7 @@
   //   on their way to a Gem Gate, along being how far each has come.
   // - gateShake ({ col, row, dx }) rattles the Gem Gate on that square dx pixels to the side.
   // - warpFlash (0 to 1) washes the whole board out white, as a Warp Wisp's does.
+  // - wispDrift (0 to 1) is how far round its slow up-and-down a Warp Wisp has got.
   // - pulses ([{ col, row, radius }]) draws each lit Lantern's pulse: a ring radius pixels out from its square's middle.
   // - pushHints ([{ col, row, direction, bob }], or one as pushHint) show that the Push Block on each square can be
   //   pushed: an arrow just
@@ -953,6 +954,10 @@
       : object.glide === 'hop' ? options.hopAlong : object.glide === 'swim' ? options.swimAlong
       : options.along) ?? 1;
     let drawnRow = (object) => object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * alongFor(object);
+    // An Archeton that warps drifts rather than hops: it floats up and down on the spot however still it is, and slides
+    // between squares instead of rising on the way - see board.js's WISP_DRIFT_CYCLE_MS.
+    let floatingOn = (object) => object.kind === 'Archeton'
+      && (look.archetons?.find(definition => definition.id === object.archeton)?.parts ?? []).some(part => part.kind === 'Warp');
     let floorsFirst = objects
       .filter(object => object.kind !== 'Start')
       // What's standing on a square is drawn over what's built into it - an Archeton or a Push Block over the Switch,
@@ -969,8 +974,12 @@
       let along = alongFor(object);
       let col = object.fromCol === undefined ? object.col : object.fromCol + (object.col - object.fromCol) * along;
       let row = object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * along;
-      // A hop rises a little on its way, as a jump does.
-      if (object.glide === 'hop' && along < 1 && (object.fromCol !== object.col || object.fromRow !== object.row)) row -= HOP_RISE * Math.sin(Math.PI * along);
+      // A hop rises a little on its way, as a jump does - but a Wisp never rises, it drifts.
+      let floating = floatingOn(object);
+      if (object.glide === 'hop' && !floating && along < 1 && (object.fromCol !== object.col || object.fromRow !== object.row)) row -= HOP_RISE * Math.sin(Math.PI * along);
+      // A Wisp drifts slowly up and down about its square, moving or not, so it reads as something floating rather than
+      // something standing that occasionally arrives.
+      if (floating) row -= WISP_DRIFT * Math.sin(2 * Math.PI * (options.wispDrift ?? 0));
       // A Push Block shoved off a ledge leaps down it as the ship does off a Jump Tile: it keeps to the straight line it
       // was going along, and grows towards the middle of it - see puzzleRules.js's pushFrom, and trackFocus.js's leap.
       let grow = object.glide === 'push' && object.falls && along < 1 ? 1 + LEDGE_JUMP_RISE * Math.sin(Math.PI * along) : 1;
@@ -1137,6 +1146,8 @@
 
   // How high a hopping Archeton rises at the middle of its hop, in squares - see renderBoard.
   const HOP_RISE = 0.35;
+  // How far a Warp Wisp drifts either side of its square, in squares: a few pixels, slowly.
+  const WISP_DRIFT = 0.12;
 
   // How much bigger a Push Block looks at the top of its drop off a ledge - a smaller leap than the ship's 0.4, so that
   // a block dropping off one reads as the block falling rather than being thrown. See renderBoard, and board.js's

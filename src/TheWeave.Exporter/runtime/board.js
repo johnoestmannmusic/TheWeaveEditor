@@ -33,6 +33,10 @@
   const GEM_SPIN_CYCLE_MS = 1400;
   // How long a Warp Wisp's white flash washes the board out for.
   const WARP_FLASH_MS = 200;
+  // How slowly a Warp Wisp drifts up and down about its square, in how many steps of the drift - a step every 100 ms,
+  // so the drift is gentle rather than a shimmer.
+  const WISP_DRIFT_CYCLE_MS = 2600;
+  const WISP_DRIFT_STEPS = 26;
   // A Gem's turn is drawn in steps, so that the sprites it goes through are a handful rather than one a frame.
   const GEM_SPIN_STEPS = 16;
   // How many turns a pulse made of three is: the last Gem in opens the Gate with a burst rather than a single ring.
@@ -84,6 +88,7 @@
       gemShots: [], // { from, to, ms, last } while a collected Gem is on its way to the Gem Gate
       gemShakeMs: null, // how long ago the Gem Gate was last hit, for its rattle
       gemClockMs: 0, // how long a Gem has been turning on the spot, for its spin
+      wispClockMs: 0, // how long a Warp Wisp has been drifting up and down for
       warpFlashMs: null, // how long ago the ship was warped, for the board's white flash
     };
 
@@ -205,6 +210,7 @@
       if (play.swimMs !== null) play.swimMs += dtMs;
       if (play.hopMs !== null) play.hopMs += dtMs;
       play.gemClockMs += dtMs;
+      play.wispClockMs += dtMs;
       if (play.gemShakeMs !== null) play.gemShakeMs += dtMs;
       if (play.warpFlashMs !== null) play.warpFlashMs += dtMs;
       for (const shot of play.gemShots) shot.ms += dtMs;
@@ -370,6 +376,11 @@
           if (Math.hypot(thing.col - pulse.col, thing.row - pulse.row) * TILE_PX > pulses[i].radius) unreached.add(thing);
         }
       });
+      // A Warp Wisp drifts on the spot all the while, so a board with one on it is never still either.
+      let drifting = (puzzle?.archetons ?? []).some(definition => (definition.parts ?? []).some(part => part.kind === 'Warp')
+        && game.objects.some(object => object.kind === 'Archeton' && object.archeton === definition.id));
+      let wispStep = Math.floor(play.wispClockMs / (WISP_DRIFT_CYCLE_MS / WISP_DRIFT_STEPS)) % WISP_DRIFT_STEPS;
+      if (drifting) key.push('d', wispStep);
       // A Gem turns on the spot all the while, so a board with one on it is never still.
       let gemStep = Math.floor(play.gemClockMs / (GEM_SPIN_CYCLE_MS / GEM_SPIN_STEPS)) % GEM_SPIN_STEPS;
       if (game.objects.some(object => object.kind === 'Gem')) key.push('g', gemStep);
@@ -399,6 +410,7 @@
         swimAlong: play.swimMs === null ? 1 : Math.min(1, play.swimMs / TIMING.stepMs),
         hopAlong: play.hopMs === null ? 1 : Math.min(1, play.hopMs / TIMING.stepMs),
         gemPhase: gemStep / GEM_SPIN_STEPS,
+        wispDrift: wispStep / WISP_DRIFT_STEPS,
         gemShots,
         gateShake: shake,
         warpFlash,
