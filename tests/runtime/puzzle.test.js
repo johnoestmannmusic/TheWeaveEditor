@@ -116,7 +116,7 @@ test('transparent pixels are ignored, and fully transparent art is still handled
 
 // ---------- playing ----------
 
-const { createPuzzleGame, hasFinish } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+const { createPuzzleGame, hasFinish, crossingCell, startOf } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
 
 const at = (col, row) => ({ col, row });
 const game = (...objects) => createPuzzleGame({ objects, palette: {} });
@@ -130,6 +130,32 @@ test('the ship begins on Start, or the default square if there is none', () => {
   assert.deepEqual(game(obj('Start', 2, 3)).start, at(2, 3));
   assert.deepEqual(game().start, at(5, 9));
   assert.deepEqual(game(obj('Start', 2, 3)).shipCell, at(2, 3));
+});
+
+test('a ship crossing on to another part comes in on that part\'s Start, wherever it finished the last one', () => {
+  let next = { objects: [obj('Start', 7, 9), obj('Finish', 9, 1)] };
+
+  // The ship finished the board from (5, 0) - its reflection was the one on the Finish, off at the far side of a
+  // pane - so the ship's own square must not be what decides where the next part picks it up.
+  assert.deepEqual(crossingCell({ next, from: at(5, 0), exit: 'Up', onward: true }), at(7, 9));
+  // Even standing on the Finish, it comes in on the Start: the two are meant to be across from each other, and the
+  // Start is the square a player is meant to begin a board on.
+  assert.deepEqual(crossingCell({ next, from: at(4, 0), exit: 'Up', onward: true }), at(7, 9));
+
+  // No Start to come in on: the square across from where it left, as before.
+  assert.deepEqual(crossingCell({ next: { objects: [] }, from: at(4, 0), exit: 'Up', onward: true }), at(4, 9));
+
+  // Going back the other way, it is the square across from the Start it left by - the Finish it walked off - and a
+  // Start on that board is not where it comes in.
+  let back = { objects: [obj('Start', 4, 9), obj('Finish', 7, 0)] };
+  assert.deepEqual(crossingCell({ next: back, from: at(7, 9), exit: 'Down', onward: false }), at(7, 0));
+});
+
+test('a board\'s Start square reads the same for the game and for a crossing', () => {
+  let puzzle = { objects: [obj('Start', 7, 9), obj('Finish', 9, 1)] };
+  assert.deepEqual(startOf(puzzle), at(7, 9));
+  assert.deepEqual(createPuzzleGame(puzzle).start, at(7, 9), 'the same square the ship begins on');
+  assert.equal(startOf({ objects: [] }), null, 'no Start, no square');
 });
 
 test('a Wall blocks the ship, and an empty square does not', () => {
@@ -2103,6 +2129,23 @@ test('a Reflect Mimic mirrors the ship as far the other side of itself', () => {
 
   g.placeShip(at(6, 5));
   assert.deepEqual(cells(g), [at(4, 5)], 'either side of it');
+});
+
+test('a reflection standing on the Finish finishes the board, with the ship nowhere near it', () => {
+  // A pane at (6, 0) facing Right shows the ship's reflection across from it, one square the other side: the ship at
+  // (5, 0) puts its reflection on the Finish at (7, 0). This is how a board like Glass Wall Gallery - Floor I's lobby
+  // gets finished, and why where the ship is at that moment says nothing about where the next board takes it in.
+  let g = withArchetons([REFLECT_MIMIC], mimic(6, 0), obj('Start', 5, 9), obj('Finish', 7, 0));
+  g.placeShip(at(5, 1));
+  assert.equal(g.isSolved, false, 'not yet');
+
+  // One step up: the ship to (5, 0), its reflection to (7, 0) - the Finish.
+  let event = g.shipArrivedAt(at(5, 0));
+
+  assert.deepEqual(cells(g), [at(7, 0)], 'the reflection is the one on the Finish');
+  assert.equal(g.isSolved, true, 'so the board is finished from there');
+  assert.equal(event?.finished, true, 'and the arrival reports it, for the board to move on');
+  assert.deepEqual(g.shipCell, at(5, 0), 'still back here, nowhere near an edge');
 });
 
 test('a Reflect Mimic facing up or down lies flat, and mirrors rows', () => {

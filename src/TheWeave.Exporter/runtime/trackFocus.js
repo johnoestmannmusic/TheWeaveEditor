@@ -548,7 +548,15 @@ function crossBoard(exit, toIndex){
   let chain = nodeMeta.get(activeRoot).chain;
   boardVisits.set(activeNode, { game: boardGame, cell: boardMover.cell });
 
-  let across = crossedTo(boardMover.cell, exit);
+  // Onward, always the next part's Start - see puzzle.js's crossingCell. A board here can be finished by a reflection
+  // standing off at the far side of a pane, and then the ship is nowhere near the edge it is crossing from, so its own
+  // square would put it down in the wrong place on the next board.
+  let across = WeavePuzzle.crossingCell({
+    next: nodeMeta.get(chain[toIndex]).puzzle,
+    from: boardMover.cell,
+    exit,
+    onward: toIndex > chainIndex,
+  });
   chainIndex = toIndex;
   activeNode = chain[toIndex];
   let visit = boardVisits.get(activeNode) ?? { game: null, cell: across };
@@ -561,15 +569,6 @@ function crossBoard(exit, toIndex){
   startBoardScroll(leaving, exit);
   renderBoardShip();
   showBoardTitle();
-}
-
-// The square on the next board across from one on this board's edge, leaving it in a direction.
-function crossedTo(cell, exit){
-  let last = TRACK_FOCUS_BOARD_SQUARES - 1;
-  if (exit === 'Left') return { col: last, row: cell.row };
-  if (exit === 'Right') return { col: 0, row: cell.row };
-  if (exit === 'Up') return { col: cell.col, row: last };
-  return { col: cell.col, row: 0 };
 }
 
 // The edge a part's board leads off to the next part's, if they're connected: its one Finish is on an edge, and

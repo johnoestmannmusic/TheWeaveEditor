@@ -107,6 +107,31 @@
     return finishes.length === 1 ? entranceFrom(finishes[0]) : null;
   }
 
+  // The square the ship starts on: a puzzle's Start tile, if it has one.
+  function startOf(puzzle){
+    let start = (puzzle?.objects ?? []).find(object => object.kind === 'Start');
+    return start ? { col: start.col, row: start.row } : null;
+  }
+
+  // The square on the board next door, directly across from one on this board's edge, leaving it that way.
+  function acrossFrom(from, exit){
+    let last = BOARD_SIZE - 1;
+    if (exit === 'Left') return { col: last, row: from.row };
+    if (exit === 'Right') return { col: 0, row: from.row };
+    if (exit === 'Up') return { col: from.col, row: last };
+    return { col: from.col, row: 0 };
+  }
+
+  // Where the ship comes in after crossing between two connected parts of a chain. Onward, always on the next part's
+  // Start tile, wherever on this board it finished - a board can be finished by a reflection standing off at the far
+  // side of a pane, and then the ship is nowhere near the Finish that ended it, so its own square says nothing about
+  // where the next part should pick it up. Back the other way, on the square across from the one it left by, which is
+  // the Finish it walked off a board laid out with the two facing each other.
+  function crossingCell({ next = null, from, exit, onward = true }){
+    let start = onward ? startOf(next) : null;
+    return start ?? acrossFrom(from, exit);
+  }
+
   // Whatever is in the way of the ship coming in at a square: anything but a floor tile or Start.
   function blockingEntrance(objects, entrance){
     return objects.find(object => isAt(object, entrance) && !isFloor(object) && object.kind !== 'Start') ?? null;
@@ -157,11 +182,11 @@
     // Each Pipe's floor tile by its square, its direction changing as Pipe Switches turn it.
     let pipes = new Map();
     let floors = [];
-    let start = { col: DEFAULT_START.col, row: DEFAULT_START.row };
+    let start = startOf(puzzle) ?? { col: DEFAULT_START.col, row: DEFAULT_START.row };
 
     for (const object of puzzle.objects) {
       if (object.kind === 'Start') {
-        start = { col: object.col, row: object.row };
+        continue;
       } else if (object.kind === 'Pipe') {
         let pipe = { ...object, revealed: false, startDirection: object.direction };
         pipes.set(cellKey(object), pipe);
@@ -1477,5 +1502,5 @@
     return [...after.filter(object => !sweeps(object)), ...leaving, ...arriving].filter(object => (object.fade ?? 1) > 0);
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
+  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
 });
