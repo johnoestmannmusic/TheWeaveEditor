@@ -258,12 +258,12 @@ test('a Gem is drawn turning on the spot: full width front on, narrower at the t
   assert.equal(drawn(0.5), drawn(0), 'and front on again, half way round');
 });
 
-test('a Gem glows, and a Gem Gate carries a Gem where a Gate carries its letter', () => {
+test('a Gem is drawn with nothing around it, and a Gem Gate carries a Gem where a Gate carries its letter', () => {
   let { look } = artLook();
   let image = blank();
   renderBoard(image, [obj('Gem', 3, 3)], look, { gemPhase: 0 });
-  // Just above the tip of the diamond: the light colour, which is the glow, not the board.
-  assert.deepEqual(pixelAt(image, 3 * TILE_PX + 12, 3 * TILE_PX), [...toRgb(look.palette.light), 255]);
+  // Just above the tip of the diamond: nothing. Any glow is the drawing's own, painted in the Drawings view.
+  assert.equal(pixelAt(image, 3 * TILE_PX + 12, 3 * TILE_PX)[3], 0, 'no halo around it');
 
   // No letter, so two placed with different ones are drawn the same...
   let one = blank();
@@ -278,6 +278,20 @@ test('a Gem glows, and a Gem Gate carries a Gem where a Gate carries its letter'
   let open = blank();
   renderBoard(open, [obj('GemGate', 3, 3, { open: true })], look, {});
   assert.notEqual(tile(shut, 3, 3), tile(open, 3, 3), 'an open one is drawn open');
+});
+
+test('an open Gem Gate is see-through by as much as an open Gate is', () => {
+  let { look } = artLook();
+  let alphaAt = (object) => {
+    let image = blank();
+    renderBoard(image, [object], look, {});
+    // The top of the ring, which both are drawn with: how much of what's behind them shows through.
+    return pixelAt(image, 3 * TILE_PX + 12, 3 * TILE_PX + 2)[3];
+  };
+  let gate = alphaAt(obj('Gate', 3, 3, { letter: 'A', open: true }));
+  assert.ok(gate > 0 && gate < 255, 'an open Gate is part see-through');
+  assert.equal(alphaAt(obj('GemGate', 3, 3, { open: true })), gate, 'and an open Gem Gate by the same amount');
+  assert.equal(alphaAt(obj('GemGate', 3, 3)), 255, 'while a shut one is solid');
 });
 
 test('a Gem on its way to the Gate is drawn between the two squares', () => {

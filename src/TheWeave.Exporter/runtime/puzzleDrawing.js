@@ -135,8 +135,7 @@
   const standardDrawings = new Map();
 
   // A Gem's standard drawing: a tall diamond, its edge in the outline colour and its body cut into two facets, the
-  // left one brighter. It's the light halo around it that makes it glow - see glowing - and its width is narrowed as
-  // it turns on the spot - see squashed.
+  // left one brighter. Its width is narrowed as it turns on the spot - see squashed.
   function standardGemPixels(){
     let half = TILE_PX / 2;
     let inside = (u, v) => {
@@ -514,8 +513,8 @@
       drawPixelGem(sprite, isOpenGate || !useDark ? light : outline, isOpenGate ? outline : null);
     }
 
-    // A Gem glows, and is drawn narrowed as it turns on the spot.
-    if (object.kind === 'Gem') sprite = squashed(glowing(sprite, light), gemWidthAt(gemPhase));
+    // A Gem is drawn narrowed about its middle as it turns on the spot.
+    if (object.kind === 'Gem') sprite = squashed(sprite, gemWidthAt(gemPhase));
 
     // Turned before its depth is added, so that its raised edge stays at the bottom whichever way round it is.
     if (object.spin) sprite = spunBy(sprite, object.spin);
@@ -949,7 +948,7 @@
       let top = Math.round(row * TILE_PX) + (options.originY ?? 0);
       let sunk = Math.round((object.sink ?? 0) * TILE_PX);
       // An open Gate is half see-through, so it reads as something the ship can pass through.
-      let opacity = (object.fade ?? 1) * (object.kind === 'Gate' && object.open ? OPEN_GATE_OPACITY : 1);
+      let opacity = (object.fade ?? 1) * ((object.kind === 'Gate' || object.kind === 'GemGate') && object.open ? OPEN_GATE_OPACITY : 1);
       if (opacity <= 0) continue;
       blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX) + shake, top + sunk, object.sink ? top + TILE_PX : Infinity, opacity, grow);
     }
