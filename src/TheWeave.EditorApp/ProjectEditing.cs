@@ -333,10 +333,17 @@ internal static class ProjectEditing
             if (obj.Col < 0 || obj.Col >= Puzzle.BoardSize || obj.Row < 0 || obj.Row >= Puzzle.BoardSize)
                 throw new InvalidOperationException($"A {obj.Kind} at column {obj.Col}, row {obj.Row} is off the board.");
 
-            var usesLetter = obj.Kind is PuzzleObjectKind.Gate or PuzzleObjectKind.Switch or PuzzleObjectKind.Teleporter;
-            if (usesLetter && (obj.Letter is not { Length: 1 } || obj.Letter[0] is < 'A' or > 'Z'))
+            // A Gate and its Switch are paired by a letter, and so are a Warp Wisp and its Warp Out Square - but only a
+            // pair that has one, since a plain Archeton hasn't. Everything else has its letter taken away. Taking the
+            // Wisp's away here is what left every Wisp with nothing to find its square by: the editor never saw the
+            // letter again, since every edit comes back from here.
+            var needsLetter = obj.Kind is PuzzleObjectKind.Gate or PuzzleObjectKind.Switch or PuzzleObjectKind.Teleporter;
+            var mayHaveLetter = needsLetter || obj.Kind is PuzzleObjectKind.Archeton or PuzzleObjectKind.WarpOut;
+            if (needsLetter && (obj.Letter is not { Length: 1 } || obj.Letter[0] is < 'A' or > 'Z'))
                 throw new InvalidOperationException($"A {obj.Kind} needs a letter from A to Z.");
-            if (!usesLetter)
+            if (obj.Letter is not null && (obj.Letter.Length != 1 || obj.Letter[0] is < 'A' or > 'Z'))
+                throw new InvalidOperationException($"A {obj.Kind} needs a letter from A to Z, or none at all.");
+            if (!mayHaveLetter)
                 obj.Letter = null;
 
             var pointsSomewhere = IsFloorTile(obj) || obj.Kind is PuzzleObjectKind.JumpTile or PuzzleObjectKind.Archeton or PuzzleObjectKind.Edge;

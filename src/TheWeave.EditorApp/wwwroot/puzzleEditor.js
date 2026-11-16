@@ -576,6 +576,9 @@ function drawPuzzleBoard(timeMs) {
       rotatorTimeMs: timeMs,
       switchesActive: !objects.some((object) => object.kind === 'Key'),
       showInvisible: true,
+      // Which Warp Wisp goes with which Warp Out Square, since the ship is the only thing that games out which - and
+      // the playtest and the exported site don't ask for it.
+      pairLetters: true,
       reaches: archetonReaches(objects),
     });
     context.putImageData(puzzleEditor.image, 0, 0);

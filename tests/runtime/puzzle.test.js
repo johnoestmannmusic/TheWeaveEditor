@@ -1828,6 +1828,22 @@ test('a Warp Wisp with no letter of its own warps nothing, rather than piling on
   assert.deepEqual(g.shipCell, at(5, 5));
 });
 
+test('the editor shows which Warp Wisp goes with which Warp Out Square, and gameplay never does', () => {
+  let { look } = artLook();
+  look.archetons = [{ id: 'warp-wisp', name: 'Warp Wisp', drawing: 'warp-wisp', parts: [{ kind: 'Warp' }] }];
+  let paired = [obj('Archeton', 2, 2, { archeton: 'warp-wisp', letter: 'A' }), obj('WarpOut', 6, 2, { letter: 'A' })];
+  let loose = [obj('Archeton', 2, 2, { archeton: 'warp-wisp' }), obj('WarpOut', 6, 2)];
+  let pixelsOf = (objects, options) => {
+    let image = blank();
+    renderBoard(image, objects, look, options);
+    return [...image.data].join(',');
+  };
+
+  assert.notEqual(pixelsOf(paired, { pairLetters: true }), pixelsOf(paired, {}), 'the editor puts the letter on each');
+  assert.equal(pixelsOf(paired, {}), pixelsOf(loose, {}), 'and gameplay draws them as if the letters weren\'t there');
+  assert.equal(pixelsOf(loose, { pairLetters: true }), pixelsOf(loose, {}), 'with nothing to show, nothing is drawn');
+});
+
 test('a Warp Wisp drifts rather than hops: sliding between squares it is drawn where it would stand', () => {
   let { look } = artLook();
   look.archetons = [

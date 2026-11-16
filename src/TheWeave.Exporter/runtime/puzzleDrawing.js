@@ -114,6 +114,23 @@
     }
   }
 
+  // A letter small enough to sit in the corner of a square without covering what it's beside. Only the editor draws
+  // these, to say which Warp Wisp goes with which Warp Out Square - see renderBoard's pairLetters.
+  function drawCornerLetter(sprite, letter, color, halo){
+    let rows = PIXEL_LETTERS[letter]?.split(' ');
+    if (!rows) return;
+
+    let left = 1, top = 1;
+    let isLetter = (x, y) => rows[y - top]?.[x - left] === '1';
+
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        if (isLetter(x, y)) sprite[y * TILE_PX + x] = color;
+        else if (halo && (isLetter(x - 1, y) || isLetter(x + 1, y) || isLetter(x, y - 1) || isLetter(x, y + 1))) sprite[y * TILE_PX + x] = halo;
+      }
+    }
+  }
+
   // ---------- drawings ----------
 
   // What each character of a drawing paints: nothing, the outline colour, the light colour, the drawing's mix
@@ -928,6 +945,8 @@
   // - gateShake ({ col, row, dx }) rattles the Gem Gate on that square dx pixels to the side.
   // - warpFlash (0 to 1) washes the whole board out white, as a Warp Wisp's does.
   // - wispDrift (0 to 1) is how far round its slow up-and-down a Warp Wisp has got.
+  // - pairLetters says which Warp Wisp goes with which Warp Out Square, as a letter in the corner of each. The editor
+  //   wants that; gameplay doesn't.
   // - pulses ([{ col, row, radius }]) draws each lit Lantern's pulse: a ring radius pixels out from its square's middle.
   // - pushHints ([{ col, row, direction, bob }], or one as pushHint) show that the Push Block on each square can be
   //   pushed: an arrow just
@@ -1010,6 +1029,25 @@
     for (const pulse of options.pulses ?? []) drawPulse(image, pulse, look, options.originY ?? 0);
     for (const cell of options.reaches ?? []) drawReach(image, cell, look, options.originY ?? 0);
     for (const beam of options.beams ?? []) drawBeam(image, beam, look, options.originY ?? 0);
+
+    // Which Warp Wisp goes with which Warp Out Square, as a small letter in the corner of each: the editor asks for
+    // this and gameplay doesn't, so a player never sees it.
+    if (options.pairLetters) {
+      let light = hexToColor(look.palette.light);
+      let outline = hexToColor(look.palette.outline);
+      for (const object of objects) {
+        if (!object.letter) continue;
+        let floating = floatingOn(object);
+        if (object.kind !== 'WarpOut' && !floating) continue;
+        let along = alongFor(object);
+        let col = object.fromCol === undefined ? object.col : object.fromCol + (object.col - object.fromCol) * along;
+        let row = object.fromRow === undefined ? object.row : object.fromRow + (object.row - object.fromRow) * along;
+        if (floating) row -= WISP_DRIFT * Math.sin(2 * Math.PI * (options.wispDrift ?? 0));
+        let sprite = new Array(TILE_PX * TILE_PX);
+        drawCornerLetter(sprite, object.letter, light, outline);
+        blit(image, sprite, Math.round(col * TILE_PX), Math.round(row * TILE_PX) + (options.originY ?? 0));
+      }
+    }
 
     // A Warp Wisp's white flash, over the lot: the whole board washed out for a moment, so that the ship appearing
     // somewhere else reads as something that happened rather than as a glitch.
