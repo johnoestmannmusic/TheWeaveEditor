@@ -417,6 +417,50 @@ public class PageRendererTests
     }
 
     [Fact]
+    public void RenderPage_ModalCardWithPanels_IsAsWideAsItsColumns()
+    {
+        var panel = new StaticTextBlock { HeadingText = "Updates:", Lines = { "One" } };
+
+        var project = new WeaveProject();
+        var page = MakePage("index", "index.html");
+        page.Nodes.Add(new Node
+        {
+            Id = "tutorial",
+            Persistent = true,
+            Card = new Card { Size = CardSize.Modal, HeadingText = "Tutorial:", ExtraPanels = { panel } },
+        });
+        project.Pages.Add(page);
+
+        var html = new PageRenderer(project).RenderPage(page);
+
+        // 250 for the text plus the panel's own 252 is all the card needs; a fixed 520 left a strip of empty
+        // space down its right edge (main.css's second column is the panel's width, not the leftover). A modal
+        // with no panels keeps 520, and CustomWidthPx wins over both.
+        Assert.Contains("style=\"width: max-content; height: auto;", html);
+        Assert.DoesNotContain("width: 520px", html);
+    }
+
+    [Fact]
+    public void RenderPage_ModalCardWithNoPanels_KeepsItsDefaultWidth()
+    {
+        var project = new WeaveProject();
+        var page = MakePage("index", "index.html");
+        page.Nodes.Add(new Node
+        {
+            Id = "tutorial",
+            Persistent = true,
+            Card = new Card { Size = CardSize.Modal, HeadingText = "Tutorial:" },
+        });
+        project.Pages.Add(page);
+
+        var html = new PageRenderer(project).RenderPage(page);
+
+        // Text only, with nothing beside it: max-content would be the 250px text column alone, half the card
+        // it has always been.
+        Assert.Contains("style=\"width: 520px; height: auto;", html);
+    }
+
+    [Fact]
     public void RenderPage_ModalCard_PutsItsPanelsInFlow_SoTheCardCanBeAsTallAsThem()
     {
         var panel = new StaticTextBlock { HeadingText = "Updates:", Lines = { "One" }, Offset = new Offset { Top = 0, Left = 260 } };

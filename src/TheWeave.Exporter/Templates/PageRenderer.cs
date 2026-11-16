@@ -502,7 +502,12 @@ public sealed class PageRenderer
             // scrolling, which is also what an explicit CustomHeightPx means.
             var modalParts = new List<string>
             {
-                $"width: {card.CustomWidthPx ?? 520}px",
+                // As wide as its own columns when there are panels beside the text (250 for the text, the panel's
+                // own 252), rather than a bare 520 that left a strip of empty space down the right edge. A modal
+                // with only text keeps 520, and CustomWidthPx still wins over both.
+                $"width: {(card.CustomWidthPx is { } width
+                    ? $"{width}px"
+                    : card.ExtraPanels.Count > 0 ? "max-content" : "520px")}",
                 card.CustomHeightPx is { } height ? $"height: {height}px" : "height: auto",
                 card.CustomHeightPx is { } tallest ? $"max-height: {tallest}px" : "max-height: 560px",
                 "overflow-y: auto",

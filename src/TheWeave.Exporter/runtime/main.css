@@ -484,7 +484,11 @@ h3 {
      positioned child would add nothing to its height and hang out under the bottom edge. Two
      columns: the text, and whatever panels the card has. */
   display: none;
-  grid-template-columns: 250px 1fr;
+  /* The second column is the panel's own width, not the leftover of a fixed card: with the card sized to its
+     content (BuildCardStyle), a flexible column would leave the loose space as a gap down the right edge. */
+  grid-template-columns: 250px max-content;
+  /* A safety net for a very wide panel; centring already keeps it on screen. */
+  max-width: calc(100vw - 32px);
   align-content: start;
   align-items: start;
 }
@@ -509,6 +513,15 @@ h3 {
 .floatInfo[data-modal="true"] > .floatInfo {
   grid-column: 2;
   position: static;
+}
+
+/* h3 and .poetry-text are indented with `position: relative; left: 10px`, which slides the box sideways
+   rather than narrowing it, so a panel's own heading runs ~9px past the card's right edge - it used to be
+   swallowed by the modal's leftover width, and now that the card is sized to its columns it would show as a
+   scrollbar. Narrow the box by the same 10px instead. */
+.floatInfo[data-modal="true"] > .floatInfo > h3,
+.floatInfo[data-modal="true"] > .floatInfo > .poetry-text {
+  width: calc(100% - 10px);
 }
 
 /* Track Focus (see main.js's openTrackFocus): album art on the left, title and poetry on the right,
