@@ -338,7 +338,7 @@
       if (objects.some(object => object.kind === 'Gate' && !object.open && isAt(object, cell))) return [];
       // A bug that's moved onto the ship sends it on the way the bug was going; one it stepped into, nowhere else.
       let bug = objects.find(object => object.kind === 'Archeton' && isAt(object, cell));
-      if (bug) return (bug.glide === 'slide' || bug.glide === 'hop') && bug.fromCol !== undefined && (bug.fromCol !== bug.col || bug.fromRow !== bug.row)
+      if (bug) return (bug.glide === 'slide' || bug.glide === 'hop' || bug.glide === 'swim') && bug.fromCol !== undefined && (bug.fromCol !== bug.col || bug.fromRow !== bug.row)
         ? [wayFrom({ col: bug.fromCol, row: bug.fromRow }, bug)]
         : [];
       if (!blockedByBeam(cell)) return undefined;
@@ -1051,6 +1051,62 @@
       return { ...set, slid };
     }
 
+    // Every Swim Fish takes its step, after the ship has: a square the way it faces. At a wall, a Push Block or anything
+    // else solid - and at the board's edge - it turns round instead, so it goes back and forth along its line. A Jump
+    // Tile throws it on as it would the ship, and a Teleporter sends it to its pair. It triggers what it lands on, as the
+    // ship would: Switches, Lanterns, Pipe Switches and Reset Switches. Swimming into the ship stings it, with a Sting,
+    // as long as the ship can be sent somewhere. { swam } and whatever they set off, or null if none moved.
+    function swimFish(){
+      // Whatever swam last time has long since got there, so it's simply where it is now - as with the Slide Bugs.
+      settle('swim');
+      let swam = [];
+      let set = {};
+      for (const fish of objects.filter(object => object.kind === 'Archeton' && hasPart(object, 'Swim'))) {
+        let direction = fish.direction ?? 'Left';
+        let to = nextCell(fish, direction);
+        let there = onBoard(to) ? objectAt(to) : null;
+        // Nowhere to go, so it turns round and swims back the other way next time. Turning is all it does: it doesn't
+        // also move, so a fish in a one-square gap sits still rather than flickering between the two.
+        if (!onBoard(to) || (there && isSolid(there)) || !pipeAllows(fish, direction) || !pipeAllows(to, direction)) {
+          fish.direction = OPPOSITES[direction];
+          continue;
+        }
+        // Swimming into the ship hurts it, sending it back where it came from - only if it can go somewhere.
+        if (isAt(shipCell, to) && !(hasPart(fish, 'Sting') && canBeSentBack(to, direction))) continue;
+
+        leaving(fish);
+        fish.fromCol = fish.col;
+        fish.fromRow = fish.row;
+        fish.col = to.col;
+        fish.row = to.row;
+        fish.glide = 'swim';
+        swam.push(fish);
+        if (there) Object.assign(set, trigger(there) ?? {});
+        // A Reset Switch puts every Swim Fish back where it started, so none of the rest move now.
+        if (set.reset) break;
+
+        // A Jump Tile throws it on to wherever it would throw the ship, and a Teleporter sends it to its pair.
+        let landing = there?.kind === 'JumpTile' ? jumpFrom(there) : there?.kind === 'Teleporter' ? teleporterPair(there) : null;
+        if (!landing || isAt(landing, fish)) continue;
+        if (isAt(shipCell, landing) && !(hasPart(fish, 'Sting') && canBeSentBack(landing, direction))) continue;
+        fish.glide = 'hop';
+        fish.col = landing.col;
+        fish.row = landing.row;
+      }
+      if (swam.length === 0) return null;
+      version++;
+      revealLitAreas();
+      return { ...set, swam };
+    }
+
+    // Where a Teleporter's pair is, or null if it hasn't got one.
+    function teleporterPair(teleporter){
+      let partners = objects.filter(other => other.kind === 'Teleporter' && other.letter === teleporter.letter);
+      if (partners.length !== 2) return null;
+      let partner = partners.find(other => other !== teleporter);
+      return { col: partner.col, row: partner.row };
+    }
+
     // Every Archeton with a Move Sequence hops to the next square of it, after the ship's step: its moves are counted
     // from the square it started on, so it always comes back round. A move onto anything solid, or off the board, it
     // stays put for, and carries on with the next. Landing on the ship hurts it, with a Sting, as long as the ship can
@@ -1106,8 +1162,12 @@
       if (objects.some(object => object.kind === 'Archeton' && isAt(object, cell) && hasPart(object, 'Sting'))) return event;
       let slid = slideBugs();
       let hopped = slid?.reset ? null : hopBugs();
-      let moved = slid || hopped ? { ...(hopped ?? {}), ...(slid ?? {}) } : null;
-      if (moved && slid && hopped) moved = { ...moved, slid: slid.slid, hopped: hopped.hopped };
+      let swam = slid?.reset || hopped?.reset ? null : swimFish();
+      // Each kind of mover says what moved in its own word, so none overwrites another's.
+      let moved = slid || hopped || swam ? { ...(hopped ?? {}), ...(swam ?? {}), ...(slid ?? {}) } : null;
+      if (moved && slid) moved = { ...moved, slid: slid.slid };
+      if (moved && hopped) moved = { ...moved, hopped: hopped.hopped };
+      if (moved && swam) moved = { ...moved, swam: swam.swam };
       if (!moved) return event;
       return event ? { ...moved, ...event } : moved;
     }
