@@ -5002,70 +5002,6 @@
                 "Symbol": "Circle"
               },
               {
-                "Kind": "PushBlock",
-                "Col": 1,
-                "Row": 4,
-                "Letter": null,
-                "Direction": null,
-                "Symbol": "Cross"
-              },
-              {
-                "Kind": "PushBlock",
-                "Col": 2,
-                "Row": 5,
-                "Letter": null,
-                "Direction": null,
-                "Symbol": "Triangle"
-              },
-              {
-                "Kind": "PushBlock",
-                "Col": 3,
-                "Row": 4,
-                "Letter": null,
-                "Direction": null,
-                "Symbol": "Triangle"
-              },
-              {
-                "Kind": "PushBlock",
-                "Col": 2,
-                "Row": 3,
-                "Letter": null,
-                "Direction": null,
-                "Symbol": "Cross"
-              },
-              {
-                "Kind": "PushBlock",
-                "Col": 9,
-                "Row": 4,
-                "Letter": null,
-                "Direction": null,
-                "Symbol": "Triangle"
-              },
-              {
-                "Kind": "PushBlock",
-                "Col": 8,
-                "Row": 5,
-                "Letter": null,
-                "Direction": null,
-                "Symbol": "Square"
-              },
-              {
-                "Kind": "PushBlock",
-                "Col": 8,
-                "Row": 3,
-                "Letter": null,
-                "Direction": null,
-                "Symbol": "Square"
-              },
-              {
-                "Kind": "PushBlock",
-                "Col": 7,
-                "Row": 4,
-                "Letter": null,
-                "Direction": null,
-                "Symbol": "Star"
-              },
-              {
                 "Kind": "Wall",
                 "Col": 9,
                 "Row": 6,
@@ -5083,83 +5019,11 @@
               },
               {
                 "Kind": "Wall",
-                "Col": 9,
-                "Row": 2,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-13"
-              },
-              {
-                "Kind": "Wall",
                 "Col": 1,
                 "Row": 5,
                 "Letter": null,
                 "Direction": null,
                 "Variant": "wall-18"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 1,
-                "Row": 2,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-12"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 2,
-                "Row": 1,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-12"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 4,
-                "Row": 0,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-13"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 3,
-                "Row": 0,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-13"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 6,
-                "Row": 0,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-13"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 7,
-                "Row": 0,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-13"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 8,
-                "Row": 1,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-17"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 0,
-                "Row": 2,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-17"
               },
               {
                 "Kind": "Finish",
@@ -5185,12 +5049,315 @@
                 "Variant": "wall-17"
               },
               {
+                "Kind": "Archeton",
+                "Col": 4,
+                "Row": 1,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "swim-fish"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-14"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-16"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-16"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 3,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-14"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 4,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-14"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 5,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-16"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 6,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-14"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 7,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-14"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 8,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-16"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-15"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 2,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-15"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 2,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-14"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 2,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-16"
+              },
+              {
                 "Kind": "PushBlock",
                 "Col": 2,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Circle"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 8,
                 "Row": 4,
                 "Letter": null,
                 "Direction": null,
-                "Symbol": "Star"
+                "Symbol": "Circle"
+              },
+              {
+                "Kind": "Switch",
+                "Col": 1,
+                "Row": 1,
+                "Letter": "A",
+                "Direction": null
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-16"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-15"
+              },
+              {
+                "Kind": "Edge",
+                "Col": 2,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Up"
+              },
+              {
+                "Kind": "Edge",
+                "Col": 3,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Up"
+              },
+              {
+                "Kind": "Edge",
+                "Col": 4,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Up"
+              },
+              {
+                "Kind": "Edge",
+                "Col": 5,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Up"
+              },
+              {
+                "Kind": "Edge",
+                "Col": 6,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Up"
+              },
+              {
+                "Kind": "Edge",
+                "Col": 7,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Up"
+              },
+              {
+                "Kind": "Edge",
+                "Col": 8,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Up"
+              },
+              {
+                "Kind": "Switch",
+                "Col": 8,
+                "Row": 1,
+                "Letter": "B",
+                "Direction": null
+              },
+              {
+                "Kind": "Gate",
+                "Col": 8,
+                "Row": 3,
+                "Letter": "B",
+                "Direction": null
+              },
+              {
+                "Kind": "Gate",
+                "Col": 7,
+                "Row": 4,
+                "Letter": "B",
+                "Direction": null
+              },
+              {
+                "Kind": "Gate",
+                "Col": 8,
+                "Row": 5,
+                "Letter": "B",
+                "Direction": null
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 7,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Cross"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 3,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Cross"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 2,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Triangle"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 3,
+                "Row": 6,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Triangle"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 4,
+                "Row": 3,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Triangle"
+              },
+              {
+                "Kind": "Edge",
+                "Col": 3,
+                "Row": 3,
+                "Letter": null,
+                "Direction": "Right"
+              },
+              {
+                "Kind": "Edge",
+                "Col": 4,
+                "Row": 4,
+                "Letter": null,
+                "Direction": "Up"
+              },
+              {
+                "Kind": "Edge",
+                "Col": 5,
+                "Row": 4,
+                "Letter": null,
+                "Direction": "Up"
+              },
+              {
+                "Kind": "Edge",
+                "Col": 6,
+                "Row": 3,
+                "Letter": null,
+                "Direction": "Left"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 6,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-18"
+              },
+              {
+                "Kind": "Gate",
+                "Col": 1,
+                "Row": 4,
+                "Letter": "A",
+                "Direction": null
               }
             ],
             "Palette": {
@@ -9874,6 +10041,34 @@
           "Percent": 50
         }
       ]
+    },
+    {
+      "Id": "swim-fish",
+      "Kind": "Archeton",
+      "Name": "Swim Fish",
+      "Pixels": "...................................................................................................................................OOO....................O444O...........OO......O44G4OO.........OGOO..OO4OGG44GOO.......OGGOOO444GGG4G4O4O......OOOOG444GGG4G4OHO4O......O22OO4G444G444O444O.....O223OG3333G3333G33O.....O22OG3333G3333G333O....OOOOO3333G3333G333O.....OGGO.O33GOO33G333O......OGOO..OOO3O3G33OO.......OO......O33GOOO.................O3GO.....................OO...........................................................................................................",
+      "Mix": [
+        {
+          "Role": "archeton",
+          "Shade": 0,
+          "Percent": 15
+        },
+        {
+          "Role": "archeton",
+          "Shade": 1,
+          "Percent": 25
+        },
+        {
+          "Role": "archeton",
+          "Shade": 2,
+          "Percent": 45
+        },
+        {
+          "Role": "archeton",
+          "Shade": 3,
+          "Percent": 15
+        }
+      ]
     }
   ],
   "PuzzleDrawingSets": [
@@ -10065,12 +10260,26 @@
           "Kind": "Reflect"
         }
       ]
+    },
+    {
+      "Id": "swim-fish",
+      "Name": "Swim Fish",
+      "Drawing": "swim-fish",
+      "Parts": [
+        {
+          "Kind": "Swim"
+        },
+        {
+          "Kind": "Sting"
+        }
+      ]
     }
   ],
   "ArchetonsOffered": [
     "sentribeam",
     "slide-bug",
     "jumpbug-a",
-    "reflect-mimic"
+    "reflect-mimic",
+    "swim-fish"
   ]
 }
