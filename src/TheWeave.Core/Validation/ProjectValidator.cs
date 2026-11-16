@@ -264,6 +264,12 @@ public static class ProjectValidator
         if (hasRotatorSwitch && !hasRotatorTiles)
             Warn("it has a Rotator Switch but no Rotator tiles, so it does nothing.");
 
+        var gemGates = puzzle.Objects.Count(o => o.Kind == PuzzleObjectKind.GemGate);
+        if (gemGates > 1)
+            Warn("it has more than one Gem Gate. A board opens all of them at once, and the Puzzle Editor only keeps one - open it to clear the extra.");
+        else if (gemGates == 1 && puzzle.Objects.All(o => o.Kind != PuzzleObjectKind.Gem))
+            Warn("its Gem Gate has no Gems on the board, so it can never be opened.");
+
         var hasPipes = puzzle.Objects.Any(o => o.Kind == PuzzleObjectKind.Pipe);
         if (puzzle.Objects.Any(o => o.Kind == PuzzleObjectKind.PipeSwitch) && !hasPipes)
             Warn("it has a Pipe Switch but no Pipes, so it does nothing.");
