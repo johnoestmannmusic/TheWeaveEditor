@@ -1010,6 +1010,10 @@
       let sunk = Math.round((object.sink ?? 0) * TILE_PX);
       // An open Gate is half see-through, so it reads as something the ship can pass through.
       let opacity = (object.fade ?? 1) * ((object.kind === 'Gate' || object.kind === 'GemGate') && object.open ? OPEN_GATE_OPACITY : 1);
+      // A Wisp fades in and out as it drifts, in step with its rise and fall: solid at the top of it, thinner at the
+      // bottom, between 90% and 60% of solid.
+      if (floating) opacity *= (WISP_FADE_TOP + WISP_FADE_BOTTOM) / 2
+        + (WISP_FADE_TOP - WISP_FADE_BOTTOM) / 2 * Math.sin(2 * Math.PI * (options.wispDrift ?? 0));
       if (opacity <= 0) continue;
       blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX) + shake, top + sunk, object.sink ? top + TILE_PX : Infinity, opacity, grow);
     }
@@ -1186,6 +1190,9 @@
   const HOP_RISE = 0.35;
   // How far a Warp Wisp drifts either side of its square, in squares: a few pixels, slowly.
   const WISP_DRIFT = 0.12;
+  // How see-through a Warp Wisp drifts between, fading in and out as it rises and falls.
+  const WISP_FADE_TOP = 0.9;
+  const WISP_FADE_BOTTOM = 0.6;
 
   // How much bigger a Push Block looks at the top of its drop off a ledge - a smaller leap than the ship's 0.4, so that
   // a block dropping off one reads as the block falling rather than being thrown. See renderBoard, and board.js's

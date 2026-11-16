@@ -1828,6 +1828,30 @@ test('a Warp Wisp with no letter of its own warps nothing, rather than piling on
   assert.deepEqual(g.shipCell, at(5, 5));
 });
 
+test('a Warp Wisp fades in and out as it drifts, from 90% of solid down to 60%', () => {
+  let { look } = artLook();
+  look.archetons = [{ id: 'warp-wisp', name: 'Warp Wisp', drawing: 'warp-wisp', parts: [{ kind: 'Warp' }] }];
+  // How much of the Wisp is showing, in alpha-weighted colour over its square - so where the drift has it doesn't
+  // matter, only how solid it is.
+  let showing = (phase) => {
+    let image = blank();
+    renderBoard(image, [obj('Archeton', 3, 3, { archeton: 'warp-wisp' })], look, { wispDrift: phase });
+    let total = 0;
+    for (let y = 3 * TILE_PX; y < 4 * TILE_PX; y++) {
+      for (let x = 3 * TILE_PX; x < 4 * TILE_PX; x++) {
+        let i = (y * image.width + x) * 4;
+        total += image.data[i + 3] / 255 * (image.data[i] + image.data[i + 1] + image.data[i + 2]);
+      }
+    }
+    return total;
+  };
+
+  let top = showing(0.25); // the top of its drift, at 90% of solid
+  let bottom = showing(0.75); // the bottom, at 60%
+  assert.ok(top > bottom * 1.3, `fainter at the bottom of its drift (${Math.round(bottom)}) than the top (${Math.round(top)})`);
+  assert.ok(bottom > 0, 'and never gone, which would read as a flicker');
+});
+
 test('the editor shows which Warp Wisp goes with which Warp Out Square, and gameplay never does', () => {
   let { look } = artLook();
   look.archetons = [{ id: 'warp-wisp', name: 'Warp Wisp', drawing: 'warp-wisp', parts: [{ kind: 'Warp' }] }];
