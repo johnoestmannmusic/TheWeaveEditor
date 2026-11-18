@@ -350,28 +350,6 @@ async function flipFocus(change, toPlaying){
   ]);
 }
 
-// Turns the card right over on itself, with nothing behind it: the same two halves as flipFocus, both showing the same
-// art, so it reads as a card printed the same on both sides rather than as a mirror showing through. Two of these and
-// then a flip make a Puzzle Warp's three turns, the last of them the one that shows the board - see openWarpedBoard.
-async function spinFocus(){
-  let art = document.getElementById('trackFocusArt');
-  if (!art || prefersReducedMotion()) return;
-  let perspective = `perspective(${Math.round(art.getBoundingClientRect().width * FOCUS_FLIP_PERSPECTIVE)}px)`;
-
-  await playFocusAnimation(art, [
-    { transform: `${perspective} rotateY(0deg)` },
-    { transform: `${perspective} rotateY(90deg)` },
-  ], FOCUS_FLIP_MS / 2, { easing: 'ease-in' });
-
-  // Hidden for the moment between the halves, so the art never shows face on again mirrored.
-  art.style.visibility = 'hidden';
-  await playFocusAnimation(art, [
-    { transform: `${perspective} rotateY(-90deg)` },
-    { transform: `${perspective} rotateY(0deg)` },
-  ], FOCUS_FLIP_MS / 2, { easing: 'ease-out' });
-  art.style.visibility = '';
-}
-
 // The part's title over its board for its first few seconds, then fading away - see main.css's
 // .trackFocusBoardTitle. Shown on starting a puzzle, and on moving from one part's to another's.
 function showBoardTitle(){
@@ -668,10 +646,10 @@ async function warpToLocation(target){
 }
 
 // Opens a location's board straight away, wherever the player came from: Track Focus already open (a warp on this
-// page) or not yet (a page load that arrived by warping). The card goes up showing that location's art, turns right
-// over three times - the first two on itself, so only the last has anything new to show - and that last turn puts the
-// board on it, so the puzzle is revealed by the turning. The board starts as the puzzle starts, with the ship on its
-// Start, or on `cell` where a return trip puts it back on the warp square.
+// page) or not yet (a page load that arrived by warping). The card goes up showing that location's art and turns over
+// onto the board, so the puzzle is revealed by the turning rather than appearing in place, and its title is shown over
+// it. The board starts as the puzzle starts, with the ship on its Start, or on `cell` where a return trip puts it back
+// on the warp square.
 function openWarpedBoard(node, cell = null){
   let root = node;
   for (let up = node.parentElement?.closest('.node'); up; up = up.parentElement?.closest('.node')) root = up;
@@ -688,14 +666,12 @@ function openWarpedBoard(node, cell = null){
   releaseDirections();
 
   // Whatever board was up - this page's own, or the one the player warped from - is forgotten rather than left behind
-  // the art, and is only built again by the last turn.
+  // the art, and is only built again as the turn comes over.
   forgetBoard();
   if (!trackFocusEl) openTrackFocus({ warped: true });
   else renderTrackFocus();
 
   runFocusTransition(async () => {
-    await spinFocus();
-    await spinFocus();
     await flipFocus(() => {
       buildBoardGame(undefined, cell ? { cell } : null);
       renderTrackFocus();
