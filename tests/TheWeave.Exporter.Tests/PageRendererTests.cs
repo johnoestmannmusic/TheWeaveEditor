@@ -1125,6 +1125,36 @@ public class PageRendererTests
         Assert.DoesNotContain("songPlayer\" controls src=\"https://example.com/track.ogg\"></audio>\n      <img class=\"keyHint\"", html);
     }
 
+    // A track's verse reads as two stanzas of four: exactly eight lines get a blank one after the fourth. The editor
+    // drops empty lines from its verse field (app.js's split/filter), so an author can't make the break by hand -
+    // this is what puts it there. Any other length is left exactly as authored, and so is a non-track's verse.
+    [Theory]
+    [InlineData(true, 8, true)]
+    [InlineData(true, 4, false)]
+    [InlineData(true, 5, false)]
+    [InlineData(true, 7, false)]
+    [InlineData(true, 9, false)]
+    [InlineData(false, 8, false)]
+    public void RenderPage_TrackVerseOfExactlyEightLines_BreaksAfterTheFourth(bool hasAudio, int lineCount, bool expected)
+    {
+        var project = new WeaveProject();
+        var page = MakePage("ouros", "ouros.html");
+        var card = new Card { Audio = hasAudio ? new AudioRef { Url = "https://example.com/track.ogg" } : null };
+        for (var i = 1; i <= lineCount; i++)
+            card.PoetryLines.Add($"Line {i}");
+        page.Nodes.Add(new Node { Id = "location", Card = card });
+        project.Pages.Add(page);
+
+        var html = new PageRenderer(project).RenderPage(page);
+
+        var blank = "<div class=\"poetry-line\">&nbsp;</div>";
+        Assert.Equal(expected, html.Contains(blank));
+        if (!expected) return;
+        // ...and the break is between the two halves, not just somewhere on the card.
+        Assert.True(html.IndexOf(blank, StringComparison.Ordinal) > html.IndexOf("Line 4", StringComparison.Ordinal));
+        Assert.True(html.IndexOf(blank, StringComparison.Ordinal) < html.IndexOf("Line 5", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void RenderPage_TravelToUnknownPage_Throws()
     {
