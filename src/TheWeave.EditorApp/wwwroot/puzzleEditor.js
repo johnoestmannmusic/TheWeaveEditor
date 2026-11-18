@@ -361,18 +361,24 @@ function renderPuzzleTools() {
 function renderWarpTargets() {
   const select = document.getElementById('pe-targets');
   const groups = warpTargetChoices();
-  const pageName = (page) => (page.title || page.id).split(' - ')[0];
-  select.replaceChildren(...groups.map(({ page, nodes }) => {
-    const group = document.createElement('optgroup');
-    group.label = pageName(page);
-    for (const node of nodes) {
-      const option = document.createElement('option');
-      option.value = node.id;
-      option.textContent = node.headingText || node.id;
-      group.appendChild(option);
-    }
-    return group;
-  }));
+  // Only rebuilt when the choices themselves have changed, so that a project-state arriving mid-click can't take
+  // the list out from under the pointer and leave the first location selected instead of the one being picked.
+  const key = JSON.stringify(groups.map(({ page, nodes }) => [page.id, nodes.map((node) => [node.id, node.headingText])]));
+  if (select.dataset.key !== key) {
+    select.dataset.key = key;
+    const pageName = (page) => (page.title || page.id).split(' - ')[0];
+    select.replaceChildren(...groups.map(({ page, nodes }) => {
+      const group = document.createElement('optgroup');
+      group.label = pageName(page);
+      for (const node of nodes) {
+        const option = document.createElement('option');
+        option.value = node.id;
+        option.textContent = node.headingText || node.id;
+        group.appendChild(option);
+      }
+      return group;
+    }));
+  }
   select.value = puzzleEditor.warpTarget ?? '';
 }
 
@@ -674,6 +680,9 @@ function buildPuzzleObject(cell) {
   const tool = currentPuzzleTool();
   // An Archeton is drawn with its definition's drawing, so it's placed as whichever one's chosen instead.
   const variant = WeavePuzzle.DRAWN_KINDS.includes(tool.kind) && !tool.archeton ? variantToPlace(tool.kind) : tool.kind;
+  // Where a Puzzle Warp leads, read from the list itself as well as from the tool's own copy of it: the list is
+  // what's on screen and what the player picked, and a square that took a stale copy would go somewhere else.
+  const warpTarget = puzzleEditor.warpTarget ?? (document.getElementById('pe-targets').value || null);
   return {
     kind: tool.kind,
     col: cell.col,
@@ -685,7 +694,7 @@ function buildPuzzleObject(cell) {
     ...(tool.kind === 'WarpOut' || (tool.archeton && isWarpWisp(puzzleEditor.archeton)) ? { letter: puzzleEditor.warpLetter } : {}),
     ...(tool.direction ? { direction: puzzleEditor.direction } : {}),
     ...(tool.symbol ? { symbol: puzzleEditor.symbol } : {}),
-    ...(tool.target ? { targetNodeId: puzzleEditor.warpTarget } : {}),
+    ...(tool.target ? { targetNodeId: warpTarget } : {}),
     ...(tool.gateState && puzzleEditor.gateOpen ? { open: true } : {}),
     ...(tool.canHide && puzzleEditor.invisible ? { invisible: true } : {}),
   };
@@ -778,6 +787,12 @@ puzzleCanvas.addEventListener('pointercancel', finishPuzzlePainting);
 document.getElementById('pe-targets').addEventListener('change', (e) => {
   if (!puzzleEditor) return;
   puzzleEditor.warpTarget = e.target.value || null;
+  // A warp square already on the board keeps the location it was given until it's painted again: saying so is
+  // quicker than the player finding out by playing it.
+  const placed = puzzleEditor.objects.filter((object) => object.kind === 'PuzzleWarp').length;
+  const name = e.target.selectedOptions[0]?.textContent;
+  if (placed > 0 && name)
+    showToast(`New Puzzle Warps will lead to '${name}'. Click a warp square to point that one there too.`);
 });
 
 document.getElementById('pe-close').addEventListener('click', closePuzzleEditor);
