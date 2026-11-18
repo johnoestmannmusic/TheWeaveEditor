@@ -687,7 +687,9 @@
             "ExtraPanels": []
           },
           "Children": [],
-          "LockMessage": "Coming in a future version.."
+          "Requirements": [
+            "0020-digital-palace"
+          ]
         },
         {
           "Id": "tutorialnode",
@@ -4738,7 +4740,8 @@
             "PaletteSource": "img/pentura/wooden-castle.png"
           },
           "Requirements": [
-            "cedarwood-high-clubrooms"
+            "cedarwood-high-clubrooms",
+            "gestalt-canals"
           ]
         },
         {
@@ -9569,7 +9572,7 @@
     },
     {
       "Id": "shrines-layer-0001",
-      "Title": "shrines layer 0001 - 1000.shrines.of.SPIRIT",
+      "Title": "layer.[n01] - 1000 - shrines - /of/ - SPIRIT",
       "OutputFileName": "shrines-layer-0001.html",
       "GroupId": null,
       "WorldWidthPx": null,
@@ -9623,7 +9626,7 @@
           "Children": []
         },
         {
-          "Id": "shrinenode",
+          "Id": "0001-skyrest",
           "X": 1401,
           "Y": 651,
           "IconStyle": 0,
@@ -9640,7 +9643,7 @@
             "Audio": {
               "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/0001-SKYREST.ogg"
             },
-            "HeadingText": "SKYREST",
+            "HeadingText": "0001 - SKYREST",
             "HeadingOffset": null,
             "PoetryLines": [
               "A Timeless Flower manifest",
@@ -9663,10 +9666,410 @@
             },
             "ExtraPanels": []
           },
-          "Children": []
+          "Children": [],
+          "Puzzle": {
+            "Objects": [
+              {
+                "Kind": "Start",
+                "Col": 0,
+                "Row": 2,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 3,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "sentribeam"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 7,
+                "Row": 5,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "sentribeam"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 2,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "sentribeam"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 2,
+                "Row": 5,
+                "Letter": "A",
+                "Direction": "Right",
+                "Archeton": "warp-wisp-2-2"
+              },
+              {
+                "Kind": "WarpOut",
+                "Col": 7,
+                "Row": 2,
+                "Letter": "A",
+                "Direction": null
+              },
+              {
+                "Kind": "Teleporter",
+                "Col": 1,
+                "Row": 8,
+                "Letter": "A",
+                "Direction": null
+              },
+              {
+                "Kind": "Gem",
+                "Col": 2,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Gem",
+                "Col": 8,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Gem",
+                "Col": 0,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "GemGate",
+                "Col": 4,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Teleporter",
+                "Col": 8,
+                "Row": 1,
+                "Letter": "A",
+                "Direction": null
+              },
+              {
+                "Kind": "JumpTile",
+                "Col": 4,
+                "Row": 1,
+                "Letter": null,
+                "Direction": "Left",
+                "Variant": "jumptile-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 6,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-10"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 6,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "JumpTile",
+                "Col": 6,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Right",
+                "Variant": "jumptile-2"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 8,
+                "Row": 9,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Finish",
+                "Col": 7,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Gate",
+                "Col": 9,
+                "Row": 8,
+                "Letter": "X",
+                "Direction": null
+              },
+              {
+                "Kind": "JumpTile",
+                "Col": 8,
+                "Row": 6,
+                "Letter": null,
+                "Direction": "Up",
+                "Variant": "jumptile-2"
+              },
+              {
+                "Kind": "JumpTile",
+                "Col": 3,
+                "Row": 8,
+                "Letter": null,
+                "Direction": "Left",
+                "Invisible": true,
+                "Variant": "jumptile-2"
+              },
+              {
+                "Kind": "Switch",
+                "Col": 4,
+                "Row": 8,
+                "Letter": "X",
+                "Direction": null,
+                "Invisible": true
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-10"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-11"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 8,
+                "Row": 8,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "reflect-mimic"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Lantern",
+                "Col": 3,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              }
+            ],
+            "Palette": {
+              "wall": "#d0d1ce",
+              "edge": "#c7cfcc",
+              "finish": "#be772b",
+              "gate": "#394a50",
+              "switch": "#394a50",
+              "teleporter": "#98a09e",
+              "stream": "#75a743",
+              "key": "#ebede9",
+              "rotator": "#c09473",
+              "rotatorSwitch": "#c09473",
+              "lantern": "#ad7757",
+              "block": "#909594",
+              "jump": "#e7d5b3",
+              "reset": "#a8b5b2",
+              "pipe": "#c0c1bf",
+              "archeton": "#819796",
+              "gem": "#abacaa",
+              "outline": "#090a14",
+              "light": "#ebede9"
+            },
+            "Textures": {
+              "wall": {
+                "Ramp": [
+                  "#a8b5b2",
+                  "#bdc3c1",
+                  "#d0d1ce",
+                  "#e3e5e1"
+                ],
+                "Grain": "pnspsnspsnspsnspnspsnspssspssspssspssspsspssspssnpsnspsnspsnspsnpsnspsnsrovrvovrvovrvovrovrvovrvvvrvvvrvvvrvvvrvvrvvvrvvorvovrvovrvovrvorvovrvovvvvvvvvvvvvvvvvvvvvvvvvv3373b3738373b3533xsxpxsxlg3g5g3g3b3g5b3ggsxxxsxx33g383b3b3b383g33xpxsxpxgl7g4g5g5l5g4l7ggxxxxxxx11a1a161a161a1a11ytypytylf1f6f3f4f3l6a1fftyyytyy11a1a1f171f1a1a11ypytypyff4f4l6f3f6f4f3afyyyyyyy11a1a161a161a1611yuyqyuylf2l3f1l6f1f3f2lfuyyyuyy11f161a1a1a161f11yqyuyqy00509090909090500zuzqzuzlf0f6f2f2f2l6f0ffuzzzuzz009090f060f090900zqzuzqzfl5f3l5f3l3f2l5flzzzzzzz00909090905090900zuzqzuzlf1l5f1l5f0f2f1lfuzzzuzz",
+                "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222111111111111111113232323221212121112111222333233112111111111112113232323221212121212121223333333001010101010101003232323220212121212110222333233001010201020101003232323221212121212121123333333001010101010101003232323210211021101110212333233001010101010101003232323001010101010101003232323210111010102110112333233001010101010101003232323121112111211021123333333001010101010101003232323210211021101010212333233"
+              },
+              "edge": {
+                "Ramp": [
+                  "#a5b1ae",
+                  "#c0c1bf",
+                  "#c7cfcc",
+                  "#dbddda"
+                ],
+                "Grain": "pnspsnspsnspsnspnspsnspssspssspssspssspsspssspssnpsnspsnspsnspsnpsnspsnsrovrvovrvovrvovrovrvovrvvvrvvvrvvvrvvvrvvrvvvrvvorvovrvovrvovrvorvovrvovvvvvvvvvvvvvvvvvvvvvvvvv3373b3738373b3533xsxpxsxlg3g5g3g3b3g5b3ggsxxxsxx33g383b3b3b383g33xpxsxpxgl7g4g5g5l5g4l7ggxxxxxxx11a1a161a161a1a11ytypytylf1f6f3f4f3l6a1fftyyytyy11a1a1f171f1a1a11ypytypyff4f4l6f3f6f4f3afyyyyyyy11a1a161a161a1611yuyqyuylf2l3f1l6f1f3f2lfuyyyuyy11f161a1a1a161f11yqyuyqy00509090909090500zuzqzuzlf0f6f2f2f2l6f0ffuzzzuzz009090f060f090900zqzuzqzfl5f3l5f3l3f2l5flzzzzzzz00909090905090900zuzqzuzlf1l5f1l5f0f2f1lfuzzzuzz",
+                "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222111111111111111113232323221212121112111222333233112111111111112113232323221212121212121223333333001010101010101003232323220212121212110222333233001010201020101003232323221212121212121123333333001010101010101003232323210211021101110212333233001010101010101003232323001010101010101003232323210111010102110112333233001010101010101003232323121112111211021123333333001010101010101003232323210211021101010212333233"
+              },
+              "finish": {
+                "Ramp": [
+                  "#cf573c",
+                  "#cf573c",
+                  "#be772b",
+                  "#be772b"
+                ],
+                "Grain": "jveverevereveeverevjvpvejz6rev6rev6re6rev6rjzjrezzzpzvzpzjvjzvjzvzpzjvpzozpzjvpzereveevevpzerezjztzvzpzvvjzrvzrvpzvvjzvzjzjvjzjvjzjre6rev6rjzjrezvzpzvzpzvzjzvjzjvjzvzjzjvpzjvpzjvpveeverevjvpvezpzvzpzvzpzvzzrvbvevjzvzjzjvjzjvjzjvj6rej0eev6vjzvzpzvzpzvzpzvjzbr6zjvpzerpzjrevevjveevevjverevevjzvzjzrzjzrvzrvjzpvjzrvevjvjv6revere6revepev6rezjzpzvzpzjvjzpevvzpvepjzerpzjvpzereve6p6vpz6j6ve6j0e6zjvjzjre6j6zjvevevjpbr6pvzpzvzjzpevvzpzrvpz6j6r6vpzjvpve6p6vpzevjzjpbvevjzpzpzpzzvzpzvvjzvz6j6j6vepjzjpejvjzjvev6vjpbpevrvjzvzjzzpzvzpzjvpzerevej6rjvpvejverev6j6r6vjzrvbvezpzrvzpzjzrvevep",
+                "Pixels": "120202020202002020212120120202020202002020212120222122212121221222121212121212120202002021202021222221222122222212221222121212121212002020212120222122212221221212122212121212121212002020212120212221222122222202021222121212121212102010002021222122212221221202021212021212020212002021202020212221222122222212121222021212020202002020102020212122212121210222120112021212120202001021201020010002121212001021202021102012212221210222122212010202121212001021202121102021212121222212221222010102011211012121202021101022212221221222121212020201021212012020201020212220202122221212220201"
+              },
+              "gate": {
+                "Ramp": [
+                  "#312534",
+                  "#283e39",
+                  "#394a50",
+                  "#7a4841"
+                ],
+                "Grain": "8ycq8ycq7yq7ycq8ycq7ycq7q4i4q4i4q44q4i4q4i4q4i4qcqcycq8yiqycqcycq8yiq8ych2q2h2h2h22h2q2h2h2h2h2h4zbq4zaq4zq4zbq4zaq4zbq4q2h2q2h2q22q2h2q2h2q2h2qhq6zhqbzaqzhq6zhqbzaq6zag1g1g1g1g11g1g1g1g1g1g1g5z9p3z9p5zp5z9p3z9p5z9p3p1g1p1g1p11p1g1p1g1p1g1pg0g0g0p0g00g0g0g0g0g0g0g5z9p5z9p3zp5z9p3z9p3z9p3p0g0p0g0p00p0g0p0g0p0g0pgp9z9p5zgpz9p9z9p5zgp5z9g0p0g0g0g00g0p0g0g0g0g0g5z9p2z9p5zp2z9p2z9p5z9p2p0g0p0g0p00p0g0p0g0p0g0pgp5zgp9z9pzgp5z9p5z9p9zgg0g0g0g0g00g0g0g0g0g0g0g5z9p2z9p5zp2z9p2z9p5z9p2p0g0p0g0p00p0g0p0g0p0g0pgp9z9p5z9pz9p9z9p5z9p5z9g0g0g0p0g00g0g0g0g0g0g0g5z9p5z9p2zp2z9p2z9p2z9p2",
+                "Pixels": "132213221321322132213221212121212112121212121212222322132232223221322132212121212112121212121212132213221321322132213221212121212112121212121212221322232232213222322132202020202002020202020202132213221321322132213221202020202002020202020202202020202002020202020202132213121321322132213221202020202002020202020202222312132231223121322131202020202002020202020202131213121321312131213121202020202002020202020202221322131232213121312132202020202002020202020202131213121321312131213121202020202002020202020202221312131231213121312131202020202002020202020202131213121321312131213121"
+              },
+              "teleporter": {
+                "Ramp": [
+                  "#819493",
+                  "#819493",
+                  "#98a09e",
+                  "#a5b1ae"
+                ],
+                "Grain": "tco5oco5oo5oco5oco5ocojz5j5j0j5j05j0j5j0j5j0j5tcoctcoctcotcoctcoctczjzco5j0c5j0c50c5j0c5j0cctcc5oco5oco5oo5oco5oco5zjt5o5j5j0j5j05o5j5j0j5j5j5tc5j0c5j0c50j5j0c5j0c5j0ococo5oco5oo5oco5oco5oco5o0j5j0j5j05j0j5j0j5j0j5j0octcoctcotcoctcoctcoctco5j0c5j0j50c5j0c5tco5j0j5oco5oco5oo5oco5ojtjoco5t0j5j0j5o05j0j5j0oct0j5o5octcoctcotcoctcojzooctco5j0c5j0c50c5j0c5tco5j0c5oco5oco5oo5oco5ojtjoco5oco5j0j5o05o5j5j0oct0j5tczjtcoctcotcoctcojzooctozco0c5j0j50j5j0c5tco5j0ococo5oco5oo5oco5oco5oco5o0j5j0j5j05j0j5j0j5j0j5j0co0c5tco50j5jcocj0j5j0oczjo5tjtjto5tctjzco5ocojzoztzoztzotzoztzoztzoztzo",
+                "Pixels": "323132313313231323132333231313131131313131313132323232323323232323233323231223122122312231223322323132313313231323133313231313131132313131323132131223122131312231213132323132313313231323132313131313131131313131313131323232323323232323232323231223132122312233323131323132313313231333332313131313131131313132313132323232323323232333332323231223122122312233323122323132313313231333332313231313131132313132313132333232323323232333332333231223132131312233323132323132313313231323132313131313131131313131313131231213331131333231323132333133333313233323132333333333333333333333333333"
+              },
+              "stream": {
+                "Ramp": [
+                  "#468232",
+                  "#75a743",
+                  "#75a743",
+                  "#75a743"
+                ],
+                "Grain": "lwmrzfuqzmwfufulzflzfuluzwzzzzzzqzlzqzlzqzzqzlzqmwmmzuzfqlwfulwgqlfqfufuzrzzuzzzlzqzlzqwlzzlzqzliwmrwfvlwfvlwfvlwffufqfuctmmvlwgqlwgqlwgqfgqfugqwmzwlzqwlzlulzlulzzlzlwlmwflwfvlwfvfufqluflufqlwzrzzqzlzqzlzqzlzqzzqzlzqmwlgqlwgqlugqal5ffgqfugqzrzwlzqwlzlulqfq9zulzlulrzflwfvlwfvfu5l9lffufqfuzwwwrzlzqzlzqqfufzzqzlzqmwccrlwgqlwgqal5flgqfugqzrwrizqwlzqwlqfq9zwlzlwllwflwfvlwfl09fqfuffwfvfuzqzzqzlzqzff3zlzqzzqzlzqgqlgqlwgqll05fugqfgqlugqzrzwlzqwlzff1zlulzwlzlulrzflwfvlwfl0ffqfuflufqfugqlgqfual9l090f090090lgqwlzwlzlq9u9f1l5f3lf3l9ullwflufqfqaf0f090f00f0ffuzqzzqzlq5f3l9f3l5fl5f3l9",
+                "Pixels": "222220222220202020020202222222222202220222222022222222202220222020020202222222220222022202202220022220222022202220020202022222202220222020020202222202220202020202202020220220222020202020020222222222022202220222222022222022202220200000020202222202220202020202202020220220222020200000020202222222022202220202222022220022202220200002020202222202220222020202202020220220222000002020020202222222022200020222222022022022202200002020022202222202220200020202202020220220222000002020220202022020200000000000000002202202020200000000000020220220202000000000000002222222020000000000000000"
+              },
+              "key": {
+                "Ramp": [
+                  "#c7cfcc",
+                  "#dbddda",
+                  "#ebede9",
+                  "#ebede9"
+                ],
+                "Grain": "zcznzcznzczn0znzcznzcznzzznzzznzzznzznzzznzzznzzznzcznzcznzcnzcznzcznzczzzzzzzzzzzzzzzzzzzzzzzzzzcznzcznzczncznzcznzcznzzznzzznzzznzznzzznzzznzzznzcznzcznzcnzcznzcznzczzzzzzzzzzzzzzzzzzzzzzzzzzcznzcznzczncznzcznzcznzzznzzznzzznzznzzznzzznzzzczcznzcznzcnzcznzcznzczqzqzzzzzzzzzzzzzzzzzzzzzz0znzcznzczncznzcznzcznzzznzzznzzznzznzzznzzznzzznzcznzcznzcnzcznzcznzczzcznzcznzczncznzcznzcznzzznzzznzzznzznzzznzzznzzznzcznzcznzcnzcznzcznzczzzzzzzzzzzzzzzzzzzzzzzzzzcznzcznzczncznzcznzcznzzznzzznzzznzznzzznzzznzzznzcznzcznzcnzcznzcznzcznzzzzzzzzzzzzzzzzzzzzzzzzcznzcznzczncznzcznzcznz",
+                "Pixels": "101010101010010101010101110111011101101110111011101010101010010101010101111111111111111111111111101010101010010101010101110111011101101110111011101010101010010101010101111111111111111111111111101010101010010101010101110111011101101110111011101010101010010101010101111111111111111111111111101010101010010101010101110111011101101110111011101010101010010101010101101010101010010101010101110111011101101110111011101010101010010101010101111111111111111111111111101010101010010101010101110111011101101110111011101010101010010101010101011111111111111111111111101010101010010101010101"
+              },
+              "rotator": {
+                "Ramp": [
+                  "#ad7757",
+                  "#819493",
+                  "#c09473",
+                  "#9ea7a5"
+                ],
+                "Grain": "zrzwwmzzrzmwmzmm4mqwlmi7rzmwrzmrzmwrwitbqab2b47bzwzrzwzzwzrztwmwfq4l6mr6mwmzmwmmwmzmtiw6l9b06747zrzwwmzwmzmwbwiq9q2f0ib7rzmwiwimwitir7m6l460900izwzrzrzzrzmzbrbrbl1f2imimwmzmwmirmzmb0b06090577rzrzwzrzwmzwz4m6i4l2f0rmirzmwrzmmwmwmi0b2b090b7cwmwmzmwmmwlwgi7m050m7icctzrzwzrzzrzqwbrbi0fbmbwriuzmwrzmrzmwrwitmwitiwiiizwzrzwzzwzrztwmzrzmztwzcqwmzmwmmwmzmtiwiriwcticczrzwwmzwmzmwmzmwiwmwmzwbrzmwiwimwitiwitirctiwflmzwzrztwzrwmztwmwiwmztzziqwmzirictmzmtiwctiwctmmizrzwwmzwmzwzmzmwmzmwmzzbuzmwmwiiwmwrwitiwitiwmrrzwzwzwzztwiwtwmwiwiwizzqlzqzmwmctcrctiwcmcrcmlgvzvzwzrzwmwirmzmwiwirizwl",
+                "Pixels": "222221222212121101221110221222122122212020000000222222222222221212010120121212112121212010000000222221221212021202010100221212112121201010000001222222222212020201010111121212112121000000000002222222221222010101010211221222112121100000000002121212112121101000101002222222222222020101010221221222122122212121212111222222222222221222122220221212112121212121202100222221221212121212121220221212112121212120212111222222222212221212122221221212102121212021202111222221221222121212121220221212112122212121212122222222222212221212121222122212102020212010201112222222221212121212121221"
+              },
+              "lantern": {
+                "Ramp": [
+                  "#cf573c",
+                  "#cf573c",
+                  "#ad7757",
+                  "#ad7757"
+                ],
+                "Grain": "vbbmbm7i7m7i7m7i40b4i4i7lwrbrbmbrbmbrbmbmi4i6i7mw7bm7i7m7i7m7i7m02b0b7i4q77i7m4c4b060b0b00509060lrmbrbm7m7b0i6i4mf0f2b0iw47i4i7i4i7i030604i4b0b0qmmcm7rcm7mci0f1imcm7i6iq40c7i4c7i0c460200c4i060lmi7mcm7mci7m090ii7m7b0ib47b077m7i7i460944b0b0b06mr6i4rircmcm1f2mm7i4i6i67470b0i7i0c49054070b0600ib7mcmcrimbr4b0ib0i4wmz900i4ictcm7m770b00b07iwi2imirbrircrbm7mbirbm7wmw577rlw4c4i4c7m7i77qlwcmc0rmizqr7mcm7mgtcmrlzqriwb7cwlvbi4i7i7mct7bwfvircicctiw7c7i7icm7ilfqlwlzqbwrizmr7mctcrgtczzlzqzvzwiii4bcrcmctcmcrfqzqzqzmtwzcm7wiwiwiriwizzzzzzwzticc4i7mcm7icrcmllzuzlzqmzwbrbrcririwqwlzzrzwzvz",
+                "Pixels": "211212121212121200102021222121212121212122021212211212121212121200101120211212010101010100001010222121212110212022020102201202120212000000201010222121212121202022121212200112011201000000102010222121212121201022121102101101121212000100101010122120222121202022120212110101021201010000101010021121212221201021020222100202121212110100101222022221222121212122121222011222010201121211222121022222212121222122222222111222120212121211222221211222111212121222222222122222212121222122222222222201121212121222222222222121222222222222222222221102121212121222222222222121212222222222222222"
+              },
+              "block": {
+                "Ramp": [
+                  "#5d7478",
+                  "#909594",
+                  "#909594",
+                  "#9ea7a5"
+                ],
+                "Grain": "l3f5l3f0b0f54f6l5f9l5qfufl9qfl9m6i9qq9qfq9ufqlzllal5fal0b4l59l4l9lal9ufql5fal3f5l3f55fal5ffugfalfq9qfl9qfl9qq9qfq9zlu9qfl9l5l9l5l9uf9l5qfual9ufqfufqfufqfuqzufqlzqqfuqzll5fal5fal5qf5faugq9l5qfufq9qfq9qfq9qq9ufq9zlu9qff9l5l9l5l9l59qal9qfqfl5l9ufqfufqfufqufqfufzlzfqfl5fal5fal5qf5faugqfugqfufq9qfq9qfqlzq9qlulzlulzll9l5l9l5l9uf9l5qfufqfufqfufqfufzlzfqzqzfufzlzqzll5fal5ffugfagqfl5lfugqfufq9qfq9zlu9qulzfq9zlulzll9l5l9lal9uf9l5qfual9ufql5fal5f9l5qf5faugq9l5qfufq9qfq9qfq9qq9qfq9zlu9ufl9l5l9l5l9l59l5l9lfqfqalfufqfufqfufqufqfufzlzfqfl5faugqal5l95faugqfugqfufq9qlulqfq9uq9qlulzlulzl",
+                "Pixels": "302030202020020302030323230323030303303230323333323022302030030303230323302230203020022302232223230323032303303230333032303030303032030323230323232323232333323333323333302230223032022323030323230323032303303230333032203030303030032303232303032323232323323232333232302230223032022323232323230323032333303333333333303030303032030323232323232323233323333232333333302230223222232303232323230323033303333230333333303030323032030323230323302230203032022323030323230323032303303230333032303030303030030303232323232323232323323232333232302232323030022323232323230333332303303333333333"
+              },
+              "jump": {
+                "Ramp": [
+                  "#b5bbb8",
+                  "#c2c9c6",
+                  "#e7d5b3",
+                  "#e3e5e1"
+                ],
+                "Grain": "szlunzlzszguguaaugunuaqazuzszzzuzuzuzuzzquauquguezlzlzlzezlzgug0q0n0qau0ztzzzszuztzuznzuguangzguszlunzlzszgzszllzgzluaqalzlzguszlzlzlzsezlzeqau0ugzqugzgunzuztzztzlztzuuauauguaqazgulzglz5sezgzazqugznugzuznzuzzuzlzuzuzgugu0qauaqau0qaezszlzszgznzgugzqugzgugzztzzzszzznzgqauauguaqaualzlzszlznzqugzqugzqugzquzuznzuzuz0qau0qau0qau0qagugzgzlzeugzgugzgugzgugzznzuztzuznzgqauauguaqguanzgunn0gazuzgzqzgzqugznzzuznzauaugugu0qauaqauanagugzgg0n0ugzuznzgugzqugzuguangzguauaunzaqauauauaau0g0uaqagugu0qauaqau0qa0qau0qau0znzgugzqugzgugzugzgugzgunzgqauauguaqauaauaqauaqazuznzuugzuznzquzqugzqugz",
+                "Pixels": "221212122212120021212020222222222222222222022212121212121212121020102020222222222222212212011212221212122212221121212020121212221212122121212020212221212122222222122222020212020212121120212120222121212221222222122222121202020202020122212221212121222121212222222222121202021202020121222121222122212221222222122222020202020202020121212121212121212121212212222222121202021202120121211010222122212221212222120202121202020202010121211010212221212122212212011212020212020202020020102020121202020202020020202020212121222121212212121212121202021202020020202020222122212221222222122212"
+              },
+              "reset": {
+                "Ramp": [
+                  "#909594",
+                  "#9ea7a5",
+                  "#a8b5b2",
+                  "#bdc3c1"
+                ],
+                "Grain": "nlpnplpnplpnplpnlpnplpnpppnpppnpppnpppnppnpppnpplnplpnplpnplpnplnplpnplppppppppppppppppppppppppppnspsnspsnspsnspnspsnspssspssspssspssspsspssspssnpsnspsnspsnspsnpsnspsnsrovrvovrvovrvovrovrvovrvvvrvvvrvvvrvvvrvvrvvvrvvorvovrvovrvovrvorvovrvovvvvvvvvvvvvvvvvvvvvvvvvv2272b2727272b2522xsxpxsxlg2g5g2g2b2g5b2ggsxxxsxx22g272b2b2b272g22xpxsxpxgl7g4g5g5l5g4l7ggxxxxxxx11a1a161a161a1a11ytypytylf1f6f3f3f3l6a1fftyyytyy11a1a1f171f1a1a11ypytypyff4f4l6f3f6f4f3afyyyyyyy00a0a050a050a0500zuzqzuzlf2l3f0l6f0f3f2lfuzzzuzz00f060a0a0a060f00zqzuzqz00509090909090500zuzqzuzlf0f5f1f2f1l5f0ffuzzzuzz",
+                "Pixels": "212221222122212212221222222222222222222222222222122122212221222122122212222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222001010101010101003232323110111010101110112333233001010101010101003232323111111111111111113333333001010101010101003232323110111011101110112333233001010101010101003232323111111110111110113333333001010101010101003232323110111011101110112333233001010101010101003232323001010101010101003232323110111010101110112333233"
+              },
+              "pipe": {
+                "Ramp": [
+                  "#9ea7a5",
+                  "#a8b5b2",
+                  "#c0c1bf",
+                  "#d0d1ce"
+                ],
+                "Grain": "nlpnplpnplpnplpnlpnplpnpppnpppnpppnpppnppnpppnpplnplpnplpnplpnplnplpnplppppppppppppppppppppppppppnspsnspsnspsnspnspsnspssspssspssspssspsspssspssnpsnspsnspsnspsnpsnspsnsrovrvovrvovrvovrovrvovrvvvrvvvrvvvrvvvrvvrvvvrvvorvovrvovrvovrvorvovrvovvvvvvvvvvvvvvvvvvvvvvvvv2272b2727272b2522xsxpxsxlg2g5g2g2b2g5b2ggsxxxsxx22g272b2b2b272g22xpxsxpxgl7g4g5g5l5g4l7ggxxxxxxx11a1a161a161a1a11ytypytylf1f6f3f3f3l6a1fftyyytyy11a1a1f171f1a1a11ypytypyff4f4l6f3f6f4f3afyyyyyyy00a0a050a050a0500zuzqzuzlf2l3f0l6f0f3f2lfuzzzuzz00f060a0a0a060f00zqzuzqz00509090909090500zuzqzuzlf0f5f1f2f1l5f0ffuzzzuzz",
+                "Pixels": "212221222122212212221222222222222222222222222222122122212221222122122212222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222001010101010101003232323110111010101110112333233001010101010101003232323111111111111111113333333001010101010101003232323110111011101110112333233001010101010101003232323111111110111110113333333001010101010101003232323110111011101110112333233001010101010101003232323001010101010101003232323110111010101110112333233"
+              },
+              "archeton": {
+                "Ramp": [
+                  "#5d7478",
+                  "#819796",
+                  "#819796",
+                  "#9ea7a5"
+                ],
+                "Grain": "l3f5l3f0b0f54f6l5f9l5qfufl9qfl9m6i9qq9qfq9ufqlzllal5fal0b4l59l4l9lal9ufql5fal3f5l3f55fal5ffugfalfq9qfl9qfl9qq9qfq9zlu9qfl9l5l9l5l9uf9l5qfual9ufqfufqfufqfuqzufqlzqqfuqzll5fal5fal5qf5faugq9l5qfufq9qfq9qfq9qq9ufq9zlu9qff9l5l9l5l9l59qal9qfqfl5l9ufqfufqfufqufqfufzlzfqfl5fal5fal5qf5faugqfugqfufq9qfq9qfqlzq9qlulzlulzll9l5l9l5l9uf9l5qfufqfufqfufqfufzlzfqzqzfufzlzqzll5fal5ffugfagqfl5lfugqfufq9qfq9zlu9qulzfq9zlulzll9l5l9lal9uf9l5qfual9ufql5fal5f9l5qf5faugq9l5qfufq9qfq9qfq9qq9qfq9zlu9ufl9l5l9l5l9l59l5l9lfqfqalfufqfufqfufqufqfufzlzfqfl5faugqal5l95faugqfugqfufq9qlulqfq9uq9qlulzlulzl",
+                "Pixels": "302030202020020302030323230323030303303230323333323022302030030303230323302230203020022302232223230323032303303230333032303030303032030323230323232323232333323333323333302230223032022323030323230323032303303230333032203030303030032303232303032323232323323232333232302230223032022323232323230323032333303333333333303030303032030323232323232323233323333232333333302230223222232303232323230323033303333230333333303030323032030323230323302230203032022323030323230323032303303230333032303030303030030303232323232323232323323232333232302232323030022323232323230333332303303333333333"
+              },
+              "gem": {
+                "Ramp": [
+                  "#819493",
+                  "#98a09e",
+                  "#abacaa",
+                  "#d7b594"
+                ],
+                "Grain": "osqsosqosqsosqsosqsosqossqsssqssqsssqsssqsssqssqqsosqsoqsosqsosqsosqsoqsssssssssssssssssssssssssqwtwqwtqwtwqwtwqwtwqwtqwwtwwwtwwtwwwtwwwtwwwtwwttwqwtwqtwqwtwqwtwqwtwqtwrzvzrzvrzvzrzvzrzvzrzvrzzvzzzvzzvzzzvzzzvzzzvzzvvzrzvzrvzrzvzrzvzrzvzrvzzzzzzzzzzzzzzzzzzzzzzzzz8i3i3i83c3i3c3c3c3i3c33csco8icsi5o8i5o8i5o8i4oi4co8ici34i3c3i3c3i3c3i33isiscscioco5o8i8o8i5ocio84i7o4b11b1b1b1i1b1b1b11btbtiobti4o7i3o7i3o7i3oi3bo7ico71i1b1i1b1i1b1i11ixitbtitobi7obi4obi7o7iob6h6o3b21h6h1b1b1b1b1b11bobtho3oobt6h3o6h2o6h3oh3bo6hbh1bo6b1h1b1h1b1h11h6h6o3h60b0h0b0b0b0h0b00btbthobth3o6h3o6h3o6h2oh3",
+                "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222232323223232323232323223323332332333233323332332232323223232323232323223333333333333333333333333120202101020101010201001212121221212121212120220121212002010201020102002222121221212121212121221011201001010101010101001212121210211021102110210121112101010101010101001312121221112110211121121111201001110101010101001212120221211021102110210121111012110101010101001111201101010101010101001212121210211021102110210"
+              }
+            },
+            "PaletteSource": "img/shrine-layers/0001/0001.png"
+          }
         },
         {
-          "Id": "shortterm-tapeloop",
+          "Id": "0002-shortterm-tapeloop",
           "X": 2601,
           "Y": 201,
           "IconStyle": 0,
@@ -9683,11 +10086,17 @@
             "Audio": {
               "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/0002-ShortTerm-TapeLoop.ogg"
             },
-            "HeadingText": "ShortTerm TapeLoop",
+            "HeadingText": "0002 - ShortTerm TapeLoop",
             "HeadingOffset": null,
             "PoetryLines": [
-              "Round and round..",
-              "A Golden Half-Moon."
+              "Round and round",
+              "A Golden Half-Moon",
+              "Seasons and Cycles",
+              "Pumping in my ears",
+              "Forget it all",
+              "The thoughts and memories",
+              "Simply Physical",
+              "Nothing but Circles"
             ],
             "PoetryOffset": null,
             "Action": {
@@ -9700,10 +10109,578 @@
             },
             "ExtraPanels": []
           },
-          "Children": []
+          "Children": [],
+          "Puzzle": {
+            "Objects": [
+              {
+                "Kind": "Start",
+                "Col": 0,
+                "Row": 3,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 6,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "swim-fish"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 3,
+                "Row": 5,
+                "Letter": null,
+                "Direction": "Left",
+                "Archeton": "swim-fish"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-4"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-6"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 7,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-4"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 7,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-4"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 8,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-7"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-7"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-6"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 7,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-8"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 8,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-7"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 2,
+                "Row": 6,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "jumpbug-a"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 4,
+                "Row": 8,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "jumpbug-a"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 6,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "swim-fish"
+              },
+              {
+                "Kind": "Finish",
+                "Col": 8,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-10"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 8,
+                "Row": 3,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "swim-fish"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 1,
+                "Row": 6,
+                "Letter": null,
+                "Direction": "Left",
+                "Archeton": "swim-fish"
+              },
+              {
+                "Kind": "GemGate",
+                "Col": 7,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Gem",
+                "Col": 9,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Gem",
+                "Col": 1,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Gem",
+                "Col": 9,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 8,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 4,
+                "Row": 1,
+                "Letter": null,
+                "Direction": "Left",
+                "Archeton": "slide-bug"
+              },
+              {
+                "Kind": "Gate",
+                "Col": 5,
+                "Row": 1,
+                "Letter": "X",
+                "Direction": null,
+                "Open": true
+              },
+              {
+                "Kind": "Gate",
+                "Col": 9,
+                "Row": 3,
+                "Letter": "X",
+                "Direction": null,
+                "Open": true
+              },
+              {
+                "Kind": "Gate",
+                "Col": 7,
+                "Row": 8,
+                "Letter": "X",
+                "Direction": null,
+                "Open": true
+              },
+              {
+                "Kind": "Gate",
+                "Col": 6,
+                "Row": 8,
+                "Letter": "X",
+                "Direction": null,
+                "Open": true
+              },
+              {
+                "Kind": "Gate",
+                "Col": 5,
+                "Row": 8,
+                "Letter": "X",
+                "Direction": null,
+                "Open": true
+              },
+              {
+                "Kind": "Gate",
+                "Col": 4,
+                "Row": 7,
+                "Letter": "X",
+                "Direction": null,
+                "Open": true
+              },
+              {
+                "Kind": "Gate",
+                "Col": 4,
+                "Row": 6,
+                "Letter": "X",
+                "Direction": null,
+                "Open": true
+              },
+              {
+                "Kind": "Gate",
+                "Col": 4,
+                "Row": 5,
+                "Letter": "X",
+                "Direction": null,
+                "Open": true
+              },
+              {
+                "Kind": "Gate",
+                "Col": 0,
+                "Row": 7,
+                "Letter": "X",
+                "Direction": null,
+                "Open": true
+              },
+              {
+                "Kind": "Edge",
+                "Col": 3,
+                "Row": 0,
+                "Letter": null,
+                "Direction": "Left"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Gate",
+                "Col": 5,
+                "Row": 3,
+                "Letter": "X",
+                "Direction": null,
+                "Open": true
+              },
+              {
+                "Kind": "Gate",
+                "Col": 6,
+                "Row": 4,
+                "Letter": "X",
+                "Direction": null,
+                "Open": true
+              },
+              {
+                "Kind": "Gate",
+                "Col": 4,
+                "Row": 2,
+                "Letter": "X",
+                "Direction": null,
+                "Open": true
+              },
+              {
+                "Kind": "Stream",
+                "Col": 1,
+                "Row": 1,
+                "Letter": null,
+                "Direction": "Up",
+                "Variant": "stream-3"
+              },
+              {
+                "Kind": "Stream",
+                "Col": 1,
+                "Row": 0,
+                "Letter": null,
+                "Direction": "Right",
+                "Variant": "stream-3"
+              },
+              {
+                "Kind": "Edge",
+                "Col": 6,
+                "Row": 0,
+                "Letter": null,
+                "Direction": "Left"
+              },
+              {
+                "Kind": "Switch",
+                "Col": 2,
+                "Row": 0,
+                "Letter": "X",
+                "Direction": null
+              },
+              {
+                "Kind": "Gem",
+                "Col": 4,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Gate",
+                "Col": 3,
+                "Row": 1,
+                "Letter": "X",
+                "Direction": null,
+                "Open": true
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 4,
+                "Row": 3,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "jumpbug-a"
+              },
+              {
+                "Kind": "Gate",
+                "Col": 1,
+                "Row": 2,
+                "Letter": "X",
+                "Direction": null,
+                "Open": true
+              }
+            ],
+            "Palette": {
+              "wall": "#ffffff",
+              "edge": "#9792bd",
+              "finish": "#feffc0",
+              "gate": "#d49874",
+              "switch": "#d49874",
+              "teleporter": "#99daa8",
+              "stream": "#d9d6f9",
+              "key": "#718d82",
+              "rotator": "#a4a2ce",
+              "rotatorSwitch": "#a4a2ce",
+              "lantern": "#ddc18f",
+              "block": "#a99178",
+              "jump": "#8ac08a",
+              "reset": "#c2bde4",
+              "pipe": "#9ebfce",
+              "archeton": "#c9b68e",
+              "gem": "#e9e3ff",
+              "outline": "#424242",
+              "light": "#ffffff"
+            },
+            "Textures": {
+              "wall": {
+                "Ramp": [
+                  "#d9e0ff",
+                  "#fff1c4",
+                  "#ffffff",
+                  "#ffffff"
+                ],
+                "Grain": "zzzzhhhhzzhhhh70bhhhhvvhzzzzhhhhhhhhhhgggghhhhhhzzzzhhhhhhhhhhgggghhhhhhzzzzhzzhhhhhzzhhhhhbzzhhzzzzhzzhhhhhzzhhhhhbzzhhzzzzhhhhhhhhhhhhhhhhhhhhzzzzhhhhhhhhhhhhhhhhhhhhzzzzvzzhzzhhzzhbzzhbzzhbzzzzvzzhzzhhzzhbzzhbzzhbzzzzzzhzhhhhhhzzhhhhhhzzzzzzzzhzhhhhhhzzhhhhhhzzzzzzzzzhzzhhzzhbzzhbzzhbzzzzzzzhzzhhzzhbzzhbzzhbzzzzzzhzhhzzhhzzhbzzhbzzzzzzzzhzhhzzhhzzhbzzhbzzzzzzzzzhzzhhzzhbzzhbzzhbzzzzzzzhzzhhzzhbzzhbzzhbzzzzzzhzhhzzhhzzhhzzhbzzzzzzzzhzhhzzhhzzhhzzhbzzzzzzzzzhzzhhzzhbzzhbzzhbzzzzzzzhzzhhzzhbzzhbzzhbzzzzzzbzhhzzhhzzhbzzhbzzzzzzzzbzhhzzhhzzhbzzhbzzbzzzzzzvzzzzzzhbzzzzzzhb",
+                "Pixels": "222200002200000000000220222200000000000000000000222200000000000000000000222202200000220000002200222202200000220000002200222200000000000000000000222200000000000000000000222222202200220022002200222222202200220022002200222222020000002200000022222222020000002200000022222222202200220022002200222222202200220022002200222222020022002200220022222222020022002200220022222222202200220022002200222222202200220022002200222222020022002200220022222222020022002200220022222222202200220022002200222222202200220022002200222222020022002200220022222222020022002200220022022222222222220022222200"
+              },
+              "edge": {
+                "Ramp": [
+                  "#7275ac",
+                  "#7e85c3",
+                  "#9792bd",
+                  "#99a9b4"
+                ],
+                "Grain": "wwyywwyylguynigl55aa1288uyyzzyyuuuiiinlgglccag22uyyzzyyuuuiiinlgglccag223dxtzzzzzwyyniswlg5a22333dxtzzzzzwyyniswlg5a22337b4fzzzzttzsuyllwwnnnttn7b4fzzzzttzsuyllwwnnnttna5aallwzhhzztn2721llcmkia5aallwzhhzztn2721llcmkizzch88rlwzzzzzrl44aannchzzch88rlwzzzzzrl44aannchcc55114aaagke9af10rv77ilcc55114aaagke9af10rv77ilswc7inaaag84agfftxzztt72swc7inaaag84agfftxzztt72wsswwwyynnwwaaaa55iohhgiwsswwwyynnwwaaaa55iohhgiuussuywwwwniinwwyy551143uussuywwwwniinwwyy551143wsswc7swwwchgayy48zzrl3dwsswc7swwwchgayy48zzrl3duuiiiiiiuznnnn53swnnaggauuiiiiiiuznnnn53swnnaggalgswnisz72llnnwzmhrlbbag",
+                "Pixels": "222222222122221200110011222332222222222112111100222332222222222112111100012233333222222221010000012233333222222221010000010133332232222222222222010133332232222222222222101122231133220000221222101122231133220000221222331111222333332200112211331111222333332200112211110000011112111100220022110000011112111100220022221122111110111122332200221122111110111122332200222222222222111100121112222222222222111100121112222222222222222222000000222222222222222222000000222211222211112201332201222211222211112201332201222222222322220022221111222222222322220022221111212222230022222321221111"
+              },
+              "finish": {
+                "Ramp": [
+                  "#f2db9d",
+                  "#ffef9d",
+                  "#feffc0",
+                  "#feffc0"
+                ],
+                "Grain": "xxxxxxxxyyvvyyyyyyxxxtrwxxxxxxxxyyvvyyyyyyxxxtrwxxwwrryxvyyyyvzzxxxxzytuxxwwrryxvyyyyvzzxxxxzytullyyvvyyyyyyvvvvyyvvzzzzllyyvvyyyyyyvvvvyyvvzzzzyyxxyyyyyyyyzzzyxxvsssvxyyxxyyyyyyyyzzzyxxvsssvxxxyyyyyyyvyyvviivvvvzzyuxxyyyyyyyvyyvviivvvvzzyuxxxxxxlrxxxxyyzzzyzyyzwwxxxxxxlrxxxxyyzzzyzyyzwwzzvvxxrjxyyyyyyvxxxxyyzzzzvvxxrjxyyyyyyvxxxxyyzzggrrnfvyxxlnxxzzyyxxywzzggrrnfvyxxlnxxzzyyxxywzzqqttyyqlooyvyyxxyyzzyyvsqqttyyqlooyvyyxxyyzzyyvsnnttrryyyylllfyyyyxxyvxxnnttrryyyylllfyyyyxxyvxxffffnntt8800yyyyyyyvyyxxffffnntt8800yyyyyyyvyyxx00ffyyyyvqtjjlzzyyyyzwxx0088lrotvtyyyyyyyyzzzyyz",
+                "Pixels": "111111222211222222112101111111222211222222112101111100221222212211222211111100221222212211222211002211222222111122112222002211222222111122112222222222222222222212100011222222222222222212100011112222222122110011112221112222222122110011112221221121002211222222222211221121002211222222222211221122001222222122112222221122001222222122112222000000121100112222112122000000121100112222112122001122000021221122222210001122000021221122222210001100222200002222222111001100222200002222222111000000110000222222212222000000110000222222212222000022221010002222222112000000011122222222222222"
+              },
+              "gate": {
+                "Ramp": [
+                  "#b67960",
+                  "#a99178",
+                  "#d49874",
+                  "#b4b4a2"
+                ],
+                "Grain": "23544bbb99bb8ootvvffyyaa23544bbb99bb8ootvvffyyaa11224bbkk44kffffkqffttyy11224bbkk44kffffkqffttyy999228511mq42ikka8qqrryy999228511mq42ikka8qqrryyakiikkiif1135uu14knnooyyakiikkiif1135uu14knnooyy5yyb999i8zz1111101hhvvii5yyb999i8zz1111101hhvvii5kivwml98mhvv0110044wwqq5kivwml98mhvv0110044wwqq8gikkwv9866faaf12211ffkk8gikkwv9866faaf12211ffkk442lmkkyyka28fa151ffddii442lmkkyyka28fa151ffddii4aa44oo539bog2998622ffkka55bba5dgiffiif56155aaeea55bba5dgiffiif56155aaee54444a824b988ikb813355ff54444a824b988ikb813355ffk4285117bkiiiig661cccc88k4285117bkiiiig661cccc88224423544kiiixy416ff99bb",
+                "Pixels": "011112221122122333223322011112221122122333223322000012222112222223223333000012222112222223223333111001100231022221333333111001100231022221333333222222222001133012222233222222222001133012222233133211121330000000223322133211121330000000223322122332211223300000113333122332211223300000113333122223311112222000002222122223311112222000002222110222233220122010222222110222233220122010222222122113311123201111002222211222122222222110112222211222122222222110112222111112101211122210111122111112101211122210111122210110012222222110222211210110012222222110222211001101111222233101221122"
+              },
+              "teleporter": {
+                "Ramp": [
+                  "#89b2d1",
+                  "#94cb90",
+                  "#99daa8",
+                  "#dbdbbe"
+                ],
+                "Grain": "mswn4f81aahkdfxaaiiyyhhgkob8ef30af8779fwwxxzzd9zkob8ef30af8779fwwxxzzd9z58fffd583177df9rrssyykgr58fffd583177df9rrssyykgr58935812fd11ko4kk9999a3h58935812fd11ko4kk9999a3h11lkkk5a508dknfffmmggddd11lkkk5a508dknfffmmggddd5ah8kp132172gnnhhkkkk01k5ah8kp132172gnnhhkkkk01k22nkee58202579ottrrkkhh822nkee58202579ottrrkkhh835okkn99311029gffrrppdd635okkn99311029gffrrppdd6fd7affrp771110gnniiooii0fd7affrp771110gnniiooii0dh51ee775821555ppaarrf80dh51ee775821555ppaarrf80b93541df228aqmdooffkkni0b93541df228aqmdooffkkni0cm11dh4004415aaooiinnkk1cm11dh4004415aaooiinnkk131kp5885720388g77oo99771",
+                "Pixels": "233212102222223222233222232122102211112333333213232122102211112333333213112222111011221333333223112222111011221333333223111111002200231221111212111111002200231221111212002222121012222222222222002222121012222222222222122123010010222222222002122123010010222222222002002222110001112333322221002222110001112333322221113222111000012223333221113222111000012223333221221222331100002222222220221222331100002222222220221022111100111332233210221022111100111332233210211110220012322332222220211110220012322332222220220022100110122332222220220022100110122332222220102311111001112112211110"
+              },
+              "stream": {
+                "Ramp": [
+                  "#c0b7d0",
+                  "#c7cde7",
+                  "#d9d6f9",
+                  "#ffe5d7"
+                ],
+                "Grain": "uuuuuuuuhhuuuuuyyuhhqqhhyyuuuuuuiiuuuuuzofjjrrrzyyuuuuuuiiuuuuuzofjjrrrzuuuuuurrgguuuzmrpduuuyyzuuuuuurrgguuuzmrpduuuyyzuuuuyyuu5500eefqttzzzzzyuuuuyyuu5500eefqttzzzzzyuuuuuuuuff00rwzzzzzyyuuuuuuuuuuuff00rwzzzzzyyuuuuuuuuuuuhhuurruyyyyyyuuuuuuuuuuuhhuurruyyyyyyuuuuuuuzzuuuurpsuuuuyyuzzusuuuuzzuuuurpsuuuuyyuzzusuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuzzuuuuuzzuuuuuszzuuuuusuzzuuuuuzzuuuuuszzuuuuusuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuyzzuzzuuzzuszzuszzuszzusyzzuzzuuzzuszzuszzuszzuszzuzuuuuuuzzuuuuuuzzuuuuzzuzuuuuuuzzuuuuuuzzuuuuzzzuzzuuzzuszzuszzuszzus",
+                "Pixels": "111111110011111221000000221111110011111200000002221111110011111200000002111111000011120000111222111111000011120000111222111122110000000011222222111122110000000011222222111111110000022222222111111111110000022222222111111111110011001222222111111111110011001222222111111122111100011112212210111122111100011112212210111111111111111111111111111111111111111111111111122111112211111022111110122111112211111022111110111111111111111111111111111111111111111111111111222122112210221022102210222122112210221022102210221211111122111111221111221211111122111111221111222122112210221022102210"
+              },
+              "key": {
+                "Ramp": [
+                  "#6d638e",
+                  "#5b8081",
+                  "#718d82",
+                  "#b88f7c"
+                ],
+                "Grain": "ceeec80220djjeeee669akk0ceeec80220djjeeee669akk0ecnq60gg00gjjjjnngggggg8ecnq60gg00gjjjjnngggggg8cecc66c8000jjcceec9gjb69cecc66c8000jjcceec9gjb69qnce55fagjjmmgg999966660qnce55fagjjmmgg999966660ee5555mh065cc00ccmguxjg0ee5555mh065cc00ccmguxjg0466652jjjj9ccgg88bbjgssu466652jjjj9ccgg88bbjgssuffcc55d6gj2nn99ggf9gggggffcc55d6gj2nn99ggf9ggggg52bdmj46e86uujj66b118rrk52bdmj46e86uujj66b118rrk665555dbjm6mm0099jggmtph665555dbjm6mm0099jggmtphd6gm50666666622ccqtlnzugd6gm50666666622ccqtlnzug52jg6ddde86992288jjjmmh052jg6ddde86992288jjjmmh052ce55cc618554444gmmjuu252ce55cc618554444gmmjuu2",
+                "Pixels": "222221000022222221112220222221000022222221112220223310220022222332222221223310220022222332222221222211210002222222122211222211210002222222122211332200222223322111111110332200222223322111111110220000320102200223233220220000320102200223233220011100222212222112222333011100222212222112222333222200212203311222122222222200212203311222122222002232012113322112001333002232012113322112001333110000222313300112223332110000222313300112223332212300111111100223333332212300111111100223333332002212222111100112223320002212222111100112223320002200221010000002332330002200221010000002332330"
+              },
+              "rotator": {
+                "Ramp": [
+                  "#aa7aaa",
+                  "#9293d4",
+                  "#a4a2ce",
+                  "#bdb2be"
+                ],
+                "Grain": "bpnll981000aexzzzztzywwlbpnll981000aexzzzztzywwlakknnb931igtxzzzzzylh350akknnb931igtxzzzzzylh350boonn41mhggryztzzrl11000boonn41mhggryztzzrl11000nzza2aa84bolikkig2200000nzza2aa84bolikkig2200000ynlohhhaagggg22gg0026102ynlohhhaagggg22gg0026102qyyqmlhzztthhgacc4812tt8qyyqmlhzztthhgacc4812tt8zywzzznaawwll12ga44akzzszywzzznaawwll12ga44akzzshkkkkyvzzkkxtzwwzzwwwwwlhkkkkyvzzkkxtzwwzzwwwwwlbqqhhzyxtzzvlnnzzwzzzwwybqqhhzyxtzzvlnnzzwzzzwwynffbbb2hmzzxxurtnnnbb111faakknkdfwtkhggf9ag22000faakknkdfwtkhggf9ag22000455yyqqnlngttooff8400000455yyqqnlngttooff8400000553oqnlooldrryyvva400000",
+                "Pixels": "122221100001123333232222122221100001123333232222122221110212233333222110122221110212233333222110122221022112332332200000122221022112332332200000233101111122222210000000233101111122222210000000322222211111100110001000322222211111100110001000222222233222211111100221222222233222211111100221332333211222200111112332332333211222200111112332222223233222232233222222222223233222232233222222122223222332222332333222122223222332222332333222211111022332222222211000111222211222211111100000111222211222211111100000111222222222222111100000111222222222222111100000111222222212233221100000"
+              },
+              "lantern": {
+                "Ramp": [
+                  "#b1a48f",
+                  "#bdb2be",
+                  "#ddc18f",
+                  "#f3cbc2"
+                ],
+                "Grain": "ytmvyyyyyxxmmyyyyrrrloooytmvyyyyyxxmmyyyyrrrlooolrrrrrutryyxxyyyyvvyyzzolrrrrrutryyxxyyyyvvyyzzoyyyyyxxyyifwxrmyyyyyyysjyyyyyxxyyifwxrmyyyyyyysj5lnxxyyxxyyrmyyoivyyylux5lnxxyyxxyyrmyyoivyyyluxolllnqoxxxxyyxxyyxwjorloolllnqoxxxxyyxxyyxwjorlofmroqqqnloolnuuqqxxnnyyyfmroqqqnloolnuuqqxxnnyyyryyyyllyvyyxxyyxxvvyyyyzryyyyllyvyyxxyyxxvvyyyyzqyyigyynlxxwlyyxxxxxxzzuqyyigyynlxxwlyyxxxxxxzzutnloiflyynnyyyyvyyvvvvvntnloiflyynnyyyyvyyvvvvvnbzzrr5bqgvyyyxxyyxxxxxxibzzrr5bqgvyyyxxyyxxxxxxixnlxx05lnyvjtyyyyyyyyxxyxnlxx05lnyvjtyyyyyyyyxxyxoqtmllfnyylllqxw1888igyxoqtmllfnyylllqxw1888igy",
+                "Pixels": "311232222221122221110111311232222221122221110111011111211222222222222331011111211222222222222331333222222002211222222310333222222002211222222310001222322331122102322022001222322331122102322022100011122223322222201101100011122223322222201101011111110110122112211332011111110110122112211332122220032222222222222223122220032222222222222223133002210222023222222332133002210222023222222332110100022113332233222221110100022113332233222221033110010233322332222220033110010233322332222220210220001320132332222222210220001320132332222222211110001330001220000003211110001330001220000003"
+              },
+              "block": {
+                "Ramp": [
+                  "#837271",
+                  "#718d82",
+                  "#a99178",
+                  "#c79e81"
+                ],
+                "Grain": "bb8idyyee7oossttuoom13334bbbbyykg7pp33rryyru85d44bbbbyykg7pp33rryyru85d4bkf52yzebryyddyyunvya3hmbkf52yzebryyddyyunvya3hmfyy10yyd4dwwootttuyyaa33fyy10yyd4dwwootttuyyaa337yyeeff811xxuuffuoyy35da7yyeeff811xxuuffuoyy35da1fkqiakb3aaayyffdfyv4ffd1fkqiakb3aaayyffdfyv4ffd5wsfillvoorryy33kkyv4fyt5wsfillvoorryy33kkyv4fyt17bkkwv98yffyy88vyuiiuxn17bkkwv98yffyy88vyuiiuxn511ii5899vaavvyyrv73a4yzwaaa28902iiiffyyxw53oidjwaaa28902iiiffyyxw53oidjh417997imkiiffyyyyorywvvh417997imkiiffyyyyorywvvbbbb9yywxfxx44rrxuuxfaddbbbb9yywxfxx44rrxuuxfadd222vwkkyykyyffootivyfdvv222vwkkyykyyffootivyfdvv",
+                "Pixels": "111212311122222222220000011113322022002233221010011113322022002233221010121003311233113322221022121003311233113322221022133002310122222222331100133002310122222222331100022111110022221122330011022111110022221122330011012221210111331111320111012221210111331111320111022122222222330022320132022122222222330022320132001222211311331123222222001222211311331123222222000220111211223322101033211101100222113322002212211101100222113322002212200011022222113333223222200011022222113333223222111113322122002222221111111113322122002222221111000222233222112222231122000222233222112222231122"
+              },
+              "jump": {
+                "Ramp": [
+                  "#6c9f94",
+                  "#bd9f7d",
+                  "#8ac08a",
+                  "#7cd9b3"
+                ],
+                "Grain": "mswn4f81aahkdfxaaiiyyhhgkob8ef30af8779fwwxxzzd9zkob8ef30af8779fwwxxzzd9z58fffd583177df9rrssyykgr58fffd583177df9rrssyykgr58935812fd11ko4kk9999a3h58935812fd11ko4kk9999a3h11lkkk5a508dknfffmmggddd11lkkk5a508dknfffmmggddd5ah8kp132172gnnhhkkkk01k5ah8kp132172gnnhhkkkk01k22nkee58202579ottrrkkhh822nkee58202579ottrrkkhh835okkn99311029gffrrppdd635okkn99311029gffrrppdd6fd7affrp771110gnniiooii0fd7affrp771110gnniiooii0dh51ee775821555ppaarrf80dh51ee775821555ppaarrf80b93541df228aqmdooffkkni0b93541df228aqmdooffkkni0cm11dh4004415aaooiinnkk1cm11dh4004415aaooiinnkk131kp5885720388g77oo99771",
+                "Pixels": "233212102222223222233222232122102211112333333213232122102211112333333213112222111011221333333223112222111011221333333223111111002200231221111212111111002200231221111212002222121012222222222222002222121012222222222222122123010010222222222002122123010010222222222002002222110001112333322221002222110001112333322221113222111000012223333221113222111000012223333221221222331100002222222220221222331100002222222220221022111100111332233210221022111100111332233210211110220012322332222220211110220012322332222220220022100110122332222220220022100110122332222220102311111001112112211110"
+              },
+              "reset": {
+                "Ramp": [
+                  "#9e9fdb",
+                  "#aeb3c8",
+                  "#c2bde4",
+                  "#b2d7ed"
+                ],
+                "Grain": "wwyywsswwwyynnwwaaaa55iouyyuuussuywwwwniinwwyy55uyyuuussuywwwwniinwwyy55wsuywsswc8swwwchgayy48zzwsuywsswc8swwwchgayy48zzuuuuuuiiiiiiuznnnn53swnnuuuuuuiiiiiiuznnnn53swnnwsuylhswnisz72llnnwzmhrlwsuylhswnisz72llnnwzmhrluuii66ssswlrgallnttttn44uuii66ssswlrgallnttttn44wsinniin22bblllttrtt7200wsinniin22bblllttrtt7200ssiiuzaannllwztnwztn1100ssiiuzaannllwztnwztn1100niswlhswnnnttnnnnnmm1100sshhinzzyzrlcc43isrrzzyvsshhinzzyzrlcc43isrrzzyvniswwsuynnaa210027lqxyxvniswwsuynnaa210027lqxyxvwsssuynnwwwslp0044nrdnb2wsssuynnwwwslp0044nrdnb2wwwwlh5annvvlr200002kr9bwwwwlh5annvvlr200002kr9b",
+                "Pixels": "223322222233222211110012233222222322222112223300233222222322222112223300222322221122221111330133222322221122221111330133222222111111232222002222222222111111232222002222222311222123001122231121222311222123001122231121221100222212111122222200221100222212111122222200221221120011111222220000221221120011111222220000221123112211232223220000221123112211232223220000212211222222222211110000221112333321110012223332221112333321110012223332212222232211000000123332212222232211000000123332222223222222120000221110222223222222120000221110222211012222120000001211222211012222120000001211"
+              },
+              "pipe": {
+                "Ramp": [
+                  "#9b97c7",
+                  "#89b2d1",
+                  "#9ebfce",
+                  "#8cdfa5"
+                ],
+                "Grain": "wwyywsswwwyynnwwaaaa55iouyyuuussuywwwwniinwwyy55uyyuuussuywwwwniinwwyy55wsuywsswc8swwwchgayy48zzwsuywsswc8swwwchgayy48zzuuuuuuiiiiiiuznnnn53swnnuuuuuuiiiiiiuznnnn53swnnwsuylhswnisz72llnnwzmhrlwsuylhswnisz72llnnwzmhrluuii66ssswlrgallnttttn44uuii66ssswlrgallnttttn44wsinniin22bblllttrtt7200wsinniin22bblllttrtt7200ssiiuzaannllwztnwztn1100ssiiuzaannllwztnwztn1100niswlhswnnnttnnnnnmm1100sshhinzzyzrlcc43isrrzzyvsshhinzzyzrlcc43isrrzzyvniswwsuynnaa210027lqxyxvniswwsuynnaa210027lqxyxvwsssuynnwwwslp0044nrdnb2wsssuynnwwwslp0044nrdnb2wwwwlh5annvvlr200002kr9bwwwwlh5annvvlr200002kr9b",
+                "Pixels": "223322222233222211110012233222222322222112223300233222222322222112223300222322221122221111330133222322221122221111330133222222111111232222002222222222111111232222002222222311222123001122231121222311222123001122231121221100222212111122222200221100222212111122222200221221120011111222220000221221120011111222220000221123112211232223220000221123112211232223220000212211222222222211110000221112333321110012223332221112333321110012223332212222232211000000123332212222232211000000123332222223222222120000221110222223222222120000221110222211012222120000001211222211012222120000001211"
+              },
+              "archeton": {
+                "Ramp": [
+                  "#b58eb3",
+                  "#bea3a5",
+                  "#c9b68e",
+                  "#98da97"
+                ],
+                "Grain": "2yyiikkmdaffttootrda23rr2yyiikkmdaffttootrda23rri44kkwtimbxxdduu83yy33oti44kkwtimbxxdduu83yy33ot4on33ikyttllffuu13mmroot4on33ikyttllffuu13mmroot4b9ikooyyuxxoovvyyaauodd4b9ikooyyuxxoovvyyaauodd8fkbbqoxttssyyooooa4ioaa8fkbbqoxttssyyooooa4ioaay777991yzfzzyyppuheiimmoy777991yzfzzyyppuheiimmo16202yyyyvyyuuood7ormooo16202yyyyvyyuuood7ormooo0028awwzzbyyyykkxo554aa80028awwzzbyyyykkxo554aa82ik42vwkffmmvvffyya44dd42ik42vwkffmmvvffyya44dd4k42ffyxyykssuuppxu11988ak42ffyxyykssuuppxu11988aa4441tvnomkkoooodi73aajja4441tvnomkkoooodi73aajjtaaa2oouy2nnooiikf51aaottaaa2oouy2nnooiikf51aaot",
+                "Pixels": "033222221111222222110022033222221111222222110022200222222122112210330022200222222122112210330022022002232222112200222222022002232222112200222222011222233222222233112211011222233222222233112211112112232222332222101211112112232222332222101211311111033133332221111222311111033133332221111222010003333233222211222222010003333233222211222222000112233133332232000111000112233133332232000111022002221122221133100110022002221122221133100110200113233222222222001111200113233222222222001111100002222222222211101122100002222222222211101122211102223022221121101122211102223022221121101122"
+              },
+              "gem": {
+                "Ramp": [
+                  "#c6c6e6",
+                  "#edd2cf",
+                  "#e9e3ff",
+                  "#e5fbff"
+                ],
+                "Grain": "zzzz9zz99999zz999990zz99zzzz99999999999999999999zzzz99999999999999999999zzzzuzz9zz99zz90zz90zz90zzzzuzz9zz99zz90zz90zz90zzzzzz9z999999zz999999zzzzzzzz9z999999zz999999zzzzzzzzz9zz99zz90zz90zz90zzzzzzz9zz99zz90zz90zz90zzzzzz9z99zz99zz90zz90zzzzzzzz9z99zz99zz90zz90zzzzzzzzz9zz99zz90zz90zz90zzzzzzz9zz99zz90zz90zz90zzzzzz9z99zz99zz99zz90zzzzzzzz9z99zz99zz99zz90zzzzzzzzz9zz99zz90zz90zz90zzzzzzz9zz99zz90zz90zz90zzzzzz0z99zz99zz90zz90zzzzzzzz0z99zz99zz90zz90zz1zzzzzzuzzzzzz90zzzzzz901zzzzzzuzzzzzz90zzzzzz90zzzzzz0z99zz99zz99zz90zzzzzzzz0z99zz99zz99zz90zzzzzzzzzzzz99zzf8zz90zzf8",
+                "Pixels": "222202200000220000002200222200000000000000000000222200000000000000000000222222202200220022002200222222202200220022002200222222020000002200000022222222020000002200000022222222202200220022002200222222202200220022002200222222020022002200220022222222020022002200220022222222202200220022002200222222202200220022002200222222020022002200220022222222020022002200220022222222202200220022002200222222202200220022002200222222020022002200220022222222020022002200220022022222222222220022222200022222222222220022222200222222020022002200220022222222020022002200220022222222222200222022002220"
+              }
+            },
+            "PaletteSource": "img/shrine-layers/0002/0002.png"
+          }
         },
         {
-          "Id": "colourshards",
+          "Id": "0020-digital-palace",
           "X": 201,
           "Y": 1101,
           "IconStyle": 0,
@@ -9716,14 +10693,21 @@
               "Top": -130,
               "Left": 80
             },
-            "CoverImagePath": "img/shrine-layers/0001/cover-shards-small.png",
+            "CoverImagePath": "img/shrine-layers/0001/0020-cover.png",
             "Audio": {
-              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/07/SW-DIGICHIP-COLOURSHARD.ogg"
+              "Url": "https://johnoestmannmusic.com/wp-content/uploads/2026/11/0020-Digital-Palace.ogg"
             },
-            "HeadingText": "COLOURSHARDS",
+            "HeadingText": "0020 - Digital Palace",
             "HeadingOffset": null,
             "PoetryLines": [
-              "??"
+              "Digital Faultlines",
+              "Harnesses Secured",
+              "Raising Sunbow.sh",
+              "Grab the Digital Throne",
+              "Bleeding Futures",
+              "No Bleeding Here",
+              "Realit(ies) Speak in Duotone",
+              "Oversee Vast digicity"
             ],
             "PoetryOffset": null,
             "Action": {
@@ -9736,7 +10720,638 @@
             },
             "ExtraPanels": []
           },
-          "Children": []
+          "Children": [],
+          "Puzzle": {
+            "Objects": [
+              {
+                "Kind": "RotatorTile",
+                "Col": 7,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Left",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 6,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Left",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 5,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Left",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 4,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Left",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 3,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Left",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 2,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Up",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 2,
+                "Row": 6,
+                "Letter": null,
+                "Direction": "Up",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 2,
+                "Row": 5,
+                "Letter": null,
+                "Direction": "Up",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 2,
+                "Row": 4,
+                "Letter": null,
+                "Direction": "Up",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 2,
+                "Row": 3,
+                "Letter": null,
+                "Direction": "Up",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 2,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Right",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 3,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Right",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 4,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Right",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 5,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Right",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 6,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Right",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 7,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Down",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 7,
+                "Row": 3,
+                "Letter": null,
+                "Direction": "Down",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 7,
+                "Row": 4,
+                "Letter": null,
+                "Direction": "Down",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 7,
+                "Row": 5,
+                "Letter": null,
+                "Direction": "Down",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorTile",
+                "Col": 7,
+                "Row": 6,
+                "Letter": null,
+                "Direction": "Down",
+                "Variant": "rotatortile-2"
+              },
+              {
+                "Kind": "RotatorSwitch",
+                "Col": 1,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "RotatorSwitch",
+                "Col": 8,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 2,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "sentribeam"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 7,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "sentribeam"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 7,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "sentribeam"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 2,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "sentribeam"
+              },
+              {
+                "Kind": "Start",
+                "Col": 6,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Finish",
+                "Col": 3,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "JumpTile",
+                "Col": 5,
+                "Row": 8,
+                "Letter": null,
+                "Direction": "Up",
+                "Variant": "jumptile-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 4,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-13"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-17"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 5,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-13"
+              },
+              {
+                "Kind": "JumpTile",
+                "Col": 4,
+                "Row": 1,
+                "Letter": null,
+                "Direction": "Down",
+                "Variant": "jumptile-2"
+              },
+              {
+                "Kind": "JumpTile",
+                "Col": 1,
+                "Row": 5,
+                "Letter": null,
+                "Direction": "Right",
+                "Variant": "jumptile-2"
+              },
+              {
+                "Kind": "JumpTile",
+                "Col": 8,
+                "Row": 4,
+                "Letter": null,
+                "Direction": "Left",
+                "Variant": "jumptile-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-13"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-13"
+              },
+              {
+                "Kind": "JumpTile",
+                "Col": 3,
+                "Row": 8,
+                "Letter": null,
+                "Direction": "Left",
+                "Variant": "jumptile-2"
+              },
+              {
+                "Kind": "Gem",
+                "Col": 0,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Gem",
+                "Col": 4,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Gem",
+                "Col": 5,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Gem",
+                "Col": 9,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 4,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Circle"
+              },
+              {
+                "Kind": "GemGate",
+                "Col": 3,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "ResetSwitch",
+                "Col": 3,
+                "Row": 3,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "ResetSwitch",
+                "Col": 6,
+                "Row": 6,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-11"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 8,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-10"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 8,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-11"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-11"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              }
+            ],
+            "Palette": {
+              "wall": "#cccccc",
+              "edge": "#dddd7c",
+              "finish": "#d0a01b",
+              "gate": "#555555",
+              "switch": "#555555",
+              "teleporter": "#d7dd7f",
+              "stream": "#d7d73e",
+              "key": "#ffffff",
+              "rotator": "#cfad52",
+              "rotatorSwitch": "#cfad52",
+              "lantern": "#999999",
+              "block": "#aaaaaa",
+              "jump": "#dada5d",
+              "reset": "#d0daf8",
+              "pipe": "#e3e3ba",
+              "archeton": "#e0e09b",
+              "gem": "#eeeeee",
+              "outline": "#333333",
+              "light": "#ffffff"
+            },
+            "Textures": {
+              "wall": {
+                "Ramp": [
+                  "#d7a0be",
+                  "#cfbcb8",
+                  "#cccccc",
+                  "#e0e09b"
+                ],
+                "Grain": "9j9j9j9j9j9j9j9j9jgqgj9qjjqjqjqjqjqjjjqjqjqjqjqj9j9j9j9j9j9jjq9jjq9jjq9jqjqjqjqjqjqjqjqjqjqjqjqj9j9j9j9j9j9j9j9j9j9j9jgjj9qjj9qjj9qjj9qjj9qjqjqj9j9j9j9j9j9j9j9j9j9jgq9jqjj9qjj9qjj9qjq9qjqjqjqj9j9j0j9j0j9j9j9j9j9j9j9jj9j9j9j9j9j9j9jjj9qjqjqj9j9j9j0j9j0j9j9j9j9jjqgjj9j9jjj9jjj9qjj9qjqjqjqj0j9j0j9j0j9j0j9j9j9j9j9qj9j9j9j9j9jjj9qjj9qjqjqj9j0j9j0j9j9j9j9j9qgj9q9qj9j9j9j9qjj9qjjjqjqjqjqj090j0j9j0j9j0j9j9jgqgjgqj9j9j9j9j9jjj9qjqjqjqgqj9j0j9j9j9j9jjq9jgqgqjqgqjjj9qjjjqjqjqjqjqjqjqqqt0j9j9j9j9jgj9jgjgjgqgqgqj9jjj9qjqjqjqgqjqjqjqgzt9j9jjj9jjqgjjqgqjqgtjqgtqjqjqjqjqjqjqjqjzqztztzt",
+                "Pixels": "010101010101010101121102112121212121112121212121010101010101120112011201212121212121212121212121010101010101010101010111102110211021102110212121010101010101010101011201211021102110212021212121010101010101010101010101101010101010101110212121010101010101010101011211101011101110211021212121010101010101010101010102101010101011102110212121010101010101010102110202101010102110211121212121000101010101010101121112101010101011102121212121010101010101120112121212111021112121212121212223010101010111011111121212101110212121212121212133010111011211121212131213212121212121212132333333"
+              },
+              "edge": {
+                "Ramp": [
+                  "#cdbc5e",
+                  "#e3c7ab",
+                  "#dddd7c",
+                  "#eae8a4"
+                ],
+                "Grain": "afaf4faf0farafafafafafafffufrfuffaufrfufraufrfrfarafffaf0rafafafarafafafufufufrfffrfufrfufufrfrfafafaf4r0faf4faf4faf4fafrfufrfufffufrfufrfufr4rfffaffraf0rafarafarafafarufzfzfufffzfufrfufrfufrfafafaf4f0fafafarafafafarpaufffufffufrfufrfufrfuffuarfraf0r4ffrararafaf4rufrfzff4ffrfzfpfufrfrfrfarrrarar0raraf0f0a0a000fzrzrzrzrfrzrzrzrzrzrzrzrrzrrrzrr0zrzrzrzrzrrrzrrzrzrzrzrfrzrzrzrzrzrzrzrrzrzrrrr0rrrarrrrrrrrrrrzrzrzrzrfrzrzrzrzrzrzrzrrzrzrzrr0rrrrrdrrzrrrzrrzrzrzrzrfrzrzrzrzrzrzrzrrzrrrrrr0rrrarrzarrrarrzzrzrzrzrfrzrzrzrzrzrzrzrrzrzrzrr0zdrrzrrrrarrrarzrzrzrzrfrzrzrzrzrzrzrzr",
+                "Pixels": "010101010102010101010101112121211021212120212121020111010201010102010101212121211121212121212121010101020101010101010101212121211121212121212021110112010201020102010102212121211121212121212121010101010101010201010102202111211121212121212121120212010201120202010102212121101121212121212121022202020202010100000001222222221222222222222222222222220222222222222222222222221222222222222222222222220222022222222222222222221222222222222222222222220222221222222222222222221222222222222222222222220222022202220222222222221222222222222222222222220212222222022202222222221222222222222222"
+              },
+              "finish": {
+                "Ramp": [
+                  "#d0a01b",
+                  "#d0a01b",
+                  "#d0a01b",
+                  "#cfb338"
+                ],
+                "Grain": "09090909099h9h999h99chqt999990h999hhh9h9hhh9qhzq99090909999hch99ch99hqqqh999h9c9h9hhqch9qhh9qhzq09090909099h9h999h99hhqtc99990h999hhh9h9hhh9qhzq99099909099h9h99ch99hqqth999h9c9h9hhqhh9qhh9qhzq0909090909ch9h999h999hqtc99999h999mhh9h9hhh9hhzq99099909099hhh99cq99hqhqh9h9h9hch9hhqch9qhh9qhqq09090909099h9h9c9h9cchht909990h999mhh9h9hhh9qhqq09090909099hch99ch99hqhth999h999h9mhqhh9hhh9qhqq0909999hc9ch9h9h9h9c9hhtc99990h9c9hch9h9hhh9hhqq9c099909099hch999h99hqhth999h9h9h9h9qhh9hhh9qhqq0909099909ch9h9h9h9cchht999990h999hhh9h9hhh9hhqq9h999c099c9h9h999h99cqhqh9h9h9h9h9h9hhh9hhh9qhqq",
+                "Pixels": "222222222223232223223333222222322233323233323333222222222223332233223333322232323233333233323333222222222223232223223333322222322233323233323333222222222223232233223333322232323233333233323333222222222233232223222333322222322233323233323333222222222223332233223333323232333233333233323333222222222223232323233333222222322233323233323333222222222223332233223333322232223233333233323333222222233233232323232333322222323233323233323333232222222223332223223333322232323232333233323333222222222233232323233333222222322233323233323333232223222323232223223333323232323232333233323333"
+              },
+              "gate": {
+                "Ramp": [
+                  "#463246",
+                  "#444444",
+                  "#555555",
+                  "#666666"
+                ],
+                "Grain": "iiaiiariiaaraiazra2irirrririiiirririiirriaaiiarriraiiaaiaziiariiaaiiaiarrirairzizriiiriiiaiaririaiai2raa2airarazia2iaairiiiaiaiia2riiizarii2aairiririiii2aiirraraa2rarirziiiriiiaiiriairriiiaizririiaiai2airarrziririiairiraiizaiiriririiaraiarraiaiiriiiziiaiaiia2iaiizziririiazrriiriiziriaiiiiraiaaii02rraaii2iai2r2iiiriiiiiiaririiiiaiaiiriaiaiaiiraiiraiaiiraiaiarriririiazirrirriiiziriiiiiiriiiraaaiaiiraiaiaraii9raiaa4i2riiirirariiirraiiiaiia2iariiaiaiaaaiaiiiraiiaai4iiaaraiaiaiaaa4aaaaaaa24ar2iiiaaira2ariiiiaaia9iiaiaziiaa2zriiii2iai222iaiaiaaiira2a2rriiaai9aaiiarrraiaa2riai",
+                "Pixels": "110110211002010320012122212111122121112210011022120110010311021100110102212012313211121110102121010102000012020310010012111010110021113021100012121211110011220200020212311121110112101221110132121101010012022312121101212011301121212110201022010112111311010110010113312121103221121131210111120100110022001101010201112111111021211110101121010101120112010112010102212121103122122111312111111211120001011201010201102010001021112120211122011101100102110101000101112011001011002010101000000000000002011100120002111100100110103110003211110101000101010011200002211001000110222010002101"
+              },
+              "teleporter": {
+                "Ramp": [
+                  "#cfb950",
+                  "#cfc7b8",
+                  "#d7dd7f",
+                  "#eae8a4"
+                ],
+                "Grain": "afaf4faf0farafafafafafafffufrfuffaufrfufraufrfrfarafffaf0rafafafarafafafufufufrfffrfufrfufufrfrfafafaf4r0faf4faf4faf4fafrfufrfufffufrfufrfufr4rfffaffraf0rafarafarafafarufzfzfufffzfufrfufrfufrfafafaf4f0fafafarafafafarpaufffufffufrfufrfufrfuffuarfraf0r4ffrararafaf4rufrfzff4ffrfzfpfufrfrfrfarrrarar0raraf0f0a0a000fzrzrzrzrfrzrzrzrzrzrzrzrrzrrrzrr0zrzrzrzrzrrrzrrzrzrzrzrfrzrzrzrzrzrzrzrrzrzrrrr0rrrarrrrrrrrrrrzrzrzrzrfrzrzrzrzrzrzrzrrzrzrzrr0rrrrrdrrzrrrzrrzrzrzrzrfrzrzrzrzrzrzrzrrzrrrrrr0rrrarrzarrrarrzzrzrzrzrfrzrzrzrzrzrzrzrrzrzrzrr0zdrrzrrrrarrrarzrzrzrzrfrzrzrzrzrzrzrzr",
+                "Pixels": "010101010102010101010101112121211021212120212121020111010201010102010101212121211121212121212121010101020101010101010101212121211121212121212021110112010201020102010102212121211121212121212121010101010101010201010102202111211121212121212121120212010201120202010102212121101121212121212121022202020202010100000001222222221222222222222222222222220222222222222222222222221222222222222222222222220222022222222222222222221222222222222222222222220222221222222222222222221222222222222222222222220222022202220222222222221222222222222222222222220212222222022202222222221222222222222222"
+              },
+              "stream": {
+                "Ramp": [
+                  "#cfad52",
+                  "#d1d100",
+                  "#d7d73e",
+                  "#e6e16b"
+                ],
+                "Grain": "cl0lclclclclclclclcl9lzzllflololololololllolflzzcl0llollllclllclclcl9ozz7277f7f7f7f7f9fclclcfcol7f0f6f7f7c7f777777770707fcfff9fcf9fcf7fcf9f997fccf0fcf7fcf7f9f9f9f7f7f7fff7fmflclffcfffcfff7fff77f0f7fcf9f9f7f7f7f7f0f7ffc7flclff9fffcfff9f9f9f9cf0fcf7fcf7fcf7f9f7f7f9flf7fmfm9mffflffffff9fffccf0f7f9f7fcf7fcfcf7f7f9flc7fl9mflfmffcmffcff9clfcf0f9fcfcfcfcf9fcf7f7f7flf7flfmfmflfmffffff9fff97f0f9fcf7fcf7f9f7f9f0f7flf7fmcmffffffcmff9f979f99f0fcl9fcf7fcf7fcf7f7f7fmf7fmflfmffcffffmff9ffff7f0fcfcf7fcf7f9f7fcf0f9ff97ffclffcf9fcfcfcff79ff7f0f9f9f7f7f7f7f9f7f0f7fol7coflclcf7f7f7f7977797",
+                "Pixels": "120212121212121212121233222232323232323222322233120223222212221212121333000020202020212121212132020202020102000000000000212221212121202121211021120212021202121212020202220232212221222122202220020202121212020202020202210221222122212221212121120212021202120212020212220232313222222222212221120202120212021212020212210221322232213221221122120212121212121212020202220222323222322222212221020212120212021202120202220231322222213221210121120212121202120212020202320232223221222232212222020212120212021202120212210221222121212121220122020212120202020212020202320132212120202020100010"
+              },
+              "key": {
+                "Ramp": [
+                  "#dce6d1",
+                  "#f0f0ff",
+                  "#ffffff",
+                  "#ffffff"
+                ],
+                "Grain": "0006000606060c060c06060c606060606cgc606cccgc6cgc0606060c060c0c0ccc0ccc0c60606c6cgc6cgcgcgcgcgcgc060c0c0c0c0c0c0c0ccc0ccc606c60gcccgc6cgcgcgcgcgc0c0c060ccc0ccc0cc60ccc0cgcgcgcgcgcgcgcgcgcgcgcgc0c0c0cc60ccc0ccc0cc60cccccgcgcncgcgcgcgcgcgcgcgcc6cccgcccgcccgcccgcccgccncgcncgcncgcscncscgcscgccccncccncccncgcncccncccnncncncncncncncncncncncnccncncncncncncncncncncncnnnnnznnnznnnznznznnnznnncncncnnncnnncnnncnnncnnnnnznznznznznznznznznznznnznnnznznznznznznznznznzznznznznznznzzznzzznznznnznznznznznznznznznznznzznzzznzzznzzzzzzzzzzzzzznznznznznznznznzzznzzznzzzzzzzzzzzzzzzzzzzzzzzzz",
+                "Pixels": "000000000000000000000000000000000020000000200020000000000000000000000000000000002000202020202020000000000000000000000000000000200020002020202020000000000000000000000000202020202020202020202020000000000000000000000000002020202020202020202020000002000200020002000200202020202020202020202020000200020002020200020002202020202020202020202020020202020202020202020202222222222222222222222222020202220222022202220222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+              },
+              "rotator": {
+                "Ramp": [
+                  "#cf9d30",
+                  "#cf9d30",
+                  "#cfad52",
+                  "#cdc180"
+                ],
+                "Grain": "24894848484848484868486884c898868486868686868686g889880402020404484888488k98c444846340404040404004g9484c6c6c6c6c6c6c686c84cgg488c6ccc6ccccccc6c64888ck4c6c6c6c6ccc6c6c6c84c8ccwccccccccccccccccc2489288z9ccc6c6c6c6c6ccc84c8888czccccccccccccccc4888884ccwcccc6ccc6ccc6c84c8988cccvccccccccccccc4489284c6cct6c6c6c9c6ccc84c88888ccccsccccccccccc4889884ccc9cckcccc6ccc9c84c8c88ccccccck6cccccccc0489884c6ccc6cck6c6c6c6c44c8988cccccccccjccccccc4848884ccc6ccc6c6ghc6c6c8488c88kkggcg8c8c8gsc8cc2449684c6c6c6c9c6cccvc6c84889488ccccc6ccc6cccccc4849884c9c6ccc6c6c6ccs6c8488c88cjcjjjcjccccccpcc",
+                "Pixels": "112212121212121212221222213222222122222222222222322222111111111112122212232231112121111111111111113212131313131313131213213331223133313333333131122233131313131333131313213233333333333333333333112212232333131313131333213222233333333333333333122222133333331333133313213222233333333333333333112212131333131313231333213222223333333333333333122222133323333333133323213232233333333233333333112222131333133313131313113222233333333333333333121222133313331313331313212232233333323232333233111222131313132313333313212221223333313331333333121222132313331313133313212232233333333333333333"
+              },
+              "lantern": {
+                "Ramp": [
+                  "#6e8287",
+                  "#888888",
+                  "#999999",
+                  "#aaaaaa"
+                ],
+                "Grain": "4nnpnpnppspsbqpspqpql1q48jppsnppspssipsssqsqs4s14njppplppsssfqpsqslss4q48nppsppnssllipsisqsqz4w44nlpnnnpnsj8fqqspqpqw4s48jppslpnspp4ipsqspsss4w44njppplppsjpfqpsqqpsq4q48nppsnpnssp4jpsqsqsss4w44nlpnplpnsj4bqpspqpws4s44jppplpnspp4fpsqsqsqw4s04njpnplppsj4bqpsqqpwp7q48lpnsnplssp4fpsqsqpqw4s02njpnplpnsl4bppqpqpws4q48jnlplplpsssfpsqspsqw4w04njpnplnpspsbqpqpqlqw7q48jpnslplssssfpsqsqlqw4w01ljpnplpnspsbqplpqpsq4s45jppplplppssfqsqspsqw0w44njpnllnpspsbspsqqlss7q48nppsnplspssfqsqsqpqw4s41ljpnnlpnppsbspspqlsq4q74jpnplplspssfpsqsppqw1w44njpnllnpspsfspsqqlqs4q78lnnplplspssiqsqsppsw4s7",
+                "Pixels": "011111111212021212121020011121112122112222222020011111111222121222122020011121112211112122223030011111111210122212123020011121112110112221222030011111111211121222122020011121112210112222222030011111111210021212132020011111112110112222223020011111111210021222131020011121112210112222123020011111111210011212132020011111111222112221223030011111111212021212123020011121112222112222123030011111111212021112122020011111111122122221223030011111111212021222122020011121112122122222123020011111111112021212122020011111112122112221123030011111111212121222122020011111112122122221123020"
+              },
+              "block": {
+                "Ramp": [
+                  "#7e9494",
+                  "#c78f8f",
+                  "#aaaaaa",
+                  "#bbbbbb"
+                ],
+                "Grain": "pspsbqpspqpql1q417l4qwp1spssipsssqsqs4s187z4sqw1psssfqpsqslss4q447q4qqp1ssllipsisqsqz4w487s4wqw1nsj8fqqspqpqw4s44bq8qsq1spp4ipsqspsss4w48cw4wqs1psjpfqpsqqpsq4q44cq4qwq1ssp4jpsqsqsss4w4bhs4wqw1nsj4bqpspqpws4s45hs8qwq1spp4fpsqsqsqw4s07cw4wqw1psj4bqpsqqpwp7q44hq4ssp1ssp4fpsqsqpqw4s07hz4wqs1nsl4bppqpqpws4q44hq4ssl1psssfpsqspsqw4w08hw4sss1pspsbqpqpqlqw7q48ks4qwl1ssssfpsqsqlqw4w0bks4wss1nspsbqplpqpsq4s44ls4wwl1ppssfqsqspsqw0w48lw4sqq1pspsbspsqqlss7q44ls8wwl1spssfqsqsqpqw4s48qw4wwq1nppsbspspqlsq4q74qs8qsl1spssfpsqsppqw1w45qs4sqq1pspsfspsqqlqs4q74qs8qsl1spssiqsqsppsw4s78lw4sqq1",
+                "Pixels": "121212121212102001102310212211222222202011302230122212122212202001202210221111212222303011203230121112221212302001212220211011222122203011303220121112122212202001202320221011222222203011203230121012121213202011212320211011222222302011303230121012122213112001202210221011222212302011303220121011121213202001202210122211222122303011302220121212121212312011202310222211222212303011203220121212111212202001203310112212222122303011302220121212122212212001213310212212222212302012303320111212121212202102212210212211222112303012202220121212122212202102212210212212222112302111302220"
+              },
+              "jump": {
+                "Ramp": [
+                  "#cfb370",
+                  "#d4d41f",
+                  "#dada5d",
+                  "#dfe392"
+                ],
+                "Grain": "huuuhu0uhuhuhuhuhuhuhuhuuuzuuuluzuzuzuzuzuzuuuzuuuhuhu0uuzuuuuhuuuhuhuhub0b0b3bblblblblbldlhuhuhdldlbl0l9lblbhblbbbbbbbblhlllhllldlhldlhlblhldlddlblhl0lhlblhlbldldldlblululllblwluhullhlllhlllbblhlbl0lblhldldlblblblbllhullhbluhulldlllhllldldhldlhl0lhlblhlblhlbldlbluluhulblwlwdwlllulllllldblhlhl0lbldlblhlblhlhlblululuhbludwlulwllhwllhllhuhlhl0ldlhlhlhlhldlhlblwlllulblulwlwlulwlllllldhldlbl0ldlhlblhlbldlbldlllwlulblwhwllllllhwlldlddldldl0lhudlhlblhlblhlblwlllwlblwlulwllhllllwlldbldlbl0lhlhlblhlbldlblhllhulldbllhullhldlhlhlhlldlblbl0ldldlblblblbldlblzuzuzubhzluhuhlblblblbdb",
+                "Pixels": "122212021212121212121212223222123232323232322232221212022322221222121212000000001010101011112121111101010101010100000000111111111111111110111111110111011101110111111101212111013121211111111110011101010111111101010101112111012121111111111111111111011101110111011101212121013131311121111111011111010111011101111101212121012131213111311111121111011111111111111101311121012131312131111111111101011111011101110111113121013131111111311111111111011211110111011101311131013121311111113111011101011111011101110111112111011121111111111111110101011111010101011101323232013121211010101010"
+              },
+              "reset": {
+                "Ramp": [
+                  "#a8b9dc",
+                  "#cccccc",
+                  "#d0daf8",
+                  "#e9e9f7"
+                ],
+                "Grain": "5ttyvyvyvytybvvwqlvqgvqybtyvyyyvyyvylvywyvqwvvwy5ttyvyvyvzoylwv3qvlvqwqybtvvzyyvyytyv0yqwvvvyvvy0ttyvyvyvyllvqqqqvqvvvlybtyvyvyvyyyiyivqvqvvwqvy5vtyvyvyvzlgvlqqqqlvvvlybtyvyyyvyyqlyivlvqqqyqwy0ttyvyvyvyglvlqqqvlvqvlybtyvyvyvyyliwiqlvqqqvqqw5ttvvyvvvyglvlqlqylqqvlybtvvyvyvyyllyivgwvvqwqvw0ttyvvvyvyglqlqvlvlvqvqy5qvvyvyvyyolwivqqqvvwqvv5ttvvyvvvyglvllqlvqvqvlwbtvvzvyvyygiylvlvqvqwqqy0vtyvyvyvyglqlqllqwqlvly5tyvyvyvyyllyivqvqvqvqqv0vtvtvqqlyglvllqlqlvqvly5lqqvqqlvqggqglilllqvqqwbttyvyvyvyglqqqqqwlvqqlq5tvvyvyvyyggyiwlqqqqqvqv0ttvvytvvybiwlqqlvlqqwlqbtvvyvyvyyggwlwlvqqqvvqv",
+                "Pixels": "022222222222022210210212022222222222022222122222022222222312022012021212022232222222202122222222022222222200211112122202022222222220202121222122022222222300201111022202022222222210202021112122022222222200201112021202022222222200201021112112022222222200201012011202022222222200202022212122022222222200101202021212012222222210202111222122022222222200200102121202022232222200202021212112022222222200101001210202022222222200202121212112022222110200200101021202001121102100100000012112022222222200111112021101022222222200202011111212022222222200201102011201022222222200202021112212"
+              },
+              "pipe": {
+                "Ramp": [
+                  "#cdc1a3",
+                  "#ccd4de",
+                  "#e3e3ba",
+                  "#eeeeee"
+                ],
+                "Grain": "999j9j999j9j9j9j9j9j9j9jj9j9j9j9j9jjjjj9j9jhj9jhmzhmmmhhmmhm9m6969096999zmzmsmz6smsmsmzmsmsmsmzmmmmzhmm9hmmshmmsmmmsmsmszmzmzmz9smzmsmzmsmzmzmsmmzmsmsm9mzmsmsmsmzmmmsmmzmzmzmz6smzmsmzmzmzmzmzmmmhzhmmhhmmshmmmhmmsmmmmzmzmzmz9smzmsmzmzmsmzmsmmzhmmzm9mzmmmmmmmmmmmsmmzmzmzmz6smzmzmzmzmzmsmsmmmmmhmmhhmmmhmmmhmmmhmmmzmzmzmz9mmzmzmzmzmzmzhzmmzhzmzhhmmhmmzhmmmhmhmhmzmzmzmz9smzmzmzmzmzmzmzmmmmzhmmhhmhmhmmmhmhmhmhmzmzmzmzhmhzmmmzmzhzmzhzmmzhmmzhmhmhmmmhmhmhmhmhmzmzmzmzhsmmhzmmhmmmhmmmhmmhmhmhmhmhmhmhmhmhmhmhmzmzmmhzhmhmhmhmhmhmhmhmhmzhmmmhmhmhmhmhmhmhmhmhmzmzmzmzmsmwhmhmhmhmhmhmh",
+                "Pixels": "000101000101010101010101101010101011111010101010120111001101010000000000212121202121212121212121111201100112011211121212212121202121212121212121121212101212121212111211212121202121212121212121110201100112011101121111212121202121212121212121120112101211111111111211212121202121212121212121111101100111011101110111212121201121212121212021120212001101120111010101212121202121212121212121111201100101011101010101212121201021112120212021120112010101110101010101212121202110211011101110110101010101010101010101212110201010101010101010120111010101010101010101212121212120101010101010"
+              },
+              "archeton": {
+                "Ramp": [
+                  "#abc78f",
+                  "#cccccc",
+                  "#e0e09b",
+                  "#c8f8cb"
+                ],
+                "Grain": "9j9j9j9j909j9j9j9j9j9j9jj9jhj9jhj0jjj9j9j9jhj9j969096999999j9j9j9j9j9j9jsmsmsmzmz6mmsmsmsmmmsmm9mmmsmsmsm6mmhmmsmsmsmsmssmzmzmsmz0zmzmsmsmsmsmwmmzmmmsmmm9mmmsmmmsmsmsmszmzmzmzmz6smzmsmzmzmsmzmhmmsmmmmm6mmmmmsmmmmhmmzzmsmzmsmz6zmzmzmzmzmzmzmmmmmmsmmm9msmzmmmsmmmzhmzmzmsmsmz6smsmzmsmsmzmsmhmmmhmmmh9mmhmmmhmmmhmhszmzmzhzmm0zmmmzmmmsmzmzmmmhmhmhmh9hmhmhmhmhmhmhmzmzmzmzmz6mmsmmmzmmhzmmmhmhmhmhmh6hmhmhmhmhmhmhmzhzmzhzmm6mhmhmhmhmhmhmhhmhmhmhmh9hmhmhmhmhmhmhmmmmhmmmhm6mhmmmhmhmhmmmhhmhmhmhmh6hmhmhmhmhmhmhmmhmhmhmhm6mhmhmhmhmhmhmmhmhmhmhmh9hmhmhmhmhmhmhmmhmhmhmhm6mhshmhmhmhmhmm",
+                "Pixels": "010101010001010101010101101010101011101010101010000000000001010101010101212121313011212121112110111212121011011212121212213131213031312121212131131112111011121112121212313131313021312131312131011211111011111211110113312131213031313131313131111112111012131112111301313121213021213121213121011101110011011101110102313130311031113111213131110101010001010101010101313131313011211131103111010101010001010101010101303130311010101010101010010101010001010101010101111011101010111010101110010101010001010101010101101010101010101010101011010101010001010101010101101010101010201010101011"
+              },
+              "gem": {
+                "Ramp": [
+                  "#bed2f0",
+                  "#e3e3ba",
+                  "#eeeeee",
+                  "#fafeff"
+                ],
+                "Grain": "000i0i0i0i0i0i0i0i0i0iiii0i0i0n0i0iii0iiiiziiizi08000i0i0i0i0i0i0i0i0i0ii0i0i0i0i0i0iiiiiiiiiiii000i000i000i0i0i0i0i0i0ii0i0i0n0i0i0i0n0i0iiiiiitututwtwtwtutwtwtwtwtwtwwtutwtwtwtwtwtwtwtwtwwwtqttutttutttwtttwtwtwtwtwutwtutwtwtutwtwtwtwtwtwttttttutttutttwtwtwtwtwtwututututwtutwtutwtwtwtwtqttsqttsqttttttutttutttuutututututututututxtutwttttttstttutttutttutttutuututututwtutututwtutwtutqttsqtttqtttqttuqttutttuutututututututwtutututwttttttstttutttttttutttuttutututututututwtxtutxtutttttqttuqttutttutttutttwwtwtutxtutwtwtwtutwtutwttwtwtwtttwtwtwtwtwtwtwtwwtwtwtwtwtwtwtwtwtwtwtwt",
+                "Pixels": "000000000000000000000000000000100000000000300030000000000000000000000000000000000000000000000000000000000000000000000000000000100000001000000000121212121212121212121212212121212121212121212221111211121112111212121212212121212121212121212121111112111211121212121212212121212121212121212121111111111111111211121112212121212121212121312121111111111211121112111212212121212121212121212121111111111111111211121112212121212121212121212121111111111211111112111211212121212121212131213121111111121112111211121112212121312121212121212121121212111212121212121212212121212121212121212121"
+              }
+            },
+            "PaletteSource": "img/shrine-layers/0001/0020-cover.png"
+          }
         }
       ],
       "Effects": [
@@ -11006,6 +12621,62 @@
           "Role": "archeton",
           "Shade": 3,
           "Percent": 20
+        }
+      ]
+    },
+    {
+      "Id": "Lantern",
+      "Kind": "Lantern",
+      "Name": "Standard",
+      "Pixels": ".........................................................HHHHH..................HOOOOOH................HO44444OH..............HO4OOOOO4OH..............HO4OOO4OH................HOOOOOH................HOG2222OH..............HO22HHHGGOH.............HO2HHHHH2OH.............HO2HH1HH2OH.............HO2HH1HH2OH.............HO2H11HH2OH.............HO2H111H2OH.............HO2H111H2OH.............HO2GHHH22OH..............HO22222OH................HOOOOOH................HOOOOOOOH..............HO4444444OH..............HOOOOOOOH................HHHHHHH.................................",
+      "Mix": [
+        {
+          "Role": "lantern",
+          "Shade": 0,
+          "Percent": 15
+        },
+        {
+          "Role": "lantern",
+          "Shade": 1,
+          "Percent": 25
+        },
+        {
+          "Role": "lantern",
+          "Shade": 2,
+          "Percent": 45
+        },
+        {
+          "Role": "lantern",
+          "Shade": 3,
+          "Percent": 15
+        }
+      ]
+    },
+    {
+      "Id": "GemGate",
+      "Kind": "GemGate",
+      "Name": "Standard",
+      "Pixels": "................................OOOOOOO................OGGGGGGGO..............OGGGGHGGGGO............OGGGGHHHGGGGO..........OGGGGHGGGHGGGGO........OGGGGGGGGGGGGGGGO......OGGGGGGGOGGGGGGGGGO....OGGGGGGGOGGGGGGGGGGGO...OGGGHGGOGGGGGGGGHGGGO...OGGHGGOGGGGGGGGGGHGGO...OGHHGGGGGGGGGGGGGHHGO...OGHHGGGGGGGGGGGGGHHGO...OGGHGGGGGGGGGGGGGHGGO...OGGGHGGGGGGGGGGGHGGGO...OGGGGGGGGGGGGGGGGGGGO....OGGGGGGGGGGGGGGGGGO......OGGGGGGGGGGGGGGGO........OGGGGHGGGHGGGGO..........OGGGGHHHGGGGO............OGGGGHGGGGO..............OGGGGGGGO................OOOOOOO.................................",
+      "Mix": [
+        {
+          "Role": "gate",
+          "Shade": 0,
+          "Percent": 15
+        },
+        {
+          "Role": "gate",
+          "Shade": 1,
+          "Percent": 25
+        },
+        {
+          "Role": "gate",
+          "Shade": 2,
+          "Percent": 45
+        },
+        {
+          "Role": "gate",
+          "Shade": 3,
+          "Percent": 15
         }
       ]
     }
