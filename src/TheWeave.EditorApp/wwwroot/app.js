@@ -1271,6 +1271,18 @@ function canHavePuzzle(node) {
   return !!card.coverImagePath && !!card.audio && card.action?.kind !== 'Travel' && card.size !== 'Modal';
 }
 
+// Every location a Puzzle Warp can lead to, by page: one whose puzzle can actually be played, parts included, on any
+// page - see canHavePuzzle. What PageRenderer resolves a warp's target against.
+function warpTargetChoices() {
+  const collect = (nodes) => (nodes ?? []).flatMap((node) => [
+    ...(node.puzzle && canHavePuzzle(node) ? [{ id: node.id, headingText: node.card.headingText }] : []),
+    ...collect(node.children),
+  ]);
+  return (project?.pages ?? [])
+    .map((page) => ({ page, nodes: collect(page.nodes) }))
+    .filter((group) => group.nodes.length > 0);
+}
+
 function renderPuzzleField(node) {
   const count = (node.puzzle?.objects ?? []).filter((o) => o.kind !== 'Start').length;
   return `

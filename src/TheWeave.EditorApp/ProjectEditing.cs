@@ -362,6 +362,13 @@ internal static class ProjectEditing
             if (obj.Kind != PuzzleObjectKind.Archeton)
                 obj.Archeton = null;
 
+            // A warp needs somewhere to go: the editor only offers locations whose puzzle can be played (see
+            // app.js's warpTargets), and an aimless square would do nothing at all in the site.
+            if (obj.Kind == PuzzleObjectKind.PuzzleWarp && string.IsNullOrWhiteSpace(obj.TargetNodeId))
+                throw new InvalidOperationException("A Puzzle Warp needs a location to warp to.");
+            if (obj.Kind != PuzzleObjectKind.PuzzleWarp)
+                obj.TargetNodeId = null;
+
             if (obj.Kind is PuzzleObjectKind.Finish or PuzzleObjectKind.Start)
                 obj.Invisible = false;
 

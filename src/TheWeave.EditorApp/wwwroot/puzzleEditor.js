@@ -29,6 +29,7 @@ const PUZZLE_TOOLS = [
   // choosing a tool, and naming one, still finds it.
   { kind: 'WarpOut', label: 'Warp Out', hint: 'Where the Warp Wisp just placed sends the ship. The ship can stand on it; nothing else can be moved onto it.', hidden: true },
   { kind: 'GemGate', label: 'Gem Gate', hint: 'Blocks the way until every Gem on the board has been collected. A board with no Gems never opens it. There\'s only one.', canHide: true },
+  { kind: 'PuzzleWarp', label: 'Puzzle Warp', hint: 'Stepping on this takes the player out of this puzzle and into the chosen location\'s puzzle, on any planet. Leaving that one without solving it brings them back to this square, with this board as it starts; solving it keeps them on the new planet. A warp ignores a location\'s requirements.', target: true, canHide: true },
   { kind: 'Start', label: 'Start', hint: 'Where the ship begins. There\'s only one.' },
   { kind: 'Erase', label: 'Erase', hint: 'Removes the top thing on a square. Drag to paint.', paints: true },
 ];
@@ -95,6 +96,7 @@ function openPuzzleEditor(pageId, nodeId) {
     symbol: 'Circle',
     gateOpen: false,
     invisible: false,
+    warpTarget: null, // the location the Puzzle Warp tool places a warp to - see warpTargetChoices
     choices: {}, // kind -> the id of the drawing set it's placed from, see placingSet
     objects: [],
     art: null, // the album art's pixels, once loaded, for the Drawings view's album patches
@@ -350,7 +352,28 @@ function renderPuzzleTools() {
     return button;
   }));
 
+  renderWarpTargets();
   showPuzzleTool();
+}
+
+// The locations the Puzzle Warp tool can place a link to, grouped by page. Any page, since a warp is how a puzzle on
+// one planet leads into one on another.
+function renderWarpTargets() {
+  const select = document.getElementById('pe-targets');
+  const groups = warpTargetChoices();
+  const pageName = (page) => (page.title || page.id).split(' - ')[0];
+  select.replaceChildren(...groups.map(({ page, nodes }) => {
+    const group = document.createElement('optgroup');
+    group.label = pageName(page);
+    for (const node of nodes) {
+      const option = document.createElement('option');
+      option.value = node.id;
+      option.textContent = node.headingText || node.id;
+      group.appendChild(option);
+    }
+    return group;
+  }));
+  select.value = puzzleEditor.warpTarget ?? '';
 }
 
 function choosePuzzleTool(kind) {
@@ -362,6 +385,8 @@ function choosePuzzleTool(kind) {
   }
   puzzleEditor.tool = kind;
   puzzleEditor.letterChosen = false;
+  // A warp needs somewhere to go, so it starts on the first location it could lead to.
+  if (kind === 'PuzzleWarp' && !puzzleEditor.warpTarget) puzzleEditor.warpTarget = warpTargetChoices()[0]?.nodes[0]?.id ?? null;
   updateSuggestedLetter();
   showPuzzleTool();
 }
@@ -409,6 +434,8 @@ function showPuzzleTool() {
   document.getElementById('pe-gate-state-row').hidden = !tool.gateState;
   document.getElementById('pe-direction-row').hidden = !tool.direction;
   document.getElementById('pe-symbol-row').hidden = !tool.symbol;
+  document.getElementById('pe-target-row').hidden = !tool.target;
+  if (tool.target) renderWarpTargets();
   renderToolTray();
   let hint = tool.hint;
   if (tool.kind === 'Finish' && leadsOn)
@@ -658,6 +685,7 @@ function buildPuzzleObject(cell) {
     ...(tool.kind === 'WarpOut' || (tool.archeton && isWarpWisp(puzzleEditor.archeton)) ? { letter: puzzleEditor.warpLetter } : {}),
     ...(tool.direction ? { direction: puzzleEditor.direction } : {}),
     ...(tool.symbol ? { symbol: puzzleEditor.symbol } : {}),
+    ...(tool.target ? { targetNodeId: puzzleEditor.warpTarget } : {}),
     ...(tool.gateState && puzzleEditor.gateOpen ? { open: true } : {}),
     ...(tool.canHide && puzzleEditor.invisible ? { invisible: true } : {}),
   };
@@ -678,6 +706,12 @@ function applyPuzzleTool(cell, erasing) {
   // An Edge is on one side of a square, and a square can have one on each, so erasing with the Edge tool takes the one
   // on the side chosen - see puzzle.js's eraseObject.
   const side = puzzleEditor.tool === 'Edge' ? puzzleEditor.direction : null;
+
+  // A Puzzle Warp is placed already pointed at its location: one that leads nowhere would do nothing in the site.
+  if (!erasing && puzzleEditor.tool === 'PuzzleWarp' && !puzzleEditor.warpTarget) {
+    showToast('Choose the location this Puzzle Warp leads to first.', true);
+    return;
+  }
 
   // A Warp Wisp and its Warp Out Square are placed as one pair and can't be placed any other way, so the two can never
   // come apart: the Wisp takes a letter no other pair is using, and the square that answers it is placed next.
@@ -740,6 +774,11 @@ function finishPuzzlePainting() {
 
 puzzleCanvas.addEventListener('pointerup', finishPuzzlePainting);
 puzzleCanvas.addEventListener('pointercancel', finishPuzzlePainting);
+
+document.getElementById('pe-targets').addEventListener('change', (e) => {
+  if (!puzzleEditor) return;
+  puzzleEditor.warpTarget = e.target.value || null;
+});
 
 document.getElementById('pe-close').addEventListener('click', closePuzzleEditor);
 

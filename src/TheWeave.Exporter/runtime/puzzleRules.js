@@ -657,6 +657,13 @@
           return { teleportTo: destination };
         }
 
+        // A Puzzle Warp leaves the board altogether, for another location's puzzle - so there is nothing to decide
+        // here beyond where it leads: the page takes the ship there, and the warp carries what it needs resolved at
+        // export (see PageRenderer's WithWarpTarget). Only the ship sets one off: a reflection arriving on the square
+        // is an image of the ship, not the ship, and warping the player because of it would come out of nowhere.
+        case 'PuzzleWarp':
+          return isAt(object, shipCell) && object.warp ? { puzzleWarp: object.warp } : null;
+
         case 'Finish':
           solved = true;
           return { finished: true };

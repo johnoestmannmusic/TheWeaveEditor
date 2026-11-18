@@ -80,7 +80,7 @@
   };
 
   const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', GemGate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
-  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Gem: 'gem', GemGate: 'gate', WarpOut: 'archeton', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton' };
+  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Gem: 'gem', GemGate: 'gate', WarpOut: 'archeton', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton', PuzzleWarp: 'teleporter' };
 
   function maskOf(test){
     let mask = [];
@@ -147,7 +147,7 @@
   const TURNED_KINDS = ['JumpTile', 'Pipe', 'Archeton', 'Laser', 'Edge'];
 
   // Every kind of object drawn from a drawing.
-  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'Gem', 'WarpOut', 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', ...ANIMATED_KINDS, 'Laser'];
+  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'Gem', 'WarpOut', 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', ...ANIMATED_KINDS, 'Laser', 'PuzzleWarp'];
 
   const standardDrawings = new Map();
 
@@ -278,6 +278,7 @@
       else if (kind === 'Edge') drawing = { id: kind, kind, name: 'Standard', pixels: standardEdgePixels(), mix: standardMix('edge') };
       else if (kind === 'Gem') drawing = { id: kind, kind, name: 'Standard', pixels: standardGemPixels(), mix: standardMix('gem') };
       else if (kind === 'WarpOut') drawing = { id: kind, kind, name: 'Standard', pixels: standardWarpOutPixels(), mix: standardMix('archeton') };
+      else if (kind === 'PuzzleWarp') drawing = { id: kind, kind, name: 'Standard', pixels: standardPuzzleWarpPixels(), mix: standardMix('teleporter') };
       else {
         let body = SHAPES[SPRITE_SHAPES[kind]];
         drawing = { id: kind, kind, name: 'Standard', pixels: pixelsOf(body), mix: standardMix(SPRITE_ROLES[kind]) };
@@ -388,6 +389,13 @@
   // A Reset Switch's Standard drawing: a pad lying on the floor, like a Jump Tile's, with two arrows chasing each
   // other round anticlockwise, each with a darker edge below. One arc runs over the top and down the left, ending
   // in a head pointing down, and the other under the bottom and up the right, ending in one pointing up.
+  // A Puzzle Warp's standard drawing: nothing but a plain square outline, in the light paint so that it reads over a
+  // dark board - it's there to be redrawn by hand, see the Drawings view.
+  function standardPuzzleWarpPixels(){
+    let onRing = (u, v) => u >= 3 && v >= 3 && u <= 20 && v <= 20 && (u <= 4 || u >= 19 || v <= 4 || v >= 19);
+    return layerOf((u, v) => onRing(u, v) ? PAINTS.light : PAINTS.clear);
+  }
+
   function standardResetSwitchPixels(){
     let onPad = (u, v) => u >= 0 && v >= 0 && u < TILE_PX && v < TILE_PX && SHAPES.roundedSquare(u + 0.5 - TILE_PX / 2, v + 0.5 - TILE_PX / 2);
     let middle = (TILE_PX - 1) / 2;

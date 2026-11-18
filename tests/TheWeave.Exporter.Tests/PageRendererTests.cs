@@ -57,6 +57,122 @@ public class PageRendererTests
         System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Match(html, "data-puzzle=\"([^\"]*)\"").Groups[1].Value);
 
     [Fact]
+    public void RenderPage_APuzzleWarpCarriesThePageAndThePlaceItLeadsTo()
+    {
+        var project = new WeaveProject();
+        var ouros = MakePage("ouros", "ouros.html");
+        var pentura = MakePage("pentura", "pentura.html");
+        ouros.Nodes.Add(new Node
+        {
+            Id = "here",
+            Card = PlayableCard(),
+            Puzzle = new Puzzle
+            {
+                Objects =
+                {
+                    new PuzzleObject { Kind = PuzzleObjectKind.Start, Col = 1, Row = 5 },
+                    new PuzzleObject { Kind = PuzzleObjectKind.PuzzleWarp, Col = 2, Row = 5, TargetNodeId = "there" },
+                },
+            },
+        });
+        pentura.Nodes.Add(new Node
+        {
+            Id = "there",
+            X = 640,
+            Y = 320,
+            Card = PlayableCard(),
+            Puzzle = new Puzzle { Objects = { new PuzzleObject { Kind = PuzzleObjectKind.Start, Col = 0, Row = 0 } } },
+        });
+        project.Pages.Add(ouros);
+        project.Pages.Add(pentura);
+
+        var html = new PageRenderer(project).RenderPage(ouros);
+
+        Assert.Contains("data-node-id=\"here\"", html);
+        using var parsed = System.Text.Json.JsonDocument.Parse(PuzzleJsonOf(html));
+        var warp = parsed.RootElement.GetProperty("objects")[1];
+        Assert.Equal("PuzzleWarp", warp.GetProperty("kind").GetString());
+        Assert.Equal("there", warp.GetProperty("targetNodeId").GetString());
+        var destination = warp.GetProperty("warp");
+        Assert.Equal("pentura.html", destination.GetProperty("page").GetString()); // the other planet's page
+        Assert.Equal("there", destination.GetProperty("node").GetString());
+        Assert.Equal(640d, destination.GetProperty("x").GetDouble());
+        Assert.Equal(320d, destination.GetProperty("y").GetDouble());
+    }
+
+    [Fact]
+    public void RenderPage_APuzzleWarpToAPartOfAChain_ArrivesWhereTheLocationStands()
+    {
+        var project = new WeaveProject();
+        var ouros = MakePage("ouros", "ouros.html");
+        ouros.Nodes.Add(new Node
+        {
+            Id = "here",
+            Card = PlayableCard(),
+            Puzzle = new Puzzle { Objects = { new PuzzleObject { Kind = PuzzleObjectKind.PuzzleWarp, Col = 2, Row = 5, TargetNodeId = "part-two" } } },
+        });
+        ouros.Nodes.Add(new Node
+        {
+            Id = "lobby",
+            X = 100,
+            Y = 200,
+            Card = PlayableCard(),
+            Puzzle = new Puzzle { Objects = { new PuzzleObject { Kind = PuzzleObjectKind.Start, Col = 0, Row = 0 } } },
+            Children =
+            {
+                new Node
+                {
+                    Id = "part-two",
+                    Card = PlayableCard(),
+                    Puzzle = new Puzzle { Objects = { new PuzzleObject { Kind = PuzzleObjectKind.Start, Col = 3, Row = 4 } } },
+                },
+            },
+        });
+        project.Pages.Add(ouros);
+
+        using var parsed = System.Text.Json.JsonDocument.Parse(PuzzleJsonOf(new PageRenderer(project).RenderPage(ouros)));
+        var destination = parsed.RootElement.GetProperty("objects")[0].GetProperty("warp");
+
+        Assert.Equal("part-two", destination.GetProperty("node").GetString()); // a part is a target in its own right
+        Assert.Equal(100d, destination.GetProperty("x").GetDouble()); // but the ship arrives where the location is on the map
+        Assert.Equal(200d, destination.GetProperty("y").GetDouble());
+    }
+
+    [Fact]
+    public void RenderPage_APuzzleWarpThatLeadsNowhere_CarriesNoTarget()
+    {
+        var project = new WeaveProject();
+        var page = MakePage("ouros", "ouros.html");
+        page.Nodes.Add(new Node
+        {
+            Id = "here",
+            Card = PlayableCard(),
+            Puzzle = new Puzzle
+            {
+                Objects =
+                {
+                    new PuzzleObject { Kind = PuzzleObjectKind.PuzzleWarp, Col = 2, Row = 5, TargetNodeId = "ghost" },
+                    // A location whose puzzle can't be played: no track, so no Track Focus to open.
+                    new PuzzleObject { Kind = PuzzleObjectKind.PuzzleWarp, Col = 3, Row = 5, TargetNodeId = "no-track" },
+                },
+            },
+        });
+        page.Nodes.Add(new Node
+        {
+            Id = "no-track",
+            Card = new Card { CoverImagePath = "img/track.png" },
+            Puzzle = new Puzzle { Objects = { new PuzzleObject { Kind = PuzzleObjectKind.Start, Col = 0, Row = 0 } } },
+        });
+        project.Pages.Add(page);
+
+        using var parsed = System.Text.Json.JsonDocument.Parse(PuzzleJsonOf(new PageRenderer(project).RenderPage(page)));
+        var objects = parsed.RootElement.GetProperty("objects").EnumerateArray().ToList();
+
+        Assert.All(objects, warp => Assert.False(warp.TryGetProperty("warp", out _), "neither of them leads anywhere"));
+        Assert.Equal("ghost", objects[0].GetProperty("targetNodeId").GetString()); // the unresolved target is still written down
+    }
+
+    [Fact]
     public void RenderPage_APuzzleCarriesOnlyTheDrawingsItUses()
     {
         PuzzleDrawing Drawing(string id, PuzzleObjectKind kind) => new()
@@ -212,7 +328,7 @@ public class PageRendererTests
               <script src="jsx/effects.js?v={{RuntimeAssets.Version}}"></script>
 
               <script>
-                window.__weavePage = {"id":"tutorial-only","globeEffect":true,"worldWidth":3000,"worldHeight":1686,"defaultSpawnX":null,"defaultSpawnY":null,"isHomePage":false,"grid":{{ExactGridJson}},"screen":{{ExactScreenJson}}};
+                window.__weavePage = {"id":"tutorial-only","file":"index.html","globeEffect":true,"worldWidth":3000,"worldHeight":1686,"defaultSpawnX":null,"defaultSpawnY":null,"isHomePage":false,"grid":{{ExactGridJson}},"screen":{{ExactScreenJson}}};
               </script>
               </head>
 
@@ -660,7 +776,7 @@ public class PageRendererTests
         project.Pages.Add(planet);
 
         var planetHtml = new PageRenderer(project).RenderPage(planet);
-        Assert.Contains("window.__weavePage = {\"id\":\"planet\",\"globeEffect\":true,\"worldWidth\":3000,\"worldHeight\":1686,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":" + ExactGridJson + ",\"screen\":" + ExactScreenJson + "};", planetHtml);
+        Assert.Contains("window.__weavePage = {\"id\":\"planet\",\"file\":\"planet.html\",\"globeEffect\":true,\"worldWidth\":3000,\"worldHeight\":1686,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":" + ExactGridJson + ",\"screen\":" + ExactScreenJson + "};", planetHtml);
 
         var merged = MakePage("index", "index.html");
         merged.GlobeEffect = false;
@@ -669,7 +785,7 @@ public class PageRendererTests
         project.Pages.Add(merged);
 
         var mergedHtml = new PageRenderer(project).RenderPage(merged);
-        Assert.Contains("window.__weavePage = {\"id\":\"index\",\"globeEffect\":false,\"worldWidth\":6000,\"worldHeight\":1686,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":{\"columns\":40,\"rows\":10,\"cellWidth\":150,\"cellHeight\":150,\"originX\":0,\"originY\":150},\"screen\":" + ExactScreenJson + "};", mergedHtml);
+        Assert.Contains("window.__weavePage = {\"id\":\"index\",\"file\":\"index.html\",\"globeEffect\":false,\"worldWidth\":6000,\"worldHeight\":1686,\"defaultSpawnX\":null,\"defaultSpawnY\":null,\"isHomePage\":false,\"grid\":{\"columns\":40,\"rows\":10,\"cellWidth\":150,\"cellHeight\":150,\"originX\":0,\"originY\":150},\"screen\":" + ExactScreenJson + "};", mergedHtml);
     }
 
     [Fact]

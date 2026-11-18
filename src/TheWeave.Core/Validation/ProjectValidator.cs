@@ -57,6 +57,7 @@ public static class ProjectValidator
 
         CheckRequirements(project, issues);
         CheckArchetons(project, issues);
+        CheckPuzzleWarps(project, issues);
 
         foreach (var drawing in project.PuzzleDrawings ?? [])
         {
@@ -133,6 +134,40 @@ public static class ProjectValidator
         {
             into.Add((pageId, node.Id));
             CollectNodeIds(pageId, node.Children, into);
+        }
+    }
+
+    // A Puzzle Warp has to lead to a puzzle that can really be played - one on a track with Track Focus and album art
+    // (see PuzzleStages.IsPlayable) - or the square does nothing at all when the player steps on it. A warp into its
+    // own puzzle is just a restart, which is never what it was put there for.
+    private static void CheckPuzzleWarps(WeaveProject project, List<ValidationIssue> issues)
+    {
+        var byId = new Dictionary<string, Node>();
+        foreach (var node in project.AllNodes())
+            byId.TryAdd(node.Id, node);
+
+        foreach (var node in project.AllNodes())
+        {
+            foreach (var warp in node.Puzzle?.Objects.Where(o => o.Kind == PuzzleObjectKind.PuzzleWarp) ?? [])
+            {
+                var where = $"Location '{node.Id}''s puzzle has a Puzzle Warp at column {warp.Col + 1}, row {warp.Row + 1}";
+
+                void Warn(string problem) => issues.Add(new ValidationIssue
+                {
+                    Severity = ValidationSeverity.Warning,
+                    Message = $"{where} {problem}",
+                    NodeId = node.Id,
+                });
+
+                if (string.IsNullOrWhiteSpace(warp.TargetNodeId))
+                    Warn("with no location to warp to, so it does nothing.");
+                else if (!byId.TryGetValue(warp.TargetNodeId, out var target))
+                    Warn($"that warps to '{warp.TargetNodeId}', which isn't a location on any map, so it does nothing.");
+                else if (!PuzzleStages.IsPlayable(target))
+                    Warn($"that warps to '{target.Id}', whose puzzle can't be played, so it does nothing.");
+                else if (target.Id == node.Id)
+                    Warn("that warps to its own puzzle, so stepping on it only starts this board again.");
+            }
         }
     }
 

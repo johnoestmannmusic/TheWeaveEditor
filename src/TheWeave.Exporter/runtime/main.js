@@ -70,7 +70,7 @@ let arrivalRoot = null;  // the node back to The Weave the ship arrived on and h
 // The page's own config (see window.__weavePage, emitted per-page by PageConfigScriptRenderer) -
 // worldWidth/worldHeight are the page's authoritative world size, and grid is the board of squares
 // the ship walks (see loadPageConfig).
-let weavePage = { id: '', globeEffect: false, worldWidth: 0, worldHeight: 0, defaultSpawnX: null, defaultSpawnY: null, isHomePage: false, grid: null, screen: null };
+let weavePage = { id: '', file: '', globeEffect: false, worldWidth: 0, worldHeight: 0, defaultSpawnX: null, defaultSpawnY: null, isHomePage: false, grid: null, screen: null };
 
 
 // Ship tuning
@@ -173,6 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
   placePersistentCards();
   bindInput();
   claimOwnFocus();
+  enterWarpedPage();
   trackPageLoading();
   requestAnimationFrame(loop);
 
@@ -216,6 +217,7 @@ function loadPageConfig(){
   let cfg = window.__weavePage;
 
   weavePage.id = cfg.id ?? '';
+  weavePage.file = cfg.file ?? '';
   weavePage.globeEffect = !!cfg.globeEffect;
   weavePage.worldWidth = cfg.worldWidth;
   weavePage.worldHeight = cfg.worldHeight;
