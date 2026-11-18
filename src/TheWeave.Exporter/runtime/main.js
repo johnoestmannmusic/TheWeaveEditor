@@ -173,8 +173,9 @@ document.addEventListener('DOMContentLoaded', function() {
   placePersistentCards();
   bindInput();
   claimOwnFocus();
-  // A page that arrived by warping puts its board up once the loading screen has gone: the card turning over is the
-  // reveal, and it can't be hidden behind the screen - see enterWarpedPage and trackPageLoading.
+  // A page that arrived by warping is white from its first paint and its board comes up out of that white once the page
+  // is loaded - see coverWarpedPage, enterWarpedPage and trackPageLoading.
+  coverWarpedPage();
   trackPageLoading().then(enterWarpedPage);
   requestAnimationFrame(loop);
 
