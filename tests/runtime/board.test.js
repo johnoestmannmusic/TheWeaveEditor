@@ -56,6 +56,33 @@ test('a Reset Switch\'s sweep holds the board still until it\'s done', () => {
   assert.equal(play.reset, null);
 });
 
+test('a Warp Wisp over a Rotator Switch runs the Rotators while the ship walks about', () => {
+  // A line of Rotator tiles with a Wall on it, and the ship down in the corner: only a Wisp can be holding the
+  // Switch, and the ship being in motion is the thing that used to stop the Rotators dead.
+  const puzzle = (wisp) => ({
+    objects: [
+      obj('Start', 1, 9),
+      obj('RotatorTile', 1, 5, { direction: 'Right' }),
+      obj('RotatorTile', 2, 5, { direction: 'Right' }),
+      obj('Wall', 1, 5),
+      obj('RotatorSwitch', 5, 5),
+      ...(wisp ? [obj('Archeton', 5, 5, { archeton: 'warp-wisp' })] : []),
+    ],
+    archetons: [{ id: 'warp-wisp', name: 'Warp Wisp', parts: [{ kind: 'Warp' }] }],
+  });
+
+  let held = createBoardPlay({ puzzle: puzzle(true) });
+  assert.equal(held.game.wispOnRotatorSwitch, true);
+  held.mover.press('right');
+  run(held, BOARD_TIMING.rotatorTickMs * 2 + 100);
+  assert.equal(held.game.objects.find(o => o.kind === 'Wall').col, 2, 'the Wall was carried along');
+
+  let alone = createBoardPlay({ puzzle: puzzle(false) });
+  alone.mover.press('right');
+  run(alone, BOARD_TIMING.rotatorTickMs * 2 + 100);
+  assert.equal(alone.game.objects.find(o => o.kind === 'Wall').col, 1, 'and with no Wisp it stays put');
+});
+
 test('reaching the Finish finishes the board, and nothing moves after', () => {
   let finished = 0;
   let play = createBoardPlay({ puzzle: { objects: [obj('Start', 1, 5), obj('Finish', 2, 5)] }, hooks: { onEvent: (e) => { if (e.finished) finished++; } } });

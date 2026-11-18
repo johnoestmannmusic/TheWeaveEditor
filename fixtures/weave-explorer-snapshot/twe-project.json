@@ -4562,14 +4562,6 @@
                 "Open": true
               },
               {
-                "Kind": "PuzzleWarp",
-                "Col": 0,
-                "Row": 4,
-                "Letter": null,
-                "Direction": null,
-                "TargetNodeId": "salanth-town-gardens"
-              },
-              {
                 "Kind": "Teleporter",
                 "Col": 1,
                 "Row": 9,
@@ -4592,6 +4584,14 @@
                 "Letter": null,
                 "Direction": null,
                 "Symbol": "Square"
+              },
+              {
+                "Kind": "PuzzleWarp",
+                "Col": 0,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "TargetNodeId": "0020-digital-palace"
               }
             ],
             "Palette": {
@@ -10914,52 +10914,6 @@
                 "Variant": "rotatortile-2"
               },
               {
-                "Kind": "RotatorSwitch",
-                "Col": 1,
-                "Row": 8,
-                "Letter": null,
-                "Direction": null
-              },
-              {
-                "Kind": "RotatorSwitch",
-                "Col": 8,
-                "Row": 1,
-                "Letter": null,
-                "Direction": null
-              },
-              {
-                "Kind": "Archeton",
-                "Col": 2,
-                "Row": 2,
-                "Letter": null,
-                "Direction": "Right",
-                "Archeton": "sentribeam"
-              },
-              {
-                "Kind": "Archeton",
-                "Col": 7,
-                "Row": 7,
-                "Letter": null,
-                "Direction": "Right",
-                "Archeton": "sentribeam"
-              },
-              {
-                "Kind": "Archeton",
-                "Col": 7,
-                "Row": 2,
-                "Letter": null,
-                "Direction": "Right",
-                "Archeton": "sentribeam"
-              },
-              {
-                "Kind": "Archeton",
-                "Col": 2,
-                "Row": 7,
-                "Letter": null,
-                "Direction": "Right",
-                "Archeton": "sentribeam"
-              },
-              {
                 "Kind": "Start",
                 "Col": 6,
                 "Row": 9,
@@ -10998,22 +10952,6 @@
                 "Variant": "wall-17"
               },
               {
-                "Kind": "Wall",
-                "Col": 5,
-                "Row": 9,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-13"
-              },
-              {
-                "Kind": "JumpTile",
-                "Col": 4,
-                "Row": 1,
-                "Letter": null,
-                "Direction": "Down",
-                "Variant": "jumptile-2"
-              },
-              {
                 "Kind": "JumpTile",
                 "Col": 1,
                 "Row": 5,
@@ -11046,24 +10984,9 @@
                 "Variant": "wall-13"
               },
               {
-                "Kind": "JumpTile",
-                "Col": 3,
-                "Row": 8,
-                "Letter": null,
-                "Direction": "Left",
-                "Variant": "jumptile-2"
-              },
-              {
                 "Kind": "Gem",
                 "Col": 0,
                 "Row": 4,
-                "Letter": null,
-                "Direction": null
-              },
-              {
-                "Kind": "Gem",
-                "Col": 4,
-                "Row": 9,
                 "Letter": null,
                 "Direction": null
               },
@@ -11082,49 +11005,11 @@
                 "Direction": null
               },
               {
-                "Kind": "PushBlock",
-                "Col": 4,
-                "Row": 4,
-                "Letter": null,
-                "Direction": null,
-                "Symbol": "Circle"
-              },
-              {
                 "Kind": "GemGate",
                 "Col": 3,
                 "Row": 1,
                 "Letter": null,
                 "Direction": null
-              },
-              {
-                "Kind": "ResetSwitch",
-                "Col": 3,
-                "Row": 3,
-                "Letter": null,
-                "Direction": null
-              },
-              {
-                "Kind": "ResetSwitch",
-                "Col": 6,
-                "Row": 6,
-                "Letter": null,
-                "Direction": null
-              },
-              {
-                "Kind": "Wall",
-                "Col": 0,
-                "Row": 8,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-11"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 1,
-                "Row": 9,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-2"
               },
               {
                 "Kind": "Wall",
@@ -11160,11 +11045,75 @@
               },
               {
                 "Kind": "Wall",
+                "Col": 0,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-11"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 7,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "sentribeam"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 2,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "sentribeam"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "Wall",
                 "Col": 8,
                 "Row": 0,
                 "Letter": null,
                 "Direction": null,
-                "Variant": "wall-11"
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-10"
               },
               {
                 "Kind": "Wall",
@@ -11172,39 +11121,112 @@
                 "Row": 1,
                 "Letter": null,
                 "Direction": null,
-                "Variant": "wall-9"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 0,
-                "Row": 0,
-                "Letter": null,
-                "Direction": null,
                 "Variant": "wall-2"
               },
               {
-                "Kind": "Wall",
-                "Col": 9,
-                "Row": 0,
+                "Kind": "PushBlock",
+                "Col": 4,
+                "Row": 4,
                 "Letter": null,
                 "Direction": null,
-                "Variant": "wall-2"
+                "Symbol": "Circle"
               },
               {
                 "Kind": "Wall",
-                "Col": 9,
+                "Col": 5,
                 "Row": 9,
                 "Letter": null,
                 "Direction": null,
-                "Variant": "wall-11"
+                "Variant": "wall-12"
               },
               {
-                "Kind": "Wall",
-                "Col": 0,
+                "Kind": "Archeton",
+                "Col": 6,
+                "Row": 6,
+                "Letter": "A",
+                "Direction": "Right",
+                "Archeton": "warp-wisp-2-2"
+              },
+              {
+                "Kind": "WarpOut",
+                "Col": 9,
+                "Row": 6,
+                "Letter": "A",
+                "Direction": null
+              },
+              {
+                "Kind": "Gem",
+                "Col": 4,
                 "Row": 9,
                 "Letter": null,
-                "Direction": null,
-                "Variant": "wall-9"
+                "Direction": null
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 2,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "sentribeam"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 7,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "sentribeam"
+              },
+              {
+                "Kind": "RotatorSwitch",
+                "Col": 6,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "RotatorSwitch",
+                "Col": 3,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "JumpTile",
+                "Col": 4,
+                "Row": 1,
+                "Letter": null,
+                "Direction": "Down",
+                "Variant": "jumptile-2"
+              },
+              {
+                "Kind": "JumpTile",
+                "Col": 3,
+                "Row": 8,
+                "Letter": null,
+                "Direction": "Left",
+                "Variant": "jumptile-2"
+              },
+              {
+                "Kind": "RotatorSwitch",
+                "Col": 1,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "RotatorSwitch",
+                "Col": 8,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "ResetSwitch",
+                "Col": 5,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null
               }
             ],
             "Palette": {
@@ -12714,8 +12736,8 @@
       "Id": "PuzzleWarp",
       "Kind": "PuzzleWarp",
       "Name": "Standard",
-      "Opacity": 0.5,
-      "Pixels": "..............................................................................HHHHHHHHHHHH...........H............H.........H..............H.......H................H......H................H......H................H......H........H.......H......H.......HH.......H......H.....HHHHH......H......H......HHHHH.....H......H.......HH.......H......H.......H........H......H................H......H................H......H................H.......H..............H.........H............H...........HHHHHHHHHHHH..............................................................................",
+      "Pixels": "..............................................................................HHHHHHHHHHHH...........H...........HH.........H.HHH........H.H.......HHH...H........H.H......H......H.......H.H......H..............H.H......H........H....H..H......H.......HH...H...H......H.....HHHHH......H......H......HHHHH.....H......H...H...HH.......H......H..H....H........H......H.H..............H......H.H.......H......H......H.H........H...HHH.......H.H........HHH.H.........HH...........H...........HHHHHHHHHHHH..............................................................................",
+      "Opacity": 0.35,
       "Mix": [
         {
           "Role": "teleporter",
@@ -12991,7 +13013,7 @@
     },
     {
       "Id": "warp-wisp-2-2",
-      "Name": "Warp Wisp Square",
+      "Name": "Warp Wisp Square 3x3",
       "Drawing": "warp-wisp",
       "Parts": [
         {
@@ -12999,10 +13021,14 @@
           "Moves": [
             "Up",
             "Up",
+            "Up",
+            "Left",
             "Left",
             "Left",
             "Down",
             "Down",
+            "Down",
+            "Right",
             "Right",
             "Right"
           ]
