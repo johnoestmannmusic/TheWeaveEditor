@@ -2,7 +2,7 @@
 // A board being played (src/TheWeave.Exporter/runtime/board.js), as the game and the Editor's playtest both play it.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createBoardPlay, facingInwards } = require('../../src/TheWeave.Exporter/runtime/board.js');
+const { createBoardPlay, facingInwards, WARP_FLASH_MS } = require('../../src/TheWeave.Exporter/runtime/board.js');
 const { BOARD_TIMING } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
 
 const obj = (kind, col, row, extra = {}) => ({ kind, col, row, ...extra });
@@ -54,6 +54,21 @@ test('a Reset Switch\'s sweep holds the board still until it\'s done', () => {
   assert.deepEqual(play.mover.cell, at(2, 5), 'held still');
   run(play, 1000);
   assert.equal(play.reset, null);
+});
+
+test("a board's white flash is washed out to white and spent over WARP_FLASH_MS, which is what a Puzzle Warp's two waits are", () => {
+  let play = createBoardPlay({ puzzle: { objects: [obj('Start', 2, 5)] } });
+  assert.equal(play.frame(0).options.warpFlash, 0, 'nothing to begin with');
+
+  // How a Puzzle Warp's departure washes the board out: the page puts this back to 0, once for each flash, and waits out
+  // WARP_FLASH_MS before the next - see trackFocus's flashBoardTwice.
+  play.warpFlashMs = 0;
+  assert.equal(play.frame(0).options.warpFlash, 1, 'white the moment it is set');
+  run(play, WARP_FLASH_MS / 2);
+  let half = play.frame(0).options.warpFlash;
+  assert.ok(half > 0.4 && half < 0.6, `washed half out at half its time (${half})`);
+  run(play, WARP_FLASH_MS);
+  assert.equal(play.frame(0).options.warpFlash, 0, 'spent');
 });
 
 test('a Warp Wisp over a Rotator Switch runs the Rotators while the ship walks about', () => {

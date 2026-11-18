@@ -221,13 +221,18 @@ function playFocusAnimation(element, keyframes, ms, { easing = 'ease-in-out', de
 }
 
 // Runs a transition, holding input back until it's over. Anything pressed meanwhile is let go of at the end,
-// so a key held through a flip doesn't set the ship off the moment it lands.
+// so a key held through a flip doesn't set the ship off the moment it lands. Counted rather than flagged, so that a
+// transition started while another is still running can't end the one it's part of.
+let focusTransitions = 0;
+
 async function runFocusTransition(transition){
+  focusTransitions++;
   focusTransition = true;
   try {
     await transition();
   } finally {
-    focusTransition = false;
+    focusTransitions--;
+    focusTransition = focusTransitions > 0;
     releaseDirections();
   }
 }
@@ -343,6 +348,28 @@ async function flipFocus(change, toPlaying){
     ], FOCUS_FLIP_MS / 2, { easing: 'ease-out' }),
     playFocusAnimation(document.getElementById('trackFocusText'), [{ opacity: 0 }, { opacity: 1 }], FOCUS_FLIP_MS / 2),
   ]);
+}
+
+// Turns the card right over on itself, with nothing behind it: the same two halves as flipFocus, both showing the same
+// art, so it reads as a card printed the same on both sides rather than as a mirror showing through. Two of these and
+// then a flip make a Puzzle Warp's three turns, the last of them the one that shows the board - see openWarpedBoard.
+async function spinFocus(){
+  let art = document.getElementById('trackFocusArt');
+  if (!art || prefersReducedMotion()) return;
+  let perspective = `perspective(${Math.round(art.getBoundingClientRect().width * FOCUS_FLIP_PERSPECTIVE)}px)`;
+
+  await playFocusAnimation(art, [
+    { transform: `${perspective} rotateY(0deg)` },
+    { transform: `${perspective} rotateY(90deg)` },
+  ], FOCUS_FLIP_MS / 2, { easing: 'ease-in' });
+
+  // Hidden for the moment between the halves, so the art never shows face on again mirrored.
+  art.style.visibility = 'hidden';
+  await playFocusAnimation(art, [
+    { transform: `${perspective} rotateY(-90deg)` },
+    { transform: `${perspective} rotateY(0deg)` },
+  ], FOCUS_FLIP_MS / 2, { easing: 'ease-out' });
+  art.style.visibility = '';
 }
 
 // The part's title over its board for its first few seconds, then fading away - see main.css's
@@ -590,10 +617,29 @@ function warpNodeElement(nodeId){
   return nodeId ? document.querySelector(`.node[data-node-id="${CSS.escape(nodeId)}"]`) : null;
 }
 
+// How long between the two washes of white that send the player through a Puzzle Warp - see flashBoardTwice.
+const PUZZLE_WARP_FLASH_GAP_MS = 140;
+
+// Two washes of white a beat apart, over the board the player is leaving: the same flash the ship makes when a Wisp
+// warps it (board.js's WARP_FLASH_MS), so that a Puzzle Warp reads as something happening to the board rather than as
+// a screen being replaced. Waits out each flash, then returns.
+async function flashBoardTwice(){
+  if (prefersReducedMotion()) return;
+  let ms = WeaveBoard.WARP_FLASH_MS;
+  for (let flash = 0; flash < 2; flash++) {
+    if (!boardPlay) return;
+    boardPlay.warpFlashMs = 0;
+    await new Promise(resolve => setTimeout(resolve, ms + (flash === 0 ? PUZZLE_WARP_FLASH_GAP_MS : 0)));
+  }
+}
+
 // What the ship does when it stands on a Puzzle Warp: the player is taken out of this puzzle and into the target
 // location's, wherever that is. Leaving that one without solving it comes back to this square, with this board as it
 // starts; solving it keeps the player on the new planet. A warp ignores a location's requirements and a part's order.
-function warpToLocation(target){
+//
+// Before any of that, the board being left washes out white twice - see flashBoardTwice - and then the card turns over
+// on the other side, which is the arrival's own doing (openWarpedBoard).
+async function warpToLocation(target){
   if (!boardMover || focusTransition || !target?.node) return;
 
   saveWarpPending({
@@ -609,6 +655,9 @@ function warpToLocation(target){
   releaseDirections();
   breakContrails(boardContrails, boardMover.position);
 
+  // Two washes of white, the same as the ship's own warping makes, and nothing can be pressed while they run.
+  await runFocusTransition(flashBoardTwice);
+
   // The same page: the other board is right here, so there's nothing to load. Otherwise the page the warp leads to is
   // opened standing on that location - see enterWarpedPage, which picks it up from the query.
   if (target.page === weavePage.file) {
@@ -619,7 +668,9 @@ function warpToLocation(target){
 }
 
 // Opens a location's board straight away, wherever the player came from: Track Focus already open (a warp on this
-// page) or not yet (a page load that arrived by warping). The board starts as the puzzle starts, with the ship on its
+// page) or not yet (a page load that arrived by warping). The card goes up showing that location's art, turns right
+// over three times - the first two on itself, so only the last has anything new to show - and that last turn puts the
+// board on it, so the puzzle is revealed by the turning. The board starts as the puzzle starts, with the ship on its
 // Start, or on `cell` where a return trip puts it back on the warp square.
 function openWarpedBoard(node, cell = null){
   let root = node;
@@ -636,12 +687,22 @@ function openWarpedBoard(node, cell = null){
   boardVisits.clear();
   releaseDirections();
 
+  // Whatever board was up - this page's own, or the one the player warped from - is forgotten rather than left behind
+  // the art, and is only built again by the last turn.
+  forgetBoard();
   if (!trackFocusEl) openTrackFocus({ warped: true });
-  buildBoardGame(undefined, cell ? { cell } : null);
-  renderTrackFocus();
-  updateTrackFocusScale();
-  renderBoardShip();
-  showBoardTitle();
+  else renderTrackFocus();
+
+  runFocusTransition(async () => {
+    await spinFocus();
+    await spinFocus();
+    await flipFocus(() => {
+      buildBoardGame(undefined, cell ? { cell } : null);
+      renderTrackFocus();
+      renderBoardShip();
+      showBoardTitle();
+    }, true);
+  });
   return true;
 }
 
@@ -762,6 +823,22 @@ function updateBoardScroll(dtMs){
   }
 }
 
+// Everything a board's play hangs on, dropped in one go: a board being left, or one a Puzzle Warp is replacing with
+// another location's before that one is built - see leaveBoardGame and openWarpedBoard.
+function forgetBoard(){
+  boardMover = null;
+  boardShipEl = null;
+  boardReflectionsEl = null;
+  boardRefusedSilhouettes = null;
+  boardContrails = null;
+  boardGame = null;
+  boardPlay = null;
+  boardPuzzle = null;
+  boardObjectsCanvas = null;
+  boardObjectsImage = null;
+  boardSolvedMs = null;
+}
+
 // Flips back over from the board to the art, and the text alongside it.
 function leaveBoardGame(){
   if (!boardMover || focusTransition) return;
@@ -778,17 +855,7 @@ function leaveBoardGame(){
   boardVisits.clear();
   releaseDirections();
   runFocusTransition(() => flipFocus(() => {
-    boardMover = null;
-    boardShipEl = null;
-    boardReflectionsEl = null;
-    boardRefusedSilhouettes = null;
-    boardContrails = null;
-    boardGame = null;
-    boardPlay = null;
-    boardPuzzle = null;
-    boardObjectsCanvas = null;
-    boardObjectsImage = null;
-    boardSolvedMs = null;
+    forgetBoard();
     renderTrackFocus();
   }, false));
 }

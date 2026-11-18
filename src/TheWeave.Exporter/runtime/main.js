@@ -173,8 +173,9 @@ document.addEventListener('DOMContentLoaded', function() {
   placePersistentCards();
   bindInput();
   claimOwnFocus();
-  enterWarpedPage();
-  trackPageLoading();
+  // A page that arrived by warping puts its board up once the loading screen has gone: the card turning over is the
+  // reveal, and it can't be hidden behind the screen - see enterWarpedPage and trackPageLoading.
+  trackPageLoading().then(enterWarpedPage);
   requestAnimationFrame(loop);
 
   // DEBUGGER

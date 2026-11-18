@@ -97,32 +97,49 @@ function hideLoadingScreen(immediately){
 }
 
 // Fills the bar as this page's images (the map and every card's album art) and its font finish loading, or
-// fail to, and hides it once they all have.
+// fail to, and hides it once they all have. Resolves once it's gone, so anything that shouldn't happen behind it - a
+// Puzzle Warp's card turning over, say - can wait for that; see main.js.
+const LOADING_OVERDUE_MS = 8000;
+
 function trackPageLoading(){
-  if (!loadingEl) return;
+  if (!loadingEl) return Promise.resolve();
   let start = loadingProgress;
   let images = [...document.images];
   let total = images.length + 1;
   let done = 0;
   let fontsDone = false;
+  let settled = false;
 
-  let update = () => {
-    setLoadingProgress(start + (1 - start) * (done + (fontsDone ? 1 : 0)) / total);
-    if (done === images.length && fontsDone) hideLoadingScreen();
-  };
+  return new Promise((resolve) => {
+    let settle = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(overdue);
+      hideLoadingScreen();
+      // The screen fades out over LOADING_FADE_MS, so it's after that that the page is really up.
+      setTimeout(resolve, LOADING_FADE_MS);
+    };
+    // A page held up by an image that never arrives still gets on with it.
+    let overdue = setTimeout(settle, LOADING_OVERDUE_MS);
 
-  for (const image of images) {
-    if (image.complete) {
-      done++;
-      continue;
+    let update = () => {
+      setLoadingProgress(start + (1 - start) * (done + (fontsDone ? 1 : 0)) / total);
+      if (done === images.length && fontsDone) settle();
+    };
+
+    for (const image of images) {
+      if (image.complete) {
+        done++;
+        continue;
+      }
+      let finished = () => { done++; update(); };
+      image.addEventListener('load', finished, { once: true });
+      image.addEventListener('error', finished, { once: true });
     }
-    let finished = () => { done++; update(); };
-    image.addEventListener('load', finished, { once: true });
-    image.addEventListener('error', finished, { once: true });
-  }
 
-  (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { fontsDone = true; update(); });
-  update();
+    (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { fontsDone = true; update(); });
+    update();
+  });
 }
 
 // Shown on the page being left, creeping forward until the next page takes over, and noting how far it got.
