@@ -452,5 +452,5 @@
     return play;
   }
 
-  return { createBoardPlay, facingInwards };
+  return { createBoardPlay, facingInwards, WARP_FLASH_MS };
 });

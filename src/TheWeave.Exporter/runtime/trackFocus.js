@@ -221,13 +221,18 @@ function playFocusAnimation(element, keyframes, ms, { easing = 'ease-in-out', de
 }
 
 // Runs a transition, holding input back until it's over. Anything pressed meanwhile is let go of at the end,
-// so a key held through a flip doesn't set the ship off the moment it lands.
+// so a key held through a flip doesn't set the ship off the moment it lands. Counted rather than flagged, so that a
+// transition started while another is still running can't end the one it's part of.
+let focusTransitions = 0;
+
 async function runFocusTransition(transition){
+  focusTransitions++;
   focusTransition = true;
   try {
     await transition();
   } finally {
-    focusTransition = false;
+    focusTransitions--;
+    focusTransition = focusTransitions > 0;
     releaseDirections();
   }
 }
@@ -590,10 +595,88 @@ function warpNodeElement(nodeId){
   return nodeId ? document.querySelector(`.node[data-node-id="${CSS.escape(nodeId)}"]`) : null;
 }
 
+// How long the puzzle a warp leads to takes to come up out of the white the second flash leaves behind it: long enough
+// to read as fading in out of white, short enough not to be a wait - see fadeWarpWhite.
+const WARP_WHITE_OUT_MS = 600;
+
+// The white a Puzzle Warp goes through, held over the whole page. Appended to <html> rather than <body> because the body
+// gets a transform as the map is walked, which would make a fixed overlay move with the world - the loading screen is
+// out here for the same reason (see loading.js's initLoadingScreen).
+let warpWhiteEl = null;
+let warpWhiteClear = null;
+
+function warpWhite(){
+  if (prefersReducedMotion()) return null;
+  clearTimeout(warpWhiteClear);
+  if (!warpWhiteEl || !warpWhiteEl.isConnected) {
+    warpWhiteEl = document.createElement('div');
+    warpWhiteEl.id = 'warpWhite';
+    warpWhiteEl.style.opacity = '0';
+    document.documentElement.appendChild(warpWhiteEl);
+  }
+  return warpWhiteEl;
+}
+
+// White, all at once, on the second flash: the page is changed underneath it and the puzzle the warp leads to fades up
+// out of it - see warpToLocation, coverWarpedPage and openWarpedBoard.
+function holdWarpWhite(){
+  let white = warpWhite();
+  if (!white) return;
+  white.style.transition = 'none';
+  white.style.opacity = '1';
+  // Read back, so that the fade that follows starts from white rather than animating up from wherever it was.
+  white.offsetWidth;
+}
+
+// The new puzzle coming up out of that white, which takes the white away with it.
+function fadeWarpWhite(){
+  let white = warpWhite();
+  if (!white) return;
+  white.style.transition = `opacity ${WARP_WHITE_OUT_MS}ms ease-out`;
+  white.style.opacity = '0';
+  warpWhiteClear = setTimeout(() => {
+    white.remove();
+    if (warpWhiteEl === white) warpWhiteEl = null;
+  }, WARP_WHITE_OUT_MS + 50);
+}
+
+// The white taken away at once, for a warp that led nowhere: there's nothing behind it to reveal, so it mustn't be left
+// covering the map - see enterWarpedPage.
+function dropWarpWhite(){
+  clearTimeout(warpWhiteClear);
+  if (warpWhiteEl) warpWhiteEl.remove();
+  warpWhiteEl = null;
+}
+
+// How long between the two washes of white that send the player through a Puzzle Warp - see flashBoardTwice.
+const PUZZLE_WARP_FLASH_GAP_MS = 140;
+
+// Two washes of white a beat apart, over the board the player is leaving: the same flash the ship makes when a Wisp
+// warps it (board.js's WARP_FLASH_MS), so that a Puzzle Warp reads as something happening to the board rather than as
+// a screen being replaced. The first flash goes and comes back; the second is held, and is what the page is changed
+// behind and the new puzzle comes up out of - see holdWarpWhite.
+async function flashBoardTwice(){
+  if (prefersReducedMotion()) return;
+  let ms = WeaveBoard.WARP_FLASH_MS;
+
+  if (!boardPlay) return;
+  boardPlay.warpFlashMs = 0;
+  await new Promise(resolve => setTimeout(resolve, ms + PUZZLE_WARP_FLASH_GAP_MS));
+
+  // The board doesn't come back from the second one: white takes over from it here and stays.
+  if (!boardPlay) return;
+  boardPlay.warpFlashMs = 0;
+  holdWarpWhite();
+  await new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // What the ship does when it stands on a Puzzle Warp: the player is taken out of this puzzle and into the target
 // location's, wherever that is. Leaving that one without solving it comes back to this square, with this board as it
 // starts; solving it keeps the player on the new planet. A warp ignores a location's requirements and a part's order.
-function warpToLocation(target){
+//
+// Before any of that, the board being left washes out white twice - see flashBoardTwice - and then the card turns over
+// on the other side, which is the arrival's own doing (openWarpedBoard).
+async function warpToLocation(target){
   if (!boardMover || focusTransition || !target?.node) return;
 
   saveWarpPending({
@@ -609,6 +692,9 @@ function warpToLocation(target){
   releaseDirections();
   breakContrails(boardContrails, boardMover.position);
 
+  // Two washes of white, the same as the ship's own warping makes, and nothing can be pressed while they run.
+  await runFocusTransition(flashBoardTwice);
+
   // The same page: the other board is right here, so there's nothing to load. Otherwise the page the warp leads to is
   // opened standing on that location - see enterWarpedPage, which picks it up from the query.
   if (target.page === weavePage.file) {
@@ -619,8 +705,9 @@ function warpToLocation(target){
 }
 
 // Opens a location's board straight away, wherever the player came from: Track Focus already open (a warp on this
-// page) or not yet (a page load that arrived by warping). The board starts as the puzzle starts, with the ship on its
-// Start, or on `cell` where a return trip puts it back on the warp square.
+// page) or not yet (a page load that arrived by warping). There's no turning over to it: the puzzle is behind the white
+// the second flash left, and comes up out of it with its title showing. The board starts as the puzzle starts, with the
+// ship on its Start, or on `cell` where a return trip puts it back on the warp square.
 function openWarpedBoard(node, cell = null){
   let root = node;
   for (let up = node.parentElement?.closest('.node'); up; up = up.parentElement?.closest('.node')) root = up;
@@ -636,12 +723,20 @@ function openWarpedBoard(node, cell = null){
   boardVisits.clear();
   releaseDirections();
 
+  // Whatever board was up - this page's own, or the one the player warped from - is dropped rather than left behind the
+  // white, and this one is built behind it.
+  forgetBoard();
   if (!trackFocusEl) openTrackFocus({ warped: true });
   buildBoardGame(undefined, cell ? { cell } : null);
   renderTrackFocus();
-  updateTrackFocusScale();
   renderBoardShip();
   showBoardTitle();
+
+  // Nothing can be pressed while the white goes, so that what's revealed can't be walked about before it's seen.
+  runFocusTransition(async () => {
+    fadeWarpWhite();
+    await new Promise(resolve => setTimeout(resolve, WARP_WHITE_OUT_MS));
+  });
   return true;
 }
 
@@ -658,6 +753,13 @@ function returnToWarpSquare(pending){
     + `&cell=${pending.fromCell.col},${pending.fromCell.row}&x=${Math.round(pending.fromX ?? 0)}&y=${Math.round(pending.fromY ?? 0)}`;
 }
 
+// A page a Puzzle Warp brought the player to is covered with the white it left through from its first paint: the loading
+// screen runs behind it, and the puzzle comes up out of it once the page is up - see main.js and enterWarpedPage.
+function coverWarpedPage(){
+  let params = new URLSearchParams(document.location.search);
+  if (params.get("warp") || params.get("warpBack")) holdWarpWhite();
+}
+
 // Where a page load lands when a Puzzle Warp brought the player here: ?warp=<location> is the warp's own arrival,
 // ?warpBack=<location>&cell=<col>,<row> is the trip back to the square the warp was stepped on. Anything else is an
 // ordinary page load, and any warp still remembered belongs to a trip the player has left behind.
@@ -669,13 +771,19 @@ function enterWarpedPage(){
   if (!nodeId) { clearWarpPending(); return; }
 
   let node = warpNodeElement(nodeId);
-  if (!node || !nodeMeta.get(node)?.puzzle) { clearWarpPending(); return; }
+  if (!node || !nodeMeta.get(node)?.puzzle) {
+    // Nowhere to go: the white goes with it, rather than leaving the map behind a blank screen.
+    clearWarpPending();
+    dropWarpWhite();
+    return;
+  }
 
   let cell = null;
   let [col, row] = (params.get("cell") ?? "").split(",").map(Number);
   if (Number.isInteger(col) && Number.isInteger(row)) cell = { col, row };
   if (returning) clearWarpPending();
-  openWarpedBoard(node, cell);
+  // A location that can't be opened is a warp that led nowhere, so the white it left can't stay over the map either.
+  if (!openWarpedBoard(node, cell)) dropWarpWhite();
 }
 
 
@@ -762,6 +870,22 @@ function updateBoardScroll(dtMs){
   }
 }
 
+// Everything a board's play hangs on, dropped in one go: a board being left, or one a Puzzle Warp is replacing with
+// another location's before that one is built - see leaveBoardGame and openWarpedBoard.
+function forgetBoard(){
+  boardMover = null;
+  boardShipEl = null;
+  boardReflectionsEl = null;
+  boardRefusedSilhouettes = null;
+  boardContrails = null;
+  boardGame = null;
+  boardPlay = null;
+  boardPuzzle = null;
+  boardObjectsCanvas = null;
+  boardObjectsImage = null;
+  boardSolvedMs = null;
+}
+
 // Flips back over from the board to the art, and the text alongside it.
 function leaveBoardGame(){
   if (!boardMover || focusTransition) return;
@@ -778,17 +902,7 @@ function leaveBoardGame(){
   boardVisits.clear();
   releaseDirections();
   runFocusTransition(() => flipFocus(() => {
-    boardMover = null;
-    boardShipEl = null;
-    boardReflectionsEl = null;
-    boardRefusedSilhouettes = null;
-    boardContrails = null;
-    boardGame = null;
-    boardPlay = null;
-    boardPuzzle = null;
-    boardObjectsCanvas = null;
-    boardObjectsImage = null;
-    boardSolvedMs = null;
+    forgetBoard();
     renderTrackFocus();
   }, false));
 }

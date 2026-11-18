@@ -814,6 +814,11 @@ function isMinimapInTheWay(){
 // its card open and shut on the way past.
 function updateNodeProximity(){
 
+  // Track Focus is what's being played while it's open, and the map ship isn't going anywhere: letting go of the
+  // location it stands on would close its card and forget which one was being played - and a Puzzle Warp's arrival
+  // isn't the location the ship stands on at all. See cards.js's hideLocation and trackFocus's openWarpedBoard.
+  if (trackFocusEl) return;
+
   let standingOn = rootByCell.get(cellKey(playerMover.cell)) ?? null;
   if (standingOn !== arrivalRoot) arrivalRoot = null;
 

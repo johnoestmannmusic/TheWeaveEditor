@@ -173,8 +173,10 @@ document.addEventListener('DOMContentLoaded', function() {
   placePersistentCards();
   bindInput();
   claimOwnFocus();
-  enterWarpedPage();
-  trackPageLoading();
+  // A page that arrived by warping is white from its first paint and its board comes up out of that white once the page
+  // is loaded - see coverWarpedPage, enterWarpedPage and trackPageLoading.
+  coverWarpedPage();
+  trackPageLoading().then(enterWarpedPage);
   requestAnimationFrame(loop);
 
   // DEBUGGER

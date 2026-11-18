@@ -384,6 +384,22 @@ h3 {
   display: none;
 }
 
+/* The white a Puzzle Warp goes through: held over the whole page while it changes, then faded off the puzzle the warp
+   leads to - see trackFocus's holdWarpWhite and fadeWarpWhite. Above the loading screen, which a page that arrived by
+   warping runs behind it, and out on <html> with that screen rather than in <body>, where the map's transform would
+   carry it about. */
+#warpWhite {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3001;
+  background: #fff;
+  pointer-events: none;
+  opacity: 0;
+}
+
 #loadingScreen.loadingDone {
   opacity: 0;
 }
