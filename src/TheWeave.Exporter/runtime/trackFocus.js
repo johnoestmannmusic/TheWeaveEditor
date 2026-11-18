@@ -16,8 +16,11 @@
 //
 // Appended to <html>, not <body>, for the same reason as #modalBackdrop - see #screenFrame's
 // comment in buildScreenFrame.
-function openTrackFocus(){
-  if (trackFocusEl || !activeNode || focusTransition || nodeMeta.get(activeRoot)?.locked) return;
+//
+// warped opens a location a Puzzle Warp has just taken the player to (see openWarpedBoard): a way in its own location's
+// requirements don't hold back, and without the grow-from-the-card transition, since nothing on the map was clicked.
+function openTrackFocus({ warped = false } = {}){
+  if (trackFocusEl || !activeNode || focusTransition || (!warped && nodeMeta.get(activeRoot)?.locked)) return;
 
   // The card's own cover on the map, which grows into Track Focus's art. Its art is already loaded, so there's
   // nothing to wait for.
@@ -29,7 +32,7 @@ function openTrackFocus(){
   renderTrackFocus();
   updateTrackFocusScale();
   document.documentElement.appendChild(trackFocusEl);
-  runFocusTransition(() => growFromCard(trackFocusEl, cardCover, false));
+  if (!warped) runFocusTransition(() => growFromCard(trackFocusEl, cardCover, false));
 }
 
 // (Re)builds the screen for activeNode. Everything shown is read from that node's card already in the
@@ -436,6 +439,10 @@ function buildBoardGame(facing, visit){
   boardSolvedMs = null;
   boardScroll = null;
   boardDrawnKey = null;
+  // A Puzzle Warp in progress only belongs to the board it led to: starting any other board (a restart of that one
+  // aside) means the trip is over, and Back shouldn't take the player back through it. See warpToLocation.
+  let pending = loadWarpPending();
+  if (pending && pending.toNode !== puzzle.id) clearWarpPending();
 
   boardPlay = WeaveBoard.createBoardPlay({
     puzzle,
@@ -476,8 +483,19 @@ function restartBoardGame(){
 // Acts on what's just happened on the board, once board.js has: the page's own part of it.
 function onBoardEvent(event){
   if (event.teleportTo) breakContrails(boardContrails, boardMover.position);
+  if (event.puzzleWarp) {
+    // Out of the board's own step: rebuild it (a warp to this page's own location) or load another page, neither of
+    // which can happen inside the mover's update - see warpToLocation.
+    let target = event.puzzleWarp;
+    releaseDirections();
+    setTimeout(() => warpToLocation(target), 0);
+    return;
+  }
   if (event.finished) {
     markPuzzleSolved(nodeMeta.get(activeNode).puzzle);
+    // Solving the location a warp led to is what keeps the player on this planet - see leaveBoardGame.
+    let pending = loadWarpPending();
+    if (pending && pending.toNode === nodeMeta.get(activeNode).puzzle.id) clearWarpPending();
     releaseDirections();
     if (connectedExit(chainIndex)) {
       boardSolvedMs = BOARD_SOLVED_PAUSE_MS - BOARD_SCROLL_DELAY_MS;
@@ -540,6 +558,126 @@ function onBoardBlocked(cell, to, direction){
 
 const PUZZLE_DIRECTIONS = { up: 'Up', down: 'Down', left: 'Left', right: 'Right' };
 const OPPOSITE_DIRECTIONS = { Up: 'Down', Down: 'Up', Left: 'Right', Right: 'Left' };
+
+// ---------- Puzzle Warps ----------
+
+// A Puzzle Warp leaves a board for another location's puzzle, and leaving that one without solving it comes back - so
+// what the page was doing when it left is kept in sessionStorage, not in memory: a warp to another planet is a real
+// page load, and the page that left has nothing left to remember it with. `toNode` is what tells a later Back whether
+// this trip is the one it is backing out of - see leaveBoardGame.
+const WARP_PENDING_KEY = "weave-puzzle-warp";
+
+function loadWarpPending(){
+  try {
+    let saved = sessionStorage.getItem(WARP_PENDING_KEY);
+    return saved ? JSON.parse(saved) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveWarpPending(pending){
+  try { sessionStorage.setItem(WARP_PENDING_KEY, JSON.stringify(pending)); } catch (e) { /* storage unavailable - the trip back is simply lost, as it is without it */ }
+}
+
+function clearWarpPending(){
+  try { sessionStorage.removeItem(WARP_PENDING_KEY); } catch (e) { /* see saveWarpPending */ }
+}
+
+// A location's element by its id, which the page carries on every location with a puzzle - see PageRenderer's
+// BuildPuzzleAttr. CSS.escape for a slug with anything odd in it.
+function warpNodeElement(nodeId){
+  return nodeId ? document.querySelector(`.node[data-node-id="${CSS.escape(nodeId)}"]`) : null;
+}
+
+// What the ship does when it stands on a Puzzle Warp: the player is taken out of this puzzle and into the target
+// location's, wherever that is. Leaving that one without solving it comes back to this square, with this board as it
+// starts; solving it keeps the player on the new planet. A warp ignores a location's requirements and a part's order.
+function warpToLocation(target){
+  if (!boardMover || focusTransition || !target?.node) return;
+
+  saveWarpPending({
+    fromPage: weavePage.file,
+    fromNode: activeNode.dataset.nodeId,
+    fromCell: { col: boardMover.cell.col, row: boardMover.cell.row },
+    fromX: parseFloat(activeRoot.style.left) || 0,
+    fromY: parseFloat(activeRoot.style.top) || 0,
+    toPage: target.page,
+    toNode: target.node,
+  });
+
+  releaseDirections();
+  breakContrails(boardContrails, boardMover.position);
+
+  // The same page: the other board is right here, so there's nothing to load. Otherwise the page the warp leads to is
+  // opened standing on that location - see enterWarpedPage, which picks it up from the query.
+  if (target.page === weavePage.file) {
+    let node = warpNodeElement(target.node);
+    if (node && openWarpedBoard(node)) return;
+  }
+  window.location.href = `${target.page}?warp=${encodeURIComponent(target.node)}&x=${Math.round(target.x ?? 0)}&y=${Math.round(target.y ?? 0)}`;
+}
+
+// Opens a location's board straight away, wherever the player came from: Track Focus already open (a warp on this
+// page) or not yet (a page load that arrived by warping). The board starts as the puzzle starts, with the ship on its
+// Start, or on `cell` where a return trip puts it back on the warp square.
+function openWarpedBoard(node, cell = null){
+  let root = node;
+  for (let up = node.parentElement?.closest('.node'); up; up = up.parentElement?.closest('.node')) root = up;
+  let meta = nodeMeta.get(root);
+  let index = meta?.chain.indexOf(node) ?? -1;
+  if (!meta || index < 0 || !nodeMeta.get(node)?.puzzle) return false;
+
+  // A warp is a way in its location's requirements don't hold back, so it isn't locked for this visit either.
+  meta.locked = false;
+  activeRoot = root;
+  activeNode = node;
+  chainIndex = index;
+  boardVisits.clear();
+  releaseDirections();
+
+  if (!trackFocusEl) openTrackFocus({ warped: true });
+  buildBoardGame(undefined, cell ? { cell } : null);
+  renderTrackFocus();
+  updateTrackFocusScale();
+  renderBoardShip();
+  showBoardTitle();
+  return true;
+}
+
+// Back on a board a warp led to, unsolved: come back to the square it was left from. On this page that's the board
+// itself, starting again; on another it's a page load that puts the ship back on the location and opens the board
+// there - see enterWarpedPage.
+function returnToWarpSquare(pending){
+  clearWarpPending();
+  if (pending.fromPage === weavePage.file) {
+    let node = warpNodeElement(pending.fromNode);
+    if (node && openWarpedBoard(node, pending.fromCell)) return;
+  }
+  window.location.href = `${pending.fromPage}?warpBack=${encodeURIComponent(pending.fromNode)}`
+    + `&cell=${pending.fromCell.col},${pending.fromCell.row}&x=${Math.round(pending.fromX ?? 0)}&y=${Math.round(pending.fromY ?? 0)}`;
+}
+
+// Where a page load lands when a Puzzle Warp brought the player here: ?warp=<location> is the warp's own arrival,
+// ?warpBack=<location>&cell=<col>,<row> is the trip back to the square the warp was stepped on. Anything else is an
+// ordinary page load, and any warp still remembered belongs to a trip the player has left behind.
+function enterWarpedPage(){
+  let params = new URLSearchParams(document.location.search);
+  let arriving = params.get("warp");
+  let returning = params.get("warpBack");
+  let nodeId = arriving ?? returning;
+  if (!nodeId) { clearWarpPending(); return; }
+
+  let node = warpNodeElement(nodeId);
+  if (!node || !nodeMeta.get(node)?.puzzle) { clearWarpPending(); return; }
+
+  let cell = null;
+  let [col, row] = (params.get("cell") ?? "").split(",").map(Number);
+  if (Number.isInteger(col) && Number.isInteger(row)) cell = { col, row };
+  if (returning) clearWarpPending();
+  openWarpedBoard(node, cell);
+}
+
 
 // Scrolls from this part's board across to a connected one's, the ship crossing the gap with them. This board
 // is remembered as it's left, and the other picks up as it was last left, if it has been: otherwise it starts
@@ -627,6 +765,14 @@ function updateBoardScroll(dtMs){
 // Flips back over from the board to the art, and the text alongside it.
 function leaveBoardGame(){
   if (!boardMover || focusTransition) return;
+
+  // A board a Puzzle Warp led to, left without solving it, goes back to the square it came from. Solving it is what
+  // keeps the player here - see warpToLocation.
+  let pending = loadWarpPending();
+  if (pending && pending.toNode === boardPuzzle?.id) {
+    if (!isPuzzleSolved({ id: pending.toNode })) { returnToWarpSquare(pending); return; }
+    clearWarpPending();
+  }
 
   boardScroll = null;
   boardVisits.clear();

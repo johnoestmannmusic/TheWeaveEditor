@@ -692,4 +692,37 @@ public class ProjectValidatorTests
         Assert.DoesNotContain(messages, m => m.Contains("'Bug'"));
         Assert.Contains(messages, m => m.Contains("'Idle'") && m.Contains("does nothing"));
     }
+
+    // A Puzzle Warp is only any use if it leads to a puzzle the site can actually open, and a warp back into its own
+    // board is just a restart.
+    [Fact]
+    public void Validate_PuzzleWarps_WarnAboutEveryWayOneCanLeadNowhere()
+    {
+        Node Track(string id, params PuzzleObject[] objects) => new()
+        {
+            Id = id,
+            Card = new Card { CoverImagePath = $"img/{id}.png", Audio = new AudioRef { Url = "track.ogg" } },
+            Puzzle = new Puzzle { Objects = objects.ToList() },
+        };
+
+        var project = new WeaveProject
+        {
+            Pages =
+            {
+                MakePage("ouros",
+                    Track("here",
+                        new PuzzleObject { Kind = PuzzleObjectKind.PuzzleWarp, Col = 0, Row = 0, TargetNodeId = "ghost" },
+                        new PuzzleObject { Kind = PuzzleObjectKind.PuzzleWarp, Col = 1, Row = 0, TargetNodeId = "no-track" },
+                        new PuzzleObject { Kind = PuzzleObjectKind.PuzzleWarp, Col = 2, Row = 0, TargetNodeId = "here" }),
+                    new Node { Id = "no-track", Card = new Card { CoverImagePath = "img/no-track.png" } }),
+            },
+        };
+
+        var warnings = ProjectValidator.Validate(project).Select(i => i.Message).Where(m => m.Contains("Puzzle Warp")).ToList();
+
+        Assert.Equal(3, warnings.Count);
+        Assert.Contains(warnings, m => m.Contains("'ghost'") && m.Contains("isn't a location"));
+        Assert.Contains(warnings, m => m.Contains("'no-track'") && m.Contains("can't be played"));
+        Assert.Contains(warnings, m => m.Contains("its own puzzle"));
+    }
 }

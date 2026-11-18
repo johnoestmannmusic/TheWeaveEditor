@@ -91,6 +91,13 @@ public enum PuzzleObjectKind
     /// letter. The ship can stand on it and walk off it; nothing else can be moved onto it.
     /// </summary>
     WarpOut,
+
+    /// <summary>
+    /// Stepping on this warps the player out of the puzzle and into another location's puzzle, on any page - see
+    /// TargetNodeId. Leaving that puzzle without solving it comes back here; solving it keeps the player on the new
+    /// planet. A location's requirements don't hold a warp back.
+    /// </summary>
+    PuzzleWarp,
 }
 
 /// <summary>A Push Block's symbol, drawn on it as a hollow outline - see runtime/puzzle.js's SYMBOLS.</summary>
@@ -129,6 +136,12 @@ public sealed class PuzzleObject
     /// <summary>Archeton only: the id of its ArchetonDefinition in WeaveProject.Archetons.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Archeton { get; set; }
+
+    /// <summary>
+    /// PuzzleWarp only: the id of the Node whose puzzle it warps the player into. Any page.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? TargetNodeId { get; set; }
 
     /// <summary>PushBlock only.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -253,7 +266,7 @@ public static class PuzzleDrawings
         PuzzleObjectKind.Stream, PuzzleObjectKind.RotatorTile, PuzzleObjectKind.PushBlock, PuzzleObjectKind.JumpTile,
         PuzzleObjectKind.ResetSwitch, PuzzleObjectKind.Pipe, PuzzleObjectKind.PipeSwitch, PuzzleObjectKind.Edge,
         PuzzleObjectKind.Archeton, PuzzleObjectKind.Laser, PuzzleObjectKind.Gem, PuzzleObjectKind.GemGate,
-        PuzzleObjectKind.WarpOut,
+        PuzzleObjectKind.WarpOut, PuzzleObjectKind.PuzzleWarp,
     };
 
     /// <summary>The kinds animated as they flow: a Still layer, and a Flow layer that moves along it.</summary>

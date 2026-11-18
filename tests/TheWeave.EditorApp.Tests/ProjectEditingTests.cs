@@ -1331,6 +1331,33 @@ public class ProjectEditingTests
     }
 
     [Fact]
+    public void ValidatePuzzle_KeepsTheTargetOnAPuzzleWarp_ButOnlyOnIt()
+    {
+        var puzzle = new Puzzle
+        {
+            Objects =
+            [
+                new PuzzleObject { Kind = PuzzleObjectKind.PuzzleWarp, TargetNodeId = "salanth-town-gardens", Col = 2, Row = 2 },
+                new PuzzleObject { Kind = PuzzleObjectKind.Wall, TargetNodeId = "salanth-town-gardens", Col = 3, Row = 2 },
+            ],
+        };
+
+        ProjectEditing.ValidatePuzzle(puzzle);
+
+        Assert.Equal("salanth-town-gardens", puzzle.Objects[0].TargetNodeId); // a warp keeps where it leads
+        Assert.Null(puzzle.Objects[1].TargetNodeId); // and nothing else has one
+    }
+
+    [Fact]
+    public void ValidatePuzzle_RefusesAPuzzleWarpWithNothingToWarpTo()
+    {
+        var puzzle = new Puzzle { Objects = [new PuzzleObject { Kind = PuzzleObjectKind.PuzzleWarp, Col = 2, Row = 2 }] };
+
+        var error = Assert.Throws<InvalidOperationException>(() => ProjectEditing.ValidatePuzzle(puzzle));
+        Assert.Contains("needs a location to warp to", error.Message);
+    }
+
+    [Fact]
     public void SeedArchetons_NewProject_GetsEveryReadyMadeArcheton_WithTheirDrawings()
     {
         var project = new WeaveProject();

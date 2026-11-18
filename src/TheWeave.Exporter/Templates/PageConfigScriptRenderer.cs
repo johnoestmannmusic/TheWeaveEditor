@@ -23,6 +23,8 @@ public static class PageConfigScriptRenderer
         {
             // What main.js saves a visitor's progress on this page under, like which squares they've explored.
             id = page.Id,
+            // This page's own file, so a Puzzle Warp can tell its target is on another page - and load it.
+            file = PageRenderer.OutputFileNameFor(page, project),
             globeEffect = page.GlobeEffect,
             worldWidth = page.WorldWidthPx ?? project.DefaultWorldWidthPx,
             worldHeight = page.WorldHeightPx ?? project.DefaultWorldHeightPx,

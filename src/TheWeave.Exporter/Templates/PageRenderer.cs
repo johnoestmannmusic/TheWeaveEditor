@@ -282,7 +282,12 @@ public sealed class PageRenderer
     // board needs Track Focus and the art. The id is another exception to Node.Id staying out of the
     // HTML, for the same reason as a modal's: main.js remembers across visits which were solved. Only the
     // drawings from the project's library that this puzzle uses come along.
-    private static string BuildPuzzleAttr(Node node, List<PuzzleDrawing>? library, List<ArchetonDefinition>? archetonLibrary = null)
+    //
+    // A Puzzle Warp needs more than an id to get somewhere: the runtime has to know the page its target is on, so it
+    // can load it if it's another planet, and where that location sits on that page, so the ship can arrive standing
+    // on it. That is resolved here, from the project, and rides on the warp's own object as `warp` - a target that
+    // doesn't resolve is left off, and the square then does nothing in the site.
+    private string BuildPuzzleAttr(Node node, List<PuzzleDrawing>? library, List<ArchetonDefinition>? archetonLibrary = null)
     {
         var puzzle = node.Puzzle;
         if (puzzle is null || !OpensTrackFocus(node.Card) || string.IsNullOrEmpty(node.Card.CoverImagePath))
@@ -291,16 +296,70 @@ public sealed class PageRenderer
         // Its Archetons come along too, with the drawings they're drawn with.
         var archetons = ArchetonDefinitions.UsedBy(puzzle, archetonLibrary);
         var drawings = PuzzleDrawings.UsedBy(puzzle, library).Concat(ArchetonDefinitions.DrawingsOf(archetons, library)).DistinctBy(d => d.Id).ToList();
+        var objects = puzzle.Objects.Select(WithWarpTarget).ToList();
         var json = JsonSerializer.Serialize(new
         {
             id = node.Id,
-            objects = puzzle.Objects,
+            objects,
             palette = puzzle.Palette,
             textures = puzzle.Textures,
             drawings = drawings.Count > 0 ? drawings : null,
             archetons = archetons.Count > 0 ? archetons : null,
         }, PuzzleJsonOptions);
-        return $" data-puzzle=\"{EscapeAttr(json)}\"";
+        return $" data-node-id=\"{EscapeAttr(node.Id)}\" data-puzzle=\"{EscapeAttr(json)}\"";
+    }
+
+    // One object as the runtime sees it. A Puzzle Warp also carries where it leads: the target location's page, id and
+    // place on that page (the top-level location's, since a chain's later parts share the map position of the first).
+    // Only for a target whose puzzle can really be played - there'd be no board to warp onto otherwise.
+    private object WithWarpTarget(PuzzleObject obj)
+    {
+        if (obj.Kind != PuzzleObjectKind.PuzzleWarp || ResolveWarpTarget(obj.TargetNodeId) is not { } target
+            || !PuzzleStages.IsPlayable(target.Node))
+            return obj;
+
+        return new
+        {
+            obj.Kind,
+            obj.Col,
+            obj.Row,
+            obj.Letter,
+            obj.Direction,
+            obj.Open,
+            obj.Invisible,
+            obj.Variant,
+            obj.TargetNodeId,
+            warp = new
+            {
+                page = _pageFileNamesById[target.Page.Id],
+                node = target.Node.Id,
+                x = target.Root.X,
+                y = target.Root.Y,
+            },
+        };
+    }
+
+    // The location a Puzzle Warp leads to, with the top-level location it belongs to - which is where the ship stands
+    // on the map when it arrives. Any page, and nested parts too: a warp can point at a part of a chain.
+    private (Page Page, Node Node, Node Root)? ResolveWarpTarget(string? nodeId)
+    {
+        if (string.IsNullOrWhiteSpace(nodeId)) return null;
+        foreach (var page in _project.Pages)
+        {
+            var found = FindWithRoot(page.Nodes, nodeId);
+            if (found is not null) return (page, found.Value.Node, found.Value.Root);
+        }
+        return null;
+    }
+
+    private static (Node Node, Node Root)? FindWithRoot(IEnumerable<Node> nodes, string id, Node? root = null)
+    {
+        foreach (var node in nodes)
+        {
+            if (node.Id == id) return (node, root ?? node);
+            if (FindWithRoot(node.Children, id, root ?? node) is { } found) return found;
+        }
+        return null;
     }
 
     private static bool OpensTrackFocus(Card card) => PuzzleStages.OpensTrackFocus(card);

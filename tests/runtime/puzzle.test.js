@@ -2290,6 +2290,47 @@ test('the reflection shoves a Push Block on ahead, as the ship would', () => {
   assert.deepEqual(cells(g).map(cell => cell.col), [8], 'and the reflection goes where the block was');
 });
 
+// ---------- Puzzle Warps ----------
+
+// What the exporter puts on a warp square once it has resolved where it leads - see PageRenderer's WithWarpTarget.
+const WARP_TO = { page: 'ouros.html', node: 'salanth-town-gardens', x: 120, y: 240 };
+const puzzleWarp = (col, row, warp = WARP_TO) => obj('PuzzleWarp', col, row, { targetNodeId: warp.node, warp });
+
+test('a Puzzle Warp is walked onto, and says where it leads when the ship stands on it', () => {
+  let g = game(obj('Start', 1, 5), puzzleWarp(3, 5));
+  assert.equal(g.canEnter(at(2, 5), at(3, 5), 'right'), true, 'the ship walks onto it');
+  assert.deepEqual(g.shipArrivedAt(at(3, 5)), { puzzleWarp: WARP_TO });
+  assert.deepEqual(g.shipCell, at(3, 5), 'and stands there until the page takes it away');
+});
+
+test('a Puzzle Warp the exporter could not resolve leads nowhere', () => {
+  let g = game(obj('Start', 1, 5), obj('PuzzleWarp', 3, 5, { targetNodeId: 'not-on-any-map' }));
+  assert.equal(g.shipArrivedAt(at(3, 5)), null, 'nothing happens at all');
+  assert.deepEqual(g.shipCell, at(3, 5));
+});
+
+test('a reflection arriving on a Puzzle Warp does not warp the player', () => {
+  let g = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), puzzleWarp(8, 5));
+  g.placeShip(at(1, 5));
+  let event = g.shipArrivedAt(at(2, 5));
+  assert.deepEqual(cells(g), [at(8, 5)], 'the reflection is standing on the warp square');
+  assert.equal(event?.puzzleWarp, undefined, 'and the player stays where the ship is');
+});
+
+test('a Puzzle Warp is drawn as a plain square outline, with nothing inside it', () => {
+  let { look } = artLook();
+  let image = blank();
+  renderBoard(image, [obj('PuzzleWarp', 3, 3)], look);
+  let light = toRgb(look.palette.light).join();
+  let at3 = (u, v) => pixelAt(image, 3 * 24 + u, 3 * 24 + v);
+  assert.equal(at3(3, 12).slice(0, 3).join(), light, 'its left edge');
+  assert.equal(at3(20, 12).slice(0, 3).join(), light, 'and its right');
+  assert.equal(at3(12, 3).slice(0, 3).join(), light, 'and its top');
+  assert.equal(at3(12, 20).slice(0, 3).join(), light, 'and its bottom');
+  assert.equal(at3(12, 12)[3], 0, 'with nothing in the middle');
+  assert.equal(standardDrawing('PuzzleWarp').mix[0].role, 'teleporter', 'and is coloured as a teleport');
+});
+
 test('a Push Block on the mirror\'s square stops a reflection forming at all', () => {
   let g = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), block(8, 5));
   assert.deepEqual(cells(g), [], 'the block is where the ship would be mirrored, so there is nothing to see');
