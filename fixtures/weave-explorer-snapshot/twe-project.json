@@ -4269,22 +4269,6 @@
               },
               {
                 "Kind": "Wall",
-                "Col": 9,
-                "Row": 4,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-15"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 0,
-                "Row": 4,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-16"
-              },
-              {
-                "Kind": "Wall",
                 "Col": 1,
                 "Row": 5,
                 "Letter": null,
@@ -4498,14 +4482,6 @@
                 "Letter": null,
                 "Direction": null,
                 "Variant": "wall-7"
-              },
-              {
-                "Kind": "Wall",
-                "Col": 8,
-                "Row": 7,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-6"
               },
               {
                 "Kind": "Wall",
@@ -4584,10 +4560,43 @@
                 "Letter": "A",
                 "Direction": null,
                 "Open": true
+              },
+              {
+                "Kind": "PuzzleWarp",
+                "Col": 0,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "TargetNodeId": "salanth-town-gardens"
+              },
+              {
+                "Kind": "Teleporter",
+                "Col": 1,
+                "Row": 9,
+                "Letter": "A",
+                "Direction": null,
+                "Invisible": true
+              },
+              {
+                "Kind": "Teleporter",
+                "Col": 9,
+                "Row": 4,
+                "Letter": "A",
+                "Direction": null,
+                "Invisible": true
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 8,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Square"
               }
             ],
             "Palette": {
               "wall": "#b0a7b8",
+              "edge": "#ce9248",
               "finish": "#ce9248",
               "gate": "#e8d282",
               "switch": "#e8d282",
@@ -4602,6 +4611,7 @@
               "reset": "#ce9248",
               "pipe": "#ce9248",
               "archeton": "#ce9248",
+              "gem": "#ce9248",
               "outline": "#10121c",
               "light": "#d3eed3"
             },
@@ -4615,6 +4625,16 @@
                 ],
                 "Grain": "ptttptttjjjjjjjtjjmt8jjjjpjptptpp8jjjjjjjptjj8jjpjjjpppppjjjjjjjjjmjjj8jttpptppppmjjjjjcjjtmjmj8tzjtttpjptjjjjjjjjmjjjjjpppptpppj8jjjjj8jjmjj8jjjtptzjpjjjjjjjjjjjmpjjmjtpppppp8jjmmj8jmjjt8jjmjtttjpjjjjjjjjjptjjjjjjjjppjptpjjjjtjj8j8jjj8jmtjptptpjjjjjjjjj8jjjcjptjptptpppp8jptjjjj8jmj8jjpmptpjpjjjjjjjjjjj8jjjjjptppjjjjjjjjj8j8jpj8jjjppfptpjjjpjjjjjjj8jjjjjjjpjppppjppjjjjjjjj8jjj8jjp8ppjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj8jptpj8jjjjjjjjjjjjjjjjjjjjpjjjpppjj8j8jcj8jmj8j8pmp8p0ptjjpjjjjjjjjjjjjjptmpp8jpjjj8jjj8j8jjj8j8tmp885jjjjjj8jjjjjjjjj8jpm5j08j8j8jjj8j8j8j888jmmm8085",
                 "Pixels": "333333330000000300330000030333333000000003300000300033333000000000300000333333333300000000330300330333303300000000300000333333330000000000300000033330300000000000330030333333300033000300300030333030000000003300000000330333000030000000000330333330000000000000003303333333300330000003000033333030000000000000000033330000000000000300000330333000300000000000000030333303300000000000000030330000000000000000000000000000000000000000033300000000000000000000003000333000000000030000333030330030000000000000333330030000000000000000333000000000000000000000330000000000000000000003330000"
+              },
+              "edge": {
+                "Ramp": [
+                  "#a26d3f",
+                  "#ce9248",
+                  "#ce9248",
+                  "#ce9248"
+                ],
+                "Grain": "iiii6iiq6i6q6qqqiqiqiqiqi6i6i6i6i6i6iiqii6qiqiqiiq666i6i6iiqiqii6iiqiqiqi6i666i6i6qii66666i6i6q6ii6i6iiq6qiq6q6i6i6i6qqqi6i6i6i666q666i666i6iiqi6i6qii666qqi6q6i6q6iiqiiiii6iii6qiq6iii6i6i6qii6iqiqiqiqqqqqiqiiiqiiiqiqi6qii6qiqiqii6i6i666iiqiiqiqiqiqqqiqiq6i6i6qii6iiii6q6qii6iiq6i666i6i6i6iqiqiqqqiqiqiiiq6iiqii6qq6iiiiq6i6iii6iii6qii6i6iq6iiqiiii6i6iiiiqiiiq6iq6iiq6i6i6i6i6i6q6i6i6iiiq6qiqiqiq6q666qiiiq6qiqi6iiq6i6i6i666iii6i666ii6qiqii6iiq0i6iii6iaa6iiqiii6i6i6i6a666i6i6i6i6iqiqii6iii6q6i6i6iiqiq6iizi6q666i6i6i6i6i6iii6i6uu6q6i6qiiiiiiii6iiq6iiquzi666i6i6i6i6q6i6iii6iqzz",
+                "Pixels": "000000020002022202020202000000000000002000202020020000000002020000020202000000000020000000000020000000020202020000000222000000000020000000000020000200000220020002000200000000002020000000002000020202022222020002000202002000202020000000000020020202022202020000020000000020200000200000000000020202220202000200020002200000200000000000200000020002000000000002000200200020000000000020000000020202020202000200020202000020000000000000000000020200000200000000000002000000000000000000000002020000000200000002020002002000000000000000000022020002000000000002000222000000000000200000000222"
               },
               "finish": {
                 "Ramp": [
@@ -4727,6 +4747,16 @@
                 "Pixels": "000000020002022202020202000000000000002000202020020000000002020000020202000000000020000000000020000000020202020000000222000000000020000000000020000200000220020002000200000000002020000000002000020202022222020002000202002000202020000000000020020202022202020000020000000020200000200000000000020202220202000200020002200000200000000000200000020002000000000002000200200020000000000020000000020202020202000200020202000020000000000000000000020200000200000000000002000000000000000000000002020000000200000002020002002000000000000000000022020002000000000002000222000000000000200000000222"
               },
               "archeton": {
+                "Ramp": [
+                  "#a26d3f",
+                  "#ce9248",
+                  "#ce9248",
+                  "#ce9248"
+                ],
+                "Grain": "iiii6iiq6i6q6qqqiqiqiqiqi6i6i6i6i6i6iiqii6qiqiqiiq666i6i6iiqiqii6iiqiqiqi6i666i6i6qii66666i6i6q6ii6i6iiq6qiq6q6i6i6i6qqqi6i6i6i666q666i666i6iiqi6i6qii666qqi6q6i6q6iiqiiiii6iii6qiq6iii6i6i6qii6iqiqiqiqqqqqiqiiiqiiiqiqi6qii6qiqiqii6i6i666iiqiiqiqiqiqqqiqiq6i6i6qii6iiii6q6qii6iiq6i666i6i6i6iqiqiqqqiqiqiiiq6iiqii6qq6iiiiq6i6iii6iii6qii6i6iq6iiqiiii6i6iiiiqiiiq6iq6iiq6i6i6i6i6i6q6i6i6iiiq6qiqiqiq6q666qiiiq6qiqi6iiq6i6i6i666iii6i666ii6qiqii6iiq0i6iii6iaa6iiqiii6i6i6i6a666i6i6i6i6iqiqii6iii6q6i6i6iiqiq6iizi6q666i6i6i6i6i6iii6i6uu6q6i6qiiiiiiii6iiq6iiquzi666i6i6i6i6q6i6iii6iqzz",
+                "Pixels": "000000020002022202020202000000000000002000202020020000000002020000020202000000000020000000000020000000020202020000000222000000000020000000000020000200000220020002000200000000002020000000002000020202022222020002000202002000202020000000000020020202022202020000020000000020200000200000000000020202220202000200020002200000200000000000200000020002000000000002000200200020000000000020000000020202020202000200020202000020000000000000000000020200000200000000000002000000000000000000000002020000000200000002020002002000000000000000000022020002000000000002000222000000000000200000000222"
+              },
+              "gem": {
                 "Ramp": [
                   "#a26d3f",
                   "#ce9248",
@@ -12675,6 +12705,35 @@
         },
         {
           "Role": "gate",
+          "Shade": 3,
+          "Percent": 15
+        }
+      ]
+    },
+    {
+      "Id": "PuzzleWarp",
+      "Kind": "PuzzleWarp",
+      "Name": "Standard",
+      "Opacity": 0.5,
+      "Pixels": "..............................................................................HHHHHHHHHHHH...........H............H.........H..............H.......H................H......H................H......H................H......H........H.......H......H.......HH.......H......H.....HHHHH......H......H......HHHHH.....H......H.......HH.......H......H.......H........H......H................H......H................H......H................H.......H..............H.........H............H...........HHHHHHHHHHHH..............................................................................",
+      "Mix": [
+        {
+          "Role": "teleporter",
+          "Shade": 0,
+          "Percent": 15
+        },
+        {
+          "Role": "teleporter",
+          "Shade": 1,
+          "Percent": 25
+        },
+        {
+          "Role": "teleporter",
+          "Shade": 2,
+          "Percent": 45
+        },
+        {
+          "Role": "teleporter",
           "Shade": 3,
           "Percent": 15
         }

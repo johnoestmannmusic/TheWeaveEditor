@@ -278,7 +278,7 @@
       else if (kind === 'Edge') drawing = { id: kind, kind, name: 'Standard', pixels: standardEdgePixels(), mix: standardMix('edge') };
       else if (kind === 'Gem') drawing = { id: kind, kind, name: 'Standard', pixels: standardGemPixels(), mix: standardMix('gem') };
       else if (kind === 'WarpOut') drawing = { id: kind, kind, name: 'Standard', pixels: standardWarpOutPixels(), mix: standardMix('archeton') };
-      else if (kind === 'PuzzleWarp') drawing = { id: kind, kind, name: 'Standard', pixels: standardPuzzleWarpPixels(), mix: standardMix('teleporter') };
+      else if (kind === 'PuzzleWarp') drawing = { id: kind, kind, name: 'Standard', pixels: standardPuzzleWarpPixels(), mix: standardMix('teleporter'), opacity: 0.5 };
       else {
         let body = SHAPES[SPRITE_SHAPES[kind]];
         drawing = { id: kind, kind, name: 'Standard', pixels: pixelsOf(body), mix: standardMix(SPRITE_ROLES[kind]) };
@@ -801,10 +801,12 @@
     let base = layer === 'bend' ? drawing.bendPixels ?? standard.bendPixels : drawing.pixels;
     let flow = layer === 'flow' ? drawing.flowPixels ?? standard.flowPixels : null;
     image.data.fill(0);
+    // Painted at the drawing's own opacity, so the Drawings view shows the see-through it'll have on the board.
+    let alpha = Math.round(255 * (drawing.opacity ?? 1));
     for (let index = 0; index < TILE_PX * TILE_PX; index++) {
       let paint = flow && flow[index] !== PAINTS.clear ? flow[index] : base[index];
       let color = paintColor(paint, mix, index, outline, light);
-      if (color) image.data.set([color.r, color.g, color.b, 255], (Math.floor(index / TILE_PX) * image.width + index % TILE_PX) * 4);
+      if (color) image.data.set([color.r, color.g, color.b, alpha], (Math.floor(index / TILE_PX) * image.width + index % TILE_PX) * 4);
     }
   }
 
@@ -835,6 +837,9 @@
       if (exit) sprite = withFinishArrows(sprite, look, exit, arrowPhase);
       cache.set(key, sprite);
     }
+    // How solid its drawing is: a see-through drawing stays see-through however the object itself is drawn, and this
+    // is where blit finds it - see renderBoard.
+    sprite.opacity = drawingFor(look, object).opacity ?? 1;
     return sprite;
   }
 
@@ -1017,7 +1022,7 @@
       let top = Math.round(row * TILE_PX) + (options.originY ?? 0);
       let sunk = Math.round((object.sink ?? 0) * TILE_PX);
       // An open Gate is half see-through, so it reads as something the ship can pass through.
-      let opacity = (object.fade ?? 1) * ((object.kind === 'Gate' || object.kind === 'GemGate') && object.open ? OPEN_GATE_OPACITY : 1);
+      let opacity = (object.fade ?? 1) * (sprite.opacity ?? 1) * ((object.kind === 'Gate' || object.kind === 'GemGate') && object.open ? OPEN_GATE_OPACITY : 1);
       // A Wisp fades in and out as it drifts, in step with its rise and fall: solid at the top of it, thinner at the
       // bottom, between 90% and 60% of solid.
       if (floating) opacity *= (WISP_FADE_TOP + WISP_FADE_BOTTOM) / 2

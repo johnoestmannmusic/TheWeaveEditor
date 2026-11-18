@@ -1037,6 +1037,26 @@ main.behind-puzzle-editor {
   font-size: 11px;
 }
 
+#pd-opacity-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+#pd-opacity {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+#pd-opacity-value {
+  width: 3em;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 #pd-preview {
   width: 216px;
   height: 216px;

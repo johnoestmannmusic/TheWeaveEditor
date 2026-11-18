@@ -245,6 +245,12 @@
             <button type="button" id="pd-mix-add" class="small">Add colour</button>
             <span id="pd-mix-total"></span>
           </div>
+          <h3>Opacity</h3>
+          <div class="field-hint">How solid this drawing is on the board. Below 100% the album art shows through it, which is how a Puzzle Warp reads as a way through rather than something standing in it.</div>
+          <div id="pd-opacity-row">
+            <input type="range" id="pd-opacity" min="0" max="100" step="1" value="100">
+            <span id="pd-opacity-value">100%</span>
+          </div>
           <h3>Preview</h3>
           <canvas id="pd-preview" width="72" height="72"></canvas>
           <div class="field-hint">On this track's album art, as on the board.</div>

@@ -227,6 +227,14 @@ public sealed class PuzzleDrawing
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? FlowPixels { get; set; }
 
+    /// <summary>
+    /// How solid the drawing is on the board, 0 to 1: 1 (and left out, which is the usual case) is as painted, and
+    /// lower lets the album art show through - see runtime/puzzleDrawing.js's blit. A Puzzle Warp's own Standard
+    /// drawing is half see-through, so that a warp reads as a way through rather than a thing standing there.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? Opacity { get; set; }
+
     public List<PuzzleMixColour> Mix { get; set; } = new();
 }
 
@@ -316,6 +324,7 @@ public static class PuzzleDrawings
                 OpenPixels = drawing.OpenPixels,
                 BendPixels = drawing.BendPixels,
                 FlowPixels = drawing.FlowPixels,
+                Opacity = drawing.Opacity,
                 Mix = drawing.Mix.Select(m => new PuzzleMixColour { Role = m.Role, Shade = m.Shade, Percent = m.Percent }).ToList(),
             });
         }
@@ -324,7 +333,7 @@ public static class PuzzleDrawings
 
     private static bool SameDrawing(PuzzleDrawing a, PuzzleDrawing b) =>
         a.Kind == b.Kind && a.Name == b.Name && a.Pixels == b.Pixels && a.OpenPixels == b.OpenPixels
-        && a.BendPixels == b.BendPixels && a.FlowPixels == b.FlowPixels
+        && a.BendPixels == b.BendPixels && a.FlowPixels == b.FlowPixels && a.Opacity == b.Opacity
         && a.Mix.Count == b.Mix.Count
         && a.Mix.Zip(b.Mix).All(pair => pair.First.Role == pair.Second.Role && pair.First.Shade == pair.Second.Shade && pair.First.Percent == pair.Second.Percent);
 }
