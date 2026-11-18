@@ -1026,6 +1026,14 @@
       return [shipCell, ...syncReflections()].some(cell => objectAt(cell)?.kind === kind);
     }
 
+    // Whether a Warp Wisp is drifting over a square that has one of these on it. A Wisp floats, so it is never stood
+    // on and never sets off what the ship would by arriving - but it is over the square, which is enough to hold a
+    // Switch down while it's there. See wispOnRotatorSwitch.
+    function wispHovers(kind){
+      return objects.some(wisp => wisp.kind === 'Archeton' && hasPart(wisp, 'Warp')
+        && objects.some(other => other !== wisp && other.kind === kind && isAt(other, wisp)));
+    }
+
     // The board's reflections as they should be right now: anything that's no longer where its pane shows it gone, and
     // any pane that's come to have the ship in its line showing one.
     function syncReflections(){
@@ -1332,6 +1340,9 @@
       // Whether the ship is on a Rotator Loop Switch, which is what makes Rotator tiles move - or one of its reflections
       // is, which counts as the ship standing there would, since that's the whole of what a reflection does.
       get onRotatorSwitch(){ return haunts('RotatorSwitch'); },
+      // Whether a Warp Wisp is over a Rotator Loop Switch, which runs the Rotators the way the ship standing there
+      // does - and goes on running them while the ship walks away, since the Wisp stays where it is.
+      get wispOnRotatorSwitch(){ return wispHovers('RotatorSwitch'); },
       // Whether the ship is on a Pipe Switch, which turns the Pipes again each second it stays there - or a reflection is.
       get onPipeSwitch(){ return haunts('PipeSwitch'); },
       // Where the ship's reflections are right now, one for each Reflect pane it's in the line of and one more for each

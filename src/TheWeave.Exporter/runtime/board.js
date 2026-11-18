@@ -274,10 +274,11 @@
         onEvent(game.tick(play.mover.isMoving ? play.mover.cell : null));
       }
 
-      // Rotator tiles only move while the ship is stopped on their Switch, once it's been there a whole tick. A move
-      // underway when it leaves still finishes.
+      // Rotator tiles only move while the ship is stopped on their Switch, once it's been there a whole tick - or
+      // while a Warp Wisp is drifting over one, which keeps them moving with the ship anywhere, walking included.
+      // A move underway when the Switch stops being held still finishes.
       play.rotatorGlideMs = Math.min(TIMING.rotatorTickMs, play.rotatorGlideMs + dtMs);
-      if (play.mover.isMoving || !game.onRotatorSwitch) {
+      if (!((!play.mover.isMoving && game.onRotatorSwitch) || game.wispOnRotatorSwitch)) {
         play.rotatorActiveMs = 0;
       } else {
         play.rotatorActiveMs += dtMs;

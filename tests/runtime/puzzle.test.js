@@ -1943,6 +1943,31 @@ test('erasing a Warp Wisp takes its Warp Out Square with it, and the other way r
   assert.equal(eraseObject(withGate, at(1, 9)).length, withGate.length - 1);
 });
 
+// A Wisp floats over the board rather than standing on it, so it can be over a Switch without being on it the way the
+// ship is - and holding that Switch down is exactly what floating over one should do.
+test('a Warp Wisp drifting over a Rotator Switch holds it, wherever the ship is', () => {
+  let g = withArchetons([STILL_WISP], still(5, 5), obj('RotatorSwitch', 5, 5), ...rotatorLine(1, 2, 3), obj('Wall', 1, 5));
+  assert.equal(g.wispOnRotatorSwitch, true);
+  assert.equal(g.onRotatorSwitch, false, 'and the ship is nowhere near it');
+
+  let beside = withArchetons([STILL_WISP], still(5, 5), obj('RotatorSwitch', 4, 5), obj('Start', 1, 9));
+  assert.equal(beside.wispOnRotatorSwitch, false, 'one square off, and it holds nothing');
+});
+
+test('a Warp Wisp holds a Rotator Switch only while it is over it', () => {
+  // Two squares right of its home and back again, so it drifts on over the Switch rather than patrolling one square.
+  let drifting = { id: 'warp-wisp', name: 'Warp Wisp', parts: [{ kind: 'Sequence', moves: ['Right', 'Right'] }, { kind: 'Warp' }] };
+  let g = withArchetons([drifting], wisp(4, 5, 'A'), warpOut(9, 1, 'A'), obj('RotatorSwitch', 5, 5));
+  g.placeShip(at(9, 9));
+  assert.equal(g.wispOnRotatorSwitch, false, 'a square short of it');
+
+  g.shipArrivedAt(at(9, 8));
+  assert.equal(g.wispOnRotatorSwitch, true, 'now over it, so it holds');
+
+  g.shipArrivedAt(at(9, 7));
+  assert.equal(g.wispOnRotatorSwitch, false, 'and drifting on, so it lets go');
+});
+
 test('a Warp Wisp with no Warp Out Square of its letter leaves the ship where it is', () => {
   let g = withArchetons([WARP_WISP], wisp(5, 5, 'A'), warpOut(2, 2, 'B'));
   g.placeShip(at(5, 6));
