@@ -205,8 +205,17 @@ public sealed class PageRenderer
             : "";
         sb.AppendLine($"{pad}  <div class=\"poetry-text\"{poetryStyle}>");
 
-        foreach (var line in card.PoetryLines)
-            sb.AppendLine($"{pad}    <div class=\"poetry-line\">{RenderPoetryLine(line)}</div>");
+        // A track's verse reads as two stanzas of four: exactly eight lines get a blank one after the fourth. The
+        // editor drops empty lines from the verse field (app.js's split/filter), so a break can't be authored by
+        // hand; only a track's verse, and only at eight, so any other poem is left exactly as written. The blank
+        // carries &nbsp; so it takes a line's height, and stays a .poetry-line so Track Focus clones it along with
+        // the rest (see trackFocus.js's renderTrackFocus).
+        for (var i = 0; i < card.PoetryLines.Count; i++)
+        {
+            sb.AppendLine($"{pad}    <div class=\"poetry-line\">{RenderPoetryLine(card.PoetryLines[i])}</div>");
+            if (card.Audio is not null && card.PoetryLines.Count == 8 && i == 3)
+                sb.AppendLine($"{pad}    <div class=\"poetry-line\">&nbsp;</div>");
+        }
 
         RenderFocusAction(sb, card, pad);
         RenderAction(sb, sourcePage, card, pad);
