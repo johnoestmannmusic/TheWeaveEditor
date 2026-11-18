@@ -46,7 +46,10 @@ public enum PuzzleObjectKind
     /// <summary>Stepping on this launches the ship 2 squares in its Direction, over anything in between, or 1 if it can't land that far.</summary>
     JumpTile,
 
-    /// <summary>Stepping on this puts every object but Walls back as the puzzle started, leaving the ship where it is.</summary>
+    /// <summary>
+    /// Stepping on this puts every object but Walls back as the puzzle started, leaving the ship and any Gems
+    /// already collected where they are. See runtime/puzzleRules.js's ResetSwitch.
+    /// </summary>
     ResetSwitch,
 
     /// <summary>

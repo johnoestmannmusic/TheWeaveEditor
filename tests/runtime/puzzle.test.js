@@ -1489,6 +1489,22 @@ test('a Reset Switch puts every object back as it started, and leaves the ship w
   assert.deepEqual(event.reset.filter(o => o.kind === 'PushBlock').map(o => `${o.symbol}@${o.col},${o.row}`), ['Circle@7,2'], 'and it says what was there before');
 });
 
+test('a Reset Switch leaves Gems already collected collected, and their Gem Gate open', () => {
+  let g = game(obj('GemGate', 1, 0), obj('Gem', 5, 5), obj('Gem', 7, 5), obj('Start', 0, 5), reset(9, 9));
+
+  g.shipArrivedAt(at(5, 5)); // one Gem taken
+  g.shipArrivedAt(at(9, 9));
+  assert.deepEqual(g.objects.filter(o => o.kind === 'Gem').map(o => [o.col, o.row]), [[7, 5]], 'the one still there is back on its square');
+  assert.equal(find(g, 'GemGate').open, false, 'and the Gate is still shut with a Gem left');
+
+  g.shipArrivedAt(at(7, 5)); // the last one
+  assert.equal(find(g, 'GemGate').open, true);
+  g.shipArrivedAt(at(9, 9));
+  assert.equal(g.objects.filter(o => o.kind === 'Gem').length, 0, 'no Gem comes back');
+  assert.equal(find(g, 'GemGate').open, true, 'so the Gate it opened stays open');
+  assert.equal(g.canEnter(at(1, 1), at(1, 0), 'up'), true, 'and the way through is open');
+});
+
 test('it works whatever Keys are left, and each object keeps its own index, before and after', () => {
   let g = game(obj('Key', 2, 2), block(4, 4), reset(6, 6));
   g.pushFrom(at(3, 4), at(4, 4), 'right');

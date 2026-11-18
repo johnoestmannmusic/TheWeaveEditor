@@ -602,12 +602,19 @@
           return { lit: { col: object.col, row: object.row }, revealed: hidden.filter(thing => thing.revealed) };
         }
 
-        // Everything back as it started, but the ship: moved objects return, sunk blocks and collected Keys come
-        // back, Gates close or open again, Lanterns go out, and what they revealed is hidden again.
+        // Everything back as it started, but the ship and the Gems it has taken: moved objects return, sunk blocks
+        // and collected Keys come back, Gates close or open again, Lanterns go out, and what they revealed is hidden
+        // again. A Gem is progress rather than something on the board, so one already collected stays collected - and
+        // once the last one has gone the Gem Gate it opened stays open, or the board would be left with a Gate that
+        // no Gem can ever open again.
         case 'ResetSwitch': {
           let before = objects;
+          let stillThere = new Set(objects.filter(object => object.kind === 'Gem').map(object => object.index));
+          let hadGems = puzzle.objects.some(object => object.kind === 'Gem');
           gateBeams = [];
-          objects = startingObjects();
+          objects = startingObjects().filter(object => object.kind !== 'Gem' || stillThere.has(object.index));
+          if (hadGems && !objects.some(object => object.kind === 'Gem'))
+            for (const object of objects) if (object.kind === 'GemGate') object.open = true;
           for (const floor of floors) floor.revealed = false;
           for (const pipe of pipes.values()) pipe.direction = pipe.startDirection;
           return { reset: before };
