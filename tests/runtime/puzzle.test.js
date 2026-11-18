@@ -2331,6 +2331,26 @@ test('a Puzzle Warp is drawn as a plain square outline, with nothing inside it',
   assert.equal(standardDrawing('PuzzleWarp').mix[0].role, 'teleporter', 'and is coloured as a teleport');
 });
 
+test("a drawing's opacity is how see-through it is on the board", () => {
+  let { look } = artLook();
+  let alphas = (image) => {
+    let found = [];
+    for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) found.push(pixelAt(image, 3 * 24 + x, 3 * 24 + y)[3]);
+    return found;
+  };
+
+  // The Puzzle Warp's Standard drawing is half see-through, so a warp reads as a way through.
+  let warped = blank();
+  renderBoard(warped, [obj('PuzzleWarp', 3, 3, { targetNodeId: 'here' })], look);
+  assert.ok(alphas(warped).includes(128), 'the warp is painted at 50%, and nothing else');
+
+  // Anything else is solid, unless its drawing says otherwise.
+  let solid = blank();
+  renderBoard(solid, [obj('Wall', 3, 3)], look);
+  assert.ok(alphas(solid).includes(255), 'a Wall is painted solid');
+  assert.ok(!alphas(solid).includes(128), 'and not at all see-through');
+});
+
 test('a Push Block on the mirror\'s square stops a reflection forming at all', () => {
   let g = withArchetons([REFLECT_MIMIC], mimic(5, 5), obj('Start', 2, 5), block(8, 5));
   assert.deepEqual(cells(g), [], 'the block is where the ship would be mirrored, so there is nothing to see');

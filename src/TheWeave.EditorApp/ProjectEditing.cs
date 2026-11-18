@@ -598,6 +598,12 @@ internal static class ProjectEditing
             drawing.BendPixels = OnlyFor(drawing, drawing.Kind == PuzzleObjectKind.Stream, drawing.BendPixels);
             drawing.FlowPixels = OnlyFor(drawing, PuzzleDrawings.IsAnimated(drawing.Kind), drawing.FlowPixels);
 
+            if (drawing.Opacity is { } opacity && (opacity < 0 || opacity > 1))
+                throw new InvalidOperationException($"Drawing '{drawing.Name}' has an opacity outside 0% to 100%.");
+            // Solid is the usual case, so it says nothing: a drawing at 100% keeps no opacity at all.
+            if (drawing.Opacity is >= 1)
+                drawing.Opacity = null;
+
             if (drawing.Mix.Count is 0 or > 4)
                 throw new InvalidOperationException($"Drawing '{drawing.Name}' needs from 1 to 4 colours in its mix.");
             foreach (var colour in drawing.Mix)

@@ -229,10 +229,19 @@ function frameField(drawing) {
   return framesOf(drawing.kind).find((entry) => entry.frame === puzzleEditor.drawings.frame)?.field ?? 'pixels';
 }
 
-// A layer a drawing has never had painted is its kind's Standard one.
+// The layer a drawing has never had painted is its kind's Standard one.
 function framePixels(drawing) {
   const field = frameField(drawing);
   return drawing[field] ?? WeavePuzzle.standardDrawing(drawing.kind)[field];
+}
+
+// The Opacity row, showing the drawing's own opacity: 100% unless it's been made see-through, since that's what
+// leaving it out means - see saveDrawing and runtime/puzzleDrawing.js's blit.
+function syncOpacity(drawing) {
+  const slider = document.getElementById('pd-opacity');
+  const percent = Math.round((drawing.opacity ?? 1) * 100);
+  if (document.activeElement !== slider) slider.value = percent;
+  document.getElementById('pd-opacity-value').textContent = `${percent}%`;
 }
 
 // Rebuilds a part of the view only when what it shows has changed, so that a project-state can't replace a
@@ -282,6 +291,8 @@ function renderDrawings() {
   const name = document.getElementById('pd-name');
   if (document.activeElement !== name) name.value = drawing.name;
   name.disabled = standard;
+
+  syncOpacity(drawing);
 
   const remove = document.getElementById('pd-delete');
   const redrawn = (project?.puzzleDrawings ?? []).some((saved) => saved.id === view.kind && saved.kind === view.kind);
@@ -599,6 +610,23 @@ function receiveDrawingPng(message) {
 
 document.getElementById('pd-png-export').addEventListener('click', exportDrawingPng);
 document.getElementById('pd-png-import').addEventListener('click', () => send('import-drawing-png'));
+
+// Opacity is a change to the drawing like any other, so it's made to the working copy as the slider moves and saved
+// when it's let go: every save sends the whole library, so one per pixel of a drag would be a lot of them.
+const opacitySlider = document.getElementById('pd-opacity');
+opacitySlider.addEventListener('input', (e) => {
+  const view = puzzleEditor?.drawings;
+  const drawing = view && currentDrawing();
+  if (!drawing || !puzzleLook()) return;
+  const percent = Number(e.target.value);
+  view.working = { ...drawing, opacity: percent >= 100 ? null : percent / 100 };
+  document.getElementById('pd-opacity-value').textContent = `${percent}%`;
+  drawDrawingCanvas();
+});
+
+opacitySlider.addEventListener('change', () => {
+  if (puzzleEditor?.drawings?.working) saveDrawing(puzzleEditor.drawings.working);
+});
 
 // ---------- generating ----------
 
@@ -941,7 +969,10 @@ function saveDrawing(drawing, { joinSet = false } = {}) {
   const view = puzzleEditor.drawings;
   view.working = drawing;
   const library = project?.puzzleDrawings ?? [];
-  const saved = { id: drawing.id, kind: drawing.kind, name: drawing.name, pixels: drawing.pixels, mix: drawing.mix };
+  // How solid it is on the board, when it isn't solid: leaving it out is how 100% is said, so that the usual
+  // drawing keeps nothing it doesn't need.
+  const opacity = drawing.opacity != null && drawing.opacity < 1 ? { opacity: drawing.opacity } : {};
+  const saved = { id: drawing.id, kind: drawing.kind, name: drawing.name, pixels: drawing.pixels, mix: drawing.mix, ...opacity };
   const standard = WeavePuzzle.standardDrawing(drawing.kind);
   for (const field of ['openPixels', 'bendPixels', 'flowPixels']) {
     if (standard[field]) saved[field] = drawing[field] ?? standard[field];

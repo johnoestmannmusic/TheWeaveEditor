@@ -101,6 +101,46 @@ public class PageRendererTests
     }
 
     [Fact]
+    public void RenderPage_ADrawingCarriesItsOpacityToTheBoard()
+    {
+        var project = new WeaveProject();
+        var ouros = MakePage("ouros", "ouros.html");
+        ouros.Nodes.Add(new Node
+        {
+            Id = "here",
+            Card = PlayableCard(),
+            Puzzle = new Puzzle
+            {
+                Objects =
+                {
+                    new PuzzleObject { Kind = PuzzleObjectKind.PuzzleWarp, Col = 1, Row = 1, TargetNodeId = "there" },
+                },
+            },
+        });
+        ouros.Nodes.Add(new Node { Id = "there", X = 100, Y = 100, Card = PlayableCard() });
+        project.Pages.Add(ouros);
+        // The Puzzle Warp's own drawing is half see-through, so the board draws it that way.
+        project.PuzzleDrawings =
+        [
+            new PuzzleDrawing
+            {
+                Id = "PuzzleWarp",
+                Kind = PuzzleObjectKind.PuzzleWarp,
+                Name = "Standard",
+                Pixels = new string('.', PuzzleDrawings.TilePixels),
+                Opacity = 0.5,
+                Mix = { new PuzzleMixColour { Role = "teleporter", Shade = 2, Percent = 100 } },
+            },
+        ];
+
+        using var parsed = System.Text.Json.JsonDocument.Parse(PuzzleJsonOf(new PageRenderer(project).RenderPage(ouros)));
+        var drawing = parsed.RootElement.GetProperty("drawings")[0];
+
+        Assert.Equal("PuzzleWarp", drawing.GetProperty("id").GetString());
+        Assert.Equal(0.5, drawing.GetProperty("opacity").GetDouble());
+    }
+
+    [Fact]
     public void RenderPage_APuzzleWarpToAPartOfAChain_ArrivesWhereTheLocationStands()
     {
         var project = new WeaveProject();

@@ -201,6 +201,23 @@ public class ProjectEditingTests
         Assert.Equal(0, key.Mix[0].Shade);
     }
 
+    // Solid is what a drawing is unless it says otherwise, so 100% is kept as nothing at all; anything less is
+    // kept, and anything outside 0 to 1 is refused - see ApplyPuzzleDrawingsEdit_RejectsAnInvalidDrawing.
+    [Fact]
+    public void ApplyPuzzleDrawingsEdit_KeepsAnOpacityBelowSolid_ButNotOneAtSolid()
+    {
+        var project = new WeaveProject();
+        var ghost = Drawing("presence", PuzzleObjectKind.PuzzleWarp);
+        ghost.Opacity = 0.5;
+        var solid = Drawing("solid");
+        solid.Opacity = 1;
+
+        ProjectEditing.ApplyPuzzleDrawingsEdit(project, [ghost, solid]);
+
+        Assert.Equal(0.5, project.PuzzleDrawings![0].Opacity);
+        Assert.Null(project.PuzzleDrawings![1].Opacity);
+    }
+
     public static TheoryData<Action<PuzzleDrawing>> InvalidDrawings => new()
     {
         d => d.Pixels = d.Pixels[1..],
@@ -219,6 +236,8 @@ public class ProjectEditingTests
         d => d.Mix[0].Percent = 101,
         d => d.Mix[0].Percent = 0,
         d => { d.Kind = PuzzleObjectKind.Gate; d.OpenPixels = "."; },
+        d => d.Opacity = 1.5,
+        d => d.Opacity = -0.05,
     };
 
     [Theory]
