@@ -571,7 +571,7 @@
   }
 
   // A square's worth of pixels for one object: a colour per pixel, or null where it's see-through.
-  function buildSprite(object, look, switchesActive, gemPhase = 0){
+  function buildSprite(object, look, switchesActive, gemPhase = 0, showCounts = false){
     let sprite = new Array(TILE_PX * TILE_PX).fill(null);
     let outline = hexToColor(look.palette.outline);
     let light = hexToColor(look.palette.light);
@@ -618,12 +618,13 @@
     if (object.kind === 'Lantern' && object.lit) sprite = glowing(sprite, light);
 
     // A Lit Lantern Pulse Tile glows as a Lantern does, and says how many of the ship's steps it has left in its
-    // middle. The glow goes on first, so the count sits on top of it. The editor's board is the puzzle itself, with no
-    // playthrough counting anything down, so there it shows the count it is set to.
+    // middle. The glow goes on first, so the count sits on top of it. A tile that isn't lit says nothing: its count is
+    // how much light it has left, so it appears as the tile lights and goes as it goes out - showCounts is the
+    // Editor's, which has no playthrough to light one and wants to see what each tile is set to.
     if (object.kind === 'LanternPulse') {
       if (object.lit) sprite = glowingPulse(sprite, light);
       let steps = object.charge ?? object.steps ?? PULSE_STEPS;
-      if (steps > 0) drawPixelCount(sprite, steps, light, outline);
+      if ((object.lit || showCounts) && steps > 0) drawPixelCount(sprite, steps, light, outline);
     }
 
     // A Gem Gate has a Gem where a Gate has its letter, in the same colours, so it reads from the same distance.
@@ -876,14 +877,14 @@
   // Sprites are only worth working out once per look, since there are only so many things to be drawn.
   const spriteCaches = new WeakMap();
 
-  function spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins, gemPhase){
+  function spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins, gemPhase, showCounts = false){
     if (object.kind === 'Stream') return `Stream|${object.variant ?? ''}|${object.direction}|${streamPhase}|${joins.back}|${joins.left}|${joins.right}`;
     if (object.kind === 'RotatorTile') return `RotatorTile|${object.variant ?? ''}|${object.direction}|${rotatorPhase}`;
     if (object.kind === 'Gem') return `Gem|${object.variant ?? ''}|${gemPhase}`;
-    return `${object.kind}|${object.variant ?? ''}|${object.letter ?? ''}|${object.symbol ?? ''}|${object.direction ?? ''}|${(object.kind === 'Gate' || object.kind === 'GemGate') && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}|${object.spin ?? 0}|${object.archeton ?? ''}|${object.charge ?? ''}|${object.steps ?? ''}`;
+    return `${object.kind}|${object.variant ?? ''}|${object.letter ?? ''}|${object.symbol ?? ''}|${object.direction ?? ''}|${(object.kind === 'Gate' || object.kind === 'GemGate') && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}|${object.spin ?? 0}|${object.archeton ?? ''}|${object.charge ?? ''}|${object.steps ?? ''}|${showCounts}`;
   }
 
-  function spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase = 0, gemPhase = 0){
+  function spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase = 0, gemPhase = 0, showCounts = false){
     let cache = spriteCaches.get(look);
     if (!cache) spriteCaches.set(look, cache = new Map());
 
@@ -891,12 +892,12 @@
     // A Finish on an edge has arrows running towards it - see withFinishArrows.
     let exit = object.kind === 'Finish' ? exitDirectionOf({ col: Math.round(object.col), row: Math.round(object.row) }) : null;
     let arrowPhase = exit ? finishPhase % FINISH_ARROW_SPACING : 0;
-    let key = spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins, gemPhase) + (exit ? `|${exit}|${arrowPhase}` : '');
+    let key = spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins, gemPhase, showCounts) + (exit ? `|${exit}|${arrowPhase}` : '');
     let sprite = cache.get(key);
     if (!sprite) {
       if (object.kind === 'Stream') sprite = buildAnimatedSprite(object, look, streamPhase, joins);
       else if (object.kind === 'RotatorTile') sprite = buildAnimatedSprite(object, look, rotatorPhase);
-      else sprite = buildSprite(object, look, switchesActive, gemPhase);
+      else sprite = buildSprite(object, look, switchesActive, gemPhase, showCounts);
       if (exit) sprite = withFinishArrows(sprite, look, exit, arrowPhase);
       cache.set(key, sprite);
     }
@@ -1023,6 +1024,8 @@
   //   is drawn - a guard shaking itself apart, or lunging as it shoves.
   // - warpFlash (0 to 1) washes the whole board out white, as a Warp Wisp's does.
   // - wispDrift (0 to 1) is how far round its slow up-and-down a Warp Wisp has got.
+  // - showCounts draws a Lantern Pulse Tile's count before it is lit. Its count is how much light it has left, so the
+  //   game only shows it on a tile that's lit; the Editor wants to see what each tile is set to.
   // - pairLetters says which Warp Wisp goes with which Warp Out Square, as a letter in the corner of each. The editor
   //   wants that; gameplay doesn't.
   // - pulses ([{ col, row, radius }]) draws each lit Lantern's pulse: a ring radius pixels out from its square's middle.
@@ -1080,7 +1083,7 @@
       // A Push Block shoved off a ledge leaps down it as the ship does off a Jump Tile: it keeps to the straight line it
       // was going along, and grows towards the middle of it - see puzzleRules.js's pushFrom, and trackFocus.js's leap.
       let grow = object.glide === 'push' && object.falls && along < 1 ? 1 + LEDGE_JUMP_RISE * Math.sin(Math.PI * along) : 1;
-      let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase, options.gemPhase ?? 0);
+      let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase, options.gemPhase ?? 0, options.showCounts);
       // A Gem Gate rattles where it stands when a Gem hits it, a pixel either side of itself; anything else can be
       // rattled by the caller, as a guard shaking itself apart is - see board.js.
       let shake = object.kind === 'GemGate' && options.gateShake

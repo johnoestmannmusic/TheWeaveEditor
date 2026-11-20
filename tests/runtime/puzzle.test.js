@@ -1645,7 +1645,7 @@ test('a Reset Switch gets its own palette colour, and is a pad with arrows, unli
   assert.equal([...shape].reverse().join(''), shape);
 });
 
-test('a Lantern Pulse Tile is a hollow ring in the light paint, and its count is drawn in its middle', () => {
+test('a Lantern Pulse Tile is a hollow ring in the light paint, and its count shows only once it is lit', () => {
   let drawing = standardDrawing('LanternPulse');
   assert.equal(drawing.pixels.length, TILE_PX * TILE_PX);
   assert.match(drawing.pixels, /^[.H]+$/, 'lines only, in the light paint, so it reads on a dark board');
@@ -1653,20 +1653,25 @@ test('a Lantern Pulse Tile is a hollow ring in the light paint, and its count is
   assert.equal(drawing.pixels[12 * TILE_PX + 12], '.', 'hollow in the middle, for the count');
 
   let { look } = artLook();
-  let one = blank(), other = blank();
-  renderBoard(one, [obj('LanternPulse', 0, 0, { steps: 3 })], look);
-  renderBoard(other, [obj('LanternPulse', 0, 0, { steps: 7 })], look);
-  assert.notDeepEqual(tile(one, 0, 0), tile(other, 0, 0), 'the count is what the tile says');
-  let middle = pixelAt(one, 12, 12);
-  assert.ok(middle[3] > 0, 'something is drawn where the count goes');
+  let unlit = blank(), lit = blank();
+  renderBoard(unlit, [obj('LanternPulse', 0, 0, { steps: 3 })], look);
+  renderBoard(lit, [obj('LanternPulse', 0, 0, { steps: 3, charge: 3, lit: true })], look);
+  assert.equal(pixelAt(unlit, 12, 12)[3], 0, 'nothing in the middle of a tile that has not been lit');
+  assert.ok(pixelAt(lit, 12, 12)[3] > 0, 'and a count there once it is');
+
+  // The Editor has no playthrough to light one, so it asks for the count anyway.
+  let editing = blank();
+  renderBoard(editing, [obj('LanternPulse', 0, 0, { steps: 3 })], look, { showCounts: true });
+  assert.ok(pixelAt(editing, 12, 12)[3] > 0, 'so an author can see what each tile is set to');
+  assert.notDeepEqual(tile(unlit, 0, 0), tile(editing, 0, 0), 'and the count is the only difference');
 });
 
 test('a Pulse Tile shows a count past nine as two digits', () => {
   let { look } = artLook();
   let two = blank(), twelve = blank(), nineteen = blank();
-  renderBoard(two, [obj('LanternPulse', 0, 0, { steps: 2 })], look);
-  renderBoard(twelve, [obj('LanternPulse', 0, 0, { steps: 12 })], look);
-  renderBoard(nineteen, [obj('LanternPulse', 0, 0, { steps: 19 })], look);
+  renderBoard(two, [obj('LanternPulse', 0, 0, { steps: 2, charge: 2, lit: true })], look);
+  renderBoard(twelve, [obj('LanternPulse', 0, 0, { steps: 12, charge: 12, lit: true })], look);
+  renderBoard(nineteen, [obj('LanternPulse', 0, 0, { steps: 19, charge: 19, lit: true })], look);
 
   // The digits drawn across the middle of the hollow, either side of its centre.
   let across = (image) => Array.from({ length: TILE_PX }, (_, x) => x)
@@ -1678,7 +1683,7 @@ test('a Pulse Tile shows a count past nine as two digits', () => {
 
 test('every count from 10 to 19 draws both of its digits', () => {
   let { look } = artLook();
-  let image = (steps) => { let one = blank(); renderBoard(one, [obj('LanternPulse', 0, 0, { steps })], look); return one; };
+  let image = (steps) => { let one = blank(); renderBoard(one, [obj('LanternPulse', 0, 0, { steps, charge: steps, lit: true })], look); return one; };
   // How wide the count is inside the ring, halo included: a single digit measures 9 to 11 pixels across, a pair 13 or
   // 14, so anything over 12 is both digits drawn. A glyph missing from PIXEL_LETTERS draws nothing at all - 10 once
   // read as a 1, because 0 wasn't in the table.

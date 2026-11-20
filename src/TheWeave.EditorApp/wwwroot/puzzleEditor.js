@@ -629,6 +629,9 @@ function drawPuzzleBoard(timeMs) {
       rotatorTimeMs: timeMs,
       switchesActive: !objects.some((object) => object.kind === 'Key'),
       showInvisible: true,
+      // A Pulse Tile's count, which the game only shows once the tile is lit: here there's no playthrough to light one,
+      // and an author wants to see what each tile is set to.
+      showCounts: true,
       // Which Warp Wisp goes with which Warp Out Square, since the ship is the only thing that games out which - and
       // the playtest and the exported site don't ask for it.
       pairLetters: true,
