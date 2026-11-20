@@ -88,10 +88,16 @@
     let elapsed = 0;
     let heldDirections = [];
     let queuedDirection = null;
+    // Whether the step being walked was asked for by something other than a press - a Stream carrying the ship, a
+    // Beam pushing it, a guard shoving it. Kept until the next step begins, so an arrival can tell the two apart.
+    let queuedByForce = false;
+    let forcedStep = false;
 
     function beginNextStep(){
       let direction = queuedDirection ?? heldDirections[heldDirections.length - 1] ?? null;
       queuedDirection = null;
+      forcedStep = queuedByForce;
+      queuedByForce = false;
       if (!direction) return false;
 
       facing = direction;
@@ -132,6 +138,9 @@
       // How far through the step underway it is, from 0 to 1, or 1 while it's standing still.
       get progress(){ return target ? elapsed / stepMs : 1; },
 
+      // Whether the step just walked was forced rather than pressed - see board.js's onArrive.
+      get stepForced(){ return forcedStep; },
+
       get position(){
         let from = grid.centerOf(current);
         if (!target) return from;
@@ -142,6 +151,7 @@
 
       press(direction){
         if (heldDirections.includes(direction)) return;
+        queuedByForce = false;
         heldDirections.push(direction);
         queuedDirection = direction;
       },
@@ -154,6 +164,7 @@
       // player moving this along, like a conveyor belt.
       queue(direction){
         queuedDirection = direction;
+        queuedByForce = true;
       },
 
       // Jumps straight to a square. Anything held carries on from there.
@@ -167,12 +178,14 @@
       releaseAll(){
         heldDirections = [];
         queuedDirection = null;
+        queuedByForce = false;
       },
 
       // Forgets presses waiting for their step, but not what's still held - for a caller that's
       // temporarily stopped calling update() and doesn't want those presses to fire afterward.
       clearQueue(){
         queuedDirection = null;
+        queuedByForce = false;
       },
 
       update(dtMs){

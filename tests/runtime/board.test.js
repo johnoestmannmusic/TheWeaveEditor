@@ -364,3 +364,21 @@ test('a Warp Wisp drifts on the spot, so a board with one on it is never still',
   assert.notEqual(later.options.wispDrift, first.options.wispDrift, 'it has moved on');
   assert.notEqual(later.key, first.key, 'so the board redraws itself');
 });
+
+test('a Pulse Tile counts down on the ship\'s own steps and not on the ones a Stream takes for it', () => {
+  let charges = [];
+  let play = createBoardPlay({ puzzle: { objects: [
+    obj('Start', 1, 5),
+    obj('LanternPulse', 2, 5, { steps: 3 }),
+    obj('Stream', 2, 5, { direction: 'Right' }),
+    obj('Stream', 3, 5, { direction: 'Right' }),
+  ] }, hooks: { onEvent: () => charges.push(tile().charge) } });
+  const tile = () => play.game.objects.find((o) => o.kind === 'LanternPulse');
+  play.mover.press('right');
+  play.mover.release('right');
+  run(play, BOARD_TIMING.stepMs + 30);
+  assert.deepEqual(charges, [3], 'the step onto it is free');
+  run(play, BOARD_TIMING.stepMs * 2 + 60);
+  assert.notDeepEqual(play.mover.cell, at(2, 5), 'the Stream carried it on');
+  assert.equal(tile().charge, 3, 'a carried step spends nothing');
+});

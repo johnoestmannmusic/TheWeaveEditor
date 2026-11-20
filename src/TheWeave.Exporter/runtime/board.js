@@ -168,7 +168,7 @@
         onArrive: game ? (arrived) => {
           play.dropping = false;
           game.settlePushes();
-          onEvent(game.shipArrivedAt(arrived));
+          onEvent(game.shipArrivedAt(arrived, { forced: play.mover.stepForced }));
           carry();
         } : undefined,
         // Walking into a Push Block pushes it on ahead, as the step begins - and so does a reflection, so that its block
