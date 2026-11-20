@@ -357,6 +357,13 @@ internal static class ProjectEditing
             if (obj.Kind != PuzzleObjectKind.PushBlock)
                 obj.Symbol = null;
 
+            // A Lantern Pulse Tile's count is one digit, so it is one of 1 to 9; one saved without it reads as the
+            // default rather than as nothing to show.
+            if (obj.Kind == PuzzleObjectKind.LanternPulse)
+                obj.Steps = Math.Clamp(obj.Steps ?? 3, 1, 9);
+            else
+                obj.Steps = null;
+
             if (obj.Kind == PuzzleObjectKind.Archeton && string.IsNullOrWhiteSpace(obj.Archeton))
                 throw new InvalidOperationException("An Archeton needs to say which one it is.");
             if (obj.Kind != PuzzleObjectKind.Archeton)

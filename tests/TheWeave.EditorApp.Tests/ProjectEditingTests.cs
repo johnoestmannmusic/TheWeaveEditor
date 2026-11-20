@@ -1339,6 +1339,26 @@ public class ProjectEditingTests
     }
 
     [Fact]
+    public void ValidatePuzzle_KeepsTheStepsOnALanternPulseTile_AndTakesThemOffEverythingElse()
+    {
+        var puzzle = new Puzzle
+        {
+            Objects =
+            [
+                new PuzzleObject { Kind = PuzzleObjectKind.LanternPulse, Col = 1, Row = 1, Steps = 5 },
+                new PuzzleObject { Kind = PuzzleObjectKind.LanternPulse, Col = 2, Row = 2 },
+                new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 3, Row = 3, Steps = 4 },
+            ],
+        };
+
+        ProjectEditing.ValidatePuzzle(puzzle);
+
+        Assert.Equal(5, puzzle.Objects[0].Steps);
+        Assert.Equal(3, puzzle.Objects[1].Steps); // no count saved reads as the default, so it has something to show
+        Assert.Null(puzzle.Objects[2].Steps);
+    }
+
+    [Fact]
     public void ValidatePuzzle_RefusesALetterThatIsNotOne_OnAPairThatMayHaveOne()
     {
         var puzzle = new Puzzle
