@@ -101,11 +101,13 @@
       warpFlashMs: null, // how long ago the ship was warped, for the board's white flash
     };
 
-    // A Stream carries the ship along, whatever's being pressed, and an Archeton's laser can push or send it back.
+    // A Stream carries the ship along, whatever's being pressed, and an Archeton's laser can push or send it back. A
+    // guard's shove is taken without turning the ship: it is thrown back the way it was going, and turning it round to
+    // face its own slide reads as it running rather than being shoved - see puzzleRules.js's shoving.
     function carry(){
       if (!game || play.finished || play.jump || play.teleport) return;
       let direction = game.carryDirection(play.mover.cell);
-      if (direction) play.mover.queue(direction);
+      if (direction) play.mover.queue(direction, { turn: !game.shoving });
     }
 
     // Acts on what puzzle.js says just happened, then tells the caller.

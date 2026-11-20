@@ -357,10 +357,10 @@ internal static class ProjectEditing
             if (obj.Kind != PuzzleObjectKind.PushBlock)
                 obj.Symbol = null;
 
-            // A Lantern Pulse Tile's count is one digit, so it is one of 1 to 9; one saved without it reads as the
-            // default rather than as nothing to show.
+            // A Lantern Pulse Tile's count is drawn as one or two digits, so it runs to 19; one saved without it reads
+            // as the default rather than as nothing to show.
             if (obj.Kind == PuzzleObjectKind.LanternPulse)
-                obj.Steps = Math.Clamp(obj.Steps ?? 3, 1, 9);
+                obj.Steps = Math.Clamp(obj.Steps ?? 3, 1, PuzzleObject.MaxLanternPulseSteps);
             else
                 obj.Steps = null;
 

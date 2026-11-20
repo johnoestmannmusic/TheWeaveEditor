@@ -355,7 +355,8 @@ function renderPuzzleTools() {
   }));
 
   const steps = document.getElementById('pe-steps');
-  steps.replaceChildren(...Array.from({ length: 9 }, (_, i) => i + 1).map((value) => {
+  // 1 to 19: a Pulse Tile's count is drawn as one or two digits - see puzzleRules.js's PULSE_MAX_STEPS.
+  steps.replaceChildren(...Array.from({ length: 19 }, (_, i) => i + 1).map((value) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.dataset.steps = value;

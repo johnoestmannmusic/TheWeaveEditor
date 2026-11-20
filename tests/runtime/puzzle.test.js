@@ -1035,6 +1035,18 @@ test('a Pulse Tile\'s count runs down with the ship\'s steps, and what it lit go
   assert.equal(find(g, 'Wall').revealed, false);
 });
 
+test('a Pulse Tile\'s count runs to 19, and is held between 1 and 19', () => {
+  let g = game(obj('LanternPulse', 2, 5, { steps: 25 }));
+  g.placeShip(at(2, 4));
+  g.shipArrivedAt(at(2, 5));
+  assert.equal(find(g, 'LanternPulse').charge, 19, 'no more than a tile can show');
+
+  let none = game(obj('LanternPulse', 2, 5, { steps: 0 }));
+  none.placeShip(at(2, 4));
+  none.shipArrivedAt(at(2, 5));
+  assert.equal(find(none, 'LanternPulse').charge, 1, 'nor fewer than one step of light');
+});
+
 test('a forced step doesn\'t spend a Pulse Tile\'s count, and a second tile keeps what the first let go', () => {
   let g = game(
     obj('LanternPulse', 2, 5, { steps: 1 }),
@@ -1647,6 +1659,21 @@ test('a Lantern Pulse Tile is a hollow ring in the light paint, and its count is
   assert.notDeepEqual(tile(one, 0, 0), tile(other, 0, 0), 'the count is what the tile says');
   let middle = pixelAt(one, 12, 12);
   assert.ok(middle[3] > 0, 'something is drawn where the count goes');
+});
+
+test('a Pulse Tile shows a count past nine as two digits', () => {
+  let { look } = artLook();
+  let two = blank(), twelve = blank(), nineteen = blank();
+  renderBoard(two, [obj('LanternPulse', 0, 0, { steps: 2 })], look);
+  renderBoard(twelve, [obj('LanternPulse', 0, 0, { steps: 12 })], look);
+  renderBoard(nineteen, [obj('LanternPulse', 0, 0, { steps: 19 })], look);
+
+  // The digits drawn across the middle of the hollow, either side of its centre.
+  let across = (image) => Array.from({ length: TILE_PX }, (_, x) => x)
+    .filter((x) => Math.abs(x - 11.5) < 8 && pixelAt(image, x, 11)[3] > 0);
+  assert.ok(across(twelve).length > across(two).length, 'two digits take more of the middle than one');
+  assert.notDeepEqual(tile(twelve, 0, 0), tile(nineteen, 0, 0), 'and they are not just the same picture');
+  assert.ok(across(nineteen).length > 0, 'nineteen is drawn');
 });
 
 test('a lit Pulse Tile glows outside its ring only, so its hollow stays hollow', () => {

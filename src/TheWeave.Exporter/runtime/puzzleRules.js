@@ -161,9 +161,9 @@
   // grid of squares: each row outward from it reaches 3, 3, 2 and 1 squares to either side.
   const LANTERN_REACH = 3.5;
   // How many of the ship's own steps a Lantern Pulse Tile stays lit for, unless it says otherwise, and the most it
-  // can be given - it shows its count as one digit in the middle of itself.
+  // can be given - it shows its count in the middle of itself, as two digits past nine.
   const PULSE_STEPS = 3;
-  const PULSE_MAX_STEPS = 9;
+  const PULSE_MAX_STEPS = 19;
   // How long something takes to fade out once nothing lights it any more.
   const PULSE_FADE_MS = 250;
   // How many Jump Tiles can launch the ship one after another before the next one lets it stay.
@@ -556,7 +556,7 @@
     // as it would a Lantern, so what it lights stays hidden until the ring reaches it - see board.js's pulses.
     function lightPulse(tile){
       let hidden = [...floors, ...objects].filter(thing => !thing.revealed);
-      tile.charge = Math.min(PULSE_MAX_STEPS, tile.steps ?? PULSE_STEPS);
+      tile.charge = Math.max(1, Math.min(PULSE_MAX_STEPS, tile.steps ?? PULSE_STEPS));
       tile.lit = true;
       for (const thing of [...floors, ...objects]) if (withinReach(tile, thing)) thing.revealed = true;
       return { lit: { col: tile.col, row: tile.row }, revealed: hidden.filter(thing => thing.revealed) };
@@ -1549,6 +1549,10 @@
       // stops - and otherwise a Stream, an Archeton's Beam pushing it away, or a Block's laser sending it back out of
       // its reach, as long as it can go - see pushedByBeam and hurtBack. Either way the caller moves the ship along, a
       // square at a time.
+      // Whether the carry under way is a guard's shove rather than anything else - what board.js asks so that the ship
+      // can be thrown backwards without being turned to face it.
+      get shoving(){ return !!shove; },
+
       carryDirection(cell){
         let direction = shoveDirection(cell) ?? streams.get(cellKey(cell)) ?? pushedByBeam(cell) ?? hurtBack(cell) ?? hurtByReflection(cell);
         return direction ? MOVER_DIRECTIONS[direction] : null;

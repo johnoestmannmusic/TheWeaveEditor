@@ -92,15 +92,20 @@
     // Beam pushing it, a guard shoving it. Kept until the next step begins, so an arrival can tell the two apart.
     let queuedByForce = false;
     let forcedStep = false;
+    // Whether taking the step waiting to be walked turns the mover to face it. A shove doesn't: the ship is thrown
+    // back the way it was going, and turning it round to face its own backward slide reads as it running, not sliding.
+    let queuedTurn = true;
 
     function beginNextStep(){
       let direction = queuedDirection ?? heldDirections[heldDirections.length - 1] ?? null;
       queuedDirection = null;
       forcedStep = queuedByForce;
       queuedByForce = false;
+      let turn = queuedTurn;
+      queuedTurn = true;
       if (!direction) return false;
 
-      facing = direction;
+      if (turn) facing = direction;
       let next = grid.neighbor(current, direction);
       if (!next) {
         onBlocked(current, null, direction);
@@ -152,6 +157,7 @@
       press(direction){
         if (heldDirections.includes(direction)) return;
         queuedByForce = false;
+        queuedTurn = true;
         heldDirections.push(direction);
         queuedDirection = direction;
       },
@@ -161,10 +167,12 @@
       },
 
       // Asks for one step in a direction as if it had been tapped, for something other than the
-      // player moving this along, like a conveyor belt.
-      queue(direction){
+      // player moving this along, like a conveyor belt. turn: false takes the step without turning to face it, for a
+      // shove that throws the mover backwards.
+      queue(direction, { turn = true } = {}){
         queuedDirection = direction;
         queuedByForce = true;
+        queuedTurn = turn;
       },
 
       // Jumps straight to a square. Anything held carries on from there.
@@ -179,6 +187,7 @@
         heldDirections = [];
         queuedDirection = null;
         queuedByForce = false;
+        queuedTurn = true;
       },
 
       // Forgets presses waiting for their step, but not what's still held - for a caller that's
@@ -186,6 +195,7 @@
       clearQueue(){
         queuedDirection = null;
         queuedByForce = false;
+        queuedTurn = true;
       },
 
       update(dtMs){

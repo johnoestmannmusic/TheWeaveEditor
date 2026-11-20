@@ -102,22 +102,34 @@
     return inside(x, y) && !(inside(x - 1, y) && inside(x + 1, y) && inside(x, y - 1) && inside(x, y + 1));
   }
 
-  function drawPixelLetter(sprite, letter, color, halo, scale){
-    let rows = PIXEL_LETTERS[letter]?.split(' ');
+  // One glyph of PIXEL_LETTERS in a sprite, its top-left at left/top, at a size. The halo goes around its outside only.
+  function drawGlyph(sprite, rows, left, top, color, halo, scale = 1){
     if (!rows) return;
-
-    let left = Math.floor((TILE_PX - 5 * scale) / 2), top = Math.floor((TILE_PX - 7 * scale) / 2);
-    let isLetter = (x, y) => {
+    let isOn = (x, y) => {
       let col = Math.floor((x - left) / scale), row = Math.floor((y - top) / scale);
       return rows[row]?.[col] === '1';
     };
 
     for (let y = 0; y < TILE_PX; y++) {
       for (let x = 0; x < TILE_PX; x++) {
-        if (isLetter(x, y)) sprite[y * TILE_PX + x] = color;
-        else if (halo && (isLetter(x - 1, y) || isLetter(x + 1, y) || isLetter(x, y - 1) || isLetter(x, y + 1))) sprite[y * TILE_PX + x] = halo;
+        if (isOn(x, y)) sprite[y * TILE_PX + x] = color;
+        else if (halo && (isOn(x - 1, y) || isOn(x + 1, y) || isOn(x, y - 1) || isOn(x, y + 1))) sprite[y * TILE_PX + x] = halo;
       }
     }
+  }
+
+  // A letter in the middle of a square, as gates, switches and teleporters wear one.
+  function drawPixelLetter(sprite, letter, color, halo, scale){
+    drawGlyph(sprite, PIXEL_LETTERS[letter]?.split(' '), Math.floor((TILE_PX - 5 * scale) / 2), Math.floor((TILE_PX - 7 * scale) / 2), color, halo, scale);
+  }
+
+  // A count in the middle of a square: one digit, or two side by side past nine, centred as a whole with a pixel
+  // between them. A Lantern Pulse Tile's count runs to 19 - see puzzleRules.js's PULSE_MAX_STEPS.
+  function drawPixelCount(sprite, count, color, halo){
+    let text = String(count);
+    let width = text.length * 5 + (text.length - 1);
+    let left = Math.floor((TILE_PX - width) / 2), top = Math.floor((TILE_PX - 7) / 2);
+    for (let i = 0; i < text.length; i++) drawGlyph(sprite, PIXEL_LETTERS[text[i]]?.split(' '), left + i * 6, top, color, halo);
   }
 
   // A letter small enough to sit in the corner of a square without covering what it's beside. Only the editor draws
@@ -608,7 +620,7 @@
     if (object.kind === 'LanternPulse') {
       if (object.lit) sprite = glowingPulse(sprite, light);
       let steps = object.charge ?? object.steps ?? PULSE_STEPS;
-      if (steps > 0) drawPixelLetter(sprite, String(steps), light, outline, 1);
+      if (steps > 0) drawPixelCount(sprite, steps, light, outline);
     }
 
     // A Gem Gate has a Gem where a Gate has its letter, in the same colours, so it reads from the same distance.

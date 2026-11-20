@@ -436,3 +436,17 @@ test('a guard that resonates is drawn shaking and sinking, then is not drawn at 
   run(play, 400);
   assert.equal(play.frame(0, {}).list.some((o) => o.kind === 'Archeton'), false, 'and gone once it has sunk');
 });
+
+test('a guard\'s shove throws the ship back without turning it round', () => {
+  const GUARD = { id: 'resonant-guard', name: 'Resonant Guard', parts: [{ kind: 'Detect', range: 1 }, { kind: 'Shove', distance: 3 }, { kind: 'Resonance' }] };
+  let play = createBoardPlay({ puzzle: { objects: [
+    obj('Start', 5, 7),
+    obj('Archeton', 5, 5, { archeton: 'resonant-guard', direction: 'Down' }),
+  ], archetons: [GUARD] } });
+  play.mover.press('up');
+  play.mover.release('up');
+  run(play, BOARD_TIMING.stepMs + 20);          // caught on (5,6)
+  run(play, BOARD_TIMING.stepMs * 3 + 60);      // and shoved 3 squares back down
+  assert.deepEqual(play.mover.cell, at(5, 9));
+  assert.equal(play.mover.facing, 'up', 'it slid back without turning round');
+});

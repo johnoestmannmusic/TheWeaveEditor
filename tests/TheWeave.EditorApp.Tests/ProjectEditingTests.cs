@@ -1347,7 +1347,9 @@ public class ProjectEditingTests
             [
                 new PuzzleObject { Kind = PuzzleObjectKind.LanternPulse, Col = 1, Row = 1, Steps = 5 },
                 new PuzzleObject { Kind = PuzzleObjectKind.LanternPulse, Col = 2, Row = 2 },
-                new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 3, Row = 3, Steps = 4 },
+                new PuzzleObject { Kind = PuzzleObjectKind.LanternPulse, Col = 3, Row = 3, Steps = 19 },
+                new PuzzleObject { Kind = PuzzleObjectKind.LanternPulse, Col = 4, Row = 4, Steps = 25 },
+                new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 5, Row = 5, Steps = 4 },
             ],
         };
 
@@ -1355,7 +1357,9 @@ public class ProjectEditingTests
 
         Assert.Equal(5, puzzle.Objects[0].Steps);
         Assert.Equal(3, puzzle.Objects[1].Steps); // no count saved reads as the default, so it has something to show
-        Assert.Null(puzzle.Objects[2].Steps);
+        Assert.Equal(19, puzzle.Objects[2].Steps); // as high as a tile's count goes
+        Assert.Equal(19, puzzle.Objects[3].Steps); // and anything higher is held to it
+        Assert.Null(puzzle.Objects[4].Steps);
     }
 
     [Fact]

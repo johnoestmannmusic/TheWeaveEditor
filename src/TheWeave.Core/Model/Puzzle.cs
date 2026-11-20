@@ -130,6 +130,9 @@ public enum PuzzleDirection
 /// <summary>One thing on a puzzle's board. A square holds one object, plus optionally a floor tile (a Stream, RotatorTile or Pipe) under it.</summary>
 public sealed class PuzzleObject
 {
+    /// <summary>The most steps a Lantern Pulse Tile can be given: its count is drawn as two digits past nine.</summary>
+    public const int MaxLanternPulseSteps = 19;
+
     public PuzzleObjectKind Kind { get; set; }
     public int Col { get; set; }
     public int Row { get; set; }
@@ -166,8 +169,9 @@ public sealed class PuzzleObject
     public bool Invisible { get; set; }
 
     /// <summary>
-    /// LanternPulse only: how many of the ship's own steps it stays lit for, from 1 to 9 - one digit in its middle. A
-    /// tile with none saved reads as 3. Left out of the project file when it isn't a Lantern Pulse Tile.
+    /// LanternPulse only: how many of the ship's own steps it stays lit for, from 1 to
+    /// PuzzleObject.MaxLanternPulseSteps - shown in its middle, as two digits past nine. A tile with none saved reads
+    /// as 3. Left out of the project file when it isn't a Lantern Pulse Tile.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Steps { get; set; }
