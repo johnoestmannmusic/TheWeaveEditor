@@ -1363,6 +1363,28 @@ public class ProjectEditingTests
     }
 
     [Fact]
+    public void ValidatePuzzle_KeepsTheLetterOnACrane_AndTakesItOffAnythingElse()
+    {
+        var puzzle = new Puzzle
+        {
+            Objects =
+            [
+                new PuzzleObject { Kind = PuzzleObjectKind.Crane, Col = 1, Row = 1, Letter = "A" },
+                new PuzzleObject { Kind = PuzzleObjectKind.Crane, Col = 6, Row = 1, Letter = "A" },
+                new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 3, Row = 3, Letter = "B" },
+            ],
+        };
+
+        ProjectEditing.ValidatePuzzle(puzzle);
+
+        // A crane and its partner are paired by letter, exactly as a Gate's is: without it they can never find each
+        // other, and every edit comes back through here.
+        Assert.Equal("A", puzzle.Objects[0].Letter);
+        Assert.Equal("A", puzzle.Objects[1].Letter);
+        Assert.Null(puzzle.Objects[2].Letter);
+    }
+
+    [Fact]
     public void ValidatePuzzle_RefusesALetterThatIsNotOne_OnAPairThatMayHaveOne()
     {
         var puzzle = new Puzzle

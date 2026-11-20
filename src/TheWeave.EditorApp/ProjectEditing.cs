@@ -337,7 +337,8 @@ internal static class ProjectEditing
             // pair that has one, since a plain Archeton hasn't. Everything else has its letter taken away. Taking the
             // Wisp's away here is what left every Wisp with nothing to find its square by: the editor never saw the
             // letter again, since every edit comes back from here.
-            var needsLetter = obj.Kind is PuzzleObjectKind.Gate or PuzzleObjectKind.Switch or PuzzleObjectKind.Teleporter;
+            var needsLetter = obj.Kind is PuzzleObjectKind.Gate or PuzzleObjectKind.Switch or PuzzleObjectKind.Teleporter
+                or PuzzleObjectKind.Crane;
             var mayHaveLetter = needsLetter || obj.Kind is PuzzleObjectKind.Archeton or PuzzleObjectKind.WarpOut;
             if (needsLetter && (obj.Letter is not { Length: 1 } || obj.Letter[0] is < 'A' or > 'Z'))
                 throw new InvalidOperationException($"A {obj.Kind} needs a letter from A to Z.");

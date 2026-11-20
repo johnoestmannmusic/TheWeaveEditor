@@ -22,6 +22,12 @@ public enum PuzzleObjectKind
     /// <summary>Stepping on this moves the ship to the other Teleporter with the same letter.</summary>
     Teleporter,
 
+    /// <summary>
+    /// One of a pair sharing a letter. Whatever enters it - the ship, a Push Block, an Archeton - is picked up by a claw
+    /// and set down on the other Crane square, half a second later. See runtime/puzzleRules.js's beginCrane.
+    /// </summary>
+    Crane,
+
     /// <summary>A conveyor belt, carrying the ship and whatever's placed on it in its Direction.</summary>
     Stream,
 
@@ -83,6 +89,13 @@ public enum PuzzleObjectKind
     /// ArchetonDefinition.LaserDrawing. A kind so that it can be drawn in the Drawings view like anything else.
     /// </summary>
     Laser,
+
+    /// <summary>
+    /// Not placed on a board: the claw a Crane picks things up with, drawn coming down on the square it takes something
+    /// from and on the one it puts it down on - see runtime/puzzleRules.js's advanceCranes. A kind so that it can be
+    /// drawn in the Drawings view like anything else, as Laser is.
+    /// </summary>
+    CraneArm,
 
     /// <summary>Stepping on this collects it, and collecting the last one on the board opens its GemGate.</summary>
     Gem,
@@ -294,6 +307,7 @@ public static class PuzzleDrawings
         PuzzleObjectKind.ResetSwitch, PuzzleObjectKind.Pipe, PuzzleObjectKind.PipeSwitch, PuzzleObjectKind.Edge,
         PuzzleObjectKind.Archeton, PuzzleObjectKind.Laser, PuzzleObjectKind.Gem, PuzzleObjectKind.GemGate,
         PuzzleObjectKind.WarpOut, PuzzleObjectKind.PuzzleWarp,
+        PuzzleObjectKind.Crane, PuzzleObjectKind.CraneArm,
     };
 
     /// <summary>The kinds animated as they flow: a Still layer, and a Flow layer that moves along it.</summary>
