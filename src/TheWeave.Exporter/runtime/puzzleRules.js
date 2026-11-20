@@ -172,11 +172,16 @@
   const PULSE_MAX_STEPS = 19;
   // How long something takes to fade out once nothing lights it any more.
   const PULSE_FADE_MS = 250;
-  // How long a Move Crane takes to pick something up and set it down, and when in it the thing changes squares: the
-  // claw comes down on it and takes hold, and half way through it is the other square's, with the claw there to put it
-  // down.
-  const CRANE_MS = 500;
-  const CRANE_PICKUP_MS = CRANE_MS / 2;
+  // How a Move Crane's pickup is timed, in ms: it comes down on what it is taking, rests on it, and pulls it up into a
+  // fade; then does the reverse on the other square, where the way down and the way up swap over. The thing changes
+  // squares at the end of the first half, which is the instant the fade has just taken it out at one square and not
+  // yet brought it in at the other.
+  const CRANE_TIMING = { dropMs: 300, restMs: 200, liftMs: 200 };
+  // How far above its own square the claw holds what it has taken, in squares - high enough to read as being hauled
+  // out of the board rather than nudged.
+  const CRANE_LIFT = 1;
+  const CRANE_PICKUP_MS = CRANE_TIMING.dropMs + CRANE_TIMING.restMs + CRANE_TIMING.liftMs;
+  const CRANE_MS = CRANE_PICKUP_MS * 2;
   // How many Jump Tiles can launch the ship one after another before the next one lets it stay.
   const MAX_JUMPS_IN_A_ROW = 8;
   // sokoban.js's directions are lower case, and a puzzle's are capitalized as they are in the project file.
@@ -1732,6 +1737,27 @@
     return { from, to: reflectionPosition(reflection, ship, tilePx) };
   }
 
+  // Where a Move Crane's claw is, ms into a pickup, and how much of what it holds shows: { cell, lift, alpha }, lift
+  // being how far above that square the claw is in squares and alpha how much of the thing in it is drawn. Down, rest,
+  // up into a fade - and then the same the other way round on the far square: down out of the fade, rest, up again.
+  function cranePose(from, to, ms){
+    let { dropMs, restMs, liftMs } = CRANE_TIMING;
+    let pose = (cell, lift, alpha) => ({ cell, lift, alpha });
+    if (ms < dropMs) return pose(from, CRANE_LIFT * (1 - ms / dropMs), 1);
+    if (ms < dropMs + restMs) return pose(from, 0, 1);
+    if (ms < CRANE_PICKUP_MS) {
+      let along = (ms - dropMs - restMs) / liftMs;
+      return pose(from, CRANE_LIFT * along, 1 - along);
+    }
+    let back = ms - CRANE_PICKUP_MS;
+    if (back < liftMs) {
+      let along = back / liftMs;
+      return pose(to, CRANE_LIFT * (1 - along), along);
+    }
+    if (back < liftMs + restMs) return pose(to, 0, 1);
+    return pose(to, CRANE_LIFT * Math.min(1, (back - liftMs - restMs) / dropMs), 1);
+  }
+
   // ---------- timing ----------
 
   // How long things take on a board, shared by the game (main.js) and the Puzzle Editor's playtest, so that a puzzle
@@ -1794,5 +1820,5 @@
     return [...after.filter(object => !sweeps(object)), ...leaving, ...arriving].filter(object => (object.fade ?? 1) > 0);
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, PULSE_MAX_STEPS, PULSE_FADE_MS, CRANE_MS, CRANE_PICKUP_MS, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
+  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, PULSE_MAX_STEPS, PULSE_FADE_MS, CRANE_MS, CRANE_PICKUP_MS, CRANE_TIMING, CRANE_LIFT, cranePose, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
 });

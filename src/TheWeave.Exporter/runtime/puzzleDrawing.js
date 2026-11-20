@@ -1075,8 +1075,8 @@
   // - pairLetters says which Warp Wisp goes with which Warp Out Square, as a letter in the corner of each. The editor
   //   wants that; gameplay doesn't.
   // - pulses ([{ col, row, radius }]) draws each lit Lantern's pulse: a ring radius pixels out from its square's middle.
-  // - cranes ([{ from, to, along }]) draws a Move Crane's claw: coming down over from during the first half of along,
-  //   and resting on to for the second.
+  // - cranes ([{ cell, lift }]) draws a Move Crane's claw over a square, held lift squares above it: the pose
+  //   puzzleRules.js's cranePose gives for how far through its pickup it is.
   // - pushHints ([{ col, row, direction, bob }], or one as pushHint) show that the Push Block on each square can be
   //   pushed: an arrow just
   //   past it, pointing the way it would go, bob pixels further out as it bobs.
@@ -1362,20 +1362,13 @@
     }
   }
 
-  // A Move Crane's claw, coming down on the square it takes something from and resting on the one it sets it down on.
-  // It is drawn over the board rather than into it, so it sits over whatever it is lifting - see puzzleRules.js's
-  // advanceCranes. The arm itself is the CraneArm drawing, so its pixels are the Drawings view's to change.
+  // A Move Crane's claw, over the square it is working on and held lift squares above it - coming down on what it
+  // takes, resting, and hauling it up into the fade. It is drawn over the board rather than into it, so it sits over
+  // whatever it holds - see puzzleRules.js's cranePose. The arm is the CraneArm drawing, so its pixels are the Drawings
+  // view's to change.
   function drawCrane(image, crane, look, originY){
-    let along = Math.min(1, crane.along / 0.5);
-    let cell = crane.from;
-    if (crane.along >= 0.5) {
-      cell = crane.to;
-      along = 1;
-    }
     let sprite = spriteFor({ kind: 'CraneArm' }, look, true, 0, 0, null);
-    // Coming down: it starts a square above where it will hold, and is clipped by the top of the board on the way.
-    let lift = Math.round((1 - along) * TILE_PX);
-    blit(image, sprite, cell.col * TILE_PX, cell.row * TILE_PX - lift + originY);
+    blit(image, sprite, crane.cell.col * TILE_PX, crane.cell.row * TILE_PX - Math.round(crane.lift * TILE_PX) + originY);
   }
 
   // An arrow pointing right, before it's turned the way a push would go.

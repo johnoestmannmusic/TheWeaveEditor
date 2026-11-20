@@ -36,9 +36,6 @@
   // A guard's shove: it lunges into the ship's square and back, over SHOVE_MS, as far as SHOVE_LUNGE of the way.
   const SHOVE_MS = 400;
   const SHOVE_LUNGE = 0.6;
-  // How far a claw lifts what it is holding off its square, in squares: a little, so it reads as picked up rather than
-  // as jumping.
-  const CRANE_LIFT = 0.35;
   // How long a guard with a Resonance part shakes before it starts sinking into the ground, and then how long that
   // takes - the same sink a matched block does. It shakes for the same second each time a Pulse Tile lights, and harder
   // the more of them are lit, up to RESONANCE_SHAKE_MAX_PX - see puzzleRules.js's resonanceShake.
@@ -375,14 +372,13 @@
       // puzzleRules.js's advanceCranes.
       let clawed = game?.cranes.find(crane => crane.ship) ?? null;
       if (clawed) {
-        let along = Math.min(1, clawed.ms / WeavePuzzle.CRANE_MS);
-        let holding = along < 0.5 ? clawed.from : clawed.to;
+        let pose = WeavePuzzle.cranePose(clawed.from, clawed.to, clawed.ms);
         return {
-          x: (holding.col + 0.5) * TILE_PX,
-          y: (holding.row + 0.5) * TILE_PX - Math.sin(Math.PI * along) * TILE_PX * CRANE_LIFT,
+          x: (pose.cell.col + 0.5) * TILE_PX,
+          y: (pose.cell.row + 0.5) * TILE_PX - pose.lift * TILE_PX,
           t: null,
           spin: 0,
-          opacity: along < 0.5 ? 1 - along * 2 : (along - 0.5) * 2,
+          opacity: pose.alpha,
         };
       }
       if (play.teleport) {
@@ -469,10 +465,10 @@
       if (game.objects.some(object => object.kind === 'Gem')) key.push('g', gemStep);
       let gemShots = play.gemShots.map(shot => ({ from: shot.from, to: shot.to, along: Math.min(1, shot.ms / GEM_SHOT_MS) }));
       for (const shot of gemShots) key.push('m', Math.round(shot.along * TILE_PX));
-      // Each claw is drawn where it is working, so how far through its pickup it is goes in the key too - the ship's
-      // included, which has no object of its own to fade.
-      let cranes = (game.cranes ?? []).map(crane => ({ from: crane.from, to: crane.to, along: Math.min(1, crane.ms / WeavePuzzle.CRANE_MS) }));
-      for (const crane of cranes) key.push('n', Math.round(crane.along * TILE_PX));
+      // Each claw is drawn over the square it is working on, held so far above it: both go in the key, the ship's
+      // included, which has no object of its own to fade - see puzzleRules.js's cranePose.
+      let cranes = (game.cranes ?? []).map(crane => WeavePuzzle.cranePose(crane.from, crane.to, crane.ms));
+      for (const crane of cranes) key.push('n', crane.cell.col, crane.cell.row, Math.round(crane.lift * TILE_PX));
       // The Gate rattles when a Gem hits it, a pixel either side of itself, settling as it goes.
       let gate = play.gemShakeMs === null || play.gemShakeMs >= GEM_SHAKE_MS ? null : game.objects.find(object => object.kind === 'GemGate');
       let shake = gate ? { col: gate.col, row: gate.row, dx: Math.round(Math.sin(play.gemShakeMs / 18) * 2 * (1 - play.gemShakeMs / GEM_SHAKE_MS)) } : null;
@@ -500,16 +496,16 @@
       floors = fadedBy(hideUnreached(floors));
       objects = fadedBy(hideUnreached(objects));
 
-      // Whatever a claw is holding is lifted off its square and faded with it: the rules have moved it by the time it
-      // starts to reappear, so one mapping covers both halves - see puzzleRules.js's advanceCranes.
+      // Whatever a claw is holding is hauled up out of its square and faded, then comes down into the other one out of
+      // the fade: the rules have moved it by the time that half starts, so one pose covers both - see cranePose.
       for (const crane of game.cranes ?? []) {
         if (crane.ship) continue;
-        let along = Math.min(1, crane.ms / WeavePuzzle.CRANE_MS);
-        key.push('c', Math.round(along * 10), crane.from.col, crane.from.row);
+        let pose = WeavePuzzle.cranePose(crane.from, crane.to, crane.ms);
+        key.push('c', Math.round(pose.alpha * 10), Math.round(pose.lift * TILE_PX));
         objects = objects.map(object => object === crane.thing ? {
           ...object,
-          fade: along < 0.5 ? 1 - along * 2 : (along - 0.5) * 2,
-          lungeY: -Math.round(Math.sin(Math.PI * along) * TILE_PX * CRANE_LIFT),
+          fade: pose.alpha,
+          lungeY: -Math.round(pose.lift * TILE_PX),
         } : object);
       }
 
