@@ -209,9 +209,10 @@ public static class ProjectValidator
 
         foreach (var archeton in library)
         {
-            var sees = archeton.Parts.Any(p => p.Kind == ArchetonPartKind.Beam);
+            var sees = archeton.Parts.Any(p => p.Kind is ArchetonPartKind.Beam or ArchetonPartKind.Detect);
             // A Warp is something done to the ship, whether or not the Archeton can see or move.
-            var acts = archeton.Parts.Any(p => p.Kind is ArchetonPartKind.Push or ArchetonPartKind.Block or ArchetonPartKind.Warp);
+            var acts = archeton.Parts.Any(p => p.Kind is ArchetonPartKind.Push or ArchetonPartKind.Block or ArchetonPartKind.Warp
+                or ArchetonPartKind.Shove or ArchetonPartKind.Resonance);
             var moves = archeton.Parts.Any(p => p.Kind is ArchetonPartKind.Slide or ArchetonPartKind.Sequence);
             if (!sees && !moves && !acts)
                 Warn($"Archeton '{archeton.Name}' has no Beam to see the ship with, nor a Slide or Move Sequence to move with, so it does nothing.");

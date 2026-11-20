@@ -695,6 +695,25 @@ public class ProjectValidatorTests
         Assert.Contains(messages, m => m.Contains("'Idle'") && m.Contains("does nothing"));
     }
 
+    [Fact]
+    public void ResonantGuard_HasSomethingToSeeWithAndSomethingToDo_SoIsNotReportedAsDoingNothing()
+    {
+        var project = new WeaveProject
+        {
+            Pages = { MakePage("ouros", new Node { Id = "track", Card = new Card(), Puzzle = new Puzzle() }) },
+            Archetons =
+            [
+                new ArchetonDefinition
+                {
+                    Id = "guard", Name = "Guard",
+                    Parts = [new ArchetonPart { Kind = ArchetonPartKind.Detect, Range = 1 }, new ArchetonPart { Kind = ArchetonPartKind.Shove, Distance = 3 }],
+                },
+            ],
+        };
+
+        Assert.DoesNotContain(ProjectValidator.Validate(project), i => i.Message.Contains("does nothing") || i.Message.Contains("has nothing like a Block"));
+    }
+
     // A Puzzle Warp is only any use if it leads to a puzzle the site can actually open, and a warp back into its own
     // board is just a restart.
     [Fact]
