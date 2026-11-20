@@ -707,7 +707,7 @@ main.behind-puzzle-editor {
   background: var(--selected);
 }
 
-#pe-directions, #pe-gate-states, #pe-visibilities, #pe-letters, #pe-symbols {
+#pe-directions, #pe-gate-states, #pe-visibilities, #pe-letters, #pe-symbols, #pe-steps {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
@@ -724,6 +724,16 @@ main.behind-puzzle-editor {
 
 #pe-symbols {
   grid-template-columns: repeat(5, 1fr);
+}
+
+#pe-steps {
+  grid-template-columns: repeat(9, 1fr);
+  gap: 2px;
+}
+
+#pe-steps button {
+  padding: 3px 0;
+  font-size: 12px;
 }
 
 #pe-directions button, #pe-gate-states button, #pe-visibilities button, #pe-letters button, #pe-symbols button {

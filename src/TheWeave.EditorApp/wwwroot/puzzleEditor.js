@@ -18,6 +18,7 @@ const PUZZLE_TOOLS = [
   { kind: 'RotatorTile', label: 'Rotator Tile', hint: 'Moves anything on it along to the next Rotator Tile, once per second, while the ship is on a Rotator Switch. The ship can walk on it freely. Drag to paint.', paints: true, direction: true, canHide: true },
   { kind: 'RotatorSwitch', label: 'Rotator Switch', hint: 'While the ship is on this, Rotator Tiles move.', canHide: true },
   { kind: 'Lantern', label: 'Lantern', hint: 'Stepping on this lights it for good, revealing invisible things within 3 squares, in a circle.', canHide: true },
+  { kind: 'LanternPulse', label: 'Lantern Pulse', hint: 'Stepping on this lights it, revealing invisible things within 3 squares, in a circle - but only for its count of your own steps, shown in its middle. When it runs out they fade back out. Stepping on it again puts the count back.', steps: true, canHide: true },
   { kind: 'PushBlock', label: 'Push Block', hint: 'Walking into it pushes it a square, onto anything but another object. Two or more with the same symbol, side by side, sink into the ground.', symbol: true, canHide: true },
   { kind: 'JumpTile', label: 'Jump Tile', hint: 'Stepping on it launches the ship 2 squares the way it points, over anything in between, or 1 if it can\'t land that far.', direction: true, canHide: true },
   { kind: 'ResetSwitch', label: 'Reset Switch', hint: 'Stepping on this puts every object but Walls back as the puzzle started: moved ones return, sunk blocks and Keys come back, and Gates and Lanterns are as they began. The ship stays put, and Gems you have collected stay collected.', canHide: true },
@@ -96,6 +97,7 @@ function openPuzzleEditor(pageId, nodeId) {
     symbol: 'Circle',
     gateOpen: false,
     invisible: false,
+    steps: 3, // how long a Lantern Pulse Tile is lit for - see PUZZLE_TOOLS
     warpTarget: null, // the location the Puzzle Warp tool places a warp to - see warpTargetChoices
     choices: {}, // kind -> the id of the drawing set it's placed from, see placingSet
     objects: [],
@@ -352,6 +354,20 @@ function renderPuzzleTools() {
     return button;
   }));
 
+  const steps = document.getElementById('pe-steps');
+  steps.replaceChildren(...Array.from({ length: 9 }, (_, i) => i + 1).map((value) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.steps = value;
+    button.textContent = value;
+    button.title = `Lit for ${value} of your own steps`;
+    button.addEventListener('click', () => {
+      puzzleEditor.steps = value;
+      showPuzzleTool();
+    });
+    return button;
+  }));
+
   renderWarpTargets();
   showPuzzleTool();
 }
@@ -426,6 +442,8 @@ function showPuzzleTool() {
     button.classList.toggle('active', button.dataset.direction === puzzleEditor.direction);
   for (const button of document.querySelectorAll('#pe-symbols button'))
     button.classList.toggle('active', button.dataset.symbol === puzzleEditor.symbol);
+  for (const button of document.querySelectorAll('#pe-steps button'))
+    button.classList.toggle('active', Number(button.dataset.steps) === puzzleEditor.steps);
 
   for (const button of document.querySelectorAll('#pe-letters button'))
     button.classList.toggle('active', button.dataset.letter === puzzleEditor.letter);
@@ -440,6 +458,7 @@ function showPuzzleTool() {
   document.getElementById('pe-gate-state-row').hidden = !tool.gateState;
   document.getElementById('pe-direction-row').hidden = !tool.direction;
   document.getElementById('pe-symbol-row').hidden = !tool.symbol;
+  document.getElementById('pe-steps-row').hidden = !tool.steps;
   document.getElementById('pe-target-row').hidden = !tool.target;
   if (tool.target) renderWarpTargets();
   renderToolTray();
@@ -694,6 +713,7 @@ function buildPuzzleObject(cell) {
     ...(tool.kind === 'WarpOut' || (tool.archeton && isWarpWisp(puzzleEditor.archeton)) ? { letter: puzzleEditor.warpLetter } : {}),
     ...(tool.direction ? { direction: puzzleEditor.direction } : {}),
     ...(tool.symbol ? { symbol: puzzleEditor.symbol } : {}),
+    ...(tool.steps ? { steps: puzzleEditor.steps } : {}),
     ...(tool.target ? { targetNodeId: warpTarget } : {}),
     ...(tool.gateState && puzzleEditor.gateOpen ? { open: true } : {}),
     ...(tool.canHide && puzzleEditor.invisible ? { invisible: true } : {}),
