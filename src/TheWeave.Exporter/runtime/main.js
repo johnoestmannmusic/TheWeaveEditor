@@ -51,6 +51,9 @@ let boardGame = null;
 let boardPuzzle = null;
 let boardObjectsCanvas = null;
 let boardObjectsImage = null; // the art-sized pixels drawn onto that canvas - see drawBoardObjects
+// Move Cranes' claws, which go over the ship rather than into the board's picture - see trackFocus.js's drawBoardCranes.
+let boardCraneCanvas = null;
+let boardCraneImage = null;
 // The board being played - see board.js. boardGame and boardMover are its game and its ship's mover.
 let boardPlay = null;
 // What was drawn last, so that a board that looks just as it did isn't drawn again - see drawBoardObjects.

@@ -190,6 +190,24 @@ function drawPlaytest(context, look, timeMs) {
     context.restore();
   }
 
+  // A Move Crane's claw, drawn last of all so it comes out in front of the ship it is holding - the board's own pass
+  // can't put it there, since the ship goes on above that - see puzzleDrawing.js's renderCraneArms.
+  if (options.cranes?.length) {
+    puzzleEditor.craneImage ??= context.createImageData(PUZZLE_ART_PX, PUZZLE_ART_PX);
+    puzzleEditor.craneImage.data.fill(0);
+    WeavePuzzle.renderCraneArms(puzzleEditor.craneImage, options.cranes, look);
+    if (!puzzleEditor.craneCanvas) {
+      puzzleEditor.craneCanvas = document.createElement('canvas');
+      puzzleEditor.craneCanvas.width = PUZZLE_ART_PX;
+      puzzleEditor.craneCanvas.height = PUZZLE_ART_PX;
+    }
+    puzzleEditor.craneCanvas.getContext('2d').putImageData(puzzleEditor.craneImage, 0, 0);
+    context.save();
+    context.imageSmoothingEnabled = false;
+    context.drawImage(puzzleEditor.craneCanvas, 0, 0, PUZZLE_ART_PX, PUZZLE_ART_PX);
+    context.restore();
+  }
+
   // A step refused because a reflection couldn't follow leaves whatever stopped it flashing on the ship's side, on the
   // square it tried to walk into, in the same orange as the reflection - so it's plain where the space is taken up.
   if (!flash) return;

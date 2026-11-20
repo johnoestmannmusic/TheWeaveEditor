@@ -575,7 +575,7 @@ test('playing never changes the puzzle it was built from', () => {
 
 // ---------- pixel art ----------
 
-const { pickTextures, renderBoard, TILE_PX, ART_PX } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+const { pickTextures, renderBoard, renderCraneArms, TILE_PX, ART_PX } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
 
 // A 240x240 art of two dithered colour families, plus dark and light, so everything has shades to find.
 function makeArt(){
@@ -604,12 +604,14 @@ const pixelAt = (image, x, y) => { let i = (y * ART_PX + x) * 4; return [...imag
 const colorsIn = (bytes) => { let set = new Set(); for (let i = 0; i < bytes.length; i += 4) if (bytes[i + 3]) set.add(`${bytes[i]},${bytes[i + 1]},${bytes[i + 2]}`); return set; };
 const tile = (image, col, row) => { let out = []; for (let y = row * TILE_PX; y < (row + 1) * TILE_PX; y++) for (let x = col * TILE_PX; x < (col + 1) * TILE_PX; x++) out.push(...pixelAt(image, x, y)); return out.join(); };
 
-test('a claw is drawn over the square it is working on, held above it by its lift', () => {
+test('a claw is drawn over the square it is working on, held above it by its lift, over whatever is already there', () => {
   let { look } = artLook();
-  let from = blank(), to = blank(), lifted = blank();
-  renderBoard(from, [], look, { cranes: [{ cell: at(0, 0), lift: 0.5 }] });
-  renderBoard(to, [], look, { cranes: [{ cell: at(5, 5), lift: 0 }] });
-  renderBoard(lifted, [], look, { cranes: [{ cell: at(5, 5), lift: 1 }] });
+  let from = blank(), to = blank(), lifted = blank(), over = blank(), behind = blank();
+  renderCraneArms(from, [{ cell: at(0, 0), lift: 0.5 }], look);
+  renderCraneArms(to, [{ cell: at(5, 5), lift: 0 }], look);
+  renderCraneArms(lifted, [{ cell: at(5, 5), lift: 1 }], look);
+  // The board's own pass leaves claws to the caller: drawn in there, they would come out behind the ship.
+  renderBoard(behind, [], look, { cranes: [{ cell: at(5, 5), lift: 0 }] });
 
   let drawn = (image, col, row) => {
     for (let y = row * TILE_PX; y < (row + 1) * TILE_PX; y++) {
@@ -617,6 +619,7 @@ test('a claw is drawn over the square it is working on, held above it by its lif
     }
     return false;
   };
+  assert.equal(drawn(behind, 5, 5), false, 'renderBoard leaves the claw to the caller: in there, it would be behind the ship');
   assert.ok(drawn(from, 0, 0), 'coming down on the square it works on');
   assert.equal(drawn(from, 5, 5), false, 'and nowhere near the other one');
   assert.ok(drawn(to, 5, 5), 'holding on it');
@@ -624,6 +627,23 @@ test('a claw is drawn over the square it is working on, held above it by its lif
   // A lift of one square puts the claw in the square above: that is the haul the fade happens over.
   assert.ok(drawn(lifted, 5, 4), 'a whole square up, it is over the square above');
   assert.equal(drawn(lifted, 5, 5), false, 'and nothing of it is left on its own');
+
+  // Drawn last, it paints over what is already in the picture - which is what puts it in front of the ship.
+  let lightPixels = (image) => {
+    let count = 0;
+    for (let y = 5 * TILE_PX; y < 6 * TILE_PX; y++) for (let x = 5 * TILE_PX; x < 6 * TILE_PX; x++) {
+      let [r, g, b] = pixelAt(image, x, y);
+      if (r > 200 && g > 200 && b > 190) count++;
+    }
+    return count;
+  };
+  for (let y = 5 * TILE_PX; y < 6 * TILE_PX; y++) for (let x = 5 * TILE_PX; x < 6 * TILE_PX; x++) {
+    let i = (y * ART_PX + x) * 4;
+    over.data[i] = 10; over.data[i + 1] = 10; over.data[i + 2] = 10; over.data[i + 3] = 255;
+  }
+  renderCraneArms(over, [{ cell: at(5, 5), lift: 0 }], look);
+  assert.ok(lightPixels(to) > 0, 'the claw is light paint');
+  assert.equal(lightPixels(over), lightPixels(to), 'and the same of it shows over a square already drawn');
 });
 
 test('a texture has 4 shades and a grain, and every shade is an exact colour from the art', () => {

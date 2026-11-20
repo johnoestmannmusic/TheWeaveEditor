@@ -1075,8 +1075,8 @@
   // - pairLetters says which Warp Wisp goes with which Warp Out Square, as a letter in the corner of each. The editor
   //   wants that; gameplay doesn't.
   // - pulses ([{ col, row, radius }]) draws each lit Lantern's pulse: a ring radius pixels out from its square's middle.
-  // - cranes ([{ cell, lift }]) draws a Move Crane's claw over a square, held lift squares above it: the pose
-  //   puzzleRules.js's cranePose gives for how far through its pickup it is.
+  // - cranes ([{ cell, lift }]) is not drawn here: a claw goes over the ship it is holding, so whoever draws the ship
+  //   draws the claws over it - see renderCraneArms. renderBoard leaves the option alone.
   // - ship ({ col, row }) is where the ship is, when it is on a board that has one: a Crane whose pair is standing under
   //   it cannot be used, and is drawn half see-through like one with a block on the far square.
   // - pushHints ([{ col, row, direction, bob }], or one as pushHint) show that the Push Block on each square can be
@@ -1171,7 +1171,6 @@
     for (const beam of options.gateBeams ?? []) drawGateBeam(image, beam, options.originY ?? 0);
     for (const hint of options.pushHints ?? (options.pushHint ? [options.pushHint] : [])) drawPushHint(image, hint, look, options.originY ?? 0);
     for (const pulse of options.pulses ?? []) drawPulse(image, pulse, look, options.originY ?? 0);
-    for (const crane of options.cranes ?? []) drawCrane(image, crane, look, options.originY ?? 0);
     for (const cell of options.reaches ?? []) drawReach(image, cell, look, options.originY ?? 0);
     for (const beam of options.beams ?? []) drawBeam(image, beam, look, options.originY ?? 0);
 
@@ -1380,6 +1379,14 @@
     blit(image, sprite, crane.cell.col * TILE_PX, crane.cell.row * TILE_PX - Math.round(crane.lift * TILE_PX) + originY);
   }
 
+  // Every Move Crane's claw for a frame, into an image that already has the board and the ship in it: the claw comes out
+  // in front of both. Drawing them in renderBoard's own pass cannot stand a claw over the ship, since the ship (and the
+  // reflections) go on above that picture - so every caller that draws a ship draws these after it.
+  function renderCraneArms(image, cranes, look, originY = 0){
+    for (const crane of cranes ?? []) drawCrane(image, crane, look, originY);
+    return image;
+  }
+
   // An arrow pointing right, before it's turned the way a push would go.
   const PUSH_ARROW = ['...X...', '...XX..', 'XXXXXX.', 'XXXXXXX', 'XXXXXX.', '...XX..', '...X...'];
   const PUSH_ARROW_PX = 7;
@@ -1422,5 +1429,5 @@
     blit(image, sprite, placed[0], placed[1]);
   }
 
-  return { renderBoard, spinAt, SPIN_STEPS, PULSE_REACH_PX, PAINTS, DRAWN_KINDS, ANIMATED_KINDS, TURNED_KINDS, SYMBOLS, SPRITE_ROLES, standardDrawing, renderDrawingLayer, RAISED_PX };
+  return { renderBoard, renderCraneArms, spinAt, SPIN_STEPS, PULSE_REACH_PX, PAINTS, DRAWN_KINDS, ANIMATED_KINDS, TURNED_KINDS, SYMBOLS, SPRITE_ROLES, standardDrawing, renderDrawingLayer, RAISED_PX };
 });
