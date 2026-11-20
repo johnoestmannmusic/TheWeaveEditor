@@ -83,6 +83,7 @@
       refusedFlash: null,
       hopMs: null, // how long ago Archetons with a Move Sequence last hopped
       sinking: [],
+      hidings: [], // { object, ms } for each thing a Pulse Tile let go of, for its fade out
       pulses: [],
       gateBeams: [], // a Gate Switch's Beams, for as long as they're drawn - see advanceGateBeams
       gemShots: [], // { from, to, ms, last } while a collected Gem is on its way to the Gem Gate
@@ -139,6 +140,9 @@
       if (event.swam) play.swimMs = 0;
       if (event.hopped) play.hopMs = 0;
       if (event.lit) play.pulses.push({ ...event.lit, ms: 0, revealed: event.revealed ?? [] });
+      // Only what's invisible is drawn differently for being unseen, so only that can fade: anything else is on the
+      // board either way, and a Pulse Tile is the light rather than one of the things it lights.
+      if (event.hid) for (const object of event.hid) if (object.invisible) play.hidings.push({ object, ms: 0 });
       if (event.gateBeam) play.gateBeams.push({ ...event.gateBeam, ms: 0 });
       // A Gem that has somewhere to go flies there; one collected with no Gem Gate on the board just goes.
       if (event.gem?.to) play.gemShots.push({ from: { col: event.gem.col, row: event.gem.row }, to: event.gem.to, ms: 0, last: event.gem.last });
@@ -149,6 +153,7 @@
       // Everything put back by a Reset Switch: whatever was sinking is back too, so it stops.
       if (event.reset) {
         play.sinking = [];
+        play.hidings = [];
         play.reset = { before: event.reset, ms: 0, durationMs: WeavePuzzle.resetSweepMs(event.reset, game.objects) };
       }
       if (event.finished) {
@@ -199,6 +204,10 @@
       play.sinking = play.sinking.filter(sinking => sinking.ms < sinking.glideMs + TIMING.sinkMs);
       for (const pulse of play.pulses) pulse.ms += dtMs;
       play.pulses = play.pulses.filter(pulse => pulse.ms < TIMING.pulseMs);
+      // What a Pulse Tile let go of fades out where it was, and is dropped once it is quite gone - or the moment
+      // something lights it again.
+      for (const hiding of play.hidings) hiding.ms += dtMs;
+      play.hidings = play.hidings.filter(hiding => hiding.ms < WeavePuzzle.PULSE_FADE_MS && !hiding.object.revealed);
       for (const beam of play.gateBeams) beam.ms += dtMs;
       play.gateBeams = play.gateBeams.filter(beam => beam.ms < TIMING.gateBeamMs);
       // A Beam that's reached its Gates changes them, which is when the press finally takes effect - see
@@ -395,9 +404,24 @@
       let warpFlash = play.warpFlashMs === null || play.warpFlashMs >= WARP_FLASH_MS ? 0 : 1 - play.warpFlashMs / WARP_FLASH_MS;
       if (warpFlash > 0) key.push('w', Math.round(warpFlash * 10));
 
+      // The fade of whatever a Pulse Tile stopped lighting, over PULSE_FADE_MS. In whole pixels, so the key only
+      // changes when the picture would.
+      let hiding = new Map();
+      for (const entry of play.hidings) {
+        let fade = 1 - Math.min(1, entry.ms / WeavePuzzle.PULSE_FADE_MS);
+        if (fade <= 0) continue;
+        key.push('f', Math.round(fade * TILE_PX));
+        hiding.set(entry.object, fade);
+      }
+      let fadedBy = (list) => hiding.size === 0 ? list
+        : list.map(thing => hiding.has(thing)
+          // A thing a Pulse Tile has just let go of is unseen from the moment the rules say so, so it would be left out
+          // of the picture at once and its fade be no fade at all: it's still drawn for as long as the fade lasts.
+          ? { ...thing, revealed: true, fade: (thing.fade ?? 1) * hiding.get(thing) } : thing);
+
       let hideUnreached = (list) => unreached.size === 0 ? list : list.map(thing => unreached.has(thing) ? { ...thing, revealed: false } : thing);
-      floors = hideUnreached(floors);
-      objects = hideUnreached(objects);
+      floors = fadedBy(hideUnreached(floors));
+      objects = fadedBy(hideUnreached(objects));
 
       let options = {
         timeMs,

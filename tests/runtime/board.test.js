@@ -382,3 +382,23 @@ test('a Pulse Tile counts down on the ship\'s own steps and not on the ones a St
   assert.notDeepEqual(play.mover.cell, at(2, 5), 'the Stream carried it on');
   assert.equal(tile().charge, 3, 'a carried step spends nothing');
 });
+
+test('what a Pulse Tile stops lighting fades out over PULSE_FADE_MS', () => {
+  let play = createBoardPlay({ puzzle: { objects: [
+    obj('Start', 1, 5),
+    obj('LanternPulse', 2, 5, { steps: 1 }),
+    obj('Wall', 2, 6, { invisible: true }),
+  ] } });
+  play.mover.press('right');
+  play.mover.release('right');
+  run(play, BOARD_TIMING.stepMs + 30);
+  play.mover.press('left');
+  play.mover.release('left');
+  run(play, BOARD_TIMING.stepMs + 30);          // spent: the Wall starts fading
+  let fading = play.frame(0, {}).list.find((o) => o.kind === 'Wall');
+  assert.ok(fading && fading.fade > 0 && fading.fade < 1, `fading, not gone: ${fading?.fade}`);
+  run(play, 400);
+  let gone = play.frame(0, {}).list.find((o) => o.kind === 'Wall');
+  // It stays on the board - an unrevealed object is simply not drawn - so what has ended is its fade.
+  assert.equal(gone?.fade, undefined, 'and then it is fading no more, and the renderer leaves it out');
+});
