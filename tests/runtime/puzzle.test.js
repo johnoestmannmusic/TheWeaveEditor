@@ -604,6 +604,24 @@ const pixelAt = (image, x, y) => { let i = (y * ART_PX + x) * 4; return [...imag
 const colorsIn = (bytes) => { let set = new Set(); for (let i = 0; i < bytes.length; i += 4) if (bytes[i + 3]) set.add(`${bytes[i]},${bytes[i + 1]},${bytes[i + 2]}`); return set; };
 const tile = (image, col, row) => { let out = []; for (let y = row * TILE_PX; y < (row + 1) * TILE_PX; y++) for (let x = col * TILE_PX; x < (col + 1) * TILE_PX; x++) out.push(...pixelAt(image, x, y)); return out.join(); };
 
+test('a claw is drawn over the square it is taking from, and over the one it sets down on', () => {
+  let { look } = artLook();
+  let from = blank(), to = blank();
+  renderBoard(from, [], look, { cranes: [{ from: at(0, 0), to: at(5, 5), along: 0.4 }] });
+  renderBoard(to, [], look, { cranes: [{ from: at(0, 0), to: at(5, 5), along: 0.8 }] });
+
+  let drawn = (image, col, row) => {
+    for (let y = row * TILE_PX; y < (row + 1) * TILE_PX; y++) {
+      for (let x = col * TILE_PX; x < (col + 1) * TILE_PX; x++) if (pixelAt(image, x, y)[3] > 0) return true;
+    }
+    return false;
+  };
+  assert.ok(drawn(from, 0, 0), 'coming down on the square it takes from');
+  assert.equal(drawn(from, 5, 5), false, 'and not yet on the other one');
+  assert.ok(drawn(to, 5, 5), 'and there once it has it');
+  assert.equal(drawn(to, 0, 0), false, 'with nothing left behind');
+});
+
 test('a texture has 4 shades and a grain, and every shade is an exact colour from the art', () => {
   let { art, look } = artLook();
   let inArt = colorsIn(art);
