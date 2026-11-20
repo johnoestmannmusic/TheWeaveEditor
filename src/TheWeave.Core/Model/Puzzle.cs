@@ -321,7 +321,10 @@ public static class PuzzleDrawings
     /// </summary>
     public static List<PuzzleDrawing> UsedBy(Puzzle puzzle, IEnumerable<PuzzleDrawing>? library, bool includeStandard = true) =>
         (library ?? []).Where(drawing => puzzle.Objects.Any(o => o.Kind == drawing.Kind
-            && (o.Variant == drawing.Id || (includeStandard && IsStandard(drawing))))).ToList();
+                && (o.Variant == drawing.Id || (includeStandard && IsStandard(drawing))))
+            // A Crane's claw is drawn by the board rather than by an object on it, so a board with a Crane needs its
+            // drawing even though nothing on the board is drawn with it.
+            || (drawing.Kind == PuzzleObjectKind.CraneArm && includeStandard && puzzle.Objects.Any(o => o.Kind == PuzzleObjectKind.Crane))).ToList();
 
     /// <summary>
     /// Which of a puzzle file's drawings a library needs adding, pointing its objects at the ones added. One
