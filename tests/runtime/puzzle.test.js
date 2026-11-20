@@ -1666,6 +1666,26 @@ test('a Lantern Pulse Tile is a hollow ring in the light paint, and its count sh
   assert.notDeepEqual(tile(unlit, 0, 0), tile(editing, 0, 0), 'and the count is the only difference');
 });
 
+test('a Crane is a corner-bracketed square with room for its letter, and its claw is its own drawing', () => {
+  let crane = standardDrawing('Crane');
+  assert.equal(crane.pixels.length, TILE_PX * TILE_PX);
+  assert.match(crane.pixels, /^[.H]+$/, 'lines only, in the light paint, so it reads on a dark board');
+  assert.equal(crane.pixels[12 * TILE_PX + 12], '.', 'clear in the middle, for the letter');
+  assert.deepEqual(crane.mix, standardMix('teleporter'));
+
+  let claw = standardDrawing('CraneArm');
+  assert.equal(claw.pixels.length, TILE_PX * TILE_PX);
+  assert.match(claw.pixels, /^[.H]+$/);
+  assert.notEqual(claw.pixels, crane.pixels, 'the claw is a shape, not a frame');
+  assert.ok([...claw.pixels].filter((paint) => paint === 'H').length > 40, 'with enough of it drawn to see');
+
+  let { look } = artLook();
+  let a = blank(), b = blank();
+  renderBoard(a, [obj('Crane', 0, 0, { letter: 'A' })], look);
+  renderBoard(b, [obj('Crane', 0, 0, { letter: 'B' })], look);
+  assert.notDeepEqual(tile(a, 0, 0), tile(b, 0, 0), 'its letter says which square it pairs with');
+});
+
 test('a Pulse Tile shows a count past nine as two digits', () => {
   let { look } = artLook();
   let two = blank(), twelve = blank(), nineteen = blank();

@@ -89,7 +89,7 @@
   };
 
   const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', GemGate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
-  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Gem: 'gem', GemGate: 'gate', WarpOut: 'archeton', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', LanternPulse: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton', PuzzleWarp: 'teleporter' };
+  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Gem: 'gem', GemGate: 'gate', WarpOut: 'archeton', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', LanternPulse: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton', PuzzleWarp: 'teleporter', Crane: 'teleporter', CraneArm: 'teleporter' };
 
   function maskOf(test){
     let mask = [];
@@ -168,7 +168,7 @@
   const TURNED_KINDS = ['JumpTile', 'Pipe', 'Archeton', 'Laser', 'Edge'];
 
   // Every kind of object drawn from a drawing.
-  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'Gem', 'WarpOut', 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', 'LanternPulse', ...ANIMATED_KINDS, 'Laser', 'PuzzleWarp'];
+  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'Gem', 'WarpOut', 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', 'LanternPulse', ...ANIMATED_KINDS, 'Laser', 'CraneArm', 'Crane', 'PuzzleWarp'];
 
   const standardDrawings = new Map();
 
@@ -298,6 +298,8 @@
       else if (kind === 'PipeSwitch') drawing = { id: kind, kind, name: 'Standard', pixels: standardPipeSwitchPixels(), mix: standardMix('pipe') };
       else if (kind === 'Edge') drawing = { id: kind, kind, name: 'Standard', pixels: standardEdgePixels(), mix: standardMix('edge') };
       else if (kind === 'LanternPulse') drawing = { id: kind, kind, name: 'Standard', pixels: standardLanternPulsePixels(), mix: standardMix('lantern') };
+      else if (kind === 'Crane') drawing = { id: kind, kind, name: 'Standard', pixels: standardCranePixels(), mix: standardMix('teleporter') };
+      else if (kind === 'CraneArm') drawing = { id: kind, kind, name: 'Standard', pixels: standardCraneArmPixels(), mix: standardMix('teleporter') };
       else if (kind === 'Gem') drawing = { id: kind, kind, name: 'Standard', pixels: standardGemPixels(), mix: standardMix('gem') };
       else if (kind === 'WarpOut') drawing = { id: kind, kind, name: 'Standard', pixels: standardWarpOutPixels(), mix: standardMix('archeton') };
       else if (kind === 'PuzzleWarp') drawing = { id: kind, kind, name: 'Standard', pixels: standardPuzzleWarpPixels(), mix: standardMix('teleporter'), opacity: 0.5 };
@@ -502,6 +504,35 @@
     });
   }
 
+  // A Crane's Standard drawing: an L at each corner, 2 pixels thick with arms 8 long, inset 2 from the edge, so the
+  // frame has a gap on each of its sides and an empty middle for the letter that pairs it with the other square. Its
+  // whole content is lines, so it is painted in the light colour - an outline-colour frame disappears on a dark board.
+  function standardCranePixels(){
+    let onBracket = (u, v) => {
+      let nearLeft = u >= 2 && u <= 3, nearRight = u >= 20 && u <= 21;
+      let nearTop = v >= 2 && v <= 3, nearBottom = v >= 20 && v <= 21;
+      let downTop = v >= 2 && v <= 9, downBottom = v >= 14 && v <= 21;
+      let acrossLeft = u >= 2 && u <= 9, acrossRight = u >= 14 && u <= 21;
+      return (nearLeft && (downTop || downBottom)) || (nearRight && (downTop || downBottom))
+        || (nearTop && (acrossLeft || acrossRight)) || (nearBottom && (acrossLeft || acrossRight));
+    };
+    return layerOf((u, v) => onBracket(u, v) ? PAINTS.light : PAINTS.clear);
+  }
+
+  // A Crane's claw: the block the arm holds it by, and two prongs splaying out and hooking back in, so it reads as
+  // something that closes on what it picks up. Drawn from above the square - see renderBoard's cranes.
+  function standardCraneArmPixels(){
+    let middle = (TILE_PX - 1) / 2;
+    let onBody = (u, v) => u >= 7 && u <= 16 && v >= 3 && v <= 6;
+    let onProng = (u, v) => {
+      let across = Math.abs(u - middle);
+      if (v >= 6 && v <= 12) return Math.abs(across - (v - 6) * 0.8) <= 1;
+      if (v >= 12 && v <= 17) return Math.abs(across - 5.6 + (v - 12) * 0.7) <= 1;
+      return false;
+    };
+    return layerOf((u, v) => onBody(u, v) || onProng(u, v) ? PAINTS.light : PAINTS.clear);
+  }
+
   // A Lantern Pulse Tile's Standard drawing: a ring, and nothing else. Its whole content is lines, so it is painted in
   // the light colour - an outline-colour ring disappears into a dark board. The count in its middle is drawn over this
   // by buildSprite, and it is hollow so that the count has somewhere to go. Left for drawing over by hand.
@@ -595,7 +626,7 @@
       }
     }
 
-    if (object.kind === 'Gate' || object.kind === 'Switch' || object.kind === 'Teleporter') {
+    if (object.kind === 'Gate' || object.kind === 'Switch' || object.kind === 'Teleporter' || object.kind === 'Crane') {
       // Whichever of the art's lightest and darkest colours stands out from this shape the most. An open
       // Gate's letter has only the art behind it, so that one gets a dark edge to stand out from it.
       let fill = mix.colors[mix.main];
