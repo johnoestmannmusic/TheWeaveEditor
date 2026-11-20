@@ -12,7 +12,7 @@
   else root.WeavePuzzleDrawing = factory(root.WeavePuzzleRules, root.WeavePuzzleColours);
 })(this, function (WeavePuzzleRules, WeavePuzzleColours) {
 
-  const { DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, exitDirectionOf, isFloor } = WeavePuzzleRules;
+  const { DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, exitDirectionOf, isFloor, craneFree, partnerOf } = WeavePuzzleRules;
   const { PALETTE_MIN_CONTRAST, TILE_PX, hexToColor, lightnessOf, mixTexture, standardMix } = WeavePuzzleColours;
 
   // ---------- drawing ----------
@@ -1077,6 +1077,8 @@
   // - pulses ([{ col, row, radius }]) draws each lit Lantern's pulse: a ring radius pixels out from its square's middle.
   // - cranes ([{ cell, lift }]) draws a Move Crane's claw over a square, held lift squares above it: the pose
   //   puzzleRules.js's cranePose gives for how far through its pickup it is.
+  // - ship ({ col, row }) is where the ship is, when it is on a board that has one: a Crane whose pair is standing under
+  //   it cannot be used, and is drawn half see-through like one with a block on the far square.
   // - pushHints ([{ col, row, direction, bob }], or one as pushHint) show that the Push Block on each square can be
   //   pushed: an arrow just
   //   past it, pointing the way it would go, bob pixels further out as it bobs.
@@ -1106,6 +1108,9 @@
     // between squares instead of rising on the way - see board.js's WISP_DRIFT_CYCLE_MS.
     let floatingOn = (object) => object.kind === 'Archeton'
       && (look.archetons?.find(definition => definition.id === object.archeton)?.parts ?? []).some(part => part.kind === 'Warp');
+    // Cranes that cannot be used because the square their pair would come out at is taken.
+    let blockedCranes = new Set(objects.filter(object => object.kind === 'Crane'
+      && !craneFree(objects, partnerOf(objects, object), options.ship ?? null)));
     let floorsFirst = objects
       .filter(object => object.kind !== 'Start')
       // What's standing on a square is drawn over what's built into it - an Archeton or a Push Block over the Switch,
@@ -1141,7 +1146,8 @@
       let top = Math.round(row * TILE_PX) + (options.originY ?? 0);
       let sunk = Math.round((object.sink ?? 0) * TILE_PX);
       // An open Gate is half see-through, so it reads as something the ship can pass through.
-      let opacity = (object.fade ?? 1) * (sprite.opacity ?? 1) * ((object.kind === 'Gate' || object.kind === 'GemGate') && object.open ? OPEN_GATE_OPACITY : 1);
+      let opacity = (object.fade ?? 1) * (sprite.opacity ?? 1) * ((object.kind === 'Gate' || object.kind === 'GemGate') && object.open ? OPEN_GATE_OPACITY : 1)
+        * (blockedCranes.has(object) ? BLOCKED_CRANE_OPACITY : 1);
       // A Wisp fades in and out as it drifts, in step with its rise and fall: solid at the top of it, thinner at the
       // bottom, between 90% and 60% of solid.
       if (floating) opacity *= (WISP_FADE_TOP + WISP_FADE_BOTTOM) / 2
@@ -1336,6 +1342,9 @@
 
   // How much of an open Gate shows - see renderBoard.
   const OPEN_GATE_OPACITY = 0.5;
+  // How much of a Move Crane shows when its pair has something on the far square: half, so it reads as not usable.
+  // puzzleRules.js's craneFree is the same rule the claw itself goes by.
+  const BLOCKED_CRANE_OPACITY = 0.5;
 
   // How far a lit Lantern's pulse spreads, in pixels: as far as it reaches.
   const PULSE_REACH_PX = LANTERN_REACH * TILE_PX;

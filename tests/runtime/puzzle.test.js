@@ -122,7 +122,7 @@ test('transparent pixels are ignored, and fully transparent art is still handled
 
 // ---------- playing ----------
 
-const { createPuzzleGame, hasFinish, crossingCell, startOf, CRANE_MS, cranePose, craneLoad } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+const { createPuzzleGame, hasFinish, crossingCell, startOf, CRANE_MS, cranePose, craneLoad, craneFree } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
 
 const at = (col, row) => ({ col, row });
 const game = (...objects) => createPuzzleGame({ objects, palette: {} });
@@ -3159,6 +3159,26 @@ test('a crane moves and fades what it has taken only while the claw has it', () 
 // rules' own half of it.
 const { CRANE_PICKUP_MS, CRANE_LIFT } = require('../../src/TheWeave.Exporter/runtime/puzzleRules.js');
 
+test('a Crane whose pair has something on it is drawn half see-through, as one that cannot be used', () => {
+  let { look } = artLook();
+  let pair = [obj('Crane', 2, 2, { letter: 'A' }), obj('Crane', 7, 7, { letter: 'A' })];
+  let free = blank(), blocked = blank();
+  renderBoard(free, pair, look, {});
+  renderBoard(blocked, [...pair, obj('PushBlock', 7, 7, { symbol: 'Circle' })], look, {});
+
+  // What the crane's own square was drawn with: solid paint, or half of it.
+  let alphas = (image) => {
+    let set = new Set();
+    for (let y = 2 * TILE_PX; y < 3 * TILE_PX; y++) for (let x = 2 * TILE_PX; x < 3 * TILE_PX; x++) {
+      let a = pixelAt(image, x, y)[3];
+      if (a) set.add(a);
+    }
+    return [...set];
+  };
+  assert.deepEqual(alphas(free), [255], 'solid while the pair is free');
+  assert.deepEqual(alphas(blocked), [128], 'and half see-through once the far square is taken');
+});
+
 test('a Crane takes the ship up and sets it down on the other Crane square', () => {
   let g = game(craneAt(2, 5), craneAt(6, 3), obj('Start', 2, 6));
   // The barrel carries only the one constant board.js draws by: a name missing from puzzle.js's allow-list would
@@ -3195,6 +3215,33 @@ test('a Push Block pushed onto a Crane is set down on the other Crane square', (
   g.advanceCranes(CRANE_PICKUP_MS);
   assert.deepEqual({ col: block.col, row: block.row }, at(7, 8));
   assert.equal(block.glide, null, 'and not drawn gliding there');
+});
+
+test('a Crane takes nothing at all when the square it would come out at is not free', () => {
+  // The ship stepping on, with a block already sitting on the far square: nothing is taken, and it simply stands there.
+  let g = game(craneAt(2, 5), craneAt(6, 3), obj('PushBlock', 6, 3, { symbol: 'Circle' }), obj('Start', 2, 6));
+  assert.equal(g.shipArrivedAt(at(2, 5))?.crane, undefined);
+  assert.deepEqual(g.cranes, [], 'no claw at all');
+  assert.deepEqual(g.shipCell, at(2, 5), 'and the ship just stands on the crane');
+
+  // A block pushed on with a block on the far square: it stops on the crane rather than being taken anywhere.
+  let b = game(craneAt(4, 5), craneAt(7, 8), obj('PushBlock', 7, 8, { symbol: 'Circle' }),
+    obj('PushBlock', 3, 5, { symbol: 'Circle' }), obj('Start', 2, 5));
+  b.pushFrom(at(2, 5), at(3, 5), 'right');
+  let pushed = b.objects.find(o => o.kind === 'PushBlock' && !(o.col === 7 && o.row === 8));
+  assert.deepEqual({ col: pushed.col, row: pushed.row }, at(4, 5), 'on the crane, but not taken');
+  assert.deepEqual(b.cranes, []);
+  b.advanceCranes(CRANE_MS);
+  assert.deepEqual({ col: pushed.col, row: pushed.row }, at(4, 5), 'and still there at the end of a pickup that never started');
+});
+
+test('a crane square is free unless something a crane could carry is on it, or the ship', () => {
+  let board = [obj('Key', 5, 5), obj('PushBlock', 3, 3, { symbol: 'Circle' })];
+  assert.equal(craneFree(board, at(5, 5), null), true, 'a key on it is not in the way');
+  assert.equal(craneFree(board, at(3, 3), null), false, 'a block is');
+  assert.equal(craneFree(board, at(1, 1), at(1, 1)), false, 'and so is the ship, on that square');
+  assert.equal(craneFree(board, at(1, 2), at(1, 1)), true, 'while it is somewhere else');
+  assert.equal(craneFree(board, null, at(1, 1)), true, 'a crane with no partner has no square to keep clear');
 });
 
 test('a Stream carrying something onto a Crane cranes it, and a held block stays put for a tick', () => {

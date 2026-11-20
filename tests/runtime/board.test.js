@@ -502,6 +502,29 @@ test('a guard\'s death washes it and the Pulse Tiles that killed it the same red
   assert.ok(tiles.length > 0 && tiles.every((o) => o.tint === guard.tint), 'and every Pulse Tile is the same shade');
 });
 
+test('a claw waits for a block it was pushed to be on the square before it starts', () => {
+  let play = createBoardPlay({ puzzle: { objects: [
+    obj('Start', 2, 5),
+    obj('PushBlock', 3, 5, { symbol: 'Circle' }),
+    obj('Crane', 4, 5, { letter: 'A' }),
+    obj('Crane', 7, 8, { letter: 'A' }),
+  ] } });
+  play.mover.press('right'); play.mover.release('right');
+
+  let started = 0, early = 0;
+  for (let frame = 0; frame < 80; frame++) {
+    play.animate(16); play.step(16);
+    let crane = play.game.cranes[0];
+    if (!crane) continue;
+    if (crane.ms <= 0) continue;
+    started++;
+    // A pushed block is drawn along the ship's own step, so that is when it is on the square the claw took it from.
+    if (play.frame(0, {}).options.pushAlong < 1) early++;
+  }
+  assert.ok(started > 0, 'the claw did start');
+  assert.equal(early, 0, 'and never on a frame where the block was still travelling');
+});
+
 test('a Crane holds the board still while its claw is out, then puts the ship down', () => {
   let play = createBoardPlay({ puzzle: { objects: [
     obj('Start', 2, 6),

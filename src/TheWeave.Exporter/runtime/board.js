@@ -236,6 +236,25 @@
       }
     );
 
+    // Whether every claw has what it took properly on the square, and can get on with it. A block pushed onto a Crane
+    // is still gliding there with the ship, and one a Stream is carrying still riding that tick, so the claw waits for
+    // the picture to say the thing has landed - these are the same alongs frame draws by. The ship is always on its
+    // square by then: a claw only takes it as it arrives.
+    play.loadsSettled = () => {
+      let alongNow = (object) => {
+        if (!object || object.fromCol === undefined) return 1;
+        if (object.fromCol === object.col && object.fromRow === object.row) return 1;
+        if (object.glide === 'push') return play.mover.progress;
+        if (object.glide === 'rotator') return play.rotatorGlideMs / TIMING.rotatorTickMs;
+        if (object.glide === 'return') return play.returnMs === null ? 1 : play.returnMs / TIMING.stepMs;
+        if (object.glide === 'slide') return play.slideMs === null ? 1 : play.slideMs / TIMING.stepMs;
+        if (object.glide === 'hop') return play.hopMs === null ? 1 : play.hopMs / TIMING.stepMs;
+        if (object.glide === 'swim') return play.swimMs === null ? 1 : play.swimMs / TIMING.stepMs;
+        return play.streamMs / TIMING.streamTickMs;
+      };
+      return (game?.cranes ?? []).every(crane => crane.ship || alongNow(crane.thing) >= 1);
+    };
+
     // What carries on whatever else is happening: blocks sinking, pulses spreading, Pipes swinging round, blocks
     // returning from a Gate.
     play.animate = (dtMs) => {
@@ -264,8 +283,9 @@
       // puzzleRules.js's advanceGateBeams.
       for (const event of game?.advanceGateBeams(dtMs) ?? []) onEvent(event);
       // A Crane's claw steps on whatever else is happening, and sets down what it holds half way through - the board is
-      // held still meanwhile, see play.step.
-      for (const event of game?.advanceCranes(dtMs) ?? []) onEvent(event);
+      // held still meanwhile, see play.step, and the claw waits for what it has taken to be on the square, see
+      // play.loadsSettled.
+      for (const event of play.loadsSettled() ? game?.advanceCranes(dtMs) ?? [] : []) onEvent(event);
       if (play.pipeTurnMs !== null) play.pipeTurnMs += dtMs;
       if (play.returnMs !== null) play.returnMs += dtMs;
       if (play.slideMs !== null) play.slideMs += dtMs;
@@ -323,8 +343,9 @@
         return;
       }
       // A crane's claw holds the board still while it takes something up and sets it down - play.animate steps the
-      // claws on, and onEvent puts the mover where the rules set the ship down.
-      if (game?.cranes.length > 0) return;
+      // claws on - and onEvent puts the mover where the rules set the ship down. A claw that has only just taken hold
+      // of something still on its way in doesn't hold the board yet: the step delivering it has to finish first.
+      if (game?.cranes.length > 0 && play.loadsSettled()) return;
       if (play.finished || !game) return;
 
       play.mover.update(dtMs);
@@ -563,6 +584,7 @@
         wispDrift: wispStep / WISP_DRIFT_STEPS,
         gemShots,
         cranes,
+        ship: game.shipCell,
         gateShake: shake,
         warpFlash,
         pulses,

@@ -619,8 +619,7 @@
     // The other Crane square sharing an entry's letter, or null. A crane with no letter would pair with every other
     // letterless one, and an unfinished pair is what the Puzzle Editor warns about - see ProjectValidator.
     function cranePartner(crane){
-      if (!crane.letter) return null;
-      return objects.find(other => other.kind === 'Crane' && other !== crane && other.letter === crane.letter) ?? null;
+      return partnerOf(objects, crane);
     }
 
     // Whether a thing is in a claw right now: it can be neither moved nor pushed until it is set down. Once it has
@@ -639,8 +638,10 @@
     // crane hasn't a partner, or that thing is already in a claw. The thing stays where it is until advanceCranes sets it
     // down, so nothing of the board happens to it in between.
     function beginCrane(crane, { thing = null, ship = false } = {}){
-      let partner = cranePartner(crane);
+      let partner = partnerOf(objects, crane);
       if (!partner) return null;
+      // Somewhere to put it, or nothing at all: the claw does not take hold of what it could not set down.
+      if (!craneFree(objects, partner, shipCell)) return null;
       if (cranes.some(entry => (ship ? entry.ship : entry.thing === thing))) return null;
       let from = { col: crane.col, row: crane.row }, to = { col: partner.col, row: partner.row };
       cranes.push({ from, to, thing, ship, ms: 0, landed: false });
@@ -1737,6 +1738,22 @@
     return { from, to: reflectionPosition(reflection, ship, tilePx) };
   }
 
+  // The other end of a Move Crane's pair: the Crane square with the same letter, or null for a crane with no letter or
+  // no partner - either of which does nothing at all.
+  function partnerOf(objects, crane){
+    if (!crane || !crane.letter) return null;
+    return (objects ?? []).find(other => other.kind === 'Crane' && other !== crane && other.letter === crane.letter) ?? null;
+  }
+
+  // Whether a Move Crane can set something down on a square: nothing a crane can carry may be sitting there, and neither
+  // may the ship. A Key or a Gem on the square is not in the way - things stand on the square together all the time.
+  function craneFree(objects, cell, shipCell){
+    if (!cell) return true;
+    if (shipCell && shipCell.col === cell.col && shipCell.row === cell.row) return false;
+    return !(objects ?? []).some(other => (other.kind === 'PushBlock' || other.kind === 'Archeton')
+      && other.col === cell.col && other.row === cell.row);
+  }
+
   // Where a Move Crane's claw is, ms into a pickup, and how much of what it holds shows: { cell, lift, alpha }, lift
   // being how far above that square the claw is in squares and alpha how much of the thing in it is drawn. Down, rest,
   // up into a fade - and then the same the other way round on the far square: down out of the fade, rest, up again.
@@ -1838,5 +1855,5 @@
     return [...after.filter(object => !sweeps(object)), ...leaving, ...arriving].filter(object => (object.fade ?? 1) > 0);
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, PULSE_MAX_STEPS, PULSE_FADE_MS, CRANE_MS, CRANE_PICKUP_MS, CRANE_TIMING, CRANE_LIFT, cranePose, craneLoad, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
+  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, PULSE_MAX_STEPS, PULSE_FADE_MS, CRANE_MS, CRANE_PICKUP_MS, CRANE_TIMING, CRANE_LIFT, cranePose, craneLoad, partnerOf, craneFree, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
 });
