@@ -1698,6 +1698,23 @@ test('every count from 10 to 19 draws both of its digits', () => {
   for (let count = 10; count <= 19; count++) assert.ok(width(image(count)) > 12, `a count of ${count} draws both digits`);
 });
 
+test('an object drawn with a tint is washed in that colour, and the cached sprite is left alone', () => {
+  let { look } = artLook();
+  let pulse = obj('LanternPulse', 0, 0, { steps: 3, charge: 3, lit: true });
+  let plain = blank(), washed = blank(), fresh = blank();
+  renderBoard(plain, [pulse], look);
+  // The red a Resonant Guard and the Pulse Tiles that killed it share - see board.js's RESONANCE_RED.
+  renderBoard(washed, [{ ...pulse, tint: { color: { r: 214, g: 44, b: 38 }, amount: 0.6 } }], look);
+  renderBoard(fresh, [pulse], look);
+
+  let [r0, g0] = pixelAt(plain, 1, 11), [r1, g1] = pixelAt(washed, 1, 11);
+  assert.ok(pixelAt(washed, 1, 11)[3] > 0, 'the ring is still drawn');
+  assert.ok(g1 < g0, `washed towards red, so less green: ${g0} -> ${g1}`);
+  assert.ok(r1 - g1 > r0 - g0 + 40, `and far redder than green: ${r0 - g0} -> ${r1 - g1}`);
+  // Tinting copies the sprite rather than painting it: a sprite is cached and shared with every other tile.
+  assert.deepEqual(tile(fresh, 0, 0), tile(plain, 0, 0), 'the next tile drawn is not red too');
+});
+
 test('a lit Pulse Tile glows outside its ring only, so its hollow stays hollow', () => {
   let { look } = artLook();
   let lit = blank(), unlit = blank();

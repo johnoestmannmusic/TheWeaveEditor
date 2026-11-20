@@ -41,6 +41,11 @@
   // the more of them are lit, up to RESONANCE_SHAKE_MAX_PX - see puzzleRules.js's resonanceShake.
   const RESONANCE_SHAKE_MS = 1000;
   const RESONANCE_SHAKE_MAX_PX = 4;
+  // The red a dying guard and the Pulse Tiles that killed it are washed in, and how much of it they take: the board
+  // saying they are one thing, so red rather than a palette colour is deliberate - it reads the same whatever the album
+  // art is, as the Gate Beam's yellow does.
+  const RESONANCE_RED = { r: 214, g: 44, b: 38 };
+  const RESONANCE_TINT = 0.75;
   // How slowly a Warp Wisp drifts up and down about its square, in how many steps of the drift - a step every 100 ms,
   // so the drift is gentle rather than a shimmer.
   const WISP_DRIFT_CYCLE_MS = 2600;
@@ -483,13 +488,21 @@
         objects = objects.map(object => object.kind === 'Archeton' && resonantIds.has(object.archeton) ? { ...object, shake } : object);
       }
 
+      // A guard's death takes the Pulse Tiles that killed it with it: for as long as it is going, they and it are washed
+      // the same red, so that the link the rattle hinted at is plain at the end. See RESONANCE_RED.
+      let deathTint = play.dissolving.length > 0 ? { color: RESONANCE_RED, amount: RESONANCE_TINT } : null;
+      if (deathTint) {
+        key.push('t', Math.round(RESONANCE_TINT * 10));
+        objects = objects.map(object => object.kind === 'LanternPulse' ? { ...object, tint: deathTint } : object);
+      }
+
       // A guard that resonated shakes where it stood, then sinks into the ground, shaking and fading as it goes - the
       // same sink a matched block does, over BOARD_TIMING.sinkMs, after RESONANCE_SHAKE_MS of shaking. The rules took it
       // off the board already, so it is drawn here rather than found in game.objects.
       let dissolving = play.dissolving.map(({ object, ms }) => {
         let sink = Math.max(0, Math.min(1, (ms - RESONANCE_SHAKE_MS) / TIMING.sinkMs));
         key.push('x', Math.round(ms / 10), Math.round(sink * TILE_PX));
-        return { ...object, sink, fade: 1 - sink, shake: Math.round(Math.sin(ms / 12) * 2) };
+        return { ...object, sink, fade: 1 - sink, shake: Math.round(Math.sin(ms / 12) * 2), ...(deathTint ? { tint: deathTint } : {}) };
       });
 
       let options = {

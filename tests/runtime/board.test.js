@@ -478,3 +478,26 @@ test('a guard with Resonance rattles when a Pulse Tile lights, harder with each 
   assert.equal(play.resonantAmplitude, 2, 'two lit is harder');
   assert.ok(rattle() >= 2, 'so the rattle is bigger');
 });
+
+test('a guard\'s death washes it and the Pulse Tiles that killed it the same red', () => {
+  const GUARD = { id: 'resonant-guard', name: 'Resonant Guard', parts: [{ kind: 'Detect', range: 1 }, { kind: 'Shove', distance: 3 }, { kind: 'Resonance' }] };
+  let play = createBoardPlay({ puzzle: { objects: [
+    obj('Start', 1, 1),
+    obj('LanternPulse', 2, 1, { steps: 3 }),
+    obj('LanternPulse', 3, 1, { steps: 3 }),
+    obj('Archeton', 9, 9, { archeton: 'resonant-guard', direction: 'Down' }),
+  ], archetons: [GUARD] } });
+  const stepRight = () => { play.mover.press('right'); play.mover.release('right'); run(play, BOARD_TIMING.stepMs + 20); };
+
+  stepRight();
+  let early = play.frame(0, {}).list.filter((o) => o.kind === 'LanternPulse');
+  assert.ok(early.length > 0 && early.every((o) => o.tint === undefined), 'a lit tile on its own is not washed');
+
+  stepRight();                                   // the second tile is both of them: the guard gives way
+  let list = play.frame(0, {}).list;
+  let guard = list.find((o) => o.kind === 'Archeton');
+  let tiles = list.filter((o) => o.kind === 'LanternPulse');
+  assert.ok(guard && guard.tint, 'the dying guard is washed');
+  assert.ok(guard.tint.color.r > 150 && guard.tint.color.g < 100, 'in red');
+  assert.ok(tiles.length > 0 && tiles.every((o) => o.tint === guard.tint), 'and every Pulse Tile is the same shade');
+});

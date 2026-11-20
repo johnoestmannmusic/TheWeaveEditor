@@ -954,6 +954,19 @@
     return arrowed;
   }
 
+  // A sprite washed in a colour, for something drawn as part of something else - a Resonant Guard's death takes the
+  // Pulse Tiles that killed it with it, and they all take the same red. A copy: sprites are cached and shared.
+  function tinted(sprite, { color, amount }){
+    let wash = sprite.map(one => one ? {
+      r: Math.round(one.r + (color.r - one.r) * amount),
+      g: Math.round(one.g + (color.g - one.g) * amount),
+      b: Math.round(one.b + (color.b - one.b) * amount),
+    } : null);
+    wash.rise = sprite.rise ?? 0;
+    wash.opacity = sprite.opacity;
+    return wash;
+  }
+
   // For the Editor, where something invisible still has to be seen: every other pixel of it, see-through.
   function ghostOf(sprite){
     let rise = sprite.rise ?? 0;
@@ -1024,6 +1037,8 @@
   //   is drawn - a guard shaking itself apart, or lunging as it shoves.
   // - warpFlash (0 to 1) washes the whole board out white, as a Warp Wisp's does.
   // - wispDrift (0 to 1) is how far round its slow up-and-down a Warp Wisp has got.
+  // - An object's own tint ({ color, amount }) washes it in that colour, for something the board is showing as part of
+  //   something else - a Resonant Guard's death takes the Pulse Tiles that killed it with it.
   // - showCounts draws a Lantern Pulse Tile's count before it is lit. Its count is how much light it has left, so the
   //   game only shows it on a tile that's lit; the Editor wants to see what each tile is set to.
   // - pairLetters says which Warp Wisp goes with which Warp Out Square, as a letter in the corner of each. The editor
@@ -1099,7 +1114,9 @@
       if (floating) opacity *= (WISP_FADE_TOP + WISP_FADE_BOTTOM) / 2
         + (WISP_FADE_TOP - WISP_FADE_BOTTOM) / 2 * Math.sin(2 * Math.PI * (options.wispDrift ?? 0));
       if (opacity <= 0) continue;
-      blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX) + shake + lungeX, top + sunk + lungeY, object.sink ? top + TILE_PX : Infinity, opacity, grow);
+      let drawn = hidden ? ghostOf(sprite) : sprite;
+      if (object.tint) drawn = tinted(drawn, object.tint);
+      blit(image, drawn, Math.round(col * TILE_PX) + shake + lungeX, top + sunk + lungeY, object.sink ? top + TILE_PX : Infinity, opacity, grow);
     }
 
     // Gems on their way to the Gate, over the board: each one the sprite the board draws, moving along a straight
