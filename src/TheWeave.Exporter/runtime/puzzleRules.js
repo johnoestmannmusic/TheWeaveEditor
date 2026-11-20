@@ -224,6 +224,9 @@
     let previousShipCell = null;
     // Whether the ship's on its way back from being hurt, when the Slide Bugs let it get there - see arriveAt.
     let recovering = false;
+    // A guard's shove, while it's carrying the ship: { from, direction, remaining }. Taken a square per arrival,
+    // through carryDirection, so a Stream or a Wall on the way stops it where it stands.
+    let shove = null;
     let solved = false;
     // How many Jump Tiles in a row the ship has been launched from, so two facing each other can't go on forever.
     let jumpsInARow = 0;
@@ -661,6 +664,7 @@
           let stillThere = new Set(objects.filter(object => object.kind === 'Gem').map(object => object.index));
           let hadGems = puzzle.objects.some(object => object.kind === 'Gem');
           gateBeams = [];
+          shove = null;
           objects = startingObjects().filter(object => object.kind !== 'Gem' || stillThere.has(object.index));
           if (hadGems && !objects.some(object => object.kind === 'Gem'))
             for (const object of objects) if (object.kind === 'GemGate') object.open = true;
@@ -760,8 +764,17 @@
       // A Pulse Tile's count runs down on the ship's own steps only - never on one the board took for it - and before
       // this square lights anything of its own: the step onto a tile is free, and the next one is the first it spends.
       let spent = step && !jumped && !forced ? spendPulseSteps() : null;
+      // A guard's shove carries on a square per arrival, and stops the moment the ship goes anywhere else.
+      if (step && shove) {
+        if (step.direction !== shove.direction) shove = null;
+        else if (--shove.remaining <= 0) shove = null;
+      }
       let object = objectAt(cell);
       let event = object ? arriveOn(object) : null;
+      // A guard whose Detection has just caught the ship shoves it back. The caller takes the squares, one at a time,
+      // through carryDirection - see shoveDirection. It is the arrival that decides, not a one-square step: a catch
+      // can land on the square the ship was already standing on, and only when the ship is still there for it.
+      if (!jumped && isAt(shipCell, cell)) event = mergeEvent(event, guardsShove(cell));
       // A Reset or a Finish ends the arrival there, and the reflections go with the board.
       if (event?.reset || event?.finished) {
         reflections = [];
@@ -789,6 +802,45 @@
     // Whether an Archeton has a part of a kind - see TheWeave.Core's ArchetonPartKind.
     function hasPart(object, kind){
       return !!archetonDefinitions.get(object.archeton)?.parts?.some(part => part.kind === kind);
+    }
+
+    // Whether a square is inside a guard's Detection: n squares from its own, along a row or a column and not
+    // diagonally, so a guard with 1 is the four squares around it.
+    function detectedBy(guard, cell){
+      let part = archetonDefinitions.get(guard.archeton)?.parts?.find(part => part.kind === 'Detect');
+      if (!part) return false;
+      return Math.abs(cell.col - guard.col) + Math.abs(cell.row - guard.row) <= (part.range ?? 1);
+    }
+
+    // A guard that catches the ship as it comes into its Detection - it was outside before this arrival, and is inside
+    // now - shoves it straight away from the guard. Nothing happens for a ship already inside the zone, so a shove
+    // that leaves it inside doesn't fire again. One guard shoves at a time. { shove } for the caller, or null.
+    function guardsShove(cell){
+      let caught = null;
+      for (const guard of objects) {
+        if (guard.kind !== 'Archeton' || !hasPart(guard, 'Detect') || !hasPart(guard, 'Shove')) continue;
+        let inside = detectedBy(guard, cell);
+        let was = guard.inZone ?? false;
+        guard.inZone = inside;
+        if (!inside || was || caught) continue;
+        let part = archetonDefinitions.get(guard.archeton).parts.find(part => part.kind === 'Shove');
+        let direction = wayFrom(guard, cell);
+        shove = { from: { col: guard.col, row: guard.row }, direction, remaining: Math.max(1, part.distance ?? 3) };
+        caught = { shove: { from: shove.from, direction, distance: shove.remaining } };
+      }
+      return caught;
+    }
+
+    // The way a guard's shove is still to carry the ship, as a puzzle direction, or null: one square, if there is
+    // room for it. Blocked, the ship stays on the last clear square and the shove is over.
+    function shoveDirection(cell){
+      if (!shove || shove.remaining <= 0) return null;
+      let to = nextCell(cell, shove.direction);
+      if (!canEnterAlone(cell, to, MOVER_DIRECTIONS[shove.direction])) {
+        shove = null;
+        return null;
+      }
+      return shove.direction;
     }
 
     // ---------- Reflect Mimics ----------
@@ -1460,6 +1512,9 @@
       placeShip(cell){
         version++;
         shipCell = cell;
+        // A shove in progress, and every guard's memory of having caught the ship, belong to where it was.
+        shove = null;
+        for (const object of objects) object.inZone = false;
         // Reflections are images, not state to be replayed: they're worked out again from wherever the ship now is.
         reflections = [];
         formReflections();
@@ -1475,11 +1530,12 @@
       get gateBeams(){ return gateBeams.map(beam => ({ from: beam.from, letter: beam.letter, ms: beam.ms, gates: beam.gates.map(gate => ({ col: gate.col, row: gate.row })) })); },
 
       // Which way a Stream is carrying a ship on this square, as sokoban.js's direction, or null.
-      // A Stream comes first, and otherwise an Archeton's Beam pushing it away, or a Block's laser sending it back
-      // out of its reach, as long as it can go - see pushedByBeam and hurtBack. Either way the caller moves the
-      // ship along, a square at a time.
+      // A guard's shove comes first - being thrown is what's happening, and the Stream takes over again the moment it
+      // stops - and otherwise a Stream, an Archeton's Beam pushing it away, or a Block's laser sending it back out of
+      // its reach, as long as it can go - see pushedByBeam and hurtBack. Either way the caller moves the ship along, a
+      // square at a time.
       carryDirection(cell){
-        let direction = streams.get(cellKey(cell)) ?? pushedByBeam(cell) ?? hurtBack(cell) ?? hurtByReflection(cell);
+        let direction = shoveDirection(cell) ?? streams.get(cellKey(cell)) ?? pushedByBeam(cell) ?? hurtBack(cell) ?? hurtByReflection(cell);
         return direction ? MOVER_DIRECTIONS[direction] : null;
       },
 

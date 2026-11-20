@@ -1764,6 +1764,33 @@ test('pushing a shielding block out of a Block\'s beam sends the ship back to th
   assert.equal(find(g, 'PushBlock').row, 4, 'and the block stays where it was pushed');
 });
 
+const GUARD = {
+  id: 'resonant-guard', name: 'Resonant Guard',
+  parts: [{ kind: 'Detect', range: 1 }, { kind: 'Shove', distance: 3 }, { kind: 'Resonance' }],
+};
+const guard = (col, row) => obj('Archeton', col, row, { archeton: 'resonant-guard', direction: 'Right' });
+
+test('a Resonant Guard shoves the ship 3 squares back as it comes within 1, and only once as it comes in', () => {
+  let g = withArchetons([GUARD], guard(5, 5), obj('Start', 5, 8));
+  let caught = g.shipArrivedAt(at(5, 6));
+  assert.deepEqual(caught.shove, { from: at(5, 5), direction: 'Down', distance: 3 });
+  assert.equal(g.carryDirection(at(5, 6)), 'down', 'the first of its 3');
+  g.shipArrivedAt(at(5, 7));
+  assert.equal(g.carryDirection(at(5, 7)), 'down');
+  g.shipArrivedAt(at(5, 8));
+  assert.equal(g.carryDirection(at(5, 8)), 'down', 'the last of its 3');
+  g.shipArrivedAt(at(5, 9));
+  assert.equal(g.carryDirection(at(5, 9)), null, 'and that is all of them');
+
+  // Coming back in is a new catch - but only after leaving the zone. With a range of 1 the zone is the four squares
+  // around the guard, so (5,8) and (5,7) are both outside it and (5,6) is inside.
+  g.shipArrivedAt(at(5, 8));
+  assert.equal(g.carryDirection(at(5, 8)), null);
+  g.shipArrivedAt(at(5, 7));
+  g.shipArrivedAt(at(5, 6));            // in again: caught again
+  assert.equal(g.carryDirection(at(5, 6)), 'down');
+});
+
 test('a Push Block can be pushed onto an open Gate, sits in it, and can be pushed on out', () => {
   let g = game(block(2, 5), obj('Gate', 3, 5, { letter: 'A', open: true }), obj('Gate', 3, 7, { letter: 'B' }), block(2, 7), obj('Wall', 3, 6));
   assert.equal(g.canPush(at(2, 5), 'right'), true, 'onto an open Gate');
