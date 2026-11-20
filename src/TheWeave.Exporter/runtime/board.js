@@ -39,9 +39,6 @@
   // How long a guard with a Resonance part shakes before it starts sinking into the ground, and then how long that
   // takes - the same sink a matched block does.
   const RESONANCE_SHAKE_MS = 1000;
-  // Which way each puzzle direction points, in squares, for drawing a guard's lunge along one. puzzleRules.js has the
-  // same table, but it isn't on the WeavePuzzle barrel's allow-list - see puzzle.js's PUBLIC.
-  const STEP_DELTAS = { Up: { x: 0, y: -1 }, Down: { x: 0, y: 1 }, Left: { x: -1, y: 0 }, Right: { x: 1, y: 0 } };
   // How slowly a Warp Wisp drifts up and down about its square, in how many steps of the drift - a step every 100 ms,
   // so the drift is gentle rather than a shimmer.
   const WISP_DRIFT_CYCLE_MS = 2600;
@@ -449,7 +446,7 @@
       // is entirely where it's drawn - see renderBoard's lungeX/lungeY.
       if (play.shove) {
         let reach = Math.round(Math.sin(Math.PI * Math.min(1, play.shove.ms / SHOVE_MS)) * TILE_PX * SHOVE_LUNGE);
-        let delta = STEP_DELTAS[play.shove.direction];
+        let delta = WeavePuzzle.DIRECTION_DELTAS[play.shove.direction];
         key.push('v', reach);
         objects = objects.map(object => object.kind === 'Archeton'
           && object.col === play.shove.from.col && object.row === play.shove.from.row
