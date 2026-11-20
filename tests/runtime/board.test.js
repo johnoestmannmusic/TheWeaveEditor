@@ -402,3 +402,37 @@ test('what a Pulse Tile stops lighting fades out over PULSE_FADE_MS', () => {
   // It stays on the board - an unrevealed object is simply not drawn - so what has ended is its fade.
   assert.equal(gone?.fade, undefined, 'and then it is fading no more, and the renderer leaves it out');
 });
+
+const GUARD = { id: 'resonant-guard', name: 'Resonant Guard', parts: [{ kind: 'Detect', range: 1 }, { kind: 'Shove', distance: 3 }, { kind: 'Resonance' }] };
+
+test('a guard that catches the ship is drawn lunging into its square', () => {
+  let play = createBoardPlay({ puzzle: { archetons: [GUARD], objects: [
+    obj('Start', 5, 7),
+    obj('Archeton', 5, 5, { archeton: 'resonant-guard', direction: 'Down' }),
+  ] } });
+  play.mover.press('up');
+  play.mover.release('up');
+  run(play, BOARD_TIMING.stepMs + 20);
+  let lunging = play.frame(0, {}).list.find((o) => o.kind === 'Archeton');
+  // The guard is shoved from, so it leans down into the square the ship was in - see puzzleRules.js's wayFrom.
+  assert.ok(lunging.lungeY > 0, `lunging into the ship's square: ${lunging.lungeY}`);
+});
+
+test('a guard that resonates is drawn shaking and sinking, then is not drawn at all', () => {
+  let play = createBoardPlay({ puzzle: { archetons: [GUARD], objects: [
+    obj('Start', 8, 9),
+    obj('LanternPulse', 9, 9, { steps: 2 }),
+    obj('Archeton', 5, 5, { archeton: 'resonant-guard', direction: 'Down' }),
+  ] } });
+  play.mover.press('right');
+  play.mover.release('right');
+  run(play, BOARD_TIMING.stepMs + 20);          // stepping on the only Pulse Tile lights it: the guard gives way
+  let shaking = play.frame(0, {}).list.find((o) => o.kind === 'Archeton');
+  assert.ok(shaking, 'still drawn while it shakes');
+  assert.equal(shaking.sink, 0, 'and not sinking yet');
+  run(play, 1200);
+  let sinking = play.frame(0, {}).list.find((o) => o.kind === 'Archeton');
+  assert.ok(sinking && sinking.sink > 0 && sinking.sink < 1, `sinking: ${sinking?.sink}`);
+  run(play, 400);
+  assert.equal(play.frame(0, {}).list.some((o) => o.kind === 'Archeton'), false, 'and gone once it has sunk');
+});

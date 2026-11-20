@@ -33,6 +33,15 @@
   const GEM_SPIN_CYCLE_MS = 1400;
   // How long a Warp Wisp's white flash washes the board out for.
   const WARP_FLASH_MS = 200;
+  // A guard's shove: it lunges into the ship's square and back, over SHOVE_MS, as far as SHOVE_LUNGE of the way.
+  const SHOVE_MS = 400;
+  const SHOVE_LUNGE = 0.6;
+  // How long a guard with a Resonance part shakes before it starts sinking into the ground, and then how long that
+  // takes - the same sink a matched block does.
+  const RESONANCE_SHAKE_MS = 1000;
+  // Which way each puzzle direction points, in squares, for drawing a guard's lunge along one. puzzleRules.js has the
+  // same table, but it isn't on the WeavePuzzle barrel's allow-list - see puzzle.js's PUBLIC.
+  const STEP_DELTAS = { Up: { x: 0, y: -1 }, Down: { x: 0, y: 1 }, Left: { x: -1, y: 0 }, Right: { x: 1, y: 0 } };
   // How slowly a Warp Wisp drifts up and down about its square, in how many steps of the drift - a step every 100 ms,
   // so the drift is gentle rather than a shimmer.
   const WISP_DRIFT_CYCLE_MS = 2600;
@@ -84,6 +93,8 @@
       hopMs: null, // how long ago Archetons with a Move Sequence last hopped
       sinking: [],
       hidings: [], // { object, ms } for each thing a Pulse Tile let go of, for its fade out
+      dissolving: [], // { object, ms } for each guard that resonated, shaking itself apart
+      shove: null, // { from, direction, ms } while a guard lunges and the ship slides away
       pulses: [],
       gateBeams: [], // a Gate Switch's Beams, for as long as they're drawn - see advanceGateBeams
       gemShots: [], // { from, to, ms, last } while a collected Gem is on its way to the Gem Gate
@@ -143,6 +154,8 @@
       // Only what's invisible is drawn differently for being unseen, so only that can fade: anything else is on the
       // board either way, and a Pulse Tile is the light rather than one of the things it lights.
       if (event.hid) for (const object of event.hid) if (object.invisible) play.hidings.push({ object, ms: 0 });
+      if (event.shove) play.shove = { ...event.shove, ms: 0 };
+      if (event.dissolved) for (const object of event.dissolved) play.dissolving.push({ object, ms: 0 });
       if (event.gateBeam) play.gateBeams.push({ ...event.gateBeam, ms: 0 });
       // A Gem that has somewhere to go flies there; one collected with no Gem Gate on the board just goes.
       if (event.gem?.to) play.gemShots.push({ from: { col: event.gem.col, row: event.gem.row }, to: event.gem.to, ms: 0, last: event.gem.last });
@@ -154,6 +167,8 @@
       if (event.reset) {
         play.sinking = [];
         play.hidings = [];
+        play.dissolving = [];
+        play.shove = null;
         play.reset = { before: event.reset, ms: 0, durationMs: WeavePuzzle.resetSweepMs(event.reset, game.objects) };
       }
       if (event.finished) {
@@ -208,6 +223,13 @@
       // something lights it again.
       for (const hiding of play.hidings) hiding.ms += dtMs;
       play.hidings = play.hidings.filter(hiding => hiding.ms < WeavePuzzle.PULSE_FADE_MS && !hiding.object.revealed);
+      // A guard that resonated shakes itself apart, then sinks into the ground - see RESONANCE_SHAKE_MS and frame.
+      for (const dying of play.dissolving) dying.ms += dtMs;
+      play.dissolving = play.dissolving.filter(dying => dying.ms < RESONANCE_SHAKE_MS + TIMING.sinkMs);
+      if (play.shove) {
+        play.shove.ms += dtMs;
+        if (play.shove.ms >= SHOVE_MS) play.shove = null;
+      }
       for (const beam of play.gateBeams) beam.ms += dtMs;
       play.gateBeams = play.gateBeams.filter(beam => beam.ms < TIMING.gateBeamMs);
       // A Beam that's reached its Gates changes them, which is when the press finally takes effect - see
@@ -423,6 +445,26 @@
       floors = fadedBy(hideUnreached(floors));
       objects = fadedBy(hideUnreached(objects));
 
+      // A guard that has just caught the ship lunges into its square and back. It doesn't move on the board, so this
+      // is entirely where it's drawn - see renderBoard's lungeX/lungeY.
+      if (play.shove) {
+        let reach = Math.round(Math.sin(Math.PI * Math.min(1, play.shove.ms / SHOVE_MS)) * TILE_PX * SHOVE_LUNGE);
+        let delta = STEP_DELTAS[play.shove.direction];
+        key.push('v', reach);
+        objects = objects.map(object => object.kind === 'Archeton'
+          && object.col === play.shove.from.col && object.row === play.shove.from.row
+          ? { ...object, lungeX: delta.x * reach, lungeY: delta.y * reach } : object);
+      }
+
+      // A guard that resonated shakes where it stood, then sinks into the ground, shaking and fading as it goes - the
+      // same sink a matched block does, over BOARD_TIMING.sinkMs, after RESONANCE_SHAKE_MS of shaking. The rules took it
+      // off the board already, so it is drawn here rather than found in game.objects.
+      let dissolving = play.dissolving.map(({ object, ms }) => {
+        let sink = Math.max(0, Math.min(1, (ms - RESONANCE_SHAKE_MS) / TIMING.sinkMs));
+        key.push('x', Math.round(ms / 10), Math.round(sink * TILE_PX));
+        return { ...object, sink, fade: 1 - sink, shake: Math.round(Math.sin(ms / 12) * 2) };
+      });
+
       let options = {
         timeMs,
         rotatorTimeMs: play.rotatorClockMs,
@@ -470,7 +512,7 @@
       // A Gate Switch's Beam, and the flashes it makes, run in whole pixels - see renderBoard's drawGateBeam.
       for (const beam of play.gateBeams) key.push('g', Math.round(beam.ms));
 
-      return { list: [...floors, ...objects, ...sinking], options, key: key.join(',') };
+      return { list: [...floors, ...objects, ...sinking, ...dissolving], options, key: key.join(',') };
     };
 
     return play;
