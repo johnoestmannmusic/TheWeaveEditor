@@ -64,6 +64,25 @@ public enum ArchetonPartKind
     /// Switches and Reset Switches.
     /// </summary>
     Swim,
+
+    /// <summary>
+    /// A sensor: notices the ship within Range squares of it, counted along its row and column and not diagonally, and
+    /// only as the ship comes in - it has to be outside that reach again before it can be noticed again. On its own it
+    /// does nothing: a Shove is what it sets off.
+    /// </summary>
+    Detect,
+
+    /// <summary>
+    /// An effect: the ship a Detection catches is shoved straight away from the Archeton, Distance squares, stopping on
+    /// the last clear square. A guard whose shove has nowhere to go does nothing, and nothing is hurt by it.
+    /// </summary>
+    Shove,
+
+    /// <summary>
+    /// An effect: when every Lantern Pulse Tile on the board is lit at the same time, it shakes for a second, then
+    /// dissolves into the ground, and is no longer on the board. See runtime/puzzleRules.js's resonanceDeath.
+    /// </summary>
+    Resonance,
 }
 
 /// <summary>Which ways a Beam looks.</summary>
@@ -82,9 +101,13 @@ public sealed class ArchetonPart
 {
     public ArchetonPartKind Kind { get; set; }
 
-    /// <summary>Beam only: how many squares it reaches, from 1 to 9.</summary>
+    /// <summary>Beam and Detection only: how many squares it reaches, from 1 to 9.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Range { get; set; }
+
+    /// <summary>Shove only: how many squares it throws the ship, from 1 to 9.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Distance { get; set; }
 
     /// <summary>Beam only.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -424,10 +447,72 @@ public static class ArchetonDefinitions
         ],
     };
 
+    /// <summary>
+    /// A guard: notices the ship a square off and shoves it back 3, and gives way when every Lantern Pulse Tile on the
+    /// board is lit at once.
+    /// </summary>
+    public static ArchetonDefinition ResonantGuard() => new()
+    {
+        Id = "resonant-guard",
+        Name = "Resonant Guard",
+        Drawing = ResonantGuardDrawingId,
+        Parts =
+        [
+            new ArchetonPart { Kind = ArchetonPartKind.Detect, Range = 1 },
+            new ArchetonPart { Kind = ArchetonPartKind.Shove, Distance = 3 },
+            new ArchetonPart { Kind = ArchetonPartKind.Resonance },
+        ],
+    };
+
+    public const string ResonantGuardDrawingId = "resonant-guard";
+
+    /// <summary>
+    /// Resonant Guard's drawing: a triangle outline, drawn in the light paint so that it reads on a dark board. John
+    /// draws the rest himself - see the issue.
+    /// </summary>
+    public static PuzzleDrawing ResonantGuardDrawing() => new()
+    {
+        Id = ResonantGuardDrawingId,
+        Kind = PuzzleObjectKind.Archeton,
+        Name = "Resonant Guard",
+        Pixels =
+        "........................" +
+        "...........H............" +
+        "..........HHH..........." +
+        "..........HHH..........." +
+        ".........HHHHH.........." +
+        ".........HH.HH.........." +
+        "........HHH.HHH........." +
+        "........HH...HHH........" +
+        ".......HHH....HH........" +
+        ".......HH.....HHH......." +
+        "......HHH......HH......." +
+        "......HH.......HHH......" +
+        ".....HHH........HH......" +
+        ".....HH.........HHH....." +
+        "....HHH..........HH....." +
+        "....HH...........HHH...." +
+        "...HHH............HHH..." +
+        "...HH..............HH..." +
+        "..HHH..............HHH.." +
+        "..HHHHHHHHHHHHHHHHHHHH.." +
+        ".HHHHHHHHHHHHHHHHHHHHHH." +
+        "..HHHHHHHHHHHHHHHHHHHH.." +
+        "........................" +
+        "........................",
+        Mix =
+        [
+            new PuzzleMixColour { Role = "archeton", Shade = 0, Percent = 15 },
+            new PuzzleMixColour { Role = "archeton", Shade = 1, Percent = 25 },
+            new PuzzleMixColour { Role = "archeton", Shade = 2, Percent = 45 },
+            new PuzzleMixColour { Role = "archeton", Shade = 3, Percent = 15 },
+        ],
+    };
+
     /// <summary>How many moves a Sequence can have.</summary>
     public const int MaxMoves = 32;
 
-    public static IReadOnlyList<Func<ArchetonDefinition>> ReadyMade { get; } = [Sentribeam, SlideBug, JumpbugA, ReflectMimic, SwimFish, WarpWisp];
+    public static IReadOnlyList<Func<ArchetonDefinition>> ReadyMade { get; } = [Sentribeam, SlideBug, JumpbugA, ReflectMimic, SwimFish, WarpWisp, ResonantGuard];
 
     /// <summary>The drawing a ready-made Archeton comes with, by its id, or null.</summary>
     public static PuzzleDrawing? ReadyMadeDrawing(string? id) => id switch
@@ -437,6 +522,7 @@ public static class ArchetonDefinitions
         ReflectMimicDrawingId => ReflectMimicDrawing(),
         SwimFishDrawingId => SwimFishDrawing(),
         WarpWispDrawingId => WarpWispDrawing(),
+        ResonantGuardDrawingId => ResonantGuardDrawing(),
         _ => null,
     };
 

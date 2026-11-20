@@ -1402,9 +1402,9 @@ public class ProjectEditingTests
         var project = new WeaveProject();
         ProjectEditing.SeedArchetons(project);
 
-        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish", "warp-wisp"], project.Archetons!.Select(a => a.Id));
-        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish", "warp-wisp"], project.ArchetonsOffered);
-        Assert.Equal(["slide-bug", "jumpbug", "reflect-mimic", "swim-fish", "warp-wisp"], project.PuzzleDrawings!.Select(d => d.Id));
+        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish", "warp-wisp", "resonant-guard"], project.Archetons!.Select(a => a.Id));
+        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish", "warp-wisp", "resonant-guard"], project.ArchetonsOffered);
+        Assert.Equal(["slide-bug", "jumpbug", "reflect-mimic", "swim-fish", "warp-wisp", "resonant-guard"], project.PuzzleDrawings!.Select(d => d.Id));
         Assert.All(project.PuzzleDrawings!, drawing =>
         {
             Assert.Equal(PuzzleObjectKind.Archeton, drawing.Kind);
@@ -1423,12 +1423,12 @@ public class ProjectEditingTests
     {
         var project = new WeaveProject { Archetons = [ArchetonDefinitions.Sentribeam()] };
         ProjectEditing.SeedArchetons(project);
-        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish", "warp-wisp"], project.Archetons!.Select(a => a.Id));
+        Assert.Equal(["sentribeam", "slide-bug", "jumpbug-a", "reflect-mimic", "swim-fish", "warp-wisp", "resonant-guard"], project.Archetons!.Select(a => a.Id));
 
         project.Archetons = [];
         ProjectEditing.SeedArchetons(project);
         Assert.Empty(project.Archetons);
-        Assert.Equal(5, project.PuzzleDrawings!.Count);
+        Assert.Equal(6, project.PuzzleDrawings!.Count);
     }
 
     [Fact]
@@ -1451,5 +1451,33 @@ public class ProjectEditingTests
         var sting = new ArchetonPart { Kind = ArchetonPartKind.Sting, Moves = [PuzzleDirection.Up] };
         ProjectEditing.ValidateArchetons([new ArchetonDefinition { Id = "b", Name = "B", Parts = [sting] }], null);
         Assert.Null(sting.Moves);
+    }
+
+    [Fact]
+    public void ValidateArchetons_KeepsADetectionsRangeAndAShovesDistance_AndDropsThemElsewhere()
+    {
+        var archetons = new List<ArchetonDefinition>
+        {
+            new()
+            {
+                Id = "guard", Name = "Guard",
+                Parts =
+                [
+                    new ArchetonPart { Kind = ArchetonPartKind.Detect, Range = 2 },
+                    new ArchetonPart { Kind = ArchetonPartKind.Shove, Distance = 4 },
+                    new ArchetonPart { Kind = ArchetonPartKind.Shove, Distance = 4, Range = 7 },
+                    new ArchetonPart { Kind = ArchetonPartKind.Resonance, Range = 3, Distance = 3 },
+                ],
+            },
+        };
+
+        ProjectEditing.ValidateArchetons(archetons, null);
+
+        Assert.Equal(2, archetons[0].Parts[0].Range);
+        Assert.Equal(4, archetons[0].Parts[1].Distance);
+        Assert.Null(archetons[0].Parts[1].Range); // a Shove has a distance, not a range
+        Assert.Null(archetons[0].Parts[2].Range);
+        Assert.Null(archetons[0].Parts[3].Range); // and Resonance has neither
+        Assert.Null(archetons[0].Parts[3].Distance);
     }
 }

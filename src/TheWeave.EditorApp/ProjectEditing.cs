@@ -523,24 +523,42 @@ internal static class ProjectEditing
             {
                 if (part.Kind == ArchetonPartKind.Beam)
                 {
-                    if (part.Range is not { } range || range < 1 || range > ArchetonDefinitions.MaxRange)
-                        throw new InvalidOperationException($"'{archeton.Name}''s Beam needs a range from 1 to {ArchetonDefinitions.MaxRange}.");
                     part.Look ??= ArchetonLook.AllWays;
                     part.BlockedByBlocks ??= true;
                     part.ShowReach ??= true;
                 }
                 else
                 {
-                    part.Range = null;
                     part.Look = null;
                     part.BlockedByBlocks = null;
                     part.ShowReach = null;
                 }
 
+                // A Beam's reach and a Detection's are both "how many squares", and each runs 1 to MaxRange.
+                if (part.Kind is ArchetonPartKind.Beam or ArchetonPartKind.Detect)
+                {
+                    if (part.Range is not { } range || range < 1 || range > ArchetonDefinitions.MaxRange)
+                        throw new InvalidOperationException($"'{archeton.Name}'s {(part.Kind == ArchetonPartKind.Beam ? "Beam" : "Detection")} needs a range from 1 to {ArchetonDefinitions.MaxRange}.");
+                }
+                else
+                {
+                    part.Range = null;
+                }
+
+                if (part.Kind == ArchetonPartKind.Shove)
+                {
+                    if (part.Distance is not { } distance || distance < 1 || distance > ArchetonDefinitions.MaxRange)
+                        throw new InvalidOperationException($"'{archeton.Name}'s Shove needs a distance from 1 to {ArchetonDefinitions.MaxRange}.");
+                }
+                else
+                {
+                    part.Distance = null;
+                }
+
                 if (part.Kind == ArchetonPartKind.Sequence)
                 {
                     if (part.Moves is not { Count: > 0 } moves || moves.Count > ArchetonDefinitions.MaxMoves)
-                        throw new InvalidOperationException($"'{archeton.Name}''s Move Sequence needs from 1 to {ArchetonDefinitions.MaxMoves} moves.");
+                        throw new InvalidOperationException($"'{archeton.Name}'s Move Sequence needs from 1 to {ArchetonDefinitions.MaxMoves} moves.");
                 }
                 else
                 {
