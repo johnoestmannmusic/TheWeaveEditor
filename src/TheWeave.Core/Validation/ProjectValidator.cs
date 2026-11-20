@@ -329,8 +329,12 @@ public static class ProjectValidator
         if (puzzle.Objects.Any(o => o.Kind == PuzzleObjectKind.PipeSwitch) && !hasPipes)
             Warn("it has a Pipe Switch but no Pipes, so it does nothing.");
 
-        if (puzzle.Objects.Any(o => o.Invisible) && puzzle.Objects.All(o => o.Kind != PuzzleObjectKind.Lantern))
-            Warn("it has invisible objects but no Lantern, so they can never be seen.");
+        if (puzzle.Objects.Any(o => o.Invisible)
+            && puzzle.Objects.All(o => o.Kind != PuzzleObjectKind.Lantern && o.Kind != PuzzleObjectKind.LanternPulse))
+            Warn("it has invisible objects but no Lantern or Lantern Pulse Tile, so they can never be seen.");
+
+        if (puzzle.Objects.Any(o => o.Kind == PuzzleObjectKind.LanternPulse) && puzzle.Objects.All(o => !o.Invisible))
+            Warn("it has Lantern Pulse Tiles but nothing invisible, so they light nothing.");
 
         // Push Blocks only ever go by sinking with another of their symbol.
         var blocks = puzzle.Objects.Where(o => o.Kind == PuzzleObjectKind.PushBlock).ToList();

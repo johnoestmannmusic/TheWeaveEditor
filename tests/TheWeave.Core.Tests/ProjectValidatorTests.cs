@@ -355,12 +355,14 @@ public class ProjectValidatorTests
     }
 
     [Fact]
-    public void Invisible_WithNoLantern_IsReported()
+    public void Invisible_WithNoLanternOrPulseTile_IsReported()
     {
         var wall = new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 1, Invisible = true };
 
         Assert.Contains("no Lantern", Assert.Single(PuzzleProblems(Finish, wall)));
         Assert.Empty(PuzzleProblems(Finish, wall, new PuzzleObject { Kind = PuzzleObjectKind.Lantern, Col = 2 }));
+        Assert.Empty(PuzzleProblems(Finish, wall, new PuzzleObject { Kind = PuzzleObjectKind.LanternPulse, Col = 2, Steps = 3 }));
+        Assert.Contains("nothing invisible", Assert.Single(PuzzleProblems(Finish, new PuzzleObject { Kind = PuzzleObjectKind.LanternPulse, Col = 2, Steps = 3 })));
     }
 
     [Fact]
