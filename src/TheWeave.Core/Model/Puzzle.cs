@@ -40,6 +40,13 @@ public enum PuzzleObjectKind
     /// <summary>Stepping on this lights it for good, revealing Invisible things within reach of it.</summary>
     Lantern,
 
+    /// <summary>
+    /// Stepping on this lights it, revealing Invisible things within reach, but only for its Steps of the ship's own
+    /// steps: then it goes out, and what few things nothing else lights go back to being unseen. Stepping on it again
+    /// puts the count back. See runtime/puzzleRules.js's spendPulseSteps.
+    /// </summary>
+    LanternPulse,
+
     /// <summary>Pushed a square by the ship walking into it. Two or more with the same Symbol side by side sink into the ground.</summary>
     PushBlock,
 
@@ -123,6 +130,9 @@ public enum PuzzleDirection
 /// <summary>One thing on a puzzle's board. A square holds one object, plus optionally a floor tile (a Stream, RotatorTile or Pipe) under it.</summary>
 public sealed class PuzzleObject
 {
+    /// <summary>The most steps a Lantern Pulse Tile can be given: its count is drawn as two digits past nine.</summary>
+    public const int MaxLanternPulseSteps = 19;
+
     public PuzzleObjectKind Kind { get; set; }
     public int Col { get; set; }
     public int Row { get; set; }
@@ -157,6 +167,14 @@ public sealed class PuzzleObject
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Invisible { get; set; }
+
+    /// <summary>
+    /// LanternPulse only: how many of the ship's own steps it stays lit for, from 1 to
+    /// PuzzleObject.MaxLanternPulseSteps - shown in its middle, as two digits past nine. A tile with none saved reads
+    /// as 3. Left out of the project file when it isn't a Lantern Pulse Tile.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Steps { get; set; }
 
     /// <summary>
     /// The id of the PuzzleDrawing in WeaveProject.PuzzleDrawings it's drawn with. Left out of the project file
@@ -271,6 +289,7 @@ public static class PuzzleDrawings
     {
         PuzzleObjectKind.Wall, PuzzleObjectKind.Finish, PuzzleObjectKind.Gate, PuzzleObjectKind.Switch,
         PuzzleObjectKind.Teleporter, PuzzleObjectKind.Key, PuzzleObjectKind.RotatorSwitch, PuzzleObjectKind.Lantern,
+        PuzzleObjectKind.LanternPulse,
         PuzzleObjectKind.Stream, PuzzleObjectKind.RotatorTile, PuzzleObjectKind.PushBlock, PuzzleObjectKind.JumpTile,
         PuzzleObjectKind.ResetSwitch, PuzzleObjectKind.Pipe, PuzzleObjectKind.PipeSwitch, PuzzleObjectKind.Edge,
         PuzzleObjectKind.Archeton, PuzzleObjectKind.Laser, PuzzleObjectKind.Gem, PuzzleObjectKind.GemGate,

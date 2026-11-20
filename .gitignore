@@ -14,3 +14,6 @@ obj/
 
 ## Worldbuilding Sketchpad
 worldbuilding/
+
+## Agents
+.hermes/plans/*

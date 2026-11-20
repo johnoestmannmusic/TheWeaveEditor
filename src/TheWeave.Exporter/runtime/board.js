@@ -33,6 +33,19 @@
   const GEM_SPIN_CYCLE_MS = 1400;
   // How long a Warp Wisp's white flash washes the board out for.
   const WARP_FLASH_MS = 200;
+  // A guard's shove: it lunges into the ship's square and back, over SHOVE_MS, as far as SHOVE_LUNGE of the way.
+  const SHOVE_MS = 400;
+  const SHOVE_LUNGE = 0.6;
+  // How long a guard with a Resonance part shakes before it starts sinking into the ground, and then how long that
+  // takes - the same sink a matched block does. It shakes for the same second each time a Pulse Tile lights, and harder
+  // the more of them are lit, up to RESONANCE_SHAKE_MAX_PX - see puzzleRules.js's resonanceShake.
+  const RESONANCE_SHAKE_MS = 1000;
+  const RESONANCE_SHAKE_MAX_PX = 4;
+  // The red a dying guard and the Pulse Tiles that killed it are washed in, and how much of it they take: the board
+  // saying they are one thing, so red rather than a palette colour is deliberate - it reads the same whatever the album
+  // art is, as the Gate Beam's yellow does.
+  const RESONANCE_RED = { r: 214, g: 44, b: 38 };
+  const RESONANCE_TINT = 0.75;
   // How slowly a Warp Wisp drifts up and down about its square, in how many steps of the drift - a step every 100 ms,
   // so the drift is gentle rather than a shimmer.
   const WISP_DRIFT_CYCLE_MS = 2600;
@@ -57,6 +70,11 @@
   // and onBlocked(from, to, direction) as sokoban.js's mover has it.
   function createBoardPlay({ puzzle, game = null, cell = null, facing = null, hooks = {} }){
     game ??= puzzle ? WeavePuzzle.createPuzzleGame(puzzle) : null;
+    // The Archetons that feel a Pulse Tile light: the ones whose definition has a Resonance part, by id.
+    let resonantIds = new Set((puzzle?.archetons ?? [])
+      .filter(definition => (definition.parts ?? []).some(part => part.kind === 'Resonance'))
+      .map(definition => definition.id));
+
     let startCell = cell ?? (game ? game.start : WeavePuzzle.DEFAULT_START);
     if (cell && game) game.placeShip(cell);
 
@@ -83,6 +101,11 @@
       refusedFlash: null,
       hopMs: null, // how long ago Archetons with a Move Sequence last hopped
       sinking: [],
+      hidings: [], // { object, ms } for each thing a Pulse Tile let go of, for its fade out
+      dissolving: [], // { object, ms } for each guard that resonated, shaking itself apart
+      shove: null, // { from, direction, ms } while a guard lunges and the ship slides away
+      resonantMs: null, // how long a guard has been shaking because a Pulse Tile lit, for its rattle
+      resonantAmplitude: 1, // how far it shakes, which is harder the more tiles are lit - see RESONANCE_SHAKE_MAX_PX
       pulses: [],
       gateBeams: [], // a Gate Switch's Beams, for as long as they're drawn - see advanceGateBeams
       gemShots: [], // { from, to, ms, last } while a collected Gem is on its way to the Gem Gate
@@ -92,11 +115,13 @@
       warpFlashMs: null, // how long ago the ship was warped, for the board's white flash
     };
 
-    // A Stream carries the ship along, whatever's being pressed, and an Archeton's laser can push or send it back.
+    // A Stream carries the ship along, whatever's being pressed, and an Archeton's laser can push or send it back. A
+    // guard's shove is taken without turning the ship: it is thrown back the way it was going, and turning it round to
+    // face its own slide reads as it running rather than being shoved - see puzzleRules.js's shoving.
     function carry(){
       if (!game || play.finished || play.jump || play.teleport) return;
       let direction = game.carryDirection(play.mover.cell);
-      if (direction) play.mover.queue(direction);
+      if (direction) play.mover.queue(direction, { turn: !game.shoving });
     }
 
     // Acts on what puzzle.js says just happened, then tells the caller.
@@ -139,6 +164,16 @@
       if (event.swam) play.swimMs = 0;
       if (event.hopped) play.hopMs = 0;
       if (event.lit) play.pulses.push({ ...event.lit, ms: 0, revealed: event.revealed ?? [] });
+      // Only what's invisible is drawn differently for being unseen, so only that can fade: anything else is on the
+      // board either way, and a Pulse Tile is the light rather than one of the things it lights.
+      if (event.hid) for (const object of event.hid) if (object.invisible) play.hidings.push({ object, ms: 0 });
+      // A Pulse Tile lighting is felt by every guard with a Resonance part: it rattles, harder the more are lit.
+      if (event.resonance) {
+        play.resonantMs = 0;
+        play.resonantAmplitude = Math.min(RESONANCE_SHAKE_MAX_PX, Math.max(1, event.resonance.active));
+      }
+      if (event.shove) play.shove = { ...event.shove, ms: 0 };
+      if (event.dissolved) for (const object of event.dissolved) play.dissolving.push({ object, ms: 0 });
       if (event.gateBeam) play.gateBeams.push({ ...event.gateBeam, ms: 0 });
       // A Gem that has somewhere to go flies there; one collected with no Gem Gate on the board just goes.
       if (event.gem?.to) play.gemShots.push({ from: { col: event.gem.col, row: event.gem.row }, to: event.gem.to, ms: 0, last: event.gem.last });
@@ -149,6 +184,10 @@
       // Everything put back by a Reset Switch: whatever was sinking is back too, so it stops.
       if (event.reset) {
         play.sinking = [];
+        play.hidings = [];
+        play.dissolving = [];
+        play.shove = null;
+        play.resonantMs = null;
         play.reset = { before: event.reset, ms: 0, durationMs: WeavePuzzle.resetSweepMs(event.reset, game.objects) };
       }
       if (event.finished) {
@@ -168,7 +207,7 @@
         onArrive: game ? (arrived) => {
           play.dropping = false;
           game.settlePushes();
-          onEvent(game.shipArrivedAt(arrived));
+          onEvent(game.shipArrivedAt(arrived, { forced: play.mover.stepForced }));
           carry();
         } : undefined,
         // Walking into a Push Block pushes it on ahead, as the step begins - and so does a reflection, so that its block
@@ -199,6 +238,21 @@
       play.sinking = play.sinking.filter(sinking => sinking.ms < sinking.glideMs + TIMING.sinkMs);
       for (const pulse of play.pulses) pulse.ms += dtMs;
       play.pulses = play.pulses.filter(pulse => pulse.ms < TIMING.pulseMs);
+      // What a Pulse Tile let go of fades out where it was, and is dropped once it is quite gone - or the moment
+      // something lights it again.
+      for (const hiding of play.hidings) hiding.ms += dtMs;
+      play.hidings = play.hidings.filter(hiding => hiding.ms < WeavePuzzle.PULSE_FADE_MS && !hiding.object.revealed);
+      // A guard that resonated shakes itself apart, then sinks into the ground - see RESONANCE_SHAKE_MS and frame.
+      for (const dying of play.dissolving) dying.ms += dtMs;
+      play.dissolving = play.dissolving.filter(dying => dying.ms < RESONANCE_SHAKE_MS + TIMING.sinkMs);
+      if (play.shove) {
+        play.shove.ms += dtMs;
+        if (play.shove.ms >= SHOVE_MS) play.shove = null;
+      }
+      if (play.resonantMs !== null) {
+        play.resonantMs += dtMs;
+        if (play.resonantMs >= RESONANCE_SHAKE_MS) play.resonantMs = null;
+      }
       for (const beam of play.gateBeams) beam.ms += dtMs;
       play.gateBeams = play.gateBeams.filter(beam => beam.ms < TIMING.gateBeamMs);
       // A Beam that's reached its Gates changes them, which is when the press finally takes effect - see
@@ -395,9 +449,61 @@
       let warpFlash = play.warpFlashMs === null || play.warpFlashMs >= WARP_FLASH_MS ? 0 : 1 - play.warpFlashMs / WARP_FLASH_MS;
       if (warpFlash > 0) key.push('w', Math.round(warpFlash * 10));
 
+      // The fade of whatever a Pulse Tile stopped lighting, over PULSE_FADE_MS. In whole pixels, so the key only
+      // changes when the picture would.
+      let hiding = new Map();
+      for (const entry of play.hidings) {
+        let fade = 1 - Math.min(1, entry.ms / WeavePuzzle.PULSE_FADE_MS);
+        if (fade <= 0) continue;
+        key.push('f', Math.round(fade * TILE_PX));
+        hiding.set(entry.object, fade);
+      }
+      let fadedBy = (list) => hiding.size === 0 ? list
+        : list.map(thing => hiding.has(thing)
+          // A thing a Pulse Tile has just let go of is unseen from the moment the rules say so, so it would be left out
+          // of the picture at once and its fade be no fade at all: it's still drawn for as long as the fade lasts.
+          ? { ...thing, revealed: true, fade: (thing.fade ?? 1) * hiding.get(thing) } : thing);
+
       let hideUnreached = (list) => unreached.size === 0 ? list : list.map(thing => unreached.has(thing) ? { ...thing, revealed: false } : thing);
-      floors = hideUnreached(floors);
-      objects = hideUnreached(objects);
+      floors = fadedBy(hideUnreached(floors));
+      objects = fadedBy(hideUnreached(objects));
+
+      // A guard that has just caught the ship lunges into its square and back. It doesn't move on the board, so this
+      // is entirely where it's drawn - see renderBoard's lungeX/lungeY.
+      if (play.shove) {
+        let reach = Math.round(Math.sin(Math.PI * Math.min(1, play.shove.ms / SHOVE_MS)) * TILE_PX * SHOVE_LUNGE);
+        let delta = WeavePuzzle.DIRECTION_DELTAS[play.shove.direction];
+        key.push('v', reach);
+        objects = objects.map(object => object.kind === 'Archeton'
+          && object.col === play.shove.from.col && object.row === play.shove.from.row
+          ? { ...object, lungeX: delta.x * reach, lungeY: delta.y * reach } : object);
+      }
+
+      // A guard that has just felt a Pulse Tile light rattles where it stands, settling over its second, and harder
+      // the more of them are lit - see puzzleRules.js's resonanceShake.
+      if (play.resonantMs !== null) {
+        let settle = 1 - (play.resonantMs / RESONANCE_SHAKE_MS) * 0.5;
+        let shake = Math.round(Math.sin(play.resonantMs / 11) * play.resonantAmplitude * settle);
+        key.push('y', shake);
+        objects = objects.map(object => object.kind === 'Archeton' && resonantIds.has(object.archeton) ? { ...object, shake } : object);
+      }
+
+      // A guard's death takes the Pulse Tiles that killed it with it: for as long as it is going, they and it are washed
+      // the same red, so that the link the rattle hinted at is plain at the end. See RESONANCE_RED.
+      let deathTint = play.dissolving.length > 0 ? { color: RESONANCE_RED, amount: RESONANCE_TINT } : null;
+      if (deathTint) {
+        key.push('t', Math.round(RESONANCE_TINT * 10));
+        objects = objects.map(object => object.kind === 'LanternPulse' ? { ...object, tint: deathTint } : object);
+      }
+
+      // A guard that resonated shakes where it stood, then sinks into the ground, shaking and fading as it goes - the
+      // same sink a matched block does, over BOARD_TIMING.sinkMs, after RESONANCE_SHAKE_MS of shaking. The rules took it
+      // off the board already, so it is drawn here rather than found in game.objects.
+      let dissolving = play.dissolving.map(({ object, ms }) => {
+        let sink = Math.max(0, Math.min(1, (ms - RESONANCE_SHAKE_MS) / TIMING.sinkMs));
+        key.push('x', Math.round(ms / 10), Math.round(sink * TILE_PX));
+        return { ...object, sink, fade: 1 - sink, shake: Math.round(Math.sin(ms / 12) * 2), ...(deathTint ? { tint: deathTint } : {}) };
+      });
 
       let options = {
         timeMs,
@@ -446,7 +552,7 @@
       // A Gate Switch's Beam, and the flashes it makes, run in whole pixels - see renderBoard's drawGateBeam.
       for (const beam of play.gateBeams) key.push('g', Math.round(beam.ms));
 
-      return { list: [...floors, ...objects, ...sinking], options, key: key.join(',') };
+      return { list: [...floors, ...objects, ...sinking, ...dissolving], options, key: key.join(',') };
     };
 
     return play;

@@ -160,6 +160,12 @@
   // How far a lit Lantern reaches, in squares from its own. A little past 3 makes it read as a circle on a
   // grid of squares: each row outward from it reaches 3, 3, 2 and 1 squares to either side.
   const LANTERN_REACH = 3.5;
+  // How many of the ship's own steps a Lantern Pulse Tile stays lit for, unless it says otherwise, and the most it
+  // can be given - it shows its count in the middle of itself, as two digits past nine.
+  const PULSE_STEPS = 3;
+  const PULSE_MAX_STEPS = 19;
+  // How long something takes to fade out once nothing lights it any more.
+  const PULSE_FADE_MS = 250;
   // How many Jump Tiles can launch the ship one after another before the next one lets it stay.
   const MAX_JUMPS_IN_A_ROW = 8;
   // sokoban.js's directions are lower case, and a puzzle's are capitalized as they are in the project file.
@@ -218,6 +224,9 @@
     let previousShipCell = null;
     // Whether the ship's on its way back from being hurt, when the Slide Bugs let it get there - see arriveAt.
     let recovering = false;
+    // A guard's shove, while it's carrying the ship: { from, direction, remaining }. Taken a square per arrival,
+    // through carryDirection, so a Stream or a Wall on the way stops it where it stands.
+    let shove = null;
     let solved = false;
     // How many Jump Tiles in a row the ship has been launched from, so two facing each other can't go on forever.
     let jumpsInARow = 0;
@@ -521,15 +530,60 @@
       return { col: cell.col + delta.x, row: cell.row + delta.y };
     }
 
-    // Everything within reach of a lit Lantern comes into view, and stays there.
+    // Whether a thing is within a Lantern's or a Pulse Tile's reach: the same circle of squares either side.
+    function withinReach(source, thing){
+      let dx = thing.col - source.col, dy = thing.row - source.row;
+      return dx * dx + dy * dy <= LANTERN_REACH * LANTERN_REACH;
+    }
+
+    // Everything within reach of a lit Lantern comes into view, and stays there. A Pulse Tile's reach is only lit
+    // while it has steps left, so it is not one of these - see lightPulse and covered.
     function revealLitAreas(){
       for (const lantern of objects) {
-        if (!lantern.lit) continue;
-        for (const thing of [...floors, ...objects]) {
-          let dx = thing.col - lantern.col, dy = thing.row - lantern.row;
-          if (dx * dx + dy * dy <= LANTERN_REACH * LANTERN_REACH) thing.revealed = true;
-        }
+        if (lantern.kind !== 'Lantern' || !lantern.lit) continue;
+        for (const thing of [...floors, ...objects]) if (withinReach(lantern, thing)) thing.revealed = true;
       }
+    }
+
+    // Whether a lit Lantern, or a Pulse Tile with steps left, keeps a thing in view: the two cover the same circle, so
+    // they overlap, and what either of them still reaches stays seen when the other runs out.
+    function covered(thing){
+      return objects.some(source => ((source.kind === 'Lantern' && source.lit)
+        || (source.kind === 'LanternPulse' && (source.charge ?? 0) > 0)) && withinReach(source, thing));
+    }
+
+    // A Pulse Tile lighting: it takes its full count, everything in its reach comes into view, and the caller pulses it
+    // as it would a Lantern, so what it lights stays hidden until the ring reaches it - see board.js's pulses.
+    function lightPulse(tile){
+      let hidden = [...floors, ...objects].filter(thing => !thing.revealed);
+      tile.charge = Math.max(1, Math.min(PULSE_MAX_STEPS, tile.steps ?? PULSE_STEPS));
+      tile.lit = true;
+      for (const thing of [...floors, ...objects]) if (withinReach(tile, thing)) thing.revealed = true;
+      // A guard with a Resonance part feels it, and shakes: the only tell the player gets that the tiles and the guard
+      // are linked at all. See resonanceShake, and resonanceDeath for when the last one lights.
+      return mergeEvent({ lit: { col: tile.col, row: tile.row }, revealed: hidden.filter(thing => thing.revealed) }, resonanceShake());
+    }
+
+    // One of the ship's own steps goes by: every Pulse Tile with steps left spends one, and whatever nothing else
+    // covers goes back to being unseen - the caller fades those out over PULSE_FADE_MS. A Lantern's lit things, and
+    // anything another tile still reaches, stay in view. { hid } for the caller, or null.
+    function spendPulseSteps(){
+      let spent = false;
+      for (const tile of objects) {
+        if (tile.kind !== 'LanternPulse' || (tile.charge ?? 0) <= 0) continue;
+        tile.charge--;
+        if (tile.charge === 0) tile.lit = false;
+        spent = true;
+      }
+      if (!spent) return null;
+      version++;
+      let hid = [];
+      for (const thing of [...floors, ...objects]) {
+        if (!thing.revealed || covered(thing)) continue;
+        thing.revealed = false;
+        hid.push(thing);
+      }
+      return hid.length === 0 ? null : { hid };
     }
 
     // A Gate Switch's Beams, in flight: { from, gates, letter, ms }. A press aims one at every Gate with its letter and
@@ -612,6 +666,7 @@
           let stillThere = new Set(objects.filter(object => object.kind === 'Gem').map(object => object.index));
           let hadGems = puzzle.objects.some(object => object.kind === 'Gem');
           gateBeams = [];
+          shove = null;
           objects = startingObjects().filter(object => object.kind !== 'Gem' || stillThere.has(object.index));
           if (hadGems && !objects.some(object => object.kind === 'Gem'))
             for (const object of objects) if (object.kind === 'GemGate') object.open = true;
@@ -619,6 +674,11 @@
           for (const pipe of pipes.values()) pipe.direction = pipe.startDirection;
           return { reset: before };
         }
+
+        // A Pulse Tile is a Lantern that runs out: lighting it shows what it reaches, and its count comes off one of
+        // the ship's own steps at a time. Lighting it again puts the count back and pulses again.
+        case 'LanternPulse':
+          return lightPulse(object);
 
         case 'PipeSwitch':
           return turnPipes();
@@ -637,6 +697,7 @@
       switch (object.kind) {
         case 'Switch':
         case 'Lantern':
+        case 'LanternPulse':
         case 'ResetSwitch':
         case 'PipeSwitch':
           return trigger(object);
@@ -693,7 +754,7 @@
       return event ? { ...event, ...more } : more;
     }
 
-    function shipArrives(cell, { jumped = false } = {}){
+    function shipArrives(cell, { jumped = false, forced = false } = {}){
       version++;
       let step = null;
       if (!isAt(shipCell, cell)) {
@@ -702,8 +763,20 @@
       }
       shipCell = cell;
       if (!jumped) jumpsInARow = 0;
+      // A Pulse Tile's count runs down on the ship's own steps only - never on one the board took for it - and before
+      // this square lights anything of its own: the step onto a tile is free, and the next one is the first it spends.
+      let spent = step && !jumped && !forced ? spendPulseSteps() : null;
+      // A guard's shove carries on a square per arrival, and stops the moment the ship goes anywhere else.
+      if (step && shove) {
+        if (step.direction !== shove.direction) shove = null;
+        else if (--shove.remaining <= 0) shove = null;
+      }
       let object = objectAt(cell);
       let event = object ? arriveOn(object) : null;
+      // A guard whose Detection has just caught the ship shoves it back. The caller takes the squares, one at a time,
+      // through carryDirection - see shoveDirection. It is the arrival that decides, not a one-square step: a catch
+      // can land on the square the ship was already standing on, and only when the ship is still there for it.
+      if (!jumped && isAt(shipCell, cell)) event = mergeEvent(event, guardsShove(cell));
       // A Reset or a Finish ends the arrival there, and the reflections go with the board.
       if (event?.reset || event?.finished) {
         reflections = [];
@@ -715,7 +788,7 @@
       settleReflections();
       formReflections();
       let mirrored = reflectArrivals();
-      return mergeEvent(mergeEvent(event, pushed), mirrored);
+      return mergeEvent(mergeEvent(mergeEvent(event, pushed), mirrored), spent);
     }
 
     // Everything that last moved in a way that's had time to finish - a slide, or being passed back from a Gate - is
@@ -731,6 +804,67 @@
     // Whether an Archeton has a part of a kind - see TheWeave.Core's ArchetonPartKind.
     function hasPart(object, kind){
       return !!archetonDefinitions.get(object.archeton)?.parts?.some(part => part.kind === kind);
+    }
+
+    // Whether a square is inside a guard's Detection: n squares from its own, along a row or a column and not
+    // diagonally, so a guard with 1 is the four squares around it.
+    function detectedBy(guard, cell){
+      let part = archetonDefinitions.get(guard.archeton)?.parts?.find(part => part.kind === 'Detect');
+      if (!part) return false;
+      return Math.abs(cell.col - guard.col) + Math.abs(cell.row - guard.row) <= (part.range ?? 1);
+    }
+
+    // A guard that catches the ship as it comes into its Detection - it was outside before this arrival, and is inside
+    // now - shoves it straight away from the guard. Nothing happens for a ship already inside the zone, so a shove
+    // that leaves it inside doesn't fire again. One guard shoves at a time. { shove } for the caller, or null.
+    function guardsShove(cell){
+      let caught = null;
+      for (const guard of objects) {
+        if (guard.kind !== 'Archeton' || !hasPart(guard, 'Detect') || !hasPart(guard, 'Shove')) continue;
+        let inside = detectedBy(guard, cell);
+        let was = guard.inZone ?? false;
+        guard.inZone = inside;
+        if (!inside || was || caught) continue;
+        let part = archetonDefinitions.get(guard.archeton).parts.find(part => part.kind === 'Shove');
+        let direction = wayFrom(guard, cell);
+        shove = { from: { col: guard.col, row: guard.row }, direction, remaining: Math.max(1, part.distance ?? 3) };
+        caught = { shove: { from: shove.from, direction, distance: shove.remaining } };
+      }
+      return caught;
+    }
+
+    // The way a guard's shove is still to carry the ship, as a puzzle direction, or null: one square, if there is
+    // room for it. Blocked, the ship stays on the last clear square and the shove is over.
+    function shoveDirection(cell){
+      if (!shove || shove.remaining <= 0) return null;
+      let to = nextCell(cell, shove.direction);
+      if (!canEnterAlone(cell, to, MOVER_DIRECTIONS[shove.direction])) {
+        shove = null;
+        return null;
+      }
+      return shove.direction;
+    }
+
+    // A guard with a Resonance part shakes as a Pulse Tile lights, harder the more of them are lit at once: { resonance:
+    // { active } } for the caller to draw, or null when there is no guard to feel it. The rules say how many tiles are
+    // on, never how far anything moves - the pixels are board.js's.
+    function resonanceShake(){
+      let active = objects.filter(object => object.kind === 'LanternPulse' && (object.charge ?? 0) > 0).length;
+      let guards = objects.filter(object => object.kind === 'Archeton' && hasPart(object, 'Resonance'));
+      return guards.length === 0 || active === 0 ? null : { resonance: { active } };
+    }
+
+    // Every Lantern Pulse Tile on the board lit at once, and a guard with a Resonance part gives way: it is off the
+    // board from here on, and the caller shakes it apart and sinks it - see board.js's RESONANCE_SHAKE_MS. A board
+    // with no Pulse Tiles has nothing to resonate, and one unlit tile is enough to hold it. { dissolved } or null.
+    function resonanceDeath(){
+      let pulses = objects.filter(object => object.kind === 'LanternPulse');
+      if (pulses.length === 0 || pulses.some(tile => (tile.charge ?? 0) <= 0)) return null;
+      let dying = objects.filter(object => object.kind === 'Archeton' && hasPart(object, 'Resonance'));
+      if (dying.length === 0) return null;
+      objects = objects.filter(object => !dying.includes(object));
+      version++;
+      return { dissolved: dying };
     }
 
     // ---------- Reflect Mimics ----------
@@ -1262,8 +1396,10 @@
       if (moved && slid) moved = { ...moved, slid: slid.slid };
       if (moved && hopped) moved = { ...moved, hopped: hopped.hopped };
       if (moved && swam) moved = { ...moved, swam: swam.swam };
-      if (!moved) return event;
-      return event ? { ...moved, ...event } : moved;
+      let result = moved ? (event ? { ...moved, ...event } : moved) : event;
+      // Once everything has moved and been acted on: if every Pulse Tile is lit at the same time, the guard gives way.
+      let death = resonanceDeath();
+      return death ? { ...result, ...death } : result;
     }
 
 
@@ -1402,6 +1538,9 @@
       placeShip(cell){
         version++;
         shipCell = cell;
+        // A shove in progress, and every guard's memory of having caught the ship, belong to where it was.
+        shove = null;
+        for (const object of objects) object.inZone = false;
         // Reflections are images, not state to be replayed: they're worked out again from wherever the ship now is.
         reflections = [];
         formReflections();
@@ -1417,11 +1556,16 @@
       get gateBeams(){ return gateBeams.map(beam => ({ from: beam.from, letter: beam.letter, ms: beam.ms, gates: beam.gates.map(gate => ({ col: gate.col, row: gate.row })) })); },
 
       // Which way a Stream is carrying a ship on this square, as sokoban.js's direction, or null.
-      // A Stream comes first, and otherwise an Archeton's Beam pushing it away, or a Block's laser sending it back
-      // out of its reach, as long as it can go - see pushedByBeam and hurtBack. Either way the caller moves the
-      // ship along, a square at a time.
+      // A guard's shove comes first - being thrown is what's happening, and the Stream takes over again the moment it
+      // stops - and otherwise a Stream, an Archeton's Beam pushing it away, or a Block's laser sending it back out of
+      // its reach, as long as it can go - see pushedByBeam and hurtBack. Either way the caller moves the ship along, a
+      // square at a time.
+      // Whether the carry under way is a guard's shove rather than anything else - what board.js asks so that the ship
+      // can be thrown backwards without being turned to face it.
+      get shoving(){ return !!shove; },
+
       carryDirection(cell){
-        let direction = streams.get(cellKey(cell)) ?? pushedByBeam(cell) ?? hurtBack(cell) ?? hurtByReflection(cell);
+        let direction = shoveDirection(cell) ?? streams.get(cellKey(cell)) ?? pushedByBeam(cell) ?? hurtBack(cell) ?? hurtByReflection(cell);
         return direction ? MOVER_DIRECTIONS[direction] : null;
       },
 
@@ -1527,5 +1671,5 @@
     return [...after.filter(object => !sweeps(object)), ...leaving, ...arriving].filter(object => (object.fade ?? 1) > 0);
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
+  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, PULSE_MAX_STEPS, PULSE_FADE_MS, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
 });

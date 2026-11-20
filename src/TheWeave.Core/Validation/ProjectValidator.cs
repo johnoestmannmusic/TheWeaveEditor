@@ -209,9 +209,10 @@ public static class ProjectValidator
 
         foreach (var archeton in library)
         {
-            var sees = archeton.Parts.Any(p => p.Kind == ArchetonPartKind.Beam);
+            var sees = archeton.Parts.Any(p => p.Kind is ArchetonPartKind.Beam or ArchetonPartKind.Detect);
             // A Warp is something done to the ship, whether or not the Archeton can see or move.
-            var acts = archeton.Parts.Any(p => p.Kind is ArchetonPartKind.Push or ArchetonPartKind.Block or ArchetonPartKind.Warp);
+            var acts = archeton.Parts.Any(p => p.Kind is ArchetonPartKind.Push or ArchetonPartKind.Block or ArchetonPartKind.Warp
+                or ArchetonPartKind.Shove or ArchetonPartKind.Resonance);
             var moves = archeton.Parts.Any(p => p.Kind is ArchetonPartKind.Slide or ArchetonPartKind.Sequence);
             if (!sees && !moves && !acts)
                 Warn($"Archeton '{archeton.Name}' has no Beam to see the ship with, nor a Slide or Move Sequence to move with, so it does nothing.");
@@ -329,8 +330,12 @@ public static class ProjectValidator
         if (puzzle.Objects.Any(o => o.Kind == PuzzleObjectKind.PipeSwitch) && !hasPipes)
             Warn("it has a Pipe Switch but no Pipes, so it does nothing.");
 
-        if (puzzle.Objects.Any(o => o.Invisible) && puzzle.Objects.All(o => o.Kind != PuzzleObjectKind.Lantern))
-            Warn("it has invisible objects but no Lantern, so they can never be seen.");
+        if (puzzle.Objects.Any(o => o.Invisible)
+            && puzzle.Objects.All(o => o.Kind != PuzzleObjectKind.Lantern && o.Kind != PuzzleObjectKind.LanternPulse))
+            Warn("it has invisible objects but no Lantern or Lantern Pulse Tile, so they can never be seen.");
+
+        if (puzzle.Objects.Any(o => o.Kind == PuzzleObjectKind.LanternPulse) && puzzle.Objects.All(o => !o.Invisible))
+            Warn("it has Lantern Pulse Tiles but nothing invisible, so they light nothing.");
 
         // Push Blocks only ever go by sinking with another of their symbol.
         var blocks = puzzle.Objects.Where(o => o.Kind == PuzzleObjectKind.PushBlock).ToList();

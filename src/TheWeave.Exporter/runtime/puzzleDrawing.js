@@ -12,7 +12,7 @@
   else root.WeavePuzzleDrawing = factory(root.WeavePuzzleRules, root.WeavePuzzleColours);
 })(this, function (WeavePuzzleRules, WeavePuzzleColours) {
 
-  const { DIRECTION_DELTAS, LANTERN_REACH, exitDirectionOf, isFloor } = WeavePuzzleRules;
+  const { DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, exitDirectionOf, isFloor } = WeavePuzzleRules;
   const { PALETTE_MIN_CONTRAST, TILE_PX, hexToColor, lightnessOf, mixTexture, standardMix } = WeavePuzzleColours;
 
   // ---------- drawing ----------
@@ -57,6 +57,15 @@
     U: '10001 10001 10001 10001 10001 10001 01110', V: '10001 10001 10001 10001 10001 01010 00100',
     W: '10001 10001 10001 10101 10101 11011 10001', X: '10001 10001 01010 00100 01010 10001 10001',
     Y: '10001 10001 01010 00100 00100 00100 00100', Z: '11111 00001 00010 00100 01000 10000 11111',
+    // The counts a Lantern Pulse Tile shows. The same 5x7 as the letters, so drawPixelLetter can draw them, and 0 is
+    // one of them: a count of 10 is a 1 and a 0, and a missing glyph draws nothing at all rather than complaining.
+
+    0: '01110 10001 10001 10001 10001 10001 01110',
+    1: '00100 01100 00100 00100 00100 00100 01110', 2: '01110 10001 00001 00010 00100 01000 11111',
+    3: '11111 00010 00100 00010 00001 10001 01110', 4: '00010 00110 01010 10010 11111 00010 00010',
+    5: '11111 10000 11110 00001 00001 10001 01110', 6: '00110 01000 10000 11110 10001 10001 01110',
+    7: '11111 00001 00010 00100 01000 01000 01000', 8: '01110 10001 10001 01110 10001 10001 01110',
+    9: '01110 10001 10001 01111 00001 00010 01100',
   };
 
   // Each shape as whether a pixel of a square is inside it, measuring from the square's center.
@@ -80,7 +89,7 @@
   };
 
   const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', GemGate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
-  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Gem: 'gem', GemGate: 'gate', WarpOut: 'archeton', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton', PuzzleWarp: 'teleporter' };
+  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Gem: 'gem', GemGate: 'gate', WarpOut: 'archeton', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', LanternPulse: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton', PuzzleWarp: 'teleporter' };
 
   function maskOf(test){
     let mask = [];
@@ -96,22 +105,34 @@
     return inside(x, y) && !(inside(x - 1, y) && inside(x + 1, y) && inside(x, y - 1) && inside(x, y + 1));
   }
 
-  function drawPixelLetter(sprite, letter, color, halo, scale){
-    let rows = PIXEL_LETTERS[letter]?.split(' ');
+  // One glyph of PIXEL_LETTERS in a sprite, its top-left at left/top, at a size. The halo goes around its outside only.
+  function drawGlyph(sprite, rows, left, top, color, halo, scale = 1){
     if (!rows) return;
-
-    let left = Math.floor((TILE_PX - 5 * scale) / 2), top = Math.floor((TILE_PX - 7 * scale) / 2);
-    let isLetter = (x, y) => {
+    let isOn = (x, y) => {
       let col = Math.floor((x - left) / scale), row = Math.floor((y - top) / scale);
       return rows[row]?.[col] === '1';
     };
 
     for (let y = 0; y < TILE_PX; y++) {
       for (let x = 0; x < TILE_PX; x++) {
-        if (isLetter(x, y)) sprite[y * TILE_PX + x] = color;
-        else if (halo && (isLetter(x - 1, y) || isLetter(x + 1, y) || isLetter(x, y - 1) || isLetter(x, y + 1))) sprite[y * TILE_PX + x] = halo;
+        if (isOn(x, y)) sprite[y * TILE_PX + x] = color;
+        else if (halo && (isOn(x - 1, y) || isOn(x + 1, y) || isOn(x, y - 1) || isOn(x, y + 1))) sprite[y * TILE_PX + x] = halo;
       }
     }
+  }
+
+  // A letter in the middle of a square, as gates, switches and teleporters wear one.
+  function drawPixelLetter(sprite, letter, color, halo, scale){
+    drawGlyph(sprite, PIXEL_LETTERS[letter]?.split(' '), Math.floor((TILE_PX - 5 * scale) / 2), Math.floor((TILE_PX - 7 * scale) / 2), color, halo, scale);
+  }
+
+  // A count in the middle of a square: one digit, or two side by side past nine, centred as a whole with a pixel
+  // between them. A Lantern Pulse Tile's count runs to 19 - see puzzleRules.js's PULSE_MAX_STEPS.
+  function drawPixelCount(sprite, count, color, halo){
+    let text = String(count);
+    let width = text.length * 5 + (text.length - 1);
+    let left = Math.floor((TILE_PX - width) / 2), top = Math.floor((TILE_PX - 7) / 2);
+    for (let i = 0; i < text.length; i++) drawGlyph(sprite, PIXEL_LETTERS[text[i]]?.split(' '), left + i * 6, top, color, halo);
   }
 
   // A letter small enough to sit in the corner of a square without covering what it's beside. Only the editor draws
@@ -147,7 +168,7 @@
   const TURNED_KINDS = ['JumpTile', 'Pipe', 'Archeton', 'Laser', 'Edge'];
 
   // Every kind of object drawn from a drawing.
-  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'Gem', 'WarpOut', 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', ...ANIMATED_KINDS, 'Laser', 'PuzzleWarp'];
+  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'Gem', 'WarpOut', 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', 'LanternPulse', ...ANIMATED_KINDS, 'Laser', 'PuzzleWarp'];
 
   const standardDrawings = new Map();
 
@@ -276,6 +297,7 @@
       else if (kind === 'Archeton') drawing = { id: kind, kind, name: 'Standard', pixels: standardArchetonPixels(), mix: standardMix('archeton') };
       else if (kind === 'PipeSwitch') drawing = { id: kind, kind, name: 'Standard', pixels: standardPipeSwitchPixels(), mix: standardMix('pipe') };
       else if (kind === 'Edge') drawing = { id: kind, kind, name: 'Standard', pixels: standardEdgePixels(), mix: standardMix('edge') };
+      else if (kind === 'LanternPulse') drawing = { id: kind, kind, name: 'Standard', pixels: standardLanternPulsePixels(), mix: standardMix('lantern') };
       else if (kind === 'Gem') drawing = { id: kind, kind, name: 'Standard', pixels: standardGemPixels(), mix: standardMix('gem') };
       else if (kind === 'WarpOut') drawing = { id: kind, kind, name: 'Standard', pixels: standardWarpOutPixels(), mix: standardMix('archeton') };
       else if (kind === 'PuzzleWarp') drawing = { id: kind, kind, name: 'Standard', pixels: standardPuzzleWarpPixels(), mix: standardMix('teleporter'), opacity: 0.5 };
@@ -480,6 +502,38 @@
     });
   }
 
+  // A Lantern Pulse Tile's Standard drawing: a ring, and nothing else. Its whole content is lines, so it is painted in
+  // the light colour - an outline-colour ring disappears into a dark board. The count in its middle is drawn over this
+  // by buildSprite, and it is hollow so that the count has somewhere to go. Left for drawing over by hand.
+  // Thin, and inset a pixel from the square's edge: a fatter ring at this size is most of the tile, and against the
+  // hollow it leaves it stops reading as a ring at all.
+  const PULSE_RING_RADIUS = 10;
+  const PULSE_RING_THICKNESS = 0.9;
+
+  function standardLanternPulsePixels(){
+    let middle = (TILE_PX - 1) / 2;
+    return layerOf((u, v) => Math.abs(Math.hypot(u - middle, v - middle) - PULSE_RING_RADIUS) <= PULSE_RING_THICKNESS
+      ? PAINTS.light
+      : PAINTS.clear);
+  }
+
+  // The halo a lit Pulse Tile wears: outside its ring only, two bands of it, the further one dithered. glowing() is no
+  // use here - it fills whatever isn't drawn, which for a ring is its own hollow, and the tile then reads as a solid
+  // disc with a count sitting on it rather than as something lit.
+  function glowingPulse(sprite, light){
+    let middle = (TILE_PX - 1) / 2;
+    let glow = [...sprite];
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        if (sprite[y * TILE_PX + x]) continue;
+        let from = Math.hypot(x - middle, y - middle);
+        if (from <= PULSE_RING_RADIUS) continue;
+        if (from <= PULSE_RING_RADIUS + 1.5 || (from <= PULSE_RING_RADIUS + 2.5 && (x + y) % 2 === 0)) glow[y * TILE_PX + x] = light;
+      }
+    }
+    return glow;
+  }
+
   // A Rotator tile's Standard layers: two rails, with chevrons between them pointing along them.
   function standardRotatorLayers(){
     let pixels = layerOf((u, v) => {
@@ -517,7 +571,7 @@
   }
 
   // A square's worth of pixels for one object: a colour per pixel, or null where it's see-through.
-  function buildSprite(object, look, switchesActive, gemPhase = 0){
+  function buildSprite(object, look, switchesActive, gemPhase = 0, showCounts = false){
     let sprite = new Array(TILE_PX * TILE_PX).fill(null);
     let outline = hexToColor(look.palette.outline);
     let light = hexToColor(look.palette.light);
@@ -562,6 +616,16 @@
 
     // A lit Lantern glows: a halo of the light colour just outside it, and a fainter, dithered one beyond that.
     if (object.kind === 'Lantern' && object.lit) sprite = glowing(sprite, light);
+
+    // A Lit Lantern Pulse Tile glows as a Lantern does, and says how many of the ship's steps it has left in its
+    // middle. The glow goes on first, so the count sits on top of it. A tile that isn't lit says nothing: its count is
+    // how much light it has left, so it appears as the tile lights and goes as it goes out - showCounts is the
+    // Editor's, which has no playthrough to light one and wants to see what each tile is set to.
+    if (object.kind === 'LanternPulse') {
+      if (object.lit) sprite = glowingPulse(sprite, light);
+      let steps = object.charge ?? object.steps ?? PULSE_STEPS;
+      if ((object.lit || showCounts) && steps > 0) drawPixelCount(sprite, steps, light, outline);
+    }
 
     // A Gem Gate has a Gem where a Gate has its letter, in the same colours, so it reads from the same distance.
     if (object.kind === 'GemGate') {
@@ -813,14 +877,14 @@
   // Sprites are only worth working out once per look, since there are only so many things to be drawn.
   const spriteCaches = new WeakMap();
 
-  function spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins, gemPhase){
+  function spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins, gemPhase, showCounts = false){
     if (object.kind === 'Stream') return `Stream|${object.variant ?? ''}|${object.direction}|${streamPhase}|${joins.back}|${joins.left}|${joins.right}`;
     if (object.kind === 'RotatorTile') return `RotatorTile|${object.variant ?? ''}|${object.direction}|${rotatorPhase}`;
     if (object.kind === 'Gem') return `Gem|${object.variant ?? ''}|${gemPhase}`;
-    return `${object.kind}|${object.variant ?? ''}|${object.letter ?? ''}|${object.symbol ?? ''}|${object.direction ?? ''}|${(object.kind === 'Gate' || object.kind === 'GemGate') && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}|${object.spin ?? 0}|${object.archeton ?? ''}`;
+    return `${object.kind}|${object.variant ?? ''}|${object.letter ?? ''}|${object.symbol ?? ''}|${object.direction ?? ''}|${(object.kind === 'Gate' || object.kind === 'GemGate') && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}|${object.spin ?? 0}|${object.archeton ?? ''}|${object.charge ?? ''}|${object.steps ?? ''}|${showCounts}`;
   }
 
-  function spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase = 0, gemPhase = 0){
+  function spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase = 0, gemPhase = 0, showCounts = false){
     let cache = spriteCaches.get(look);
     if (!cache) spriteCaches.set(look, cache = new Map());
 
@@ -828,12 +892,12 @@
     // A Finish on an edge has arrows running towards it - see withFinishArrows.
     let exit = object.kind === 'Finish' ? exitDirectionOf({ col: Math.round(object.col), row: Math.round(object.row) }) : null;
     let arrowPhase = exit ? finishPhase % FINISH_ARROW_SPACING : 0;
-    let key = spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins, gemPhase) + (exit ? `|${exit}|${arrowPhase}` : '');
+    let key = spriteKey(object, switchesActive, streamPhase, rotatorPhase, joins, gemPhase, showCounts) + (exit ? `|${exit}|${arrowPhase}` : '');
     let sprite = cache.get(key);
     if (!sprite) {
       if (object.kind === 'Stream') sprite = buildAnimatedSprite(object, look, streamPhase, joins);
       else if (object.kind === 'RotatorTile') sprite = buildAnimatedSprite(object, look, rotatorPhase);
-      else sprite = buildSprite(object, look, switchesActive, gemPhase);
+      else sprite = buildSprite(object, look, switchesActive, gemPhase, showCounts);
       if (exit) sprite = withFinishArrows(sprite, look, exit, arrowPhase);
       cache.set(key, sprite);
     }
@@ -888,6 +952,19 @@
       }
     }
     return arrowed;
+  }
+
+  // A sprite washed in a colour, for something drawn as part of something else - a Resonant Guard's death takes the
+  // Pulse Tiles that killed it with it, and they all take the same red. A copy: sprites are cached and shared.
+  function tinted(sprite, { color, amount }){
+    let wash = sprite.map(one => one ? {
+      r: Math.round(one.r + (color.r - one.r) * amount),
+      g: Math.round(one.g + (color.g - one.g) * amount),
+      b: Math.round(one.b + (color.b - one.b) * amount),
+    } : null);
+    wash.rise = sprite.rise ?? 0;
+    wash.opacity = sprite.opacity;
+    return wash;
   }
 
   // For the Editor, where something invisible still has to be seen: every other pixel of it, see-through.
@@ -956,8 +1033,14 @@
   // - gemPhase (0 to 1) how far round a Gem is in its turn on the spot, and gemShots ([{ from, to, along }]) the Gems
   //   on their way to a Gem Gate, along being how far each has come.
   // - gateShake ({ col, row, dx }) rattles the Gem Gate on that square dx pixels to the side.
+  // - An object's own shake is how many pixels it is rattled by, and its own lungeX/lungeY how far past its square it
+  //   is drawn - a guard shaking itself apart, or lunging as it shoves.
   // - warpFlash (0 to 1) washes the whole board out white, as a Warp Wisp's does.
   // - wispDrift (0 to 1) is how far round its slow up-and-down a Warp Wisp has got.
+  // - An object's own tint ({ color, amount }) washes it in that colour, for something the board is showing as part of
+  //   something else - a Resonant Guard's death takes the Pulse Tiles that killed it with it.
+  // - showCounts draws a Lantern Pulse Tile's count before it is lit. Its count is how much light it has left, so the
+  //   game only shows it on a tile that's lit; the Editor wants to see what each tile is set to.
   // - pairLetters says which Warp Wisp goes with which Warp Out Square, as a letter in the corner of each. The editor
   //   wants that; gameplay doesn't.
   // - pulses ([{ col, row, radius }]) draws each lit Lantern's pulse: a ring radius pixels out from its square's middle.
@@ -1015,10 +1098,13 @@
       // A Push Block shoved off a ledge leaps down it as the ship does off a Jump Tile: it keeps to the straight line it
       // was going along, and grows towards the middle of it - see puzzleRules.js's pushFrom, and trackFocus.js's leap.
       let grow = object.glide === 'push' && object.falls && along < 1 ? 1 + LEDGE_JUMP_RISE * Math.sin(Math.PI * along) : 1;
-      let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase, options.gemPhase ?? 0);
-      // A Gem Gate rattles where it stands when a Gem hits it, a pixel either side of itself.
+      let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase, options.gemPhase ?? 0, options.showCounts);
+      // A Gem Gate rattles where it stands when a Gem hits it, a pixel either side of itself; anything else can be
+      // rattled by the caller, as a guard shaking itself apart is - see board.js.
       let shake = object.kind === 'GemGate' && options.gateShake
-        && object.col === options.gateShake.col && object.row === options.gateShake.row ? Math.round(options.gateShake.dx) : 0;
+        && object.col === options.gateShake.col && object.row === options.gateShake.row ? Math.round(options.gateShake.dx) : Math.round(object.shake ?? 0);
+      // Its own lunge is how far it's thrown past its square, in pixels, as a Resonant Guard's shove is - see board.js.
+      let lungeX = Math.round(object.lungeX ?? 0), lungeY = Math.round(object.lungeY ?? 0);
       let top = Math.round(row * TILE_PX) + (options.originY ?? 0);
       let sunk = Math.round((object.sink ?? 0) * TILE_PX);
       // An open Gate is half see-through, so it reads as something the ship can pass through.
@@ -1028,7 +1114,9 @@
       if (floating) opacity *= (WISP_FADE_TOP + WISP_FADE_BOTTOM) / 2
         + (WISP_FADE_TOP - WISP_FADE_BOTTOM) / 2 * Math.sin(2 * Math.PI * (options.wispDrift ?? 0));
       if (opacity <= 0) continue;
-      blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX) + shake, top + sunk, object.sink ? top + TILE_PX : Infinity, opacity, grow);
+      let drawn = hidden ? ghostOf(sprite) : sprite;
+      if (object.tint) drawn = tinted(drawn, object.tint);
+      blit(image, drawn, Math.round(col * TILE_PX) + shake + lungeX, top + sunk + lungeY, object.sink ? top + TILE_PX : Infinity, opacity, grow);
     }
 
     // Gems on their way to the Gate, over the board: each one the sprite the board draws, moving along a straight

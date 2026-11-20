@@ -355,12 +355,14 @@ public class ProjectValidatorTests
     }
 
     [Fact]
-    public void Invisible_WithNoLantern_IsReported()
+    public void Invisible_WithNoLanternOrPulseTile_IsReported()
     {
         var wall = new PuzzleObject { Kind = PuzzleObjectKind.Wall, Col = 1, Invisible = true };
 
         Assert.Contains("no Lantern", Assert.Single(PuzzleProblems(Finish, wall)));
         Assert.Empty(PuzzleProblems(Finish, wall, new PuzzleObject { Kind = PuzzleObjectKind.Lantern, Col = 2 }));
+        Assert.Empty(PuzzleProblems(Finish, wall, new PuzzleObject { Kind = PuzzleObjectKind.LanternPulse, Col = 2, Steps = 3 }));
+        Assert.Contains("nothing invisible", Assert.Single(PuzzleProblems(Finish, new PuzzleObject { Kind = PuzzleObjectKind.LanternPulse, Col = 2, Steps = 3 })));
     }
 
     [Fact]
@@ -691,6 +693,25 @@ public class ProjectValidatorTests
         var messages = ProjectValidator.Validate(project, null).Select(i => i.Message).ToList();
         Assert.DoesNotContain(messages, m => m.Contains("'Bug'"));
         Assert.Contains(messages, m => m.Contains("'Idle'") && m.Contains("does nothing"));
+    }
+
+    [Fact]
+    public void ResonantGuard_HasSomethingToSeeWithAndSomethingToDo_SoIsNotReportedAsDoingNothing()
+    {
+        var project = new WeaveProject
+        {
+            Pages = { MakePage("ouros", new Node { Id = "track", Card = new Card(), Puzzle = new Puzzle() }) },
+            Archetons =
+            [
+                new ArchetonDefinition
+                {
+                    Id = "guard", Name = "Guard",
+                    Parts = [new ArchetonPart { Kind = ArchetonPartKind.Detect, Range = 1 }, new ArchetonPart { Kind = ArchetonPartKind.Shove, Distance = 3 }],
+                },
+            ],
+        };
+
+        Assert.DoesNotContain(ProjectValidator.Validate(project), i => i.Message.Contains("does nothing") || i.Message.Contains("has nothing like a Block"));
     }
 
     // A Puzzle Warp is only any use if it leads to a puzzle the site can actually open, and a warp back into its own

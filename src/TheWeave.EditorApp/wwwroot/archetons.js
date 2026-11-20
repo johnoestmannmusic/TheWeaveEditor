@@ -13,6 +13,9 @@ const ARCHETON_PARTS = [
   { kind: 'Sequence', label: 'Move Sequence', hint: 'Each step the ship takes, hops to the next square of its moves, counted from where it started, so it always comes back round. A move that\'s blocked, it stays put for, and carries on with the next.' },
   { kind: 'Sting', label: 'Sting', hint: 'Touching it hurts: the ship stepping into it, or it landing on the ship, sends the ship back to where it came from. Still solid to everything else, like beams and Push Blocks.' },
   { kind: 'Reflect', label: 'Reflect', hint: 'A pane of glass: solid to the ship and to Push Blocks, but beams are photonic and pass through. While the ship is in its line - its row when placed facing left or right, its column facing up or down - a shadowy reflection of it shows as far the other side, moving as it does, setting off what it lands on, and hurting the ship when it\'s hurt.' },
+  { kind: 'Detect', label: 'Detection', hint: 'Notices the ship within its range of squares, counted along its row and column and not diagonally, and only as the ship comes in: it has to be out of reach again before it can be caught again. On its own it does nothing - a Shove is what it sets off.' },
+  { kind: 'Shove', label: 'Shove', hint: 'The ship a Detection catches is shoved straight away from this Archeton, as many squares as it says, stopping on the last clear square. The guard lunges into the ship\'s square and back as it does, and nothing is hurt by it.' },
+  { kind: 'Resonance', label: 'Resonance Death', hint: 'It feels the Lantern Pulse Tiles: each time one is lit it shakes for a second, harder the more of them are lit at once, so the player can see the two are linked. When every one on the board is lit at the same time, it shakes and then dissolves into the ground, and is no longer on the board.' },
 ];
 // The moves a Move Sequence can be given, and how each is shown.
 const ARCHETON_MOVES = [
@@ -74,6 +77,8 @@ function describeArcheton(archeton) {
   return archeton.parts.map((part) => part.kind === 'Beam'
     ? `Beam ${part.range} ${part.look === 'Facing' ? 'ahead' : 'all ways'}${part.blockedByBlocks === false ? ', through blocks' : ''}${part.showReach === false ? ', unmarked' : ''}`
     : part.kind === 'Sequence' ? (part.moves ?? []).map((move) => ARCHETON_MOVES.find((m) => m.name === move)?.label ?? move).join('')
+    : part.kind === 'Detect' ? `Detect ${part.range}`
+    : part.kind === 'Shove' ? `Shove ${part.distance}`
     : part.kind).join(' + ') || 'No parts';
 }
 
@@ -270,6 +275,18 @@ function renderArchetonEditor(side) {
       clear.addEventListener('click', () => { part.moves = []; renderArchetons(); });
       adders.append(clear);
       row.append(moves, adders);
+    } else if (part.kind === 'Detect' || part.kind === 'Shove') {
+      const amount = document.createElement('input');
+      amount.type = 'number';
+      amount.min = 1;
+      amount.max = 9;
+      const field = part.kind === 'Detect' ? 'range' : 'distance';
+      amount.value = part[field] ?? (part.kind === 'Detect' ? 1 : 3);
+      amount.title = part.kind === 'Detect' ? 'How many squares away it notices the ship' : 'How many squares it shoves the ship back';
+      amount.addEventListener('input', () => { part[field] = Math.max(1, Math.min(9, Number(amount.value) || 1)); });
+      const label = document.createElement('label');
+      label.append(part.kind === 'Detect' ? 'Within ' : 'Back ', amount, part.kind === 'Detect' ? ' squares' : ' squares');
+      row.append(label);
     }
     parts.append(row);
   });
@@ -282,6 +299,8 @@ function renderArchetonEditor(side) {
     if (!add.value) return;
     archeton.parts.push(add.value === 'Beam' ? { kind: 'Beam', range: 2, look: 'AllWays', blockedByBlocks: true, showReach: true }
       : add.value === 'Sequence' ? { kind: 'Sequence', moves: ['Up', 'Down'] }
+      : add.value === 'Detect' ? { kind: 'Detect', range: 1 }
+      : add.value === 'Shove' ? { kind: 'Shove', distance: 3 }
       : { kind: add.value });
     renderArchetons();
   });

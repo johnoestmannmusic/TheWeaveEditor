@@ -1012,6 +1012,76 @@ test('a Lantern moving under the ship is lit by it', () => {
   assert.equal(find(g, 'Lantern').lit, true);
 });
 
+test('a Lantern Pulse Tile lights what it reaches, and takes the step onto it for free', () => {
+  let g = game(obj('LanternPulse', 2, 5, { steps: 3 }), obj('Wall', 2, 6, { invisible: true }));
+  assert.equal(find(g, 'Wall').revealed, false, 'nothing is lit until it is stepped on');
+  g.placeShip(at(2, 4));
+  g.shipArrivedAt(at(2, 5));
+  assert.equal(find(g, 'Wall').revealed, true);
+  assert.equal(find(g, 'LanternPulse').lit, true);
+  assert.equal(find(g, 'LanternPulse').charge, 3, 'the step onto it spends nothing');
+});
+
+test('a Pulse Tile\'s count runs down with the ship\'s steps, and what it lit goes back to unseen at 0', () => {
+  let g = game(obj('LanternPulse', 2, 5, { steps: 2 }), obj('Wall', 2, 6, { invisible: true }));
+  g.placeShip(at(2, 4));
+  g.shipArrivedAt(at(2, 5));          // step onto it: 2, and free
+  g.shipArrivedAt(at(3, 5));          // the ship's own step: 1
+  assert.equal(find(g, 'LanternPulse').charge, 1);
+  assert.equal(find(g, 'Wall').revealed, true);
+  g.shipArrivedAt(at(3, 4));          // 0 - and nothing covers it any more
+  assert.equal(find(g, 'LanternPulse').charge, 0);
+  assert.equal(find(g, 'LanternPulse').lit, false);
+  assert.equal(find(g, 'Wall').revealed, false);
+});
+
+test('a Pulse Tile\'s count runs to 19, and is held between 1 and 19', () => {
+  let g = game(obj('LanternPulse', 2, 5, { steps: 25 }));
+  g.placeShip(at(2, 4));
+  g.shipArrivedAt(at(2, 5));
+  assert.equal(find(g, 'LanternPulse').charge, 19, 'no more than a tile can show');
+
+  let none = game(obj('LanternPulse', 2, 5, { steps: 0 }));
+  none.placeShip(at(2, 4));
+  none.shipArrivedAt(at(2, 5));
+  assert.equal(find(none, 'LanternPulse').charge, 1, 'nor fewer than one step of light');
+});
+
+test('a forced step doesn\'t spend a Pulse Tile\'s count, and a second tile keeps what the first let go', () => {
+  let g = game(
+    obj('LanternPulse', 2, 5, { steps: 1 }),
+    obj('LanternPulse', 4, 5, { steps: 3 }),
+    obj('Wall', 3, 5, { invisible: true }));
+  g.placeShip(at(2, 4));
+  g.shipArrivedAt(at(2, 5));            // the first tile: 1
+  g.shipArrivedAt(at(3, 5));            // spends it
+  assert.equal(find(g, 'Wall').revealed, false, 'only the first tile reached it');
+  g.shipArrivedAt(at(4, 5));            // the second tile: 3
+  assert.equal(find(g, 'Wall').revealed, true);
+  g.shipArrivedAt(at(5, 5), { forced: true });
+  assert.equal(g.objects.find(o => o.kind === 'LanternPulse' && o.col === 4).charge, 3, 'carried, not walked');
+});
+
+test('a lit Lantern keeps what a Pulse Tile ran out of lighting, and a tile re-arms when stepped on again', () => {
+  let g = game(obj('Lantern', 2, 5), obj('LanternPulse', 4, 5, { steps: 1 }), obj('Wall', 3, 5, { invisible: true }));
+  g.placeShip(at(2, 4));
+  g.shipArrivedAt(at(2, 5));            // the Lantern lights for good
+  g.placeShip(at(4, 4));
+  g.shipArrivedAt(at(4, 5));            // the tile arms to 1
+  g.shipArrivedAt(at(3, 5));            // spends it
+  assert.equal(find(g, 'LanternPulse').charge, 0);
+  assert.equal(find(g, 'Wall').revealed, true, 'the Lantern still reaches it');
+
+  let own = game(obj('LanternPulse', 2, 5, { steps: 1 }), obj('Wall', 2, 6, { invisible: true }));
+  own.placeShip(at(2, 4));
+  own.shipArrivedAt(at(2, 5));
+  own.shipArrivedAt(at(2, 4));          // spent: the Wall goes dark again
+  assert.equal(find(own, 'Wall').revealed, false);
+  own.shipArrivedAt(at(2, 5));          // and stepping back on puts the count back
+  assert.equal(find(own, 'LanternPulse').charge, 1);
+  assert.equal(find(own, 'Wall').revealed, true);
+});
+
 test('invisible things behave exactly the same', () => {
   let g = game(obj('Wall', 1, 0, { invisible: true }), obj('Stream', 3, 3, { direction: 'Right', invisible: true }), obj('Gate', 5, 0, { letter: 'A', invisible: true }), obj('Switch', 6, 6, { letter: 'A', invisible: true }), obj('Finish', 8, 8));
   assert.equal(g.canEnter(at(0, 0), at(1, 0), 'right'), false);
@@ -1575,6 +1645,103 @@ test('a Reset Switch gets its own palette colour, and is a pad with arrows, unli
   assert.equal([...shape].reverse().join(''), shape);
 });
 
+test('a Lantern Pulse Tile is a hollow ring in the light paint, and its count shows only once it is lit', () => {
+  let drawing = standardDrawing('LanternPulse');
+  assert.equal(drawing.pixels.length, TILE_PX * TILE_PX);
+  assert.match(drawing.pixels, /^[.H]+$/, 'lines only, in the light paint, so it reads on a dark board');
+  assert.deepEqual(drawing.mix, standardMix('lantern'));
+  assert.equal(drawing.pixels[12 * TILE_PX + 12], '.', 'hollow in the middle, for the count');
+
+  let { look } = artLook();
+  let unlit = blank(), lit = blank();
+  renderBoard(unlit, [obj('LanternPulse', 0, 0, { steps: 3 })], look);
+  renderBoard(lit, [obj('LanternPulse', 0, 0, { steps: 3, charge: 3, lit: true })], look);
+  assert.equal(pixelAt(unlit, 12, 12)[3], 0, 'nothing in the middle of a tile that has not been lit');
+  assert.ok(pixelAt(lit, 12, 12)[3] > 0, 'and a count there once it is');
+
+  // The Editor has no playthrough to light one, so it asks for the count anyway.
+  let editing = blank();
+  renderBoard(editing, [obj('LanternPulse', 0, 0, { steps: 3 })], look, { showCounts: true });
+  assert.ok(pixelAt(editing, 12, 12)[3] > 0, 'so an author can see what each tile is set to');
+  assert.notDeepEqual(tile(unlit, 0, 0), tile(editing, 0, 0), 'and the count is the only difference');
+});
+
+test('a Pulse Tile shows a count past nine as two digits', () => {
+  let { look } = artLook();
+  let two = blank(), twelve = blank(), nineteen = blank();
+  renderBoard(two, [obj('LanternPulse', 0, 0, { steps: 2, charge: 2, lit: true })], look);
+  renderBoard(twelve, [obj('LanternPulse', 0, 0, { steps: 12, charge: 12, lit: true })], look);
+  renderBoard(nineteen, [obj('LanternPulse', 0, 0, { steps: 19, charge: 19, lit: true })], look);
+
+  // The digits drawn across the middle of the hollow, either side of its centre.
+  let across = (image) => Array.from({ length: TILE_PX }, (_, x) => x)
+    .filter((x) => Math.abs(x - 11.5) < 8 && pixelAt(image, x, 11)[3] > 0);
+  assert.ok(across(twelve).length > across(two).length, 'two digits take more of the middle than one');
+  assert.notDeepEqual(tile(twelve, 0, 0), tile(nineteen, 0, 0), 'and they are not just the same picture');
+  assert.ok(across(nineteen).length > 0, 'nineteen is drawn');
+});
+
+test('every count from 10 to 19 draws both of its digits', () => {
+  let { look } = artLook();
+  let image = (steps) => { let one = blank(); renderBoard(one, [obj('LanternPulse', 0, 0, { steps, charge: steps, lit: true })], look); return one; };
+  // How wide the count is inside the ring, halo included: a single digit measures 9 to 11 pixels across, a pair 13 or
+  // 14, so anything over 12 is both digits drawn. A glyph missing from PIXEL_LETTERS draws nothing at all - 10 once
+  // read as a 1, because 0 wasn't in the table.
+  let width = (image) => {
+    let xs = [];
+    for (let y = 7; y < 17; y++) for (let x = 0; x < TILE_PX; x++) {
+      if (Math.abs(x - 11.5) < 8 && pixelAt(image, x, y)[3] > 0) xs.push(x);
+    }
+    return Math.max(...xs) - Math.min(...xs);
+  };
+  assert.ok(width(image(9)) < 12, 'one digit is one digit wide');
+  for (let count = 10; count <= 19; count++) assert.ok(width(image(count)) > 12, `a count of ${count} draws both digits`);
+});
+
+test('an object drawn with a tint is washed in that colour, and the cached sprite is left alone', () => {
+  let { look } = artLook();
+  let pulse = obj('LanternPulse', 0, 0, { steps: 3, charge: 3, lit: true });
+  let plain = blank(), washed = blank(), fresh = blank();
+  renderBoard(plain, [pulse], look);
+  // The red a Resonant Guard and the Pulse Tiles that killed it share - see board.js's RESONANCE_RED.
+  renderBoard(washed, [{ ...pulse, tint: { color: { r: 214, g: 44, b: 38 }, amount: 0.6 } }], look);
+  renderBoard(fresh, [pulse], look);
+
+  let [r0, g0] = pixelAt(plain, 1, 11), [r1, g1] = pixelAt(washed, 1, 11);
+  assert.ok(pixelAt(washed, 1, 11)[3] > 0, 'the ring is still drawn');
+  assert.ok(g1 < g0, `washed towards red, so less green: ${g0} -> ${g1}`);
+  assert.ok(r1 - g1 > r0 - g0 + 40, `and far redder than green: ${r0 - g0} -> ${r1 - g1}`);
+  // Tinting copies the sprite rather than painting it: a sprite is cached and shared with every other tile.
+  assert.deepEqual(tile(fresh, 0, 0), tile(plain, 0, 0), 'the next tile drawn is not red too');
+});
+
+test('a lit Pulse Tile glows outside its ring only, so its hollow stays hollow', () => {
+  let { look } = artLook();
+  let lit = blank(), unlit = blank();
+  // No count, so the only difference between the two is the glow itself.
+  renderBoard(lit, [obj('LanternPulse', 0, 0, { steps: 0, lit: true })], look);
+  renderBoard(unlit, [obj('LanternPulse', 0, 0, { steps: 0 })], look);
+
+  let pixels = (image) => Array.from({ length: TILE_PX * TILE_PX }, (_, i) => ({ x: i % TILE_PX, y: Math.floor(i / TILE_PX), a: pixelAt(image, i % TILE_PX, Math.floor(i / TILE_PX))[3] }));
+  let inside = (image) => pixels(image).filter((p) => p.a > 0 && Math.hypot(p.x - 11.5, p.y - 11.5) < 8).length;
+  let drawn = (image) => pixels(image).filter((p) => p.a > 0).length;
+
+  // glowing() fills whatever isn't drawn, which for a ring is its own middle: the tile then reads as a solid disc with
+  // the count sitting on it. The halo belongs outside the ring, where the room is.
+  assert.equal(inside(lit), inside(unlit), 'being lit adds nothing inside the ring');
+  assert.ok(drawn(lit) > drawn(unlit), 'and adds a halo outside it');
+});
+
+test('an object can be drawn rattled where it stands, and lunging past its own square', () => {
+  let { look } = artLook();
+  let still = blank(), rattled = blank(), lunged = blank();
+  renderBoard(still, [obj('Wall', 2, 2)], look);
+  renderBoard(rattled, [obj('Wall', 2, 2, { shake: 2 })], look);
+  renderBoard(lunged, [obj('Wall', 2, 2, { lungeX: 12 })], look);
+  assert.notDeepEqual(tile(rattled, 2, 2), tile(still, 2, 2), 'a Wall moved 2 pixels to the side');
+  assert.notDeepEqual(tile(lunged, 2, 2), tile(still, 2, 2), 'and one moved half a square');
+});
+
 // ---------- Archetons ----------
 
 const SENTRIBEAM = { id: 'sentribeam', name: 'Sentribeam', parts: [{ kind: 'Beam', range: 2, look: 'AllWays', blockedByBlocks: true }, { kind: 'Push' }] };
@@ -1671,6 +1838,89 @@ test('pushing a shielding block out of a Block\'s beam sends the ship back to th
   g.shipArrivedAt(at(6, 5));
   assert.equal(g.carryDirection(at(6, 5)), 'down', 'with the block gone, the laser sends it back');
   assert.equal(find(g, 'PushBlock').row, 4, 'and the block stays where it was pushed');
+});
+
+const GUARD = {
+  id: 'resonant-guard', name: 'Resonant Guard',
+  parts: [{ kind: 'Detect', range: 1 }, { kind: 'Shove', distance: 3 }, { kind: 'Resonance' }],
+};
+const guard = (col, row) => obj('Archeton', col, row, { archeton: 'resonant-guard', direction: 'Right' });
+
+test('a Resonant Guard shoves the ship 3 squares back as it comes within 1, and only once as it comes in', () => {
+  let g = withArchetons([GUARD], guard(5, 5), obj('Start', 5, 8));
+  let caught = g.shipArrivedAt(at(5, 6));
+  assert.deepEqual(caught.shove, { from: at(5, 5), direction: 'Down', distance: 3 });
+  assert.equal(g.carryDirection(at(5, 6)), 'down', 'the first of its 3');
+  g.shipArrivedAt(at(5, 7));
+  assert.equal(g.carryDirection(at(5, 7)), 'down');
+  g.shipArrivedAt(at(5, 8));
+  assert.equal(g.carryDirection(at(5, 8)), 'down', 'the last of its 3');
+  g.shipArrivedAt(at(5, 9));
+  assert.equal(g.carryDirection(at(5, 9)), null, 'and that is all of them');
+
+  // Coming back in is a new catch - but only after leaving the zone. With a range of 1 the zone is the four squares
+  // around the guard, so (5,8) and (5,7) are both outside it and (5,6) is inside.
+  g.shipArrivedAt(at(5, 8));
+  assert.equal(g.carryDirection(at(5, 8)), null);
+  g.shipArrivedAt(at(5, 7));
+  g.shipArrivedAt(at(5, 6));            // in again: caught again
+  assert.equal(g.carryDirection(at(5, 6)), 'down');
+});
+
+test('a shove stops on the last clear square, and a shove with nowhere to go does nothing at all', () => {
+  let g = withArchetons([GUARD], guard(5, 5), obj('Wall', 5, 8), obj('Start', 5, 7));
+  g.shipArrivedAt(at(5, 6));
+  assert.equal(g.carryDirection(at(5, 6)), 'down', 'the first square is clear');
+  g.shipArrivedAt(at(5, 7));
+  assert.equal(g.carryDirection(at(5, 7)), null, 'the Wall stops it');
+  assert.deepEqual(g.shipCell, at(5, 7));
+
+  let walled = withArchetons([GUARD], guard(5, 5), obj('Wall', 5, 7), obj('Start', 5, 6));
+  let caught = walled.shipArrivedAt(at(5, 6));
+  assert.ok(caught.shove, 'it still lunges');
+  assert.equal(walled.carryDirection(at(5, 6)), null, 'but there is nowhere to shove it');
+  assert.deepEqual(walled.shipCell, at(5, 6), 'and nothing else happens');
+});
+
+test('a guard with Resonance shakes when a Pulse Tile lights, harder with each tile already lit', () => {
+  let tiles = () => [obj('LanternPulse', 1, 1, { steps: 3 }), obj('LanternPulse', 3, 3, { steps: 3 }), obj('LanternPulse', 5, 5, { steps: 3 })];
+  let g = withArchetons([GUARD], guard(9, 9), ...tiles());
+  let lightAt = (col, row) => {
+    g.placeShip(at(col, row + 1));
+    return g.shipArrivedAt(at(col, row));
+  };
+
+  assert.equal(lightAt(1, 1).resonance.active, 1, 'the first tile: one lit');
+  assert.equal(lightAt(3, 3).resonance.active, 2, 'the second: harder');
+  let all = lightAt(5, 5);
+  assert.equal(all.resonance.active, 3);
+  assert.ok(all.dissolved, 'and the third is all of them, so the guard gives way');
+
+  // No guard on the board, nothing to feel it.
+  let lonely = game(...tiles());
+  lonely.placeShip(at(1, 2));
+  assert.equal(lonely.shipArrivedAt(at(1, 1)).resonance, undefined);
+});
+
+test('when every Lantern Pulse Tile is lit at once, a guard with Resonance dies and is off the board', () => {
+  let g = withArchetons([GUARD], guard(9, 9),
+    obj('LanternPulse', 1, 1, { steps: 2 }), obj('LanternPulse', 8, 8, { steps: 2 }));
+  g.placeShip(at(1, 2));
+  g.shipArrivedAt(at(1, 1));           // the first tile lights; the second is not lit yet
+  assert.ok(g.objects.some(o => o.kind === 'Archeton'));
+  g.placeShip(at(8, 7));
+  g.shipArrivedAt(at(8, 8));           // the second lights: all of them, so the guard gives way
+  assert.equal(g.objects.some(o => o.kind === 'Archeton'), false);
+
+  let partial = withArchetons([GUARD], guard(9, 9), obj('LanternPulse', 1, 1, { steps: 2 }), obj('LanternPulse', 5, 5, { steps: 2 }));
+  partial.placeShip(at(1, 2));
+  partial.shipArrivedAt(at(1, 1));
+  assert.ok(partial.objects.some(o => o.kind === 'Archeton'), 'one of two is not all of them');
+
+  let none = withArchetons([GUARD], guard(9, 9));
+  none.placeShip(at(1, 2));
+  none.shipArrivedAt(at(1, 1));
+  assert.ok(none.objects.some(o => o.kind === 'Archeton'), 'no Pulse Tiles, nothing to resonate with');
 });
 
 test('a Push Block can be pushed onto an open Gate, sits in it, and can be pushed on out', () => {

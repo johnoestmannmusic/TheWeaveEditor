@@ -37,6 +37,20 @@ public class WeaveProjectSerializerTests
     }
 
     [Fact]
+    public void PuzzleFile_RoundTripsALanternPulseTileAndItsCount()
+    {
+        var puzzle = new Puzzle { Objects = { new PuzzleObject { Kind = PuzzleObjectKind.LanternPulse, Col = 1, Row = 2, Steps = 5 } } };
+
+        var json = PuzzleFile.Serialize(puzzle);
+
+        Assert.Contains("\"Kind\": \"LanternPulse\"", json);
+        Assert.Contains("\"Steps\": 5", json);
+        var (objects, _, _) = PuzzleFile.Parse(json);
+        Assert.Equal(PuzzleObjectKind.LanternPulse, objects[0].Kind);
+        Assert.Equal(5, objects[0].Steps);
+    }
+
+    [Fact]
     public void PuzzleFile_LeavesOutWhatComesFromTheArt_AndIsEasyToRead()
     {
         var json = PuzzleFile.Serialize(MakeFilePuzzle());

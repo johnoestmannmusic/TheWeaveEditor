@@ -8724,6 +8724,715 @@
             "ExtraPanels": []
           },
           "Children": [],
+          "Puzzle": {
+            "Objects": [
+              {
+                "Kind": "Start",
+                "Col": 9,
+                "Row": 3,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Finish",
+                "Col": 9,
+                "Row": 6,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-6"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-7"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-6"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-6"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 2,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-11"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 8,
+                "Row": 6,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "resonant-guard"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 8,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 8,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-11"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 7,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 6,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 5,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-11"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 4,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 3,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 6,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-10"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-10"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 3,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 2,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-11"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-11"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 3,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-11"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 4,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 5,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 6,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 7,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 8,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 4,
+                "Row": 3,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-11"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 4,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 3,
+                "Row": 6,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-11"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 3,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 5,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 5,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 7,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-10"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 7,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "LanternPulse",
+                "Col": 6,
+                "Row": 6,
+                "Letter": null,
+                "Direction": null,
+                "Steps": 2
+              },
+              {
+                "Kind": "LanternPulse",
+                "Col": 3,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Steps": 6
+              },
+              {
+                "Kind": "LanternPulse",
+                "Col": 6,
+                "Row": 2,
+                "Letter": null,
+                "Direction": null,
+                "Steps": 13
+              },
+              {
+                "Kind": "PipeSwitch",
+                "Col": 1,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "pipeswitch-2"
+              },
+              {
+                "Kind": "Pipe",
+                "Col": 3,
+                "Row": 3,
+                "Letter": null,
+                "Direction": "Right"
+              },
+              {
+                "Kind": "Pipe",
+                "Col": 6,
+                "Row": 4,
+                "Letter": null,
+                "Direction": "Up"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-6"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-7"
+              },
+              {
+                "Kind": "GemGate",
+                "Col": 2,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-8"
+              },
+              {
+                "Kind": "Stream",
+                "Col": 5,
+                "Row": 6,
+                "Letter": null,
+                "Direction": "Down",
+                "Variant": "stream-3"
+              },
+              {
+                "Kind": "Stream",
+                "Col": 5,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Left",
+                "Variant": "stream-3"
+              },
+              {
+                "Kind": "Stream",
+                "Col": 4,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Left",
+                "Variant": "stream-3"
+              },
+              {
+                "Kind": "Stream",
+                "Col": 3,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Left",
+                "Variant": "stream-2"
+              },
+              {
+                "Kind": "Stream",
+                "Col": 2,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Up",
+                "Variant": "stream-3"
+              },
+              {
+                "Kind": "JumpTile",
+                "Col": 4,
+                "Row": 6,
+                "Letter": null,
+                "Direction": "Right",
+                "Variant": "jumptile-2"
+              },
+              {
+                "Kind": "Gem",
+                "Col": 2,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Invisible": true
+              },
+              {
+                "Kind": "Gem",
+                "Col": 4,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null,
+                "Invisible": true
+              },
+              {
+                "Kind": "Gem",
+                "Col": 1,
+                "Row": 6,
+                "Letter": null,
+                "Direction": null,
+                "Invisible": true
+              },
+              {
+                "Kind": "Gem",
+                "Col": 7,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Invisible": true
+              },
+              {
+                "Kind": "Stream",
+                "Col": 6,
+                "Row": 1,
+                "Letter": null,
+                "Direction": "Left",
+                "Variant": "stream-2"
+              },
+              {
+                "Kind": "Stream",
+                "Col": 5,
+                "Row": 1,
+                "Letter": null,
+                "Direction": "Left",
+                "Variant": "stream-3"
+              },
+              {
+                "Kind": "Stream",
+                "Col": 4,
+                "Row": 1,
+                "Letter": null,
+                "Direction": "Left",
+                "Variant": "stream-3"
+              },
+              {
+                "Kind": "Stream",
+                "Col": 3,
+                "Row": 1,
+                "Letter": null,
+                "Direction": "Left",
+                "Variant": "stream-2"
+              },
+              {
+                "Kind": "Gem",
+                "Col": 7,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Invisible": true
+              }
+            ],
+            "Palette": {
+              "wall": "#7a757d",
+              "edge": "#646486",
+              "finish": "#ba905e",
+              "gate": "#5f5f81",
+              "switch": "#5f5f81",
+              "teleporter": "#e3c69c",
+              "stream": "#8f9fbd",
+              "key": "#a9b9d7",
+              "rotator": "#bcbd8b",
+              "rotatorSwitch": "#bcbd8b",
+              "lantern": "#bda369",
+              "block": "#6c5e73",
+              "jump": "#7a7a9c",
+              "reset": "#b98e5d",
+              "pipe": "#b98f5e",
+              "archeton": "#96a5c2",
+              "gem": "#616183",
+              "outline": "#393225",
+              "light": "#e3c69c"
+            },
+            "Textures": {
+              "wall": {
+                "Ramp": [
+                  "#5d5570",
+                  "#72647b",
+                  "#7a757d",
+                  "#7988a1"
+                ],
+                "Grain": "kkkkkkkkgggkgkfkkppkjjjzkkkkkkkkkgggkkkgkkzkjkkkkkkkkkgkgk9ggkkkkzqkkkgkkkkkkkkkkggekkk8gkqkkgkkkkkkkkkqkkkgkkkkkqkggkkqkkkkkkkkkkkgkkkgkkqkkgggkkkkkkkkkkggkkkkkqkkkkkkkkkkkkkkk9ggggkgkkqkkkkkkkkkkkkkkgggkqkkkzkkkkkqkkkkkkkkk9ggkkkkkkqkkkkkkkekekekkg9gkqkkkqkkkkkkkkkgkgggg9gggkkgkkkkkgkkkkkqkkkkkgegkqkggkkkkkkqkkkkkkkkkgggkkqkkkkgkkkjkkkkkqkqgg9kkqkkkkkkggbjkkkkkkkkgggkkkkkkkkkkkkjfffmfmfmabbmfmfffufufffkfffffffea3aefffffflfffeeflffefee9a8deuffelfuelfuefebe9fb92adleefeelfeelebeeeeeee29efeufefeeuekeufe9999ab70a9eeeeefffeeeeejdddd9d099fbeaeeeeleeeueddebad290daeeka51eeeeee",
+                "Pixels": "222222221112121223322223222222222111232122322222222222121201122223322212222222222110223012322122222222232221222223311223222222222221222122322111222222222211222223222222222222222011112122322222222222222111232223222223222222222011222222322222221212122101232223222222222121111011122122222122222322222101233112222223222222222111223223312222222223231102232222221102222222221112222222222222111313130003131113131113111111100000111111311111131111110000131113131313111000100000311111311131011001110001031011031313100000000000010111110101120000000001010100131013000000000000013000110100"
+              },
+              "edge": {
+                "Ramp": [
+                  "#474757",
+                  "#565678",
+                  "#646486",
+                  "#737499"
+                ],
+                "Grain": "nnmmgmmmmmmmgriinlmmmumflllffmllm9mfmqoingngnnwgmwmmmmmm9ffgfpii1mmggmmmlfmfmml300flliohmgggmwmggmmwgfgggmmmmooommmmmmmmhmmn71gghgnnmioinhppqipzgnnggg8nnnnmnopinogynnmymgf7fgggm1gcmoohmnmimmnqfmfmgmgmmggmlpponnpohooyf2fgmmwlmmmfmiohoooiiooo17gmmmmummmfmpiiipnohgnm5nggmgmgmmu1mopignpjogmm1ngmnmmmnmmmeooogopiiggmggmmmgmgmmwmgfofniiiogmmm7mlmmmmmvmvmioomoiioommmgfmmmmmmmvmmjjjgipjpmg4gmmgmmmmmlmlmpiognfijffnggl0lfmllllmmoyhgepopdlmmmmmgmgummmwmyohhooppllnmgng4gmggmnmmiji5hpfigmgmmmmmfmlgmlmmppphniipmqpwgmmmgggmlmfmpoio2pjoppilmmmmmmmmlmlfpoonoiojoiimmmmmgggmmmgmopjinijjggn",
+                "Pixels": "222212222222131121222320111002112020233121212230232222220000031102201222102022100001113120102320022300000222233222222222122200111122213121333133122111022222233122132223210000012000233122212223020202022002133222331223000022312220213122211232000222232220231113221122021121212230233112313022021222222222033213311002002220202232102021113122202122222323213322112222200222222232211111313200022022222121231312011002001010211112223110333012222202032223232112333112212100201222211101301021222220210212233312113233302220002120233120312331122222222121033323131211222220002220233112111112"
+              },
+              "finish": {
+                "Ramp": [
+                  "#9b7243",
+                  "#a5854a",
+                  "#ba905e",
+                  "#e3996a"
+                ],
+                "Grain": "cbmmmombmmmbbbpndf281012nmmbqmoebmbbbncncdj13101nmbnmqmofemmbnncgfcm1410mbbbbqvmpbmfmbg8hpmm8121mf8mmvqq8v8mmngfonmb8g28mbf8mmuubbemmmznqfqebbb2bfbb7fqffbbbbmornnqmbgbfobmbfbbbf8obfcfnscmmbbbbvbbmbbfb8bbfbfpqwmmbbb8bbfmmm5ogb8h8bbffofpgg8bbmvmvvvqmm8b8bmnnrvqoc9ccvuummmvqy3b8bbcnnqmemeb2mmvvmymnvmbffncnmmmvmm8bmvyqfhyqnnbgbnncbbbbqmmbpqzqqvjyqqbpbhnobm9bcmnnqqqmvbqqqnnmpgcgfbqbb8ccymvgmqmmmqffgppcqoqgcccnyqofqmyummfubgpgbbfgh8b8uvbqqqvyqvfybqifqgqgmobbvqmbffbgqmqmmbnmqmbfqpbffvmymqqmoqbqmcrmvqiqqmnmouyuummgmbbmmmnqvqvmm8gbpuqqbuuvbmgyoqguqmqufmgbyyfhqgqvybofqmqgqufmqmb8",
+                "Pixels": "112222212220112211000000222122210210021211200000220222221122022121120000210113322121212022220000210223220302222122210200211022331112223231210010110001211111022322221201212010001021111231221111300200100001012332211101112220220020111121222011232333222010022233221011333222323010011222212110223323223211121222232200233312332212122111112221223333233312122212011222333231223222221211211011323222222211222122221112322122332213022210122010330222332313022122222211322011122222212222112211132322222212213232232222233332222002222232322021232203330223221322231220331222233021223223122200"
+              },
+              "gate": {
+                "Ramp": [
+                  "#4d414e",
+                  "#525170",
+                  "#5f5f81",
+                  "#6f6f91"
+                ],
+                "Grain": "nnmmgmmmmmmmgriinlmmmumflllffmllm9mfmqoingngnnwgmwmmmmmm9ffgfpii1mmggmmmlfmfmml300flliohmgggmwmggmmwgfgggmmmmooommmmmmmmhmmn71gghgnnmioinhppqipzgnnggg8nnnnmnopinogynnmymgf7fgggm1gcmoohmnmimmnqfmfmgmgmmggmlpponnpohooyf2fgmmwlmmmfmiohoooiiooo17gmmmmummmfmpiiipnohgnm5nggmgmgmmu1mopignpjogmm1ngmnmmmnmmmeooogopiiggmggmmmgmgmmwmgfofniiiogmmm7mlmmmmmvmvmioomoiioommmgfmmmmmmmvmmjjjgipjpmg4gmmgmmmmmlmlmpiognfijffnggl0lfmllllmmoyhgepopdlmmmmmgmgummmwmyohhooppllnmgng4gmggmnmmiji5hpfigmgmmmmmfmlgmlmmppphniipmqpwgmmmgggmlmfmpoio2pjoppilmmmmmmmmlmlfpoonoiojoiimmmmmgggmmmgmopjinijjggn",
+                "Pixels": "222212222222131121222320111002112020233121212230232222220000031102201222102022100001113120102320022300000222233222222222122200111122213121333133122111022222233122132223210000012000233122212223020202022002133222331223000022312220213122211232000222232220231113221122021121212230233112313022021222222222033213311002002220202232102021113122202122222323213322112222200222222232211111313200022022222121231312011002001010211112223110333012222202032223232112333112212100201222211101301021222220210212233312113233302220002120233120312331122222222121033323131211222220002220233112111112"
+              },
+              "teleporter": {
+                "Ramp": [
+                  "#beab75",
+                  "#bebf8c",
+                  "#e3c69c",
+                  "#d6ddb9"
+                ],
+                "Grain": "ppgk9pgstgp9gkgggk889ij44ii9kkpsski8jgspgg8p49j9999iippspp4kkkpskp8t4jb8g4iioipipkg48849kgkgg4hgkk8i8oip8pgtgkkgik4kg5lgpksjgglaiotppgg9g44ggggk4tkptppkjpkk4ppp4g9tik9p4itppp9gss8ak9kps4i8kgk978ptihhtpika4iptpp4kkpkpa44pkl9ii8i8i4tggk8kggtp2r64lqhtllqq9l9hql9h5pquiii1chggbbkhuhlhq9hhlhlq9ii82jhklqkuuqhuh9khhulq69a462jpujqjqjjl9h5h9aqk665kk61tuuquqtjqhpgq9gktg348i940ppsstspj4pjfojoj44g465h43ssstspiksgpgsppg489h5jg8ozstoogggsjkhmhpp8k9jgi48isspgpip8jjqrl40pga61pgg4isggtsfojnuqb0k4iqh1k8j48isttssgintkq44ig5rgg88jc4tukstpippjk3934qh4tgj8g8jutotqkluhb0403bkg8op88889tttktokh7",
+                "Pixels": "221212133121121112011220022122233220213211020121111222232202222322030211102222222210110121211021221212221213122122021021223211212232211110011112032232222222022201132212023222113301212230202121012321132221022322022222100222122121203112121132030022232232121232110223222012111122322231222222122102222323322321222322011000223222322212021122000220033323232212121123100121002233332202212222001000100333332223121322101120210233322111322222221212120123321222022232002110021102311331222321020222020200233333122322002103110021033233222222010032031201023323222321000012112211111333232210"
+              },
+              "stream": {
+                "Ramp": [
+                  "#738199",
+                  "#7f9496",
+                  "#8f9fbd",
+                  "#9fafcd"
+                ],
+                "Grain": "55ffcgbnnndfffqrrncc9cbf5ffcccghqrfcfqqqqff99cnsfjcgcgdqqfcfqvqqqqca9coqqeccgceeecejqqqjqfccfqqqqqjqoqe5cfzrrqqrqffeqqqqqiveqqe3eprjwprrrbeqqqqqjqrjee34eqrrquqqbebuqvqqujjcc233qqqqupsncbpjrdqqqqdc2444hwuqosnc9eqqqieqoggg000orrrpont9ceqqqqqpnno200nnqyponoccauqqqqjqnn333jpglctcce14beeeoqqbw3235qqqigbnde48ejejikqe2024iiqeecnnoa44eeeeeeqb002jqqjtosonncauqqejeqq402oqjiqnnpqpc9cjqqqqkjq23nprqqjnntuq9cgoqvvvqqq7qnnhviqhsqqee9nnqquqqer4qnnuqqputuqeejnspuqvjq45qqqpvpoquqebepontqqqee44vzqzonhuqzeeeuowoquvej4bkizquiuiueebvqtssqqqjc44jqvvuqqguebequqsnpqqee44jrqqqqihzbeqqqtnnoqeqb54",
+                "Pixels": "001111022211112332110101011111112311122221100123121111122111232222100122211111111112222221111222222222101133322321112222213122101232323330122222223211001233232201032322322110002222323210223122221100001332232101222112211100023332223011222222222000222322221103222222220002212131110001112220300002221102110012121221000022211122200011111120000222232322210322121220002221222222101222222220022322222332011223332220222132213221102222322130222322233321122323232200222232223210122232221100332322132311132322331200223232313110323332222100223332213101232322221100232222213012223222212000"
+              },
+              "key": {
+                "Ramp": [
+                  "#8a9da7",
+                  "#9babc9",
+                  "#a9b9d7",
+                  "#b9cad9"
+                ],
+                "Grain": "5664jqqqfffqkffqqcqqhphojqvrqjzqjrzjqjqfqgiicdddsvqjqzvvvqrqqqqqjnpqcedofsrfqqvqvfrcqjqffgpfhddovvqvrzvzvqqqqjqqjnqjceoojjqvqqvqiqqrqjvqqgqfoe42qzvvvqqqjqqqszqssorf1525vqsqvqqqqqsffifi61645324szvzqqsvfsqqj66643664qipvszqzszvzqc4647462cfpehdvzvzvvvj6646666ffvqjoppozsvqz6646464jqjjjcqfoppd6w7767776ksjqjsvqnfqopip747474fqffsjjqsqqnqjhppp474fqjjqjqjqvzqqqoqqhvtp47kjjqqjvsqqvqvjvnqjgrq26jqqsjqqjzqzqvqvqnkqni246fqjwqsqvqsqqqvqvosq24444pfqjoprhygouuqqury4024dgcoccgnnnnnchcnnns1103ddcggnnnssmnnncrrg0330nddtcggcgnrcnngcgbc0222nnhtocncgcncncnmm32001gmnnsoogcncccngncl12002nnnnrooo",
+                "Pixels": "000022221112211221221212123221321231222121111111232223333222222212221112122122323121212111211112332323333222212212211122122322321222213221212100233332222222232222210000322232222221111100000000233322231222100000000212323232333210001000112111333333310000000113222222323230000000222221212221031101110222222322122212101010121121222222221222010122222222332222221332012222223222323232221220012222222323232322222100012232223222223232220000021212221312332232300001112111222221112223000011111222222222122100002113111112212211111000022132121112121222000001222322112111212120000022222222"
+              },
+              "rotator": {
+                "Ramp": [
+                  "#bf9665",
+                  "#a2adb4",
+                  "#bcbd8b",
+                  "#e3c69d"
+                ],
+                "Grain": "9pgstfp9gkgggj889ij4jik9jkossji8jfsoff8o39j94389iposop4jjjpsjp8t4jb8j9j9oioipjg38849jgjgg4hgjg488oip8pgtgjkgij4jg5kgpkbkggkahosooff9f33ffggkpkpgtppjjojj3oop3g9tij8ojfjopp9gss8aj9jps3i8jfk9jo8giggtoika4iptpp4kjpkp8sg8kl8ii8i8i4tggk8kggtpp8j3lqhtllqq9l9hql9h5pqukq4gchggbbkhuhlhq9hhlhlqqll52jhklqkuuqhuh9khhtlqkqla62jpujqjqjjl9h5h8aqkplk4k51ttupuqtjpgpgp9gktktt4i840opsstsoj3ojfojojjf9365g43sssssoiksfpfsppk8f3h5ig8ozstooggfsjkhmh90i39jgi48isspgpip7jjprl9j99a51pff3isfftsfojntqbb9hfph0k8j38isttssfintkqj59o5rgg88jc4tukstpippjk6544qh4tfj8g8jutotqkluha5511bkg8np88889tttktokg7g8fj",
+                "Pixels": "121331211211120012202221222332202132110201210011222322022223220302102121222222100001212110212101122212131221220210212212112122322111100111122221322222220222011322122122221133012122302021212201211322210223220222220310221221212031121211322120222322321212321102232201121111223222312222223220022223233223212213222221002232223222110111222220200333232322121211232330210022333322022122222110001003333322231213222010202102333221113221221020121200233212220222321211100211023113312223211111220202002333331223222012031100210332332222220000320312010233233223210000121122000113332322101112"
+              },
+              "lantern": {
+                "Ramp": [
+                  "#cb7660",
+                  "#bb915f",
+                  "#bda369",
+                  "#cdb37a"
+                ],
+                "Grain": "cbmmmombmmmbbbpndf281012nmmbqmoebmbbbncncdj13101nmbnmqmofemmbnncgfcm1410mbbbbqvmpbmfmbg8hpmm8121mf8mmvqq8v8mmngfonmb8g28mbf8mmuubbemmmznqfqebbb2bfbb7fqffbbbbmornnqmbgbfobmbfbbbf8obfcfnscmmbbbbvbbmbbfb8bbfbfpqwmmbbb8bbfmmm5ogb8h8bbffofpgg8bbmvmvvvqmm8b8bmnnrvqoc9ccvuummmvqy3b8bbcnnqmemeb2mmvvmymnvmbffncnmmmvmm8bmvyqfhyqnnbgbnncbbbbqmmbpqzqqvjyqqbpbhnobm9bcmnnqqqmvbqqqnnmpgcgfbqbb8ccymvgmqmmmqffgppcqoqgcccnyqofqmyummfubgpgbbfgh8b8uvbqqqvyqvfybqifqgqgmobbvqmbffbgqmqmmbnmqmbfqpbffvmymqqmoqbqmcrmvqiqqmnmouyuummgmbbmmmnqvqvmm8gbpuqqbuuvbmgyoqguqmqufmgbyyfhqgqvybofqmqgqufmqmb8",
+                "Pixels": "112222212220112211000000222122210210021211200000220222221122022121120000210113322121212022220000210223220302222122210200211022331112223231210010110001211111022322221201212010001021111231221111300200100001012332211101112220220020111121222011232333222010022233221011333222323010011222212110223323223211121222232200233312332212122111112221223333233312122212011222333231223222221211211011323222222211222122221112322122332213022210122010330222332313022122222211322011122222212222112211132322222212213232232222233332222002222232322021232203330223221322231220331222233021223223122200"
+              },
+              "block": {
+                "Ramp": [
+                  "#4b424a",
+                  "#57563e",
+                  "#6c5e73",
+                  "#75717a"
+                ],
+                "Grain": "nnmmgmmmmmmmgriinlmmmumflllffmllm9mfmqoingngnnwgmwmmmmmm9ffgfpii1mmggmmmlfmfmml300flliohmgggmwmggmmwgfgggmmmmooommmmmmmmhmmn71gghgnnmioinhppqipzgnnggg8nnnnmnopinogynnmymgf7fgggm1gcmoohmnmimmnqfmfmgmgmmggmlpponnpohooyf2fgmmwlmmmfmiohoooiiooo17gmmmmummmfmpiiipnohgnm5nggmgmgmmu1mopignpjogmm1ngmnmmmnmmmeooogopiiggmggmmmgmgmmwmgfofniiiogmmm7mlmmmmmvmvmioomoiioommmgfmmmmmmmvmmjjjgipjpmg4gmmgmmmmmlmlmpiognfijffnggl0lfmllllmmoyhgepopdlmmmmmgmgummmwmyohhooppllnmgng4gmggmnmmiji5hpfigmgmmmmmfmlgmlmmppphniipmqpwgmmmgggmlmfmpoio2pjoppilmmmmmmmmlmlfpoonoiojoiimmmmmgggmmmgmopjinijjggn",
+                "Pixels": "222212222222131121222320111002112020233121212230232222220000031102201222102022100001113120102320022300000222233222222222122200111122213121333133122111022222233122132223210000012000233122212223020202022002133222331223000022312220213122211232000222232220231113221122021121212230233112313022021222222222033213311002002220202232102021113122202122222323213322112222200222222232211111313200022022222121231312011002001010211112223110333012222202032223232112333112212100201222211101301021222220210212233312113233302220002120233120312331122222222121033323131211222220002220233112111112"
+              },
+              "jump": {
+                "Ramp": [
+                  "#615b79",
+                  "#6c6c8e",
+                  "#7a7a9c",
+                  "#7c9190"
+                ],
+                "Grain": "kkkkkkkkgggkgkfkkppkjjjzkkkkkkkkkgggkkkgkkzkjkkkkkkkkkgkgk9ggkkkkzqkkkgkkkkkkkkkkggekkk8gkqkkgkkkkkkkkkqkkkgkkkkkqkggkkqkkkkkkkkkkkgkkkgkkqkkgggkkkkkkkkkkggkkkkkqkkkkkkkkkkkkkkk9ggggkgkkqkkkkkkkkkkkkkkgggkqkkkzkkkkkqkkkkkkkkk9ggkkkkkkqkkkkkkkekekekkg9gkqkkkqkkkkkkkkkgkgggg9gggkkgkkkkkgkkkkkqkkkkkgegkqkggkkkkkkqkkkkkkkkkgggkkqkkkkgkkkjkkkkkqkqgg9kkqkkkkkkggbjkkkkkkkkgggkkkkkkkkkkkkjfffmfmfmabbmfmfffufufffkfffffffea3aefffffflfffeeflffefee9a8deuffelfuelfuefebe9fb92adleefeelfeelebeeeeeee29efeufefeeuekeufe9999ab70a9eeeeefffeeeeejdddd9d099fbeaeeeeleeeueddebad290daeeka51eeeeee",
+                "Pixels": "222222221112121223322223222222222111232122322222222222121201122223322212222222222110223012322122222222232221222223311223222222222221222122322111222222222211222223222222222222222011112122322222222222222111232223222223222222222011222222322222221212122101232223222222222121111011122122222122222322222101233112222223222222222111223223312222222223231102232222221102222222221112222222222222111313130003131113131113111111100000111111311111131111110000131113131313111000100000311111311131011001110001031011031313100000000000010111110101120000000001010100131013000000000000013000110100"
+              },
+              "reset": {
+                "Ramp": [
+                  "#9a7042",
+                  "#8b8485",
+                  "#b98e5d",
+                  "#c99e6e"
+                ],
+                "Grain": "cbmmmombmmmbbbpndf281012nmmbqmoebmbbbncncdj13101nmbnmqmofemmbnncgfcm1410mbbbbqvmpbmfmbg8hpmm8121mf8mmvqq8v8mmngfonmb8g28mbf8mmuubbemmmznqfqebbb2bfbb7fqffbbbbmornnqmbgbfobmbfbbbf8obfcfnscmmbbbbvbbmbbfb8bbfbfpqwmmbbb8bbfmmm5ogb8h8bbffofpgg8bbmvmvvvqmm8b8bmnnrvqoc9ccvuummmvqy3b8bbcnnqmemeb2mmvvmymnvmbffncnmmmvmm8bmvyqfhyqnnbgbnncbbbbqmmbpqzqqvjyqqbpbhnobm9bcmnnqqqmvbqqqnnmpgcgfbqbb8ccymvgmqmmmqffgppcqoqgcccnyqofqmyummfubgpgbbfgh8b8uvbqqqvyqvfybqifqgqgmobbvqmbffbgqmqmmbnmqmbfqpbffvmymqqmoqbqmcrmvqiqqmnmouyuummgmbbmmmnqvqvmm8gbpuqqbuuvbmgyoqguqmqufmgbyyfhqgqvybofqmqgqufmqmb8",
+                "Pixels": "112222212220112211000000222122210210021211200000220222221122022121120000210113322121212022220000210223220302222122210200211022331112223231210010110001211111022322221201212010001021111231221111300200100001012332211101112220220020111121222011232333222010022233221011333222323010011222212110223323223211121222232200233312332212122111112221223333233312122212011222333231223222221211211011323222222211222122221112322122332213022210122010330222332313022122222211322011122222212222112211132322222212213232232222233332222002222232322021232203330223221322231220331222233021223223122200"
+              },
+              "pipe": {
+                "Ramp": [
+                  "#ae6c3a",
+                  "#cb7660",
+                  "#b98f5e",
+                  "#bda36a"
+                ],
+                "Grain": "cbmmmombmmmbbbpndf281012nmmbqmoebmbbbncncdj13101nmbnmqmofemmbnncgfcm1410mbbbbqvmpbmfmbg8hpmm8121mf8mmvqq8v8mmngfonmb8g28mbf8mmuubbemmmznqfqebbb2bfbb7fqffbbbbmornnqmbgbfobmbfbbbf8obfcfnscmmbbbbvbbmbbfb8bbfbfpqwmmbbb8bbfmmm5ogb8h8bbffofpgg8bbmvmvvvqmm8b8bmnnrvqoc9ccvuummmvqy3b8bbcnnqmemeb2mmvvmymnvmbffncnmmmvmm8bmvyqfhyqnnbgbnncbbbbqmmbpqzqqvjyqqbpbhnobm9bcmnnqqqmvbqqqnnmpgcgfbqbb8ccymvgmqmmmqffgppcqoqgcccnyqofqmyummfubgpgbbfgh8b8uvbqqqvyqvfybqifqgqgmobbvqmbffbgqmqmmbnmqmbfqpbffvmymqqmoqbqmcrmvqiqqmnmouyuummgmbbmmmnqvqvmm8gbpuqqbuuvbmgyoqguqmqufmgbyyfhqgqvybofqmqgqufmqmb8",
+                "Pixels": "112222212220112211000000222122210210021211200000220222221122022121120000210113322121212022220000210223220302222122210200211022331112223231210010110001211111022322221201212010001021111231221111300200100001012332211101112220220020111121222011232333222010022233221011333222323010011222212110223323223211121222232200233312332212122111112221223333233312122212011222333231223222221211211011323222222211222122221112322122332213022210122010330222332313022122222211322011122222212222112211132322222212213232232222233332222002222232322021232203330223221322231220331222233021223223122200"
+              },
+              "archeton": {
+                "Ramp": [
+                  "#7987a2",
+                  "#8997b0",
+                  "#96a5c2",
+                  "#a8b5cc"
+                ],
+                "Grain": "ghchqtttuuuuuzuzuumuglglgdgcqtuuuuuuuuuuuuuggdgghqchruuuuuuuguuuumgumk7ghigcruuuuugggddgggggg7ddiqcpruugdgglgmgugmguggdgidc99clmugumdcgdgdggg8dd99hirtguuumulugmguguggddidicqluguggmggggmgggm7g7dicpdtuuuluugmgugmgugdddjcicqmumumuuumugugggmddddicpqtuuuuuuuuuumummgdd8lcchrlumumummgmgggddggd6gidprsuuuuuuggdggmglgkddmcjirkumgdgdkluggggggd53mhdpdbdguuuugggggggggg48d18hqdmmuuugggggggggugddaahpppppppoobpihchiiii99gaghpppppoooopqppppppqccgobpppppoooooupuppppppccooohppphoooopppppppppppbfgopppppoooppppvpppupoobagohpppoogppppppppphbaaaagbpbhhogoppppppchpugogaoagbbcaagbc0cfvpvppphgga",
+                "Pixels": "220222222222232322221212111022222222222222211111220222222222122222122201221022222211111111111000220222211112121212121101200000222122101111111000002222122222221212121100202022212112111121112010120212222222121212121000202022222222222121112111120222222222222222221100200222222222212111101100120222222222110112121200202222221010222111111100221210012222111111111100000221222221111111112100002222222222022202222200101222222222222222222200120222222222232322222200222222222222222222222220122222222222222322232220012222222222222222220000020202221222222202232210202000001000013232222110"
+              },
+              "gem": {
+                "Ramp": [
+                  "#494550",
+                  "#515471",
+                  "#616183",
+                  "#717193"
+                ],
+                "Grain": "nnmmgmmmmmmmgriinlmmmumflllffmllm9mfmqoingngnnwgmwmmmmmm9ffgfpii1mmggmmmlfmfmml300flliohmgggmwmggmmwgfgggmmmmooommmmmmmmhmmn71gghgnnmioinhppqipzgnnggg8nnnnmnopinogynnmymgf7fgggm1gcmoohmnmimmnqfmfmgmgmmggmlpponnpohooyf2fgmmwlmmmfmiohoooiiooo17gmmmmummmfmpiiipnohgnm5nggmgmgmmu1mopignpjogmm1ngmnmmmnmmmeooogopiiggmggmmmgmgmmwmgfofniiiogmmm7mlmmmmmvmvmioomoiioommmgfmmmmmmmvmmjjjgipjpmg4gmmgmmmmmlmlmpiognfijffnggl0lfmllllmmoyhgepopdlmmmmmgmgummmwmyohhooppllnmgng4gmggmnmmiji5hpfigmgmmmmmfmlgmlmmppphniipmqpwgmmmgggmlmfmpoio2pjoppilmmmmmmmmlmlfpoonoiojoiimmmmmgggmmmgmopjinijjggn",
+                "Pixels": "222212222222131121222320111002112020233121212230232222220000031102201222102022100001113120102320022300000222233222222222122200111122213121333133122111022222233122132223210000012000233122212223020202022002133222331223000022312220213122211232000222232220231113221122021121212230233112313022021222222222033213311002002220202232102021113122202122222323213322112222200222222232211111313200022022222121231312011002001010211112223110333012222202032223232112333112212100201222211101301021222220210212233312113233302220002120233120312331122222222121033323131211222220002220233112111112"
+              }
+            },
+            "PaletteSource": "img/pentura/mountain-town-urnh.png"
+          },
           "LockMessage": "Coming in a future version.."
         },
         {
@@ -9920,6 +10629,14 @@
                 "Letter": null,
                 "Direction": null,
                 "Variant": "wall-2"
+              },
+              {
+                "Kind": "JumpTile",
+                "Col": 5,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Down",
+                "Variant": "jumptile-2"
               }
             ],
             "Palette": {
@@ -10151,14 +10868,6 @@
               },
               {
                 "Kind": "Archeton",
-                "Col": 6,
-                "Row": 7,
-                "Letter": null,
-                "Direction": "Right",
-                "Archeton": "swim-fish"
-              },
-              {
-                "Kind": "Archeton",
                 "Col": 3,
                 "Row": 5,
                 "Letter": null,
@@ -10207,14 +10916,6 @@
               },
               {
                 "Kind": "Wall",
-                "Col": 1,
-                "Row": 7,
-                "Letter": null,
-                "Direction": null,
-                "Variant": "wall-7"
-              },
-              {
-                "Kind": "Wall",
                 "Col": 2,
                 "Row": 8,
                 "Letter": null,
@@ -10236,30 +10937,6 @@
                 "Letter": null,
                 "Direction": null,
                 "Variant": "wall-7"
-              },
-              {
-                "Kind": "Archeton",
-                "Col": 2,
-                "Row": 6,
-                "Letter": null,
-                "Direction": "Right",
-                "Archeton": "jumpbug-a"
-              },
-              {
-                "Kind": "Archeton",
-                "Col": 4,
-                "Row": 8,
-                "Letter": null,
-                "Direction": "Right",
-                "Archeton": "jumpbug-a"
-              },
-              {
-                "Kind": "Archeton",
-                "Col": 6,
-                "Row": 2,
-                "Letter": null,
-                "Direction": "Right",
-                "Archeton": "swim-fish"
               },
               {
                 "Kind": "Finish",
@@ -10285,38 +10962,9 @@
                 "Archeton": "swim-fish"
               },
               {
-                "Kind": "Archeton",
-                "Col": 1,
-                "Row": 6,
-                "Letter": null,
-                "Direction": "Left",
-                "Archeton": "swim-fish"
-              },
-              {
-                "Kind": "GemGate",
-                "Col": 7,
-                "Row": 9,
-                "Letter": null,
-                "Direction": null
-              },
-              {
-                "Kind": "Gem",
-                "Col": 9,
-                "Row": 8,
-                "Letter": null,
-                "Direction": null
-              },
-              {
                 "Kind": "Gem",
                 "Col": 1,
                 "Row": 9,
-                "Letter": null,
-                "Direction": null
-              },
-              {
-                "Kind": "Gem",
-                "Col": 9,
-                "Row": 1,
                 "Letter": null,
                 "Direction": null
               },
@@ -10354,14 +11002,6 @@
               },
               {
                 "Kind": "Gate",
-                "Col": 9,
-                "Row": 3,
-                "Letter": "X",
-                "Direction": null,
-                "Open": true
-              },
-              {
-                "Kind": "Gate",
                 "Col": 7,
                 "Row": 8,
                 "Letter": "X",
@@ -10387,30 +11027,6 @@
               {
                 "Kind": "Gate",
                 "Col": 4,
-                "Row": 7,
-                "Letter": "X",
-                "Direction": null,
-                "Open": true
-              },
-              {
-                "Kind": "Gate",
-                "Col": 4,
-                "Row": 6,
-                "Letter": "X",
-                "Direction": null,
-                "Open": true
-              },
-              {
-                "Kind": "Gate",
-                "Col": 4,
-                "Row": 5,
-                "Letter": "X",
-                "Direction": null,
-                "Open": true
-              },
-              {
-                "Kind": "Gate",
-                "Col": 0,
                 "Row": 7,
                 "Letter": "X",
                 "Direction": null,
@@ -10451,22 +11067,6 @@
                 "Kind": "Gate",
                 "Col": 5,
                 "Row": 3,
-                "Letter": "X",
-                "Direction": null,
-                "Open": true
-              },
-              {
-                "Kind": "Gate",
-                "Col": 6,
-                "Row": 4,
-                "Letter": "X",
-                "Direction": null,
-                "Open": true
-              },
-              {
-                "Kind": "Gate",
-                "Col": 4,
-                "Row": 2,
                 "Letter": "X",
                 "Direction": null,
                 "Open": true
@@ -10531,6 +11131,126 @@
                 "Letter": "X",
                 "Direction": null,
                 "Open": true
+              },
+              {
+                "Kind": "Gate",
+                "Col": 6,
+                "Row": 4,
+                "Letter": "X",
+                "Direction": null,
+                "Open": true
+              },
+              {
+                "Kind": "Gate",
+                "Col": 3,
+                "Row": 6,
+                "Letter": "X",
+                "Direction": null,
+                "Open": true
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 0,
+                "Row": 6,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "jumpbug-a"
+              },
+              {
+                "Kind": "Edge",
+                "Col": 2,
+                "Row": 9,
+                "Letter": null,
+                "Direction": "Right"
+              },
+              {
+                "Kind": "Gate",
+                "Col": 3,
+                "Row": 9,
+                "Letter": "X",
+                "Direction": null
+              },
+              {
+                "Kind": "JumpTile",
+                "Col": 4,
+                "Row": 8,
+                "Letter": null,
+                "Direction": "Up",
+                "Variant": "jumptile-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 5,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-4"
+              },
+              {
+                "Kind": "Edge",
+                "Col": 0,
+                "Row": 7,
+                "Letter": null,
+                "Direction": "Down"
+              },
+              {
+                "Kind": "Gate",
+                "Col": 7,
+                "Row": 9,
+                "Letter": "Y",
+                "Direction": null
+              },
+              {
+                "Kind": "GemGate",
+                "Col": 7,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-10"
+              },
+              {
+                "Kind": "Switch",
+                "Col": 8,
+                "Row": 0,
+                "Letter": "Y",
+                "Direction": null
+              },
+              {
+                "Kind": "Gem",
+                "Col": 9,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 6,
+                "Row": 2,
+                "Letter": null,
+                "Direction": "Right",
+                "Archeton": "swim-fish"
+              },
+              {
+                "Kind": "Gem",
+                "Col": 9,
+                "Row": 2,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "JumpTile",
+                "Col": 9,
+                "Row": 1,
+                "Letter": null,
+                "Direction": "Down",
+                "Variant": "jumptile-2"
               }
             ],
             "Palette": {
@@ -10742,7 +11462,7 @@
             "PoetryOffset": null,
             "Action": {
               "Kind": 1,
-              "Url": "https://johnoestmannmusic.com/soundworlds-digichip-academy-colourshards-double-album-released/",
+              "Url": "https://johnoestmannmusic.com/0020-digital-palace/",
               "TargetPageId": null,
               "TravelSpawnX": null,
               "TravelSpawnY": null,
@@ -11140,21 +11860,6 @@
                 "Variant": "wall-12"
               },
               {
-                "Kind": "Archeton",
-                "Col": 6,
-                "Row": 6,
-                "Letter": "A",
-                "Direction": "Right",
-                "Archeton": "warp-wisp-2-2"
-              },
-              {
-                "Kind": "WarpOut",
-                "Col": 9,
-                "Row": 6,
-                "Letter": "A",
-                "Direction": null
-              },
-              {
                 "Kind": "Gem",
                 "Col": 4,
                 "Row": 9,
@@ -11226,6 +11931,21 @@
                 "Col": 5,
                 "Row": 5,
                 "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Archeton",
+                "Col": 6,
+                "Row": 6,
+                "Letter": "A",
+                "Direction": "Right",
+                "Archeton": "warp-wisp-square-2"
+              },
+              {
+                "Kind": "WarpOut",
+                "Col": 9,
+                "Row": 6,
+                "Letter": "A",
                 "Direction": null
               }
             ],
@@ -12760,6 +13480,34 @@
           "Percent": 15
         }
       ]
+    },
+    {
+      "Id": "resonant-guard",
+      "Kind": "Archeton",
+      "Name": "Resonant Guard",
+      "Pixels": "..................................................................................HHH....................HHHHH...................HH.HH..................HHH.HHH.................HH...HH..............HHHHH...HHHHH..........H..HH.....HH..H.........H.HHHHHHHHHHH.H.........H.HHHHHHHHHHH.H.........HHHHHHHHHHHHHHH.........HHHHHH....HHHHH.........HHH.HH....HH.HH.........HH..H..HH..H.HHH.......HHH..H..HH..H..HHH......HH...HH....HH...HH.....HHH...HH....HH...HHH....HHHHHHHHHHHHHHHHHHHH....HHHHHHHHHHHHHHHHHHHH.....HHHHHHHHHHHHHHHHHH............H....H...................HHHH..........",
+      "Mix": [
+        {
+          "Role": "archeton",
+          "Shade": 0,
+          "Percent": 15
+        },
+        {
+          "Role": "archeton",
+          "Shade": 1,
+          "Percent": 25
+        },
+        {
+          "Role": "archeton",
+          "Shade": 2,
+          "Percent": 45
+        },
+        {
+          "Role": "archeton",
+          "Shade": 3,
+          "Percent": 15
+        }
+      ]
     }
   ],
   "PuzzleDrawingSets": [
@@ -13013,7 +13761,7 @@
     },
     {
       "Id": "warp-wisp-2-2",
-      "Name": "Warp Wisp Square 3x3",
+      "Name": "Warp Wisp Square",
       "Drawing": "warp-wisp",
       "Parts": [
         {
@@ -13021,14 +13769,10 @@
           "Moves": [
             "Up",
             "Up",
-            "Up",
-            "Left",
             "Left",
             "Left",
             "Down",
             "Down",
-            "Down",
-            "Right",
             "Right",
             "Right"
           ]
@@ -13075,6 +13819,51 @@
           "Kind": "Warp"
         }
       ]
+    },
+    {
+      "Id": "warp-wisp-square-2",
+      "Name": "Warp Wisp Square 3x3",
+      "Drawing": "warp-wisp",
+      "Parts": [
+        {
+          "Kind": "Sequence",
+          "Moves": [
+            "Up",
+            "Up",
+            "Up",
+            "Left",
+            "Left",
+            "Left",
+            "Down",
+            "Down",
+            "Down",
+            "Right",
+            "Right",
+            "Right"
+          ]
+        },
+        {
+          "Kind": "Warp"
+        }
+      ]
+    },
+    {
+      "Id": "resonant-guard",
+      "Name": "Resonant Guard",
+      "Drawing": "resonant-guard",
+      "Parts": [
+        {
+          "Kind": "Detect",
+          "Range": 1
+        },
+        {
+          "Kind": "Shove",
+          "Distance": 3
+        },
+        {
+          "Kind": "Resonance"
+        }
+      ]
     }
   ],
   "ArchetonsOffered": [
@@ -13083,9 +13872,11 @@
     "jumpbug-a",
     "reflect-mimic",
     "swim-fish",
-    "warp-wisp"
+    "warp-wisp",
+    "resonant-guard"
   ],
   "UpdateHistory": [
+    "[18NOV26] 3 secret puzzles added.. Can you discover how to access them?",
     "[17NOV26] First batch of puzzles now released!",
     "A number of locations have been temporarily locked until puzzles are made for them.",
     "[01NOV26] Overhaul starting to transform TWE into a Sokoban-like explorer!",
