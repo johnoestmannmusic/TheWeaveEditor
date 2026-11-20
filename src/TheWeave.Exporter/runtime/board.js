@@ -372,7 +372,9 @@
       // puzzleRules.js's advanceCranes.
       let clawed = game?.cranes.find(crane => crane.ship) ?? null;
       if (clawed) {
-        let pose = WeavePuzzle.cranePose(clawed.from, clawed.to, clawed.ms);
+        // The ship's own pose, not the claw's: it sits on its square while the claw comes down, and is only carried
+        // while the claw has it.
+        let pose = WeavePuzzle.craneLoad(clawed.from, clawed.to, clawed.ms);
         return {
           x: (pose.cell.col + 0.5) * TILE_PX,
           y: (pose.cell.row + 0.5) * TILE_PX - pose.lift * TILE_PX,
@@ -496,11 +498,11 @@
       floors = fadedBy(hideUnreached(floors));
       objects = fadedBy(hideUnreached(objects));
 
-      // Whatever a claw is holding is hauled up out of its square and faded, then comes down into the other one out of
-      // the fade: the rules have moved it by the time that half starts, so one pose covers both - see cranePose.
+      // Whatever a claw has grabbed is hauled up out of its square and faded, then comes down into the other one out
+      // of the fade. It is still until it is grabbed and still again once it is set down - see craneLoad.
       for (const crane of game.cranes ?? []) {
         if (crane.ship) continue;
-        let pose = WeavePuzzle.cranePose(crane.from, crane.to, crane.ms);
+        let pose = WeavePuzzle.craneLoad(crane.from, crane.to, crane.ms);
         key.push('c', Math.round(pose.alpha * 10), Math.round(pose.lift * TILE_PX));
         objects = objects.map(object => object === crane.thing ? {
           ...object,

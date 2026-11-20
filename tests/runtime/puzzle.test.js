@@ -122,7 +122,7 @@ test('transparent pixels are ignored, and fully transparent art is still handled
 
 // ---------- playing ----------
 
-const { createPuzzleGame, hasFinish, crossingCell, startOf, CRANE_MS, cranePose } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+const { createPuzzleGame, hasFinish, crossingCell, startOf, CRANE_MS, cranePose, craneLoad } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
 
 const at = (col, row) => ({ col, row });
 const game = (...objects) => createPuzzleGame({ objects, palette: {} });
@@ -3129,9 +3129,35 @@ test('a crane comes down for 300ms, rests, hauls its load up into a fade, then d
   assert.equal(CRANE_MS, 1400, 'and the same again on the other side');
 });
 
+test('a crane moves and fades what it has taken only while the claw has it', () => {
+  let from = at(2, 2), to = at(7, 7);
+  let load = (ms) => craneLoad(from, to, ms);
+
+  // Untouched while the claw comes down on it and rests: on its own square, and solid.
+  assert.deepEqual(load(0), { cell: from, lift: 0, alpha: 1 });
+  assert.deepEqual(load(299), { cell: from, lift: 0, alpha: 1 });
+  assert.deepEqual(load(499), { cell: from, lift: 0, alpha: 1 });
+  // Grabbed at 500, and only then moving: up with the claw, fading as it goes.
+  assert.deepEqual(load(600), { cell: from, lift: 0.5, alpha: 0.5 });
+  let hauled = load(699);
+  assert.equal(hauled.cell, from);
+  assert.ok(hauled.lift > CRANE_LIFT * 0.99 && hauled.alpha < 0.01, `all but up and all but gone: ${hauled.lift}, ${hauled.alpha}`);
+  // In the claw right across the landing, where it is out of sight at one square and not yet in at the other.
+  assert.deepEqual(load(CRANE_PICKUP_MS), { cell: to, lift: 1, alpha: 0 });
+  assert.deepEqual(load(800), { cell: to, lift: 0.5, alpha: 0.5 });
+  // Set down at 900, and there it stays while the empty claw lifts away.
+  assert.deepEqual(load(900), { cell: to, lift: 0, alpha: 1 });
+  assert.deepEqual(load(1250), { cell: to, lift: 0, alpha: 1 });
+  assert.deepEqual(load(CRANE_MS), { cell: to, lift: 0, alpha: 1 });
+
+  // The claw itself keeps moving the whole time - it is the one doing the work.
+  assert.deepEqual(cranePose(from, to, 0).lift, 1);
+  assert.deepEqual(cranePose(from, to, CRANE_MS).lift, 1);
+});
+
 // The barrel carries only CRANE_MS, which is the one board.js draws by; where in a pickup the thing lands is the
 // rules' own half of it.
-const { CRANE_PICKUP_MS } = require('../../src/TheWeave.Exporter/runtime/puzzleRules.js');
+const { CRANE_PICKUP_MS, CRANE_LIFT } = require('../../src/TheWeave.Exporter/runtime/puzzleRules.js');
 
 test('a Crane takes the ship up and sets it down on the other Crane square', () => {
   let g = game(craneAt(2, 5), craneAt(6, 3), obj('Start', 2, 6));

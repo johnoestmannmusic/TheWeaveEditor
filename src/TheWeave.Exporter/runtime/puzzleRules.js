@@ -1758,6 +1758,24 @@
     return pose(to, CRANE_LIFT * Math.min(1, (back - liftMs - restMs) / dropMs), 1);
   }
 
+  // The same for what a Move Crane has taken hold of: it sits where it is until the claw grabs it, rides up with the
+  // claw into the fade, is the far square's at the landing, and comes down with the claw out of the fade to rest there.
+  // So it is only ever moving, and only ever transparent, while the claw has it.
+  function craneLoad(from, to, ms){
+    let { dropMs, restMs, liftMs } = CRANE_TIMING;
+    let grabMs = dropMs + restMs;
+    if (ms < grabMs) return { cell: from, lift: 0, alpha: 1 };
+    if (ms < CRANE_PICKUP_MS) {
+      let along = (ms - grabMs) / liftMs;
+      return { cell: from, lift: CRANE_LIFT * along, alpha: 1 - along };
+    }
+    if (ms < CRANE_PICKUP_MS + liftMs) {
+      let along = (ms - CRANE_PICKUP_MS) / liftMs;
+      return { cell: to, lift: CRANE_LIFT * (1 - along), alpha: along };
+    }
+    return { cell: to, lift: 0, alpha: 1 };
+  }
+
   // ---------- timing ----------
 
   // How long things take on a board, shared by the game (main.js) and the Puzzle Editor's playtest, so that a puzzle
@@ -1820,5 +1838,5 @@
     return [...after.filter(object => !sweeps(object)), ...leaving, ...arriving].filter(object => (object.fade ?? 1) > 0);
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, PULSE_MAX_STEPS, PULSE_FADE_MS, CRANE_MS, CRANE_PICKUP_MS, CRANE_TIMING, CRANE_LIFT, cranePose, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
+  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, PULSE_MAX_STEPS, PULSE_FADE_MS, CRANE_MS, CRANE_PICKUP_MS, CRANE_TIMING, CRANE_LIFT, cranePose, craneLoad, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
 });

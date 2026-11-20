@@ -512,11 +512,14 @@ test('a Crane holds the board still while its claw is out, then puts the ship do
 
   stepUp();
   assert.deepEqual(play.mover.cell, at(2, 5), 'on the crane, in its claw');
-  // A press while it is held goes nowhere. Keep this run short: the claw sets the ship down at 250 ms, so a longer one
-  // would be testing the landing rather than the hold.
+  // A press while it is held goes nowhere. Keep this run short: the claw sets the ship down part way through the
+  // pickup, so a longer one would be testing the landing rather than the hold.
   play.mover.press('down'); play.mover.release('down');
   run(play, 50);
   assert.deepEqual(play.mover.cell, at(2, 5), 'held still');
+  // And it stays exactly on its own square while the claw comes down: the ship is only carried once the claw has it.
+  let waiting = play.shipPosition();
+  assert.deepEqual([waiting.x, waiting.y, waiting.opacity], [(2 + 0.5) * 24, (5 + 0.5) * 24, 1], 'on its square, solid, until it is grabbed');
 
   run(play, CRANE_MS + 60);                                    // past the halfway point and the end of the pickup
   assert.deepEqual(play.mover.cell, at(6, 3), 'set down on the other square');
