@@ -148,6 +148,12 @@
       return teleporters.find(letter => teleporters.filter(l => l === letter).length === 1) ?? firstUnused(teleporters);
     }
 
+    // A Crane is placed in pairs like a Teleporter, and the second one wants the letter the first one has.
+    if (kind === 'Crane') {
+      let cranes = letters('Crane');
+      return cranes.find(letter => cranes.filter(l => l === letter).length === 1) ?? firstUnused(cranes);
+    }
+
     let gates = letters('Gate');
     let switches = letters('Switch');
     if (kind === 'Switch') return gates.find(letter => !switches.includes(letter)) ?? firstUnused(gates, switches);

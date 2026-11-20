@@ -64,6 +64,12 @@ test('a Teleporter is offered the letter of its unfinished pair, then a new one'
   assert.equal(suggestLetter([lettered('Teleporter', 'A'), lettered('Teleporter', 'A')], 'Teleporter'), 'B');
 });
 
+test('a Crane is offered the letter of its unfinished pair, then a new one', () => {
+  assert.equal(suggestLetter([], 'Crane'), 'A');
+  assert.equal(suggestLetter([lettered('Crane', 'C')], 'Crane'), 'C');
+  assert.equal(suggestLetter([lettered('Crane', 'C'), lettered('Crane', 'C')], 'Crane'), 'A');
+});
+
 test('a Switch is offered its Gate\'s letter, and a Gate its Switch\'s', () => {
   assert.equal(suggestLetter([lettered('Gate', 'A')], 'Switch'), 'A');
   assert.equal(suggestLetter([lettered('Switch', 'C')], 'Gate'), 'C');
