@@ -1791,6 +1791,42 @@ test('a Resonant Guard shoves the ship 3 squares back as it comes within 1, and 
   assert.equal(g.carryDirection(at(5, 6)), 'down');
 });
 
+test('a shove stops on the last clear square, and a shove with nowhere to go does nothing at all', () => {
+  let g = withArchetons([GUARD], guard(5, 5), obj('Wall', 5, 8), obj('Start', 5, 7));
+  g.shipArrivedAt(at(5, 6));
+  assert.equal(g.carryDirection(at(5, 6)), 'down', 'the first square is clear');
+  g.shipArrivedAt(at(5, 7));
+  assert.equal(g.carryDirection(at(5, 7)), null, 'the Wall stops it');
+  assert.deepEqual(g.shipCell, at(5, 7));
+
+  let walled = withArchetons([GUARD], guard(5, 5), obj('Wall', 5, 7), obj('Start', 5, 6));
+  let caught = walled.shipArrivedAt(at(5, 6));
+  assert.ok(caught.shove, 'it still lunges');
+  assert.equal(walled.carryDirection(at(5, 6)), null, 'but there is nowhere to shove it');
+  assert.deepEqual(walled.shipCell, at(5, 6), 'and nothing else happens');
+});
+
+test('when every Lantern Pulse Tile is lit at once, a guard with Resonance dies and is off the board', () => {
+  let g = withArchetons([GUARD], guard(9, 9),
+    obj('LanternPulse', 1, 1, { steps: 2 }), obj('LanternPulse', 8, 8, { steps: 2 }));
+  g.placeShip(at(1, 2));
+  g.shipArrivedAt(at(1, 1));           // the first tile lights; the second is not lit yet
+  assert.ok(g.objects.some(o => o.kind === 'Archeton'));
+  g.placeShip(at(8, 7));
+  g.shipArrivedAt(at(8, 8));           // the second lights: all of them, so the guard gives way
+  assert.equal(g.objects.some(o => o.kind === 'Archeton'), false);
+
+  let partial = withArchetons([GUARD], guard(9, 9), obj('LanternPulse', 1, 1, { steps: 2 }), obj('LanternPulse', 5, 5, { steps: 2 }));
+  partial.placeShip(at(1, 2));
+  partial.shipArrivedAt(at(1, 1));
+  assert.ok(partial.objects.some(o => o.kind === 'Archeton'), 'one of two is not all of them');
+
+  let none = withArchetons([GUARD], guard(9, 9));
+  none.placeShip(at(1, 2));
+  none.shipArrivedAt(at(1, 1));
+  assert.ok(none.objects.some(o => o.kind === 'Archeton'), 'no Pulse Tiles, nothing to resonate with');
+});
+
 test('a Push Block can be pushed onto an open Gate, sits in it, and can be pushed on out', () => {
   let g = game(block(2, 5), obj('Gate', 3, 5, { letter: 'A', open: true }), obj('Gate', 3, 7, { letter: 'B' }), block(2, 7), obj('Wall', 3, 6));
   assert.equal(g.canPush(at(2, 5), 'right'), true, 'onto an open Gate');

@@ -843,6 +843,19 @@
       return shove.direction;
     }
 
+    // Every Lantern Pulse Tile on the board lit at once, and a guard with a Resonance part gives way: it is off the
+    // board from here on, and the caller shakes it apart and sinks it - see board.js's RESONANCE_SHAKE_MS. A board
+    // with no Pulse Tiles has nothing to resonate, and one unlit tile is enough to hold it. { dissolved } or null.
+    function resonanceDeath(){
+      let pulses = objects.filter(object => object.kind === 'LanternPulse');
+      if (pulses.length === 0 || pulses.some(tile => (tile.charge ?? 0) <= 0)) return null;
+      let dying = objects.filter(object => object.kind === 'Archeton' && hasPart(object, 'Resonance'));
+      if (dying.length === 0) return null;
+      objects = objects.filter(object => !dying.includes(object));
+      version++;
+      return { dissolved: dying };
+    }
+
     // ---------- Reflect Mimics ----------
 
     // Where an Archeton with a Reflect part mirrors a point to, or null if the point isn't in its line: a pane turned
@@ -1372,8 +1385,10 @@
       if (moved && slid) moved = { ...moved, slid: slid.slid };
       if (moved && hopped) moved = { ...moved, hopped: hopped.hopped };
       if (moved && swam) moved = { ...moved, swam: swam.swam };
-      if (!moved) return event;
-      return event ? { ...moved, ...event } : moved;
+      let result = moved ? (event ? { ...moved, ...event } : moved) : event;
+      // Once everything has moved and been acted on: if every Pulse Tile is lit at the same time, the guard gives way.
+      let death = resonanceDeath();
+      return death ? { ...result, ...death } : result;
     }
 
 
