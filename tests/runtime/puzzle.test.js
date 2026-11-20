@@ -1649,6 +1649,23 @@ test('a Lantern Pulse Tile is a hollow ring in the light paint, and its count is
   assert.ok(middle[3] > 0, 'something is drawn where the count goes');
 });
 
+test('a lit Pulse Tile glows outside its ring only, so its hollow stays hollow', () => {
+  let { look } = artLook();
+  let lit = blank(), unlit = blank();
+  // No count, so the only difference between the two is the glow itself.
+  renderBoard(lit, [obj('LanternPulse', 0, 0, { steps: 0, lit: true })], look);
+  renderBoard(unlit, [obj('LanternPulse', 0, 0, { steps: 0 })], look);
+
+  let pixels = (image) => Array.from({ length: TILE_PX * TILE_PX }, (_, i) => ({ x: i % TILE_PX, y: Math.floor(i / TILE_PX), a: pixelAt(image, i % TILE_PX, Math.floor(i / TILE_PX))[3] }));
+  let inside = (image) => pixels(image).filter((p) => p.a > 0 && Math.hypot(p.x - 11.5, p.y - 11.5) < 8).length;
+  let drawn = (image) => pixels(image).filter((p) => p.a > 0).length;
+
+  // glowing() fills whatever isn't drawn, which for a ring is its own middle: the tile then reads as a solid disc with
+  // the count sitting on it. The halo belongs outside the ring, where the room is.
+  assert.equal(inside(lit), inside(unlit), 'being lit adds nothing inside the ring');
+  assert.ok(drawn(lit) > drawn(unlit), 'and adds a halo outside it');
+});
+
 // ---------- Archetons ----------
 
 const SENTRIBEAM = { id: 'sentribeam', name: 'Sentribeam', parts: [{ kind: 'Beam', range: 2, look: 'AllWays', blockedByBlocks: true }, { kind: 'Push' }] };

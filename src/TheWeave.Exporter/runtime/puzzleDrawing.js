@@ -490,9 +490,33 @@
   // A Lantern Pulse Tile's Standard drawing: a ring, and nothing else. Its whole content is lines, so it is painted in
   // the light colour - an outline-colour ring disappears into a dark board. The count in its middle is drawn over this
   // by buildSprite, and it is hollow so that the count has somewhere to go. Left for drawing over by hand.
+  // Thin, and inset a pixel from the square's edge: a fatter ring at this size is most of the tile, and against the
+  // hollow it leaves it stops reading as a ring at all.
+  const PULSE_RING_RADIUS = 10;
+  const PULSE_RING_THICKNESS = 0.9;
+
   function standardLanternPulsePixels(){
     let middle = (TILE_PX - 1) / 2;
-    return layerOf((u, v) => Math.abs(Math.hypot(u - middle, v - middle) - 10.5) <= 1.4 ? PAINTS.light : PAINTS.clear);
+    return layerOf((u, v) => Math.abs(Math.hypot(u - middle, v - middle) - PULSE_RING_RADIUS) <= PULSE_RING_THICKNESS
+      ? PAINTS.light
+      : PAINTS.clear);
+  }
+
+  // The halo a lit Pulse Tile wears: outside its ring only, two bands of it, the further one dithered. glowing() is no
+  // use here - it fills whatever isn't drawn, which for a ring is its own hollow, and the tile then reads as a solid
+  // disc with a count sitting on it rather than as something lit.
+  function glowingPulse(sprite, light){
+    let middle = (TILE_PX - 1) / 2;
+    let glow = [...sprite];
+    for (let y = 0; y < TILE_PX; y++) {
+      for (let x = 0; x < TILE_PX; x++) {
+        if (sprite[y * TILE_PX + x]) continue;
+        let from = Math.hypot(x - middle, y - middle);
+        if (from <= PULSE_RING_RADIUS) continue;
+        if (from <= PULSE_RING_RADIUS + 1.5 || (from <= PULSE_RING_RADIUS + 2.5 && (x + y) % 2 === 0)) glow[y * TILE_PX + x] = light;
+      }
+    }
+    return glow;
   }
 
   // A Rotator tile's Standard layers: two rails, with chevrons between them pointing along them.
@@ -582,7 +606,7 @@
     // middle. The glow goes on first, so the count sits on top of it. The editor's board is the puzzle itself, with no
     // playthrough counting anything down, so there it shows the count it is set to.
     if (object.kind === 'LanternPulse') {
-      if (object.lit) sprite = glowing(sprite, light);
+      if (object.lit) sprite = glowingPulse(sprite, light);
       let steps = object.charge ?? object.steps ?? PULSE_STEPS;
       if (steps > 0) drawPixelLetter(sprite, String(steps), light, outline, 1);
     }
