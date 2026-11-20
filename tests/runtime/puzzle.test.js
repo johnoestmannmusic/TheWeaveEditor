@@ -3113,3 +3113,42 @@ test('a Crane with no partner, or with no letter, does nothing at all', () => {
   let letterless = game(obj('Crane', 2, 5), obj('Crane', 6, 5), obj('Start', 2, 6));
   assert.equal(letterless.shipArrivedAt(at(2, 5))?.crane, undefined, 'two letterless cranes would pair with each other');
 });
+
+test('a Push Block pushed onto a Crane is set down on the other Crane square', () => {
+  let g = game(craneAt(4, 5), craneAt(7, 8), obj('PushBlock', 3, 5, { symbol: 'Circle' }), obj('Start', 2, 5));
+  g.pushFrom(at(2, 5), at(3, 5), 'right');
+  let block = find(g, 'PushBlock');
+  assert.deepEqual({ col: block.col, row: block.row }, at(4, 5), 'on the crane, in its claw');
+  g.advanceCranes(CRANE_PICKUP_MS);
+  assert.deepEqual({ col: block.col, row: block.row }, at(7, 8));
+  assert.equal(block.glide, null, 'and not drawn gliding there');
+});
+
+test('a Stream carrying something onto a Crane cranes it, and a held block stays put for a tick', () => {
+  let g = game(craneAt(4, 5), craneAt(8, 5), obj('PushBlock', 3, 5, { symbol: 'Circle' }),
+    obj('Stream', 3, 5, { direction: 'Right' }), obj('Stream', 4, 5, { direction: 'Right' }));
+  g.tick(null);
+  let block = find(g, 'PushBlock');
+  assert.deepEqual({ col: block.col, row: block.row }, at(4, 5));
+  g.tick(null);
+  assert.deepEqual({ col: block.col, row: block.row }, at(4, 5), 'the claw has hold of it');
+  g.advanceCranes(CRANE_PICKUP_MS);
+  assert.deepEqual({ col: block.col, row: block.row }, at(8, 5));
+});
+
+test('an Archeton craned to another Crane goes on patrolling from there', () => {
+  // Two moves, so that a route still counted from the bug's old home - or from the beat it had got to - lands
+  // somewhere else: a one-move sequence is at the start of itself again however far it has walked.
+  let hopper = { id: 'hopper', name: 'Hopper', parts: [{ kind: 'Sequence', moves: ['Right', 'Left'] }] };
+  let g = withArchetons([hopper],
+    obj('Archeton', 3, 5, { archeton: 'hopper', direction: 'Right' }),
+    craneAt(4, 5), craneAt(4, 8), obj('Start', 1, 9));
+
+  g.shipArrivedAt(at(1, 8));                       // its beat: right, onto the crane
+  assert.deepEqual({ col: find(g, 'Archeton').col, row: find(g, 'Archeton').row }, at(4, 5));
+  g.advanceCranes(CRANE_PICKUP_MS);
+  assert.deepEqual({ col: find(g, 'Archeton').col, row: find(g, 'Archeton').row }, at(4, 8));
+
+  g.shipArrivedAt(at(1, 9));                       // its next beat, counted from where it was put down
+  assert.deepEqual({ col: find(g, 'Archeton').col, row: find(g, 'Archeton').row }, at(5, 8), 'not back at 5,5');
+});

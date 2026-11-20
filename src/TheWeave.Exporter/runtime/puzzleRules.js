@@ -509,7 +509,8 @@
       let to = nextCell(block, direction);
       let there = onBoard(to) ? objectAt(to) : null;
       let openGate = there?.kind === 'Gate' && there.open;
-      if (!onBoard(to) || (there && !openGate) || streams.get(cellKey(to)) === OPPOSITES[direction]) return null;
+      // A Crane is somewhere a block can go: it takes hold of it rather than being in the way.
+      if (!onBoard(to) || (there && !openGate && there.kind !== 'Crane') || streams.get(cellKey(to)) === OPPOSITES[direction]) return null;
       if (!pipeAllows(block, direction) || !pipeAllows(to, direction)) return null;
       return to;
     }
@@ -617,9 +618,11 @@
       return objects.find(other => other.kind === 'Crane' && other !== crane && other.letter === crane.letter) ?? null;
     }
 
-    // Whether a thing is in a claw right now: it can be neither moved nor pushed until it is set down.
+    // Whether a thing is in a claw right now: it can be neither moved nor pushed until it is set down. Once it has
+    // landed it is the board's again - the claw is only lifting away - so it can be carried on by the floor it landed
+    // on, or take its next step, before the pickup has finished.
     function held(thing){
-      return cranes.some(crane => crane.thing === thing);
+      return cranes.some(crane => crane.thing === thing && !crane.landed);
     }
 
     // Whether the ship is in a claw - see canEnter and carryDirection.
@@ -1056,7 +1059,9 @@
       block.row = next.row;
       revealLitAreas();
       let sank = sinkMatches();
-      return sank ? { sank } : null;
+      // A block shoved onto a Crane is taken hold of, unless it sank with a match on the way.
+      let took = sank?.includes(block) ? null : craneTook(next, block);
+      return mergeEvent(sank ? { sank } : null, took);
     }
 
     // Whether the ship's reflection can be on a square: anywhere the ship could stand, and anywhere it would be hurt - a
@@ -1328,6 +1333,7 @@
       let slid = [];
       let set = {};
       for (const bug of objects.filter(object => object.kind === 'Archeton' && archetonDefinitions.get(object.archeton)?.parts?.some(part => part.kind === 'Slide'))) {
+        if (held(bug)) continue;
         let across = bug.direction !== 'Up' && bug.direction !== 'Down';
         let target = across ? shipCell.col : shipCell.row;
         let at = across ? bug.col : bug.row;
@@ -1347,6 +1353,7 @@
         bug.glide = 'slide';
         slid.push(bug);
         if (there) Object.assign(set, trigger(there) ?? {});
+        Object.assign(set, craneTook(to, bug) ?? {});
         // A Reset Switch puts every Slide Bug back where it started, so none of the rest move now.
         if (set.reset) break;
       }
@@ -1367,6 +1374,7 @@
       let swam = [];
       let set = {};
       for (const fish of objects.filter(object => object.kind === 'Archeton' && hasPart(object, 'Swim'))) {
+        if (held(fish)) continue;
         let direction = fish.direction ?? 'Left';
         let to = nextCell(fish, direction);
         let there = onBoard(to) ? objectAt(to) : null;
@@ -1387,6 +1395,7 @@
         fish.glide = 'swim';
         swam.push(fish);
         if (there) Object.assign(set, trigger(there) ?? {});
+        Object.assign(set, craneTook(to, fish) ?? {});
         // A Reset Switch puts every Swim Fish back where it started, so none of the rest move now.
         if (set.reset) break;
 
@@ -1397,6 +1406,7 @@
         fish.glide = 'hop';
         fish.col = landing.col;
         fish.row = landing.row;
+        Object.assign(set, craneTook(landing, fish) ?? {});
       }
       if (swam.length === 0) return null;
       version++;
@@ -1437,6 +1447,7 @@
       let hopped = [];
       let set = {};
       for (const bug of objects.filter(object => object.kind === 'Archeton' && hasPart(object, 'Sequence'))) {
+        if (held(bug)) continue;
         let moves = archetonDefinitions.get(bug.archeton).parts.find(part => part.kind === 'Sequence').moves ?? [];
         if (moves.length === 0) continue;
         bug.homeCol ??= bug.col;
@@ -1462,6 +1473,7 @@
         hopped.push(bug);
         let under = objects.find(other => other !== bug && isAt(other, target));
         if (under) Object.assign(set, trigger(under) ?? {});
+        Object.assign(set, craneTook(target, bug) ?? {});
         if (warp) Object.assign(set, warp);
         if (set.reset) break;
       }
@@ -1506,7 +1518,7 @@
       let moves = new Map();
       for (const object of objects) {
         let direction = track.get(cellKey(object));
-        if (!direction) continue;
+        if (!direction || held(object)) continue;
         let to = nextCell(object, direction);
         if (track.has(cellKey(to))) moves.set(object, to);
       }
@@ -1517,11 +1529,13 @@
         for (const [object, to] of moves) {
           let occupant = objectAt(to);
           let occupantLeaving = occupant && moves.has(occupant);
+          // A Crane is not in the way of what a Stream carries: it picks it up.
+          let aCrane = occupant?.kind === 'Crane';
           let swapping = occupantLeaving && isAt(moves.get(occupant), object);
           let shipInTheWay = isSolid(object) && occupiedByShip.some(cell => isAt(cell, to));
           let contested = [...moves].some(([other, otherTo]) => other !== object && isAt(otherTo, to) && objects.indexOf(other) < objects.indexOf(object));
 
-          if ((occupant && !occupantLeaving) || swapping || shipInTheWay || contested) {
+          if ((occupant && !occupantLeaving && !aCrane) || swapping || shipInTheWay || contested) {
             moves.delete(object);
             changed = true;
           }
@@ -1546,17 +1560,21 @@
       let occupied = shipHeadingTo ? [shipCell, shipHeadingTo] : [shipCell];
       let moves = resolveMoves(track, occupied);
       if (moves.size > 0) version++;
+      let took = null;
       for (const [object, to] of moves) {
         leaving(object);
         object.col = to.col;
         object.row = to.row;
+        // Something a Stream carries onto a Crane is a crane picking it up, as walking onto one would be.
+        took = mergeEvent(took, craneTook(to, object));
       }
       if (moves.size > 0) revealLitAreas();
 
       let sank = moves.size > 0 ? sinkMatches() : null;
       let cameUnder = !shipHeadingTo && [...moves.keys()].some(object => isAt(object, shipCell) && objects.includes(object));
       let arrived = cameUnder ? arriveAt(shipCell) : null;
-      return sank ? { ...arrived, sank } : arrived;
+      let result = sank ? { ...arrived, sank } : arrived;
+      return mergeEvent(result, took);
     }
 
     // A board with panes in line with the ship starts with its reflections already showing.
