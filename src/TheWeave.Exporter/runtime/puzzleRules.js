@@ -559,7 +559,9 @@
       tile.charge = Math.max(1, Math.min(PULSE_MAX_STEPS, tile.steps ?? PULSE_STEPS));
       tile.lit = true;
       for (const thing of [...floors, ...objects]) if (withinReach(tile, thing)) thing.revealed = true;
-      return { lit: { col: tile.col, row: tile.row }, revealed: hidden.filter(thing => thing.revealed) };
+      // A guard with a Resonance part feels it, and shakes: the only tell the player gets that the tiles and the guard
+      // are linked at all. See resonanceShake, and resonanceDeath for when the last one lights.
+      return mergeEvent({ lit: { col: tile.col, row: tile.row }, revealed: hidden.filter(thing => thing.revealed) }, resonanceShake());
     }
 
     // One of the ship's own steps goes by: every Pulse Tile with steps left spends one, and whatever nothing else
@@ -841,6 +843,15 @@
         return null;
       }
       return shove.direction;
+    }
+
+    // A guard with a Resonance part shakes as a Pulse Tile lights, harder the more of them are lit at once: { resonance:
+    // { active } } for the caller to draw, or null when there is no guard to feel it. The rules say how many tiles are
+    // on, never how far anything moves - the pixels are board.js's.
+    function resonanceShake(){
+      let active = objects.filter(object => object.kind === 'LanternPulse' && (object.charge ?? 0) > 0).length;
+      let guards = objects.filter(object => object.kind === 'Archeton' && hasPart(object, 'Resonance'));
+      return guards.length === 0 || active === 0 ? null : { resonance: { active } };
     }
 
     // Every Lantern Pulse Tile on the board lit at once, and a guard with a Resonance part gives way: it is off the

@@ -1860,6 +1860,26 @@ test('a shove stops on the last clear square, and a shove with nowhere to go doe
   assert.deepEqual(walled.shipCell, at(5, 6), 'and nothing else happens');
 });
 
+test('a guard with Resonance shakes when a Pulse Tile lights, harder with each tile already lit', () => {
+  let tiles = () => [obj('LanternPulse', 1, 1, { steps: 3 }), obj('LanternPulse', 3, 3, { steps: 3 }), obj('LanternPulse', 5, 5, { steps: 3 })];
+  let g = withArchetons([GUARD], guard(9, 9), ...tiles());
+  let lightAt = (col, row) => {
+    g.placeShip(at(col, row + 1));
+    return g.shipArrivedAt(at(col, row));
+  };
+
+  assert.equal(lightAt(1, 1).resonance.active, 1, 'the first tile: one lit');
+  assert.equal(lightAt(3, 3).resonance.active, 2, 'the second: harder');
+  let all = lightAt(5, 5);
+  assert.equal(all.resonance.active, 3);
+  assert.ok(all.dissolved, 'and the third is all of them, so the guard gives way');
+
+  // No guard on the board, nothing to feel it.
+  let lonely = game(...tiles());
+  lonely.placeShip(at(1, 2));
+  assert.equal(lonely.shipArrivedAt(at(1, 1)).resonance, undefined);
+});
+
 test('when every Lantern Pulse Tile is lit at once, a guard with Resonance dies and is off the board', () => {
   let g = withArchetons([GUARD], guard(9, 9),
     obj('LanternPulse', 1, 1, { steps: 2 }), obj('LanternPulse', 8, 8, { steps: 2 }));

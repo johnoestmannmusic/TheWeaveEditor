@@ -37,8 +37,10 @@
   const SHOVE_MS = 400;
   const SHOVE_LUNGE = 0.6;
   // How long a guard with a Resonance part shakes before it starts sinking into the ground, and then how long that
-  // takes - the same sink a matched block does.
+  // takes - the same sink a matched block does. It shakes for the same second each time a Pulse Tile lights, and harder
+  // the more of them are lit, up to RESONANCE_SHAKE_MAX_PX - see puzzleRules.js's resonanceShake.
   const RESONANCE_SHAKE_MS = 1000;
+  const RESONANCE_SHAKE_MAX_PX = 4;
   // How slowly a Warp Wisp drifts up and down about its square, in how many steps of the drift - a step every 100 ms,
   // so the drift is gentle rather than a shimmer.
   const WISP_DRIFT_CYCLE_MS = 2600;
@@ -63,6 +65,11 @@
   // and onBlocked(from, to, direction) as sokoban.js's mover has it.
   function createBoardPlay({ puzzle, game = null, cell = null, facing = null, hooks = {} }){
     game ??= puzzle ? WeavePuzzle.createPuzzleGame(puzzle) : null;
+    // The Archetons that feel a Pulse Tile light: the ones whose definition has a Resonance part, by id.
+    let resonantIds = new Set((puzzle?.archetons ?? [])
+      .filter(definition => (definition.parts ?? []).some(part => part.kind === 'Resonance'))
+      .map(definition => definition.id));
+
     let startCell = cell ?? (game ? game.start : WeavePuzzle.DEFAULT_START);
     if (cell && game) game.placeShip(cell);
 
@@ -92,6 +99,8 @@
       hidings: [], // { object, ms } for each thing a Pulse Tile let go of, for its fade out
       dissolving: [], // { object, ms } for each guard that resonated, shaking itself apart
       shove: null, // { from, direction, ms } while a guard lunges and the ship slides away
+      resonantMs: null, // how long a guard has been shaking because a Pulse Tile lit, for its rattle
+      resonantAmplitude: 1, // how far it shakes, which is harder the more tiles are lit - see RESONANCE_SHAKE_MAX_PX
       pulses: [],
       gateBeams: [], // a Gate Switch's Beams, for as long as they're drawn - see advanceGateBeams
       gemShots: [], // { from, to, ms, last } while a collected Gem is on its way to the Gem Gate
@@ -153,6 +162,11 @@
       // Only what's invisible is drawn differently for being unseen, so only that can fade: anything else is on the
       // board either way, and a Pulse Tile is the light rather than one of the things it lights.
       if (event.hid) for (const object of event.hid) if (object.invisible) play.hidings.push({ object, ms: 0 });
+      // A Pulse Tile lighting is felt by every guard with a Resonance part: it rattles, harder the more are lit.
+      if (event.resonance) {
+        play.resonantMs = 0;
+        play.resonantAmplitude = Math.min(RESONANCE_SHAKE_MAX_PX, Math.max(1, event.resonance.active));
+      }
       if (event.shove) play.shove = { ...event.shove, ms: 0 };
       if (event.dissolved) for (const object of event.dissolved) play.dissolving.push({ object, ms: 0 });
       if (event.gateBeam) play.gateBeams.push({ ...event.gateBeam, ms: 0 });
@@ -168,6 +182,7 @@
         play.hidings = [];
         play.dissolving = [];
         play.shove = null;
+        play.resonantMs = null;
         play.reset = { before: event.reset, ms: 0, durationMs: WeavePuzzle.resetSweepMs(event.reset, game.objects) };
       }
       if (event.finished) {
@@ -228,6 +243,10 @@
       if (play.shove) {
         play.shove.ms += dtMs;
         if (play.shove.ms >= SHOVE_MS) play.shove = null;
+      }
+      if (play.resonantMs !== null) {
+        play.resonantMs += dtMs;
+        if (play.resonantMs >= RESONANCE_SHAKE_MS) play.resonantMs = null;
       }
       for (const beam of play.gateBeams) beam.ms += dtMs;
       play.gateBeams = play.gateBeams.filter(beam => beam.ms < TIMING.gateBeamMs);
@@ -453,6 +472,15 @@
         objects = objects.map(object => object.kind === 'Archeton'
           && object.col === play.shove.from.col && object.row === play.shove.from.row
           ? { ...object, lungeX: delta.x * reach, lungeY: delta.y * reach } : object);
+      }
+
+      // A guard that has just felt a Pulse Tile light rattles where it stands, settling over its second, and harder
+      // the more of them are lit - see puzzleRules.js's resonanceShake.
+      if (play.resonantMs !== null) {
+        let settle = 1 - (play.resonantMs / RESONANCE_SHAKE_MS) * 0.5;
+        let shake = Math.round(Math.sin(play.resonantMs / 11) * play.resonantAmplitude * settle);
+        key.push('y', shake);
+        objects = objects.map(object => object.kind === 'Archeton' && resonantIds.has(object.archeton) ? { ...object, shake } : object);
       }
 
       // A guard that resonated shakes where it stood, then sinks into the ground, shaking and fading as it goes - the

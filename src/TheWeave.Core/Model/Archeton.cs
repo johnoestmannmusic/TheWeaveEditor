@@ -79,8 +79,10 @@ public enum ArchetonPartKind
     Shove,
 
     /// <summary>
-    /// An effect: when every Lantern Pulse Tile on the board is lit at the same time, it shakes for a second, then
-    /// dissolves into the ground, and is no longer on the board. See runtime/puzzleRules.js's resonanceDeath.
+    /// An effect: it feels the Lantern Pulse Tiles. Each time one is lit it shakes for a second, harder the more of
+    /// them are lit at once, so that the link between the tiles and the Archeton is something the player can see - see
+    /// runtime/puzzleRules.js's resonanceShake. When every one on the board is lit at the same time it shakes, then
+    /// dissolves into the ground, and is no longer on the board - see resonanceDeath.
     /// </summary>
     Resonance,
 }

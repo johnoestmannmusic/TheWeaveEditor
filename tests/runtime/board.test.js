@@ -450,3 +450,31 @@ test('a guard\'s shove throws the ship back without turning it round', () => {
   assert.deepEqual(play.mover.cell, at(5, 9));
   assert.equal(play.mover.facing, 'up', 'it slid back without turning round');
 });
+
+test('a guard with Resonance rattles when a Pulse Tile lights, harder with each tile already lit', () => {
+  const GUARD = { id: 'resonant-guard', name: 'Resonant Guard', parts: [{ kind: 'Detect', range: 1 }, { kind: 'Shove', distance: 3 }, { kind: 'Resonance' }] };
+  let play = createBoardPlay({ puzzle: { objects: [
+    obj('Start', 1, 1),
+    obj('LanternPulse', 2, 1, { steps: 3 }),
+    obj('LanternPulse', 3, 1, { steps: 3 }),
+    obj('Archeton', 9, 9, { archeton: 'resonant-guard', direction: 'Down' }),
+  ], archetons: [GUARD] } });
+  // The biggest rattle over a dozen frames, whatever phase the sine is at.
+  const rattle = () => {
+    let most = 0;
+    for (let i = 0; i < 12; i++) {
+      run(play, 16);
+      let guard = play.frame(0, {}).list.find((o) => o.kind === 'Archeton');
+      most = Math.max(most, Math.abs(guard?.shake ?? 0));
+    }
+    return most;
+  };
+  const stepRight = () => { play.mover.press('right'); play.mover.release('right'); run(play, BOARD_TIMING.stepMs + 20); };
+
+  stepRight();
+  assert.equal(play.resonantAmplitude, 1, 'one tile lit');
+  assert.equal(rattle(), 1, 'it shakes a pixel');
+  stepRight();
+  assert.equal(play.resonantAmplitude, 2, 'two lit is harder');
+  assert.ok(rattle() >= 2, 'so the rattle is bigger');
+});
