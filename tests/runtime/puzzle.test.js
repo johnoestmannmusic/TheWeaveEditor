@@ -1633,6 +1633,22 @@ test('a Reset Switch gets its own palette colour, and is a pad with arrows, unli
   assert.equal([...shape].reverse().join(''), shape);
 });
 
+test('a Lantern Pulse Tile is a hollow ring in the light paint, and its count is drawn in its middle', () => {
+  let drawing = standardDrawing('LanternPulse');
+  assert.equal(drawing.pixels.length, TILE_PX * TILE_PX);
+  assert.match(drawing.pixels, /^[.H]+$/, 'lines only, in the light paint, so it reads on a dark board');
+  assert.deepEqual(drawing.mix, standardMix('lantern'));
+  assert.equal(drawing.pixels[12 * TILE_PX + 12], '.', 'hollow in the middle, for the count');
+
+  let { look } = artLook();
+  let one = blank(), other = blank();
+  renderBoard(one, [obj('LanternPulse', 0, 0, { steps: 3 })], look);
+  renderBoard(other, [obj('LanternPulse', 0, 0, { steps: 7 })], look);
+  assert.notDeepEqual(tile(one, 0, 0), tile(other, 0, 0), 'the count is what the tile says');
+  let middle = pixelAt(one, 12, 12);
+  assert.ok(middle[3] > 0, 'something is drawn where the count goes');
+});
+
 // ---------- Archetons ----------
 
 const SENTRIBEAM = { id: 'sentribeam', name: 'Sentribeam', parts: [{ kind: 'Beam', range: 2, look: 'AllWays', blockedByBlocks: true }, { kind: 'Push' }] };
