@@ -12,7 +12,7 @@
   else root.WeavePuzzleDrawing = factory(root.WeavePuzzleRules, root.WeavePuzzleColours);
 })(this, function (WeavePuzzleRules, WeavePuzzleColours) {
 
-  const { DIRECTION_DELTAS, LANTERN_REACH, exitDirectionOf, isFloor } = WeavePuzzleRules;
+  const { DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, exitDirectionOf, isFloor } = WeavePuzzleRules;
   const { PALETTE_MIN_CONTRAST, TILE_PX, hexToColor, lightnessOf, mixTexture, standardMix } = WeavePuzzleColours;
 
   // ---------- drawing ----------
@@ -57,6 +57,12 @@
     U: '10001 10001 10001 10001 10001 10001 01110', V: '10001 10001 10001 10001 10001 01010 00100',
     W: '10001 10001 10001 10101 10101 11011 10001', X: '10001 10001 01010 00100 01010 10001 10001',
     Y: '10001 10001 01010 00100 00100 00100 00100', Z: '11111 00001 00010 00100 01000 10000 11111',
+    // The counts a Lantern Pulse Tile shows. The same 5x7 as the letters, so drawPixelLetter can draw them.
+    1: '00100 01100 00100 00100 00100 00100 01110', 2: '01110 10001 00001 00010 00100 01000 11111',
+    3: '11111 00010 00100 00010 00001 10001 01110', 4: '00010 00110 01010 10010 11111 00010 00010',
+    5: '11111 10000 11110 00001 00001 10001 01110', 6: '00110 01000 10000 11110 10001 10001 01110',
+    7: '11111 00001 00010 00100 01000 01000 01000', 8: '01110 10001 10001 01110 10001 10001 01110',
+    9: '01110 10001 10001 01111 00001 00010 01100',
   };
 
   // Each shape as whether a pixel of a square is inside it, measuring from the square's center.
@@ -80,7 +86,7 @@
   };
 
   const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', GemGate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
-  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Gem: 'gem', GemGate: 'gate', WarpOut: 'archeton', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton', PuzzleWarp: 'teleporter' };
+  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Gem: 'gem', GemGate: 'gate', WarpOut: 'archeton', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', LanternPulse: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton', PuzzleWarp: 'teleporter' };
 
   function maskOf(test){
     let mask = [];
@@ -147,7 +153,7 @@
   const TURNED_KINDS = ['JumpTile', 'Pipe', 'Archeton', 'Laser', 'Edge'];
 
   // Every kind of object drawn from a drawing.
-  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'Gem', 'WarpOut', 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', ...ANIMATED_KINDS, 'Laser', 'PuzzleWarp'];
+  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'Gem', 'WarpOut', 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', 'LanternPulse', ...ANIMATED_KINDS, 'Laser', 'PuzzleWarp'];
 
   const standardDrawings = new Map();
 
@@ -276,6 +282,7 @@
       else if (kind === 'Archeton') drawing = { id: kind, kind, name: 'Standard', pixels: standardArchetonPixels(), mix: standardMix('archeton') };
       else if (kind === 'PipeSwitch') drawing = { id: kind, kind, name: 'Standard', pixels: standardPipeSwitchPixels(), mix: standardMix('pipe') };
       else if (kind === 'Edge') drawing = { id: kind, kind, name: 'Standard', pixels: standardEdgePixels(), mix: standardMix('edge') };
+      else if (kind === 'LanternPulse') drawing = { id: kind, kind, name: 'Standard', pixels: standardLanternPulsePixels(), mix: standardMix('lantern') };
       else if (kind === 'Gem') drawing = { id: kind, kind, name: 'Standard', pixels: standardGemPixels(), mix: standardMix('gem') };
       else if (kind === 'WarpOut') drawing = { id: kind, kind, name: 'Standard', pixels: standardWarpOutPixels(), mix: standardMix('archeton') };
       else if (kind === 'PuzzleWarp') drawing = { id: kind, kind, name: 'Standard', pixels: standardPuzzleWarpPixels(), mix: standardMix('teleporter'), opacity: 0.5 };
@@ -480,6 +487,14 @@
     });
   }
 
+  // A Lantern Pulse Tile's Standard drawing: a ring, and nothing else. Its whole content is lines, so it is painted in
+  // the light colour - an outline-colour ring disappears into a dark board. The count in its middle is drawn over this
+  // by buildSprite, and it is hollow so that the count has somewhere to go. Left for drawing over by hand.
+  function standardLanternPulsePixels(){
+    let middle = (TILE_PX - 1) / 2;
+    return layerOf((u, v) => Math.abs(Math.hypot(u - middle, v - middle) - 10.5) <= 1.4 ? PAINTS.light : PAINTS.clear);
+  }
+
   // A Rotator tile's Standard layers: two rails, with chevrons between them pointing along them.
   function standardRotatorLayers(){
     let pixels = layerOf((u, v) => {
@@ -562,6 +577,15 @@
 
     // A lit Lantern glows: a halo of the light colour just outside it, and a fainter, dithered one beyond that.
     if (object.kind === 'Lantern' && object.lit) sprite = glowing(sprite, light);
+
+    // A Lit Lantern Pulse Tile glows as a Lantern does, and says how many of the ship's steps it has left in its
+    // middle. The glow goes on first, so the count sits on top of it. The editor's board is the puzzle itself, with no
+    // playthrough counting anything down, so there it shows the count it is set to.
+    if (object.kind === 'LanternPulse') {
+      if (object.lit) sprite = glowing(sprite, light);
+      let steps = object.charge ?? object.steps ?? PULSE_STEPS;
+      if (steps > 0) drawPixelLetter(sprite, String(steps), light, outline, 1);
+    }
 
     // A Gem Gate has a Gem where a Gate has its letter, in the same colours, so it reads from the same distance.
     if (object.kind === 'GemGate') {
@@ -817,7 +841,7 @@
     if (object.kind === 'Stream') return `Stream|${object.variant ?? ''}|${object.direction}|${streamPhase}|${joins.back}|${joins.left}|${joins.right}`;
     if (object.kind === 'RotatorTile') return `RotatorTile|${object.variant ?? ''}|${object.direction}|${rotatorPhase}`;
     if (object.kind === 'Gem') return `Gem|${object.variant ?? ''}|${gemPhase}`;
-    return `${object.kind}|${object.variant ?? ''}|${object.letter ?? ''}|${object.symbol ?? ''}|${object.direction ?? ''}|${(object.kind === 'Gate' || object.kind === 'GemGate') && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}|${object.spin ?? 0}|${object.archeton ?? ''}`;
+    return `${object.kind}|${object.variant ?? ''}|${object.letter ?? ''}|${object.symbol ?? ''}|${object.direction ?? ''}|${(object.kind === 'Gate' || object.kind === 'GemGate') && !!object.open}|${object.kind === 'Switch' && !switchesActive}|${!!object.lit}|${object.spin ?? 0}|${object.archeton ?? ''}|${object.charge ?? ''}|${object.steps ?? ''}`;
   }
 
   function spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase = 0, gemPhase = 0){
