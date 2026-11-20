@@ -1004,6 +1004,8 @@
   // - gemPhase (0 to 1) how far round a Gem is in its turn on the spot, and gemShots ([{ from, to, along }]) the Gems
   //   on their way to a Gem Gate, along being how far each has come.
   // - gateShake ({ col, row, dx }) rattles the Gem Gate on that square dx pixels to the side.
+  // - An object's own shake is how many pixels it is rattled by, and its own lungeX/lungeY how far past its square it
+  //   is drawn - a guard shaking itself apart, or lunging as it shoves.
   // - warpFlash (0 to 1) washes the whole board out white, as a Warp Wisp's does.
   // - wispDrift (0 to 1) is how far round its slow up-and-down a Warp Wisp has got.
   // - pairLetters says which Warp Wisp goes with which Warp Out Square, as a letter in the corner of each. The editor
@@ -1064,9 +1066,12 @@
       // was going along, and grows towards the middle of it - see puzzleRules.js's pushFrom, and trackFocus.js's leap.
       let grow = object.glide === 'push' && object.falls && along < 1 ? 1 + LEDGE_JUMP_RISE * Math.sin(Math.PI * along) : 1;
       let sprite = spriteFor(object, look, switchesActive, streamPhase, rotatorPhase, streams, finishPhase, options.gemPhase ?? 0);
-      // A Gem Gate rattles where it stands when a Gem hits it, a pixel either side of itself.
+      // A Gem Gate rattles where it stands when a Gem hits it, a pixel either side of itself; anything else can be
+      // rattled by the caller, as a guard shaking itself apart is - see board.js.
       let shake = object.kind === 'GemGate' && options.gateShake
-        && object.col === options.gateShake.col && object.row === options.gateShake.row ? Math.round(options.gateShake.dx) : 0;
+        && object.col === options.gateShake.col && object.row === options.gateShake.row ? Math.round(options.gateShake.dx) : Math.round(object.shake ?? 0);
+      // Its own lunge is how far it's thrown past its square, in pixels, as a Resonant Guard's shove is - see board.js.
+      let lungeX = Math.round(object.lungeX ?? 0), lungeY = Math.round(object.lungeY ?? 0);
       let top = Math.round(row * TILE_PX) + (options.originY ?? 0);
       let sunk = Math.round((object.sink ?? 0) * TILE_PX);
       // An open Gate is half see-through, so it reads as something the ship can pass through.
@@ -1076,7 +1081,7 @@
       if (floating) opacity *= (WISP_FADE_TOP + WISP_FADE_BOTTOM) / 2
         + (WISP_FADE_TOP - WISP_FADE_BOTTOM) / 2 * Math.sin(2 * Math.PI * (options.wispDrift ?? 0));
       if (opacity <= 0) continue;
-      blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX) + shake, top + sunk, object.sink ? top + TILE_PX : Infinity, opacity, grow);
+      blit(image, hidden ? ghostOf(sprite) : sprite, Math.round(col * TILE_PX) + shake + lungeX, top + sunk + lungeY, object.sink ? top + TILE_PX : Infinity, opacity, grow);
     }
 
     // Gems on their way to the Gate, over the board: each one the sprite the board draws, moving along a straight

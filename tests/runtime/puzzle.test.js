@@ -1666,6 +1666,16 @@ test('a lit Pulse Tile glows outside its ring only, so its hollow stays hollow',
   assert.ok(drawn(lit) > drawn(unlit), 'and adds a halo outside it');
 });
 
+test('an object can be drawn rattled where it stands, and lunging past its own square', () => {
+  let { look } = artLook();
+  let still = blank(), rattled = blank(), lunged = blank();
+  renderBoard(still, [obj('Wall', 2, 2)], look);
+  renderBoard(rattled, [obj('Wall', 2, 2, { shake: 2 })], look);
+  renderBoard(lunged, [obj('Wall', 2, 2, { lungeX: 12 })], look);
+  assert.notDeepEqual(tile(rattled, 2, 2), tile(still, 2, 2), 'a Wall moved 2 pixels to the side');
+  assert.notDeepEqual(tile(lunged, 2, 2), tile(still, 2, 2), 'and one moved half a square');
+});
+
 // ---------- Archetons ----------
 
 const SENTRIBEAM = { id: 'sentribeam', name: 'Sentribeam', parts: [{ kind: 'Beam', range: 2, look: 'AllWays', blockedByBlocks: true }, { kind: 'Push' }] };
