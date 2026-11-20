@@ -1676,6 +1676,23 @@ test('a Pulse Tile shows a count past nine as two digits', () => {
   assert.ok(across(nineteen).length > 0, 'nineteen is drawn');
 });
 
+test('every count from 10 to 19 draws both of its digits', () => {
+  let { look } = artLook();
+  let image = (steps) => { let one = blank(); renderBoard(one, [obj('LanternPulse', 0, 0, { steps })], look); return one; };
+  // How wide the count is inside the ring, halo included: a single digit measures 9 to 11 pixels across, a pair 13 or
+  // 14, so anything over 12 is both digits drawn. A glyph missing from PIXEL_LETTERS draws nothing at all - 10 once
+  // read as a 1, because 0 wasn't in the table.
+  let width = (image) => {
+    let xs = [];
+    for (let y = 7; y < 17; y++) for (let x = 0; x < TILE_PX; x++) {
+      if (Math.abs(x - 11.5) < 8 && pixelAt(image, x, y)[3] > 0) xs.push(x);
+    }
+    return Math.max(...xs) - Math.min(...xs);
+  };
+  assert.ok(width(image(9)) < 12, 'one digit is one digit wide');
+  for (let count = 10; count <= 19; count++) assert.ok(width(image(count)) > 12, `a count of ${count} draws both digits`);
+});
+
 test('a lit Pulse Tile glows outside its ring only, so its hollow stays hollow', () => {
   let { look } = artLook();
   let lit = blank(), unlit = blank();
