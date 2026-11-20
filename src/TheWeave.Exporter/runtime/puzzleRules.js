@@ -160,6 +160,12 @@
   // How far a lit Lantern reaches, in squares from its own. A little past 3 makes it read as a circle on a
   // grid of squares: each row outward from it reaches 3, 3, 2 and 1 squares to either side.
   const LANTERN_REACH = 3.5;
+  // How many of the ship's own steps a Lantern Pulse Tile stays lit for, unless it says otherwise, and the most it
+  // can be given - it shows its count as one digit in the middle of itself.
+  const PULSE_STEPS = 3;
+  const PULSE_MAX_STEPS = 9;
+  // How long something takes to fade out once nothing lights it any more.
+  const PULSE_FADE_MS = 250;
   // How many Jump Tiles can launch the ship one after another before the next one lets it stay.
   const MAX_JUMPS_IN_A_ROW = 8;
   // sokoban.js's directions are lower case, and a puzzle's are capitalized as they are in the project file.
@@ -521,15 +527,58 @@
       return { col: cell.col + delta.x, row: cell.row + delta.y };
     }
 
-    // Everything within reach of a lit Lantern comes into view, and stays there.
+    // Whether a thing is within a Lantern's or a Pulse Tile's reach: the same circle of squares either side.
+    function withinReach(source, thing){
+      let dx = thing.col - source.col, dy = thing.row - source.row;
+      return dx * dx + dy * dy <= LANTERN_REACH * LANTERN_REACH;
+    }
+
+    // Everything within reach of a lit Lantern comes into view, and stays there. A Pulse Tile's reach is only lit
+    // while it has steps left, so it is not one of these - see lightPulse and covered.
     function revealLitAreas(){
       for (const lantern of objects) {
-        if (!lantern.lit) continue;
-        for (const thing of [...floors, ...objects]) {
-          let dx = thing.col - lantern.col, dy = thing.row - lantern.row;
-          if (dx * dx + dy * dy <= LANTERN_REACH * LANTERN_REACH) thing.revealed = true;
-        }
+        if (lantern.kind !== 'Lantern' || !lantern.lit) continue;
+        for (const thing of [...floors, ...objects]) if (withinReach(lantern, thing)) thing.revealed = true;
       }
+    }
+
+    // Whether a lit Lantern, or a Pulse Tile with steps left, keeps a thing in view: the two cover the same circle, so
+    // they overlap, and what either of them still reaches stays seen when the other runs out.
+    function covered(thing){
+      return objects.some(source => ((source.kind === 'Lantern' && source.lit)
+        || (source.kind === 'LanternPulse' && (source.charge ?? 0) > 0)) && withinReach(source, thing));
+    }
+
+    // A Pulse Tile lighting: it takes its full count, everything in its reach comes into view, and the caller pulses it
+    // as it would a Lantern, so what it lights stays hidden until the ring reaches it - see board.js's pulses.
+    function lightPulse(tile){
+      let hidden = [...floors, ...objects].filter(thing => !thing.revealed);
+      tile.charge = Math.min(PULSE_MAX_STEPS, tile.steps ?? PULSE_STEPS);
+      tile.lit = true;
+      for (const thing of [...floors, ...objects]) if (withinReach(tile, thing)) thing.revealed = true;
+      return { lit: { col: tile.col, row: tile.row }, revealed: hidden.filter(thing => thing.revealed) };
+    }
+
+    // One of the ship's own steps goes by: every Pulse Tile with steps left spends one, and whatever nothing else
+    // covers goes back to being unseen - the caller fades those out over PULSE_FADE_MS. A Lantern's lit things, and
+    // anything another tile still reaches, stay in view. { hid } for the caller, or null.
+    function spendPulseSteps(){
+      let spent = false;
+      for (const tile of objects) {
+        if (tile.kind !== 'LanternPulse' || (tile.charge ?? 0) <= 0) continue;
+        tile.charge--;
+        if (tile.charge === 0) tile.lit = false;
+        spent = true;
+      }
+      if (!spent) return null;
+      version++;
+      let hid = [];
+      for (const thing of [...floors, ...objects]) {
+        if (!thing.revealed || covered(thing)) continue;
+        thing.revealed = false;
+        hid.push(thing);
+      }
+      return hid.length === 0 ? null : { hid };
     }
 
     // A Gate Switch's Beams, in flight: { from, gates, letter, ms }. A press aims one at every Gate with its letter and
@@ -620,6 +669,11 @@
           return { reset: before };
         }
 
+        // A Pulse Tile is a Lantern that runs out: lighting it shows what it reaches, and its count comes off one of
+        // the ship's own steps at a time. Lighting it again puts the count back and pulses again.
+        case 'LanternPulse':
+          return lightPulse(object);
+
         case 'PipeSwitch':
           return turnPipes();
 
@@ -637,6 +691,7 @@
       switch (object.kind) {
         case 'Switch':
         case 'Lantern':
+        case 'LanternPulse':
         case 'ResetSwitch':
         case 'PipeSwitch':
           return trigger(object);
@@ -693,7 +748,7 @@
       return event ? { ...event, ...more } : more;
     }
 
-    function shipArrives(cell, { jumped = false } = {}){
+    function shipArrives(cell, { jumped = false, forced = false } = {}){
       version++;
       let step = null;
       if (!isAt(shipCell, cell)) {
@@ -702,6 +757,9 @@
       }
       shipCell = cell;
       if (!jumped) jumpsInARow = 0;
+      // A Pulse Tile's count runs down on the ship's own steps only - never on one the board took for it - and before
+      // this square lights anything of its own: the step onto a tile is free, and the next one is the first it spends.
+      let spent = step && !jumped && !forced ? spendPulseSteps() : null;
       let object = objectAt(cell);
       let event = object ? arriveOn(object) : null;
       // A Reset or a Finish ends the arrival there, and the reflections go with the board.
@@ -715,7 +773,7 @@
       settleReflections();
       formReflections();
       let mirrored = reflectArrivals();
-      return mergeEvent(mergeEvent(event, pushed), mirrored);
+      return mergeEvent(mergeEvent(mergeEvent(event, pushed), mirrored), spent);
     }
 
     // Everything that last moved in a way that's had time to finish - a slide, or being passed back from a Gate - is
@@ -1527,5 +1585,5 @@
     return [...after.filter(object => !sweeps(object)), ...leaving, ...arriving].filter(object => (object.fade ?? 1) > 0);
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
+  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, PULSE_MAX_STEPS, PULSE_FADE_MS, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
 });

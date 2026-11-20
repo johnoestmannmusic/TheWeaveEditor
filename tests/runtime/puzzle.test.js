@@ -1012,6 +1012,16 @@ test('a Lantern moving under the ship is lit by it', () => {
   assert.equal(find(g, 'Lantern').lit, true);
 });
 
+test('a Lantern Pulse Tile lights what it reaches, and takes the step onto it for free', () => {
+  let g = game(obj('LanternPulse', 2, 5, { steps: 3 }), obj('Wall', 2, 6, { invisible: true }));
+  assert.equal(find(g, 'Wall').revealed, false, 'nothing is lit until it is stepped on');
+  g.placeShip(at(2, 4));
+  g.shipArrivedAt(at(2, 5));
+  assert.equal(find(g, 'Wall').revealed, true);
+  assert.equal(find(g, 'LanternPulse').lit, true);
+  assert.equal(find(g, 'LanternPulse').charge, 3, 'the step onto it spends nothing');
+});
+
 test('invisible things behave exactly the same', () => {
   let g = game(obj('Wall', 1, 0, { invisible: true }), obj('Stream', 3, 3, { direction: 'Right', invisible: true }), obj('Gate', 5, 0, { letter: 'A', invisible: true }), obj('Switch', 6, 6, { letter: 'A', invisible: true }), obj('Finish', 8, 8));
   assert.equal(g.canEnter(at(0, 0), at(1, 0), 'right'), false);
