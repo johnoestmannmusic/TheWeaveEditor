@@ -122,7 +122,7 @@ test('transparent pixels are ignored, and fully transparent art is still handled
 
 // ---------- playing ----------
 
-const { createPuzzleGame, hasFinish, crossingCell, startOf } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+const { createPuzzleGame, hasFinish, crossingCell, startOf, CRANE_MS } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
 
 const at = (col, row) => ({ col, row });
 const game = (...objects) => createPuzzleGame({ objects, palette: {} });
@@ -3077,4 +3077,39 @@ test('the Switch flashes as it fires, and a Gate flashes as the Beam reaches it'
 
   let landed = drawn({ switchFlash: 0, gateFlash: 1 });
   assert.ok(brightestIn(landed, 6, 4)[2] < brightestIn(drawn(plain), 6, 4)[2], 'then the Gate lights up too');
+});
+
+// ---------- Move Cranes ----------
+
+const craneAt = (col, row, letter = 'A') => obj('Crane', col, row, { letter });
+// The barrel carries only CRANE_MS, which is the one board.js draws by; where in a pickup the thing lands is the
+// rules' own half of it.
+const { CRANE_PICKUP_MS } = require('../../src/TheWeave.Exporter/runtime/puzzleRules.js');
+
+test('a Crane takes the ship up and sets it down on the other Crane square', () => {
+  let g = game(craneAt(2, 5), craneAt(6, 3), obj('Start', 2, 6));
+  // The barrel carries only the one constant board.js draws by: a name missing from puzzle.js's allow-list would
+  // leave this undefined, and every pickup would land on the frame it started.
+  assert.equal(CRANE_MS, CRANE_PICKUP_MS * 2);
+  let caught = g.shipArrivedAt(at(2, 5));
+  assert.deepEqual(caught.crane, { from: at(2, 5), to: at(6, 3) });
+  assert.deepEqual(g.shipCell, at(2, 5), 'still where it stepped on, until the claw has it');
+  assert.equal(g.canEnter(at(2, 5), at(2, 6), 'down'), false, 'and it can go nowhere while it is held');
+  assert.equal(g.carryDirection(at(2, 5)), null);
+
+  let landed = g.advanceCranes(CRANE_MS / 2);
+  assert.deepEqual(landed, [{ cranedTo: at(6, 3), ship: true }]);
+  assert.deepEqual(g.shipCell, at(6, 3));
+  // The square it is set down on does not fire: a crane takes what arrives, and nothing arrived a second time.
+  assert.equal(g.canEnter(at(6, 3), at(6, 4), 'down'), true, 'and it is free to walk on');
+  g.advanceCranes(CRANE_MS);
+  assert.deepEqual(g.cranes, [], 'the claw is gone once the pickup has played');
+});
+
+test('a Crane with no partner, or with no letter, does nothing at all', () => {
+  let lonely = game(craneAt(2, 5), obj('Start', 2, 6));
+  assert.equal(lonely.shipArrivedAt(at(2, 5))?.crane, undefined);
+
+  let letterless = game(obj('Crane', 2, 5), obj('Crane', 6, 5), obj('Start', 2, 6));
+  assert.equal(letterless.shipArrivedAt(at(2, 5))?.crane, undefined, 'two letterless cranes would pair with each other');
 });

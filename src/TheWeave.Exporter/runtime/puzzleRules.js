@@ -172,6 +172,11 @@
   const PULSE_MAX_STEPS = 19;
   // How long something takes to fade out once nothing lights it any more.
   const PULSE_FADE_MS = 250;
+  // How long a Move Crane takes to pick something up and set it down, and when in it the thing changes squares: the
+  // claw comes down on it and takes hold, and half way through it is the other square's, with the claw there to put it
+  // down.
+  const CRANE_MS = 500;
+  const CRANE_PICKUP_MS = CRANE_MS / 2;
   // How many Jump Tiles can launch the ship one after another before the next one lets it stay.
   const MAX_JUMPS_IN_A_ROW = 8;
   // sokoban.js's directions are lower case, and a puzzle's are capitalized as they are in the project file.
@@ -233,6 +238,9 @@
     // A guard's shove, while it's carrying the ship: { from, direction, remaining }. Taken a square per arrival,
     // through carryDirection, so a Stream or a Wall on the way stops it where it stands.
     let shove = null;
+    // Every crane with something in its claw: { from, to, thing, ship, ms, landed }. The caller steps them on with
+    // advanceCranes, which is when the thing changes squares - see beginCrane.
+    let cranes = [];
     let solved = false;
     // How many Jump Tiles in a row the ship has been launched from, so two facing each other can't go on forever.
     let jumpsInARow = 0;
@@ -421,6 +429,7 @@
     // one is the way it's going. It can't be stepped onto head-on either.
     function canEnter(from, to, moverDirection){
       return canEnterAlone(from, to, moverDirection)
+        && !heldShip()
         && (!isAt(from, shipCell) || reflectionsFollow(moverDirection));
     }
 
@@ -493,6 +502,8 @@
     // Where a Push Block would go if pushed along a direction: the next square, if it's on the board, has nothing
     // on it, and isn't a Stream flowing straight back at it. Otherwise null, and it can't be pushed.
     function pushedTo(block, direction){
+      // A block in a claw is not on the board to be pushed: see advanceCranes.
+      if (held(block)) return null;
       // Shoved off a ledge, but not up one, as the ship is - see ledgeAt.
       if (ledgeAt(block, direction)) return null;
       let to = nextCell(block, direction);
@@ -590,6 +601,80 @@
         hid.push(thing);
       }
       return hid.length === 0 ? null : { hid };
+    }
+
+    // ---------- Move Cranes ----------
+
+    // The Crane on a square, if there is one.
+    function craneAt(cell){
+      return objects.find(object => object.kind === 'Crane' && isAt(object, cell)) ?? null;
+    }
+
+    // The other Crane square sharing an entry's letter, or null. A crane with no letter would pair with every other
+    // letterless one, and an unfinished pair is what the Puzzle Editor warns about - see ProjectValidator.
+    function cranePartner(crane){
+      if (!crane.letter) return null;
+      return objects.find(other => other.kind === 'Crane' && other !== crane && other.letter === crane.letter) ?? null;
+    }
+
+    // Whether a thing is in a claw right now: it can be neither moved nor pushed until it is set down.
+    function held(thing){
+      return cranes.some(crane => crane.thing === thing);
+    }
+
+    // Whether the ship is in a claw - see canEnter and carryDirection.
+    function heldShip(){
+      return cranes.some(crane => crane.ship && !crane.landed);
+    }
+
+    // A claw taking hold of what has just entered a crane: { crane: { from, to } } for the caller to draw, or null if the
+    // crane hasn't a partner, or that thing is already in a claw. The thing stays where it is until advanceCranes sets it
+    // down, so nothing of the board happens to it in between.
+    function beginCrane(crane, { thing = null, ship = false } = {}){
+      let partner = cranePartner(crane);
+      if (!partner) return null;
+      if (cranes.some(entry => (ship ? entry.ship : entry.thing === thing))) return null;
+      let from = { col: crane.col, row: crane.row }, to = { col: partner.col, row: partner.row };
+      cranes.push({ from, to, thing, ship, ms: 0, landed: false });
+      return { crane: { from, to } };
+    }
+
+    // A Crane picking up something that has just come onto its square: what the movers and the pushes call, since
+    // trigger can't tell one thing from another. An event for the caller, or null.
+    function craneTook(cell, thing){
+      let crane = craneAt(cell);
+      return crane ? beginCrane(crane, { thing }) : null;
+    }
+
+    // Steps every claw on by ms. Half way through, what it holds is set down on the other Crane square; the entry is
+    // dropped once the whole pickup has played. Each landing says what moved, and whether it was the ship - the caller
+    // puts the ship's mover there, since the rules never move it themselves.
+    function advanceCranes(ms){
+      let landed = [];
+      for (const crane of cranes) {
+        crane.ms += ms;
+        if (crane.landed || crane.ms < CRANE_PICKUP_MS) continue;
+        crane.landed = true;
+        let { to } = crane;
+        if (crane.ship) {
+          shipCell = to;
+        } else if (objects.includes(crane.thing)) {
+          let thing = crane.thing;
+          // Its route moves with it: a bug that patrols goes on patrolling from where it was put down, from the
+          // beginning of its moves.
+          if (thing.kind === 'Archeton') { thing.homeCol = to.col; thing.homeRow = to.row; thing.beat = 0; }
+          thing.fromCol = to.col;
+          thing.fromRow = to.row;
+          thing.col = to.col;
+          thing.row = to.row;
+          thing.glide = null;
+          thing.falls = false;
+          version++;
+        }
+        landed.push({ cranedTo: to, ship: !!crane.ship });
+      }
+      cranes = cranes.filter(crane => crane.ms < CRANE_MS);
+      return landed;
     }
 
     // A Gate Switch's Beams, in flight: { from, gates, letter, ms }. A press aims one at every Gate with its letter and
@@ -730,6 +815,11 @@
           shipCell = destination;
           return { teleportTo: destination };
         }
+
+        // A Crane takes hold of the ship that has entered it: the claw comes down, and half a second later it is on the
+        // other Crane square - see advanceCranes. Only the ship: a reflection is an image of it, with nothing to lift.
+        case 'Crane':
+          return isAt(object, shipCell) ? beginCrane(object, { ship: true }) : null;
 
         // A Puzzle Warp leaves the board altogether, for another location's puzzle - so there is nothing to decide
         // here beyond where it leads: the page takes the ship there, and the warp carries what it needs resolved at
@@ -1546,6 +1636,8 @@
         shipCell = cell;
         // A shove in progress, and every guard's memory of having caught the ship, belong to where it was.
         shove = null;
+        // A claw belongs to the board the ship was on.
+        cranes = [];
         for (const object of objects) object.inZone = false;
         // Reflections are images, not state to be replayed: they're worked out again from wherever the ship now is.
         reflections = [];
@@ -1561,6 +1653,12 @@
       // The Beams in flight, for a caller that keeps its own clock: each says where it came from and when it left.
       get gateBeams(){ return gateBeams.map(beam => ({ from: beam.from, letter: beam.letter, ms: beam.ms, gates: beam.gates.map(gate => ({ col: gate.col, row: gate.row })) })); },
 
+      // The claws picking something up right now, { from, to, ms, ship, thing } each, for drawing - see advanceCranes.
+      get cranes(){ return cranes.map(crane => ({ ...crane })); },
+
+      // Steps every claw on, setting down what it holds half way through - see advanceCranes.
+      advanceCranes,
+
       // Which way a Stream is carrying a ship on this square, as sokoban.js's direction, or null.
       // A guard's shove comes first - being thrown is what's happening, and the Stream takes over again the moment it
       // stops - and otherwise a Stream, an Archeton's Beam pushing it away, or a Block's laser sending it back out of
@@ -1571,6 +1669,7 @@
       get shoving(){ return !!shove; },
 
       carryDirection(cell){
+        if (heldShip()) return null;
         let direction = shoveDirection(cell) ?? streams.get(cellKey(cell)) ?? pushedByBeam(cell) ?? hurtBack(cell) ?? hurtByReflection(cell);
         return direction ? MOVER_DIRECTIONS[direction] : null;
       },
@@ -1677,5 +1776,5 @@
     return [...after.filter(object => !sweeps(object)), ...leaving, ...arriving].filter(object => (object.fade ?? 1) > 0);
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, PULSE_MAX_STEPS, PULSE_FADE_MS, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
+  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, PULSE_MAX_STEPS, PULSE_FADE_MS, CRANE_MS, CRANE_PICKUP_MS, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
 });
