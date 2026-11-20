@@ -13,6 +13,7 @@ const PUZZLE_TOOLS = [
   { kind: 'Gate', label: 'Gate', hint: 'Blocks the way while closed. A Switch with its letter flips it between closed and open.', letter: true, gateState: true, canHide: true },
   { kind: 'Switch', label: 'Switch', hint: 'Stepping on this opens or closes every Gate with its letter.', letter: true, canHide: true },
   { kind: 'Teleporter', label: 'Teleporter', hint: 'Jumps to the other Teleporter with its letter. Place them in pairs.', letter: true, canHide: true },
+  { kind: 'Crane', label: 'Crane', hint: 'One of a pair sharing a letter. Whatever enters it - the ship, a Push Block, an Archeton - is picked up by a claw and set down on the other Crane square, half a second later. Place two with the same letter.', letter: true, canHide: true },
   { kind: 'Stream', label: 'Stream', hint: 'Carries the ship and anything on it, and holds the ship until it\'s pushed off onto a non-Stream square. Drag to paint.', paints: true, direction: true, canHide: true },
   { kind: 'Key', label: 'Key', hint: 'If there are any, all must be collected before Switches do anything.', canHide: true },
   { kind: 'RotatorTile', label: 'Rotator Tile', hint: 'Moves anything on it along to the next Rotator Tile, once per second, while the ship is on a Rotator Switch. The ship can walk on it freely. Drag to paint.', paints: true, direction: true, canHide: true },

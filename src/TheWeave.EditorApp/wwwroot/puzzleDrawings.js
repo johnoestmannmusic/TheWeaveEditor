@@ -22,7 +22,9 @@ const DRAWING_ROLE_LABELS = {
   key: 'Key', rotator: 'Rotator', lantern: 'Lantern', block: 'Push Block', jump: 'Jump Tile', reset: 'Reset Switch', pipe: 'Pipe Switch', archeton: 'Archeton', outline: 'Outline', light: 'Light',
 };
 const DRAWING_MAX_MIX = 4;
-const DRAWING_LETTERED = ['Gate', 'Switch', 'Teleporter'];
+const DRAWING_LETTERED = ['Gate', 'Switch', 'Teleporter', 'Crane'];
+// Kinds that are only ever drawn, never placed, so PUZZLE_TOOLS has no label for them.
+const DRAWING_KIND_LABELS = { Laser: 'Laser arm', CraneArm: 'Crane arm', Crane: 'Crane' };
 const DRAWING_PREVIEW_TILES = 3;
 // The layers a drawing of each kind is painted in, as tabs over its canvas. A Stream or Rotator tile is drawn
 // flowing right, and turned for the other directions - see puzzle.js's buildAnimatedSprite.
@@ -48,6 +50,12 @@ const DRAWING_FRAMES = {
   Laser: [
     { frame: 'drawing', label: 'Drawing', field: 'pixels', hint: 'One square of an Archeton\'s laser, running right. It\'s repeated along the beam, turned the way it runs, and drawn a little see-through. Run it right across the square so the squares join up. Choose it for an Archeton in the Archetons window.' },
   ],
+  Crane: [
+    { frame: 'drawing', label: 'Drawing', field: 'pixels', hint: 'The square a crane picks things up from. Its letter is drawn in the middle, so keep that clear.' },
+  ],
+  CraneArm: [
+    { frame: 'drawing', label: 'Drawing', field: 'pixels', hint: 'The claw, drawn as if it is coming down on the square it is picking something up from. It is drawn over whatever it takes hold of.' },
+  ],
   Pipe: [
     { frame: 'drawing', label: 'Drawing', field: 'pixels', hint: 'Drawn lying across, and turned to stand up. Run it right across the square, so that a line of them joins up.' },
   ],
@@ -69,7 +77,7 @@ function isAnimatedKind(kind) {
 const DRAWING_CANDIDATES = 8;
 
 function drawingKindLabel(kind) {
-  return PUZZLE_TOOLS.find((tool) => tool.kind === kind)?.label ?? kind;
+  return PUZZLE_TOOLS.find((tool) => tool.kind === kind)?.label ?? DRAWING_KIND_LABELS[kind] ?? kind;
 }
 
 // Every drawing a kind can be placed with, Standard first: the library's redrawn one, or the built-in one.
