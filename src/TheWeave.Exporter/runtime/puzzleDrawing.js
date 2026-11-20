@@ -12,7 +12,7 @@
   else root.WeavePuzzleDrawing = factory(root.WeavePuzzleRules, root.WeavePuzzleColours);
 })(this, function (WeavePuzzleRules, WeavePuzzleColours) {
 
-  const { DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, exitDirectionOf, isFloor, craneFree, partnerOf } = WeavePuzzleRules;
+  const { DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, exitDirectionOf, isFloor, craneBlocked } = WeavePuzzleRules;
   const { PALETTE_MIN_CONTRAST, TILE_PX, hexToColor, lightnessOf, mixTexture, standardMix } = WeavePuzzleColours;
 
   // ---------- drawing ----------
@@ -1077,8 +1077,8 @@
   // - pulses ([{ col, row, radius }]) draws each lit Lantern's pulse: a ring radius pixels out from its square's middle.
   // - cranes ([{ cell, lift }]) is not drawn here: a claw goes over the ship it is holding, so whoever draws the ship
   //   draws the claws over it - see renderCraneArms. renderBoard leaves the option alone.
-  // - ship ({ col, row }) is where the ship is, when it is on a board that has one: a Crane whose pair is standing under
-  //   it cannot be used, and is drawn half see-through like one with a block on the far square.
+  // - ship ({ col, row }) is where the ship is. It is not used for a Crane's half see-through: that goes by what a crane
+  //   could carry being on either square of the pair - see puzzleRules.js's craneBlocked.
   // - pushHints ([{ col, row, direction, bob }], or one as pushHint) show that the Push Block on each square can be
   //   pushed: an arrow just
   //   past it, pointing the way it would go, bob pixels further out as it bobs.
@@ -1108,9 +1108,10 @@
     // between squares instead of rising on the way - see board.js's WISP_DRIFT_CYCLE_MS.
     let floatingOn = (object) => object.kind === 'Archeton'
       && (look.archetons?.find(definition => definition.id === object.archeton)?.parts ?? []).some(part => part.kind === 'Warp');
-    // Cranes that cannot be used because the square their pair would come out at is taken.
-    let blockedCranes = new Set(objects.filter(object => object.kind === 'Crane'
-      && !craneFree(objects, partnerOf(objects, object), options.ship ?? null)));
+    // Cranes that cannot be used because something a crane could carry is on one of their pair's two squares: both
+    // halves of the pair go see-through together, so a pair with a block sitting on the half you are looking at still
+    // shows as out of action.
+    let blockedCranes = new Set(objects.filter(object => object.kind === 'Crane' && craneBlocked(objects, object)));
     let floorsFirst = objects
       .filter(object => object.kind !== 'Start')
       // What's standing on a square is drawn over what's built into it - an Archeton or a Push Block over the Switch,

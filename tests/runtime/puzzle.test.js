@@ -122,7 +122,7 @@ test('transparent pixels are ignored, and fully transparent art is still handled
 
 // ---------- playing ----------
 
-const { createPuzzleGame, hasFinish, crossingCell, startOf, CRANE_MS, cranePose, craneLoad, craneFree } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+const { createPuzzleGame, hasFinish, crossingCell, startOf, CRANE_MS, cranePose, craneLoad, craneFree, craneBlocked } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
 
 const at = (col, row) => ({ col, row });
 const game = (...objects) => createPuzzleGame({ objects, palette: {} });
@@ -3262,6 +3262,40 @@ test('a crane square is free unless something a crane could carry is on it, or t
   assert.equal(craneFree(board, at(1, 1), at(1, 1)), false, 'and so is the ship, on that square');
   assert.equal(craneFree(board, at(1, 2), at(1, 1)), true, 'while it is somewhere else');
   assert.equal(craneFree(board, null, at(1, 1)), true, 'a crane with no partner has no square to keep clear');
+});
+
+test('a Push Block craned down beside one of its own symbol takes them both off the board', () => {
+  // The far crane's neighbour is a Circle, so the block put down on the crane meets it - the same as a push into it.
+  let g = game(craneAt(4, 5), craneAt(7, 8), obj('PushBlock', 8, 8, { symbol: 'Circle' }),
+    obj('PushBlock', 3, 5, { symbol: 'Circle' }), obj('Start', 2, 5));
+  g.pushFrom(at(2, 5), at(3, 5), 'right');
+  assert.equal(g.objects.filter(object => object.kind === 'PushBlock').length, 2, 'two to start with');
+
+  let landed = g.advanceCranes(CRANE_PICKUP_MS);
+  assert.equal(landed[0].sank.length, 2, 'both of them go');
+  assert.deepEqual(g.objects.filter(object => object.kind === 'PushBlock'), [], 'and neither is left on the board');
+
+  // A Circle set down beside a Star is nothing to do with it, and stays.
+  let h = game(craneAt(4, 5), craneAt(7, 8), obj('PushBlock', 8, 8, { symbol: 'Star' }),
+    obj('PushBlock', 3, 5, { symbol: 'Circle' }), obj('Start', 2, 5));
+  h.pushFrom(at(2, 5), at(3, 5), 'right');
+  h.advanceCranes(CRANE_PICKUP_MS);
+  assert.equal(h.objects.filter(object => object.kind === 'PushBlock').length, 2, 'a different symbol is no match');
+});
+
+test('a crane pair is out of action while anything a crane could carry is on either of its squares', () => {
+  let pair = [craneAt(2, 2), craneAt(7, 7)];
+  assert.equal(craneBlocked(pair, pair[0]), false, 'clear, it can be used');
+
+  let farTaken = [...pair, obj('PushBlock', 7, 7, { symbol: 'Circle' })];
+  assert.equal(craneBlocked(farTaken, farTaken[0]), true, 'the square it would set down on is taken');
+  assert.equal(craneBlocked(farTaken, farTaken[1]), true, 'and the other half of the pair is out of action with it');
+
+  let nearTaken = [...pair, obj('PushBlock', 2, 2, { symbol: 'Circle' })];
+  assert.equal(craneBlocked(nearTaken, nearTaken[1]), true, 'either way round');
+
+  let withAKey = [...pair, obj('Key', 7, 7)];
+  assert.equal(craneBlocked(withAKey, withAKey[0]), false, 'a key on it is not in the way');
 });
 
 test('a Stream carrying something onto a Crane cranes it, and a held block stays put for a tick', () => {

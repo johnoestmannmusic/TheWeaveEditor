@@ -665,6 +665,7 @@
         if (crane.landed || crane.ms < CRANE_PICKUP_MS) continue;
         crane.landed = true;
         let { to } = crane;
+        let sank = null;
         if (crane.ship) {
           shipCell = to;
         } else if (objects.includes(crane.thing)) {
@@ -679,8 +680,11 @@
           thing.glide = null;
           thing.falls = false;
           version++;
+          // Set down beside a Push Block of its own symbol, the two go together - the same as anything else that puts
+          // one next to the other - see sinkMatches.
+          sank = sinkMatches();
         }
-        landed.push({ cranedTo: to, ship: !!crane.ship });
+        landed.push({ cranedTo: to, ship: !!crane.ship, ...(sank ? { sank } : {}) });
       }
       cranes = cranes.filter(crane => crane.ms < CRANE_MS);
       return landed;
@@ -1754,6 +1758,15 @@
       && other.col === cell.col && other.row === cell.row);
   }
 
+  // Whether a Move Crane is out of action: something a crane could carry is sitting on either square of its pair - the one
+  // it would take from or the one it would set down on - so it stays out of action until that is moved. The ship is not
+  // counted here: standing on a crane to be lifted is exactly what using one looks like, so it would read as the pair
+  // going dead at the moment it works. The claw itself still refuses a far square with the ship on it - see beginCrane.
+  function craneBlocked(objects, crane){
+    if (!crane) return false;
+    return [crane, partnerOf(objects, crane)].some(square => square && !craneFree(objects, square, null));
+  }
+
   // Where a Move Crane's claw is, ms into a pickup, and how much of what it holds shows: { cell, lift, alpha }, lift
   // being how far above that square the claw is in squares and alpha how much of the thing in it is drawn. Down, rest,
   // up into a fade - and then the same the other way round on the far square: down out of the fade, rest, up again.
@@ -1855,5 +1868,5 @@
     return [...after.filter(object => !sweeps(object)), ...leaving, ...arriving].filter(object => (object.fade ?? 1) > 0);
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, PULSE_MAX_STEPS, PULSE_FADE_MS, CRANE_MS, CRANE_PICKUP_MS, CRANE_TIMING, CRANE_LIFT, cranePose, craneLoad, partnerOf, craneFree, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
+  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, PULSE_MAX_STEPS, PULSE_FADE_MS, CRANE_MS, CRANE_PICKUP_MS, CRANE_TIMING, CRANE_LIFT, cranePose, craneLoad, partnerOf, craneFree, craneBlocked, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
 });
