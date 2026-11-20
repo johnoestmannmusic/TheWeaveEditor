@@ -344,6 +344,17 @@ public class ProjectValidatorTests
     }
 
     [Fact]
+    public void Crane_NeedsExactlyTwoOnItsLetter()
+    {
+        var crane = new PuzzleObject { Kind = PuzzleObjectKind.Crane, Col = 2, Letter = "A" };
+        var partner = new PuzzleObject { Kind = PuzzleObjectKind.Crane, Col = 6, Letter = "A" };
+
+        // A lone crane is a square nothing can come out of.
+        Assert.Contains("needs exactly 2", Assert.Single(PuzzleProblems(Finish, crane)));
+        Assert.Empty(PuzzleProblems(Finish, crane, partner));
+    }
+
+    [Fact]
     public void RotatorTiles_WithNoSwitch_AreReported_AndTheReverse()
     {
         var tile = new PuzzleObject { Kind = PuzzleObjectKind.RotatorTile, Direction = PuzzleDirection.Up, Col = 1 };

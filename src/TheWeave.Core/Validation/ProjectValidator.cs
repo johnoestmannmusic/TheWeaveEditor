@@ -289,6 +289,12 @@ public static class ProjectValidator
                 Warn($"Teleporter {group.Key} needs exactly 2, and there {(group.Count() == 1 ? "is 1" : $"are {group.Count()}")}.");
         }
 
+        foreach (var group in puzzle.Objects.Where(o => o.Kind == PuzzleObjectKind.Crane).GroupBy(o => o.Letter ?? "").OrderBy(g => g.Key))
+        {
+            if (group.Count() != 2)
+                Warn($"Crane {group.Key} needs exactly 2, and there {(group.Count() == 1 ? "is 1" : $"are {group.Count()}")}.");
+        }
+
         foreach (var problem in FindStreamTraps(puzzle))
             Warn(problem);
 
