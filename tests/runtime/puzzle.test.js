@@ -1022,6 +1022,54 @@ test('a Lantern Pulse Tile lights what it reaches, and takes the step onto it fo
   assert.equal(find(g, 'LanternPulse').charge, 3, 'the step onto it spends nothing');
 });
 
+test('a Pulse Tile\'s count runs down with the ship\'s steps, and what it lit goes back to unseen at 0', () => {
+  let g = game(obj('LanternPulse', 2, 5, { steps: 2 }), obj('Wall', 2, 6, { invisible: true }));
+  g.placeShip(at(2, 4));
+  g.shipArrivedAt(at(2, 5));          // step onto it: 2, and free
+  g.shipArrivedAt(at(3, 5));          // the ship's own step: 1
+  assert.equal(find(g, 'LanternPulse').charge, 1);
+  assert.equal(find(g, 'Wall').revealed, true);
+  g.shipArrivedAt(at(3, 4));          // 0 - and nothing covers it any more
+  assert.equal(find(g, 'LanternPulse').charge, 0);
+  assert.equal(find(g, 'LanternPulse').lit, false);
+  assert.equal(find(g, 'Wall').revealed, false);
+});
+
+test('a forced step doesn\'t spend a Pulse Tile\'s count, and a second tile keeps what the first let go', () => {
+  let g = game(
+    obj('LanternPulse', 2, 5, { steps: 1 }),
+    obj('LanternPulse', 4, 5, { steps: 3 }),
+    obj('Wall', 3, 5, { invisible: true }));
+  g.placeShip(at(2, 4));
+  g.shipArrivedAt(at(2, 5));            // the first tile: 1
+  g.shipArrivedAt(at(3, 5));            // spends it
+  assert.equal(find(g, 'Wall').revealed, false, 'only the first tile reached it');
+  g.shipArrivedAt(at(4, 5));            // the second tile: 3
+  assert.equal(find(g, 'Wall').revealed, true);
+  g.shipArrivedAt(at(5, 5), { forced: true });
+  assert.equal(g.objects.find(o => o.kind === 'LanternPulse' && o.col === 4).charge, 3, 'carried, not walked');
+});
+
+test('a lit Lantern keeps what a Pulse Tile ran out of lighting, and a tile re-arms when stepped on again', () => {
+  let g = game(obj('Lantern', 2, 5), obj('LanternPulse', 4, 5, { steps: 1 }), obj('Wall', 3, 5, { invisible: true }));
+  g.placeShip(at(2, 4));
+  g.shipArrivedAt(at(2, 5));            // the Lantern lights for good
+  g.placeShip(at(4, 4));
+  g.shipArrivedAt(at(4, 5));            // the tile arms to 1
+  g.shipArrivedAt(at(3, 5));            // spends it
+  assert.equal(find(g, 'LanternPulse').charge, 0);
+  assert.equal(find(g, 'Wall').revealed, true, 'the Lantern still reaches it');
+
+  let own = game(obj('LanternPulse', 2, 5, { steps: 1 }), obj('Wall', 2, 6, { invisible: true }));
+  own.placeShip(at(2, 4));
+  own.shipArrivedAt(at(2, 5));
+  own.shipArrivedAt(at(2, 4));          // spent: the Wall goes dark again
+  assert.equal(find(own, 'Wall').revealed, false);
+  own.shipArrivedAt(at(2, 5));          // and stepping back on puts the count back
+  assert.equal(find(own, 'LanternPulse').charge, 1);
+  assert.equal(find(own, 'Wall').revealed, true);
+});
+
 test('invisible things behave exactly the same', () => {
   let g = game(obj('Wall', 1, 0, { invisible: true }), obj('Stream', 3, 3, { direction: 'Right', invisible: true }), obj('Gate', 5, 0, { letter: 'A', invisible: true }), obj('Switch', 6, 6, { letter: 'A', invisible: true }), obj('Finish', 8, 8));
   assert.equal(g.canEnter(at(0, 0), at(1, 0), 'right'), false);
