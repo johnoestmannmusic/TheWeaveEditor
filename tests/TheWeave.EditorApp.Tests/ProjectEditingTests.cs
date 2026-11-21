@@ -524,6 +524,38 @@ public class ProjectEditingTests
         Assert.Throws<InvalidOperationException>(() => ProjectEditing.ApplyPuzzleEdit(new Node(), puzzle));
     }
 
+    [Fact]
+    public void ValidatePuzzle_AllowsACraneUnderneathAnObjectPlacedOnIt()
+    {
+        // A Crane is the square a thing stands on rather than one of the things on it: a Push Block laid on one in the
+        // editor has to survive the round trip through here, or it is silently undone with an error.
+        var crane = At(PuzzleObjectKind.Crane, 4, 4);
+        crane.Letter = "A";
+        var block = At(PuzzleObjectKind.PushBlock, 4, 4);
+        block.Symbol = PuzzleSymbol.Circle;
+
+        ProjectEditing.ValidatePuzzle(MakePuzzle(At(PuzzleObjectKind.Start, 5, 9), crane, block));
+    }
+
+    [Fact]
+    public void ValidatePuzzle_StillAllowsOnlyOneThingPerSquareOtherwise()
+    {
+        var block = At(PuzzleObjectKind.PushBlock, 4, 4);
+        block.Symbol = PuzzleSymbol.Circle;
+        var other = At(PuzzleObjectKind.PushBlock, 4, 4);
+        other.Symbol = PuzzleSymbol.Star;
+        var crowded = Assert.Throws<InvalidOperationException>(
+            () => ProjectEditing.ValidatePuzzle(MakePuzzle(At(PuzzleObjectKind.Start, 5, 9), block, other)));
+        Assert.Contains("more than one object", crowded.Message);
+
+        var crane = At(PuzzleObjectKind.Crane, 4, 4);
+        crane.Letter = "A";
+        var another = At(PuzzleObjectKind.Crane, 4, 4);
+        another.Letter = "B";
+        Assert.Throws<InvalidOperationException>(
+            () => ProjectEditing.ValidatePuzzle(MakePuzzle(At(PuzzleObjectKind.Start, 5, 9), crane, another)));
+    }
+
     private static PuzzleObject At(PuzzleObjectKind kind, int col, int row) => new() { Kind = kind, Col = col, Row = row };
 
     // A location of three parts, each with a puzzle, and the page it's on.
