@@ -82,12 +82,38 @@ function describeArcheton(archeton) {
     : part.kind).join(' + ') || 'No parts';
 }
 
+// A Move Crane is not an Archeton - it is a pair of puzzle squares - but it is chosen here, with the Archetons, since it
+// is the same sort of thing to a puzzle: a piece of machinery the ship has to deal with. Picking it chooses the tool and
+// shuts the window; its letter is the one the unfinished pair needs, which choosePuzzleTool asks for.
+function craneCard() {
+  const card = document.createElement('button');
+  card.type = 'button';
+  card.className = 'ar-card';
+  card.dataset.crane = 'true';
+  card.classList.toggle('active', puzzleEditor.tool === 'Crane');
+  const name = document.createElement('strong');
+  name.textContent = 'Move Crane';
+  const parts = document.createElement('span');
+  parts.textContent = 'Two squares sharing a letter: whatever enters one is craned to the other';
+  const library = project?.puzzleDrawings ?? [];
+  const drawing = library.find((entry) => entry.kind === 'Crane' && entry.id === 'Crane') ?? WeavePuzzle.standardDrawing('Crane');
+  card.append(drawingThumbnail(drawing), name, parts);
+  card.addEventListener('click', placeCrane);
+  card.addEventListener('dblclick', placeCrane);
+  return card;
+}
+
+function placeCrane() {
+  closeArchetons();
+  choosePuzzleTool('Crane');
+}
+
 function renderArchetons() {
   if (!archetonsView) return;
   const archetons = project?.archetons ?? [];
   const list = archetonsWindow().querySelector('.ar-list');
 
-  list.replaceChildren(...archetons.map((archeton) => {
+  list.replaceChildren(craneCard(), ...archetons.map((archeton) => {
     const card = document.createElement('button');
     card.type = 'button';
     card.className = 'ar-card';

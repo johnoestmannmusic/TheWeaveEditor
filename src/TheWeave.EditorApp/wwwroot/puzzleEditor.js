@@ -13,7 +13,9 @@ const PUZZLE_TOOLS = [
   { kind: 'Gate', label: 'Gate', hint: 'Blocks the way while closed. A Switch with its letter flips it between closed and open.', letter: true, gateState: true, canHide: true },
   { kind: 'Switch', label: 'Switch', hint: 'Stepping on this opens or closes every Gate with its letter.', letter: true, canHide: true },
   { kind: 'Teleporter', label: 'Teleporter', hint: 'Jumps to the other Teleporter with its letter. Place them in pairs.', letter: true, canHide: true },
-  { kind: 'Crane', label: 'Crane', hint: 'One of a pair sharing a letter. Whatever enters it - the ship, a Push Block, an Archeton - is picked up by a claw and set down on the other Crane square, half a second later. Place two with the same letter.', letter: true, canHide: true },
+  // Chosen in the Archetons window, with the Archetons, rather than from the tray - see archetons.js's craneCard. It's
+  // here at all so that choosing the tool, its hint and its letter still find it.
+  { kind: 'Crane', label: 'Crane', hint: 'One of a pair sharing a letter. Whatever enters it - the ship, a Push Block, an Archeton - is picked up by a claw and set down on the other Crane square. Place two with the same letter.', letter: true, canHide: true, hidden: true },
   { kind: 'Stream', label: 'Stream', hint: 'Carries the ship and anything on it, and holds the ship until it\'s pushed off onto a non-Stream square. Drag to paint.', paints: true, direction: true, canHide: true },
   { kind: 'Key', label: 'Key', hint: 'If there are any, all must be collected before Switches do anything.', canHide: true },
   { kind: 'RotatorTile', label: 'Rotator Tile', hint: 'Moves anything on it along to the next Rotator Tile, once per second, while the ship is on a Rotator Switch. The ship can walk on it freely. Drag to paint.', paints: true, direction: true, canHide: true },
@@ -436,10 +438,12 @@ function showPuzzleTool() {
     button.disabled = fixed;
     button.title = fixed ? `The ship comes in here from '${previous.card.headingText}'.` : '';
   }
-  // The Archeton tool says which one it places.
+  // The Archeton tool says which one it places - and says so when what it placed last was a Crane, which is chosen from
+  // its window rather than having a button of its own.
   const archetonButton = document.querySelector('#pe-tool-buttons button[data-tool="Archeton"]');
   const chosen = (project?.archetons ?? []).find((archeton) => archeton.id === puzzleEditor.archeton);
-  if (archetonButton) archetonButton.textContent = chosen ? `Archeton: ${chosen.name}` : 'Archeton…';
+  if (archetonButton) archetonButton.textContent = tool.kind === 'Crane' ? 'Crane…' : chosen ? `Archeton: ${chosen.name}` : 'Archeton…';
+  if (archetonButton && tool.kind === 'Crane') archetonButton.classList.add('active');
   for (const button of document.querySelectorAll('#pe-directions button'))
     button.classList.toggle('active', button.dataset.direction === puzzleEditor.direction);
   for (const button of document.querySelectorAll('#pe-symbols button'))
@@ -502,8 +506,12 @@ function renderToolTray() {
   const tray = puzzleToolTray;
 
   tray.hidden = sets.length === 0;
-  const toolButton = document.querySelector(`#pe-tool-buttons button[data-tool="${kind}"]`);
-  if (toolButton && toolButton.nextElementSibling !== tray) toolButton.after(tray);
+  // A Crane has no button of its own - it is chosen from the Archetons window - so its drawing sets hang under the
+  // Archeton button, which is the one its tool comes from.
+  const toolButton = document.querySelector(`#pe-tool-buttons button[data-tool="${kind}"]`)
+    ?? (kind === 'Crane' ? document.querySelector('#pe-tool-buttons button[data-tool="Archeton"]') : null);
+  if (!toolButton) tray.remove();
+  else if (toolButton.nextElementSibling !== tray) toolButton.after(tray);
 
   const key = JSON.stringify([kind, sets.map((set) => [set.id, set.name, setMembers(set)])]);
   if (tray.dataset.key !== key || tray.look !== puzzleLook()) {
