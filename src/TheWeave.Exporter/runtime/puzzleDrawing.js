@@ -12,7 +12,7 @@
   else root.WeavePuzzleDrawing = factory(root.WeavePuzzleRules, root.WeavePuzzleColours);
 })(this, function (WeavePuzzleRules, WeavePuzzleColours) {
 
-  const { DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, exitDirectionOf, isFloor } = WeavePuzzleRules;
+  const { DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, exitDirectionOf, isFloor, craneBlocked } = WeavePuzzleRules;
   const { PALETTE_MIN_CONTRAST, TILE_PX, hexToColor, lightnessOf, mixTexture, standardMix } = WeavePuzzleColours;
 
   // ---------- drawing ----------
@@ -89,7 +89,7 @@
   };
 
   const SPRITE_SHAPES = { Wall: 'octagon', Gate: 'octagon', GemGate: 'octagon', Finish: 'roundedSquare', Switch: 'circle', Teleporter: 'diamond', Key: 'triangle', RotatorSwitch: 'gear', Lantern: 'star' };
-  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Gem: 'gem', GemGate: 'gate', WarpOut: 'archeton', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', LanternPulse: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton', PuzzleWarp: 'teleporter' };
+  const SPRITE_ROLES = { Wall: 'wall', Edge: 'edge', Gate: 'gate', Gem: 'gem', GemGate: 'gate', WarpOut: 'archeton', Finish: 'finish', Switch: 'gate', Teleporter: 'teleporter', Key: 'key', Stream: 'stream', RotatorTile: 'rotator', RotatorSwitch: 'rotator', Lantern: 'lantern', LanternPulse: 'lantern', PushBlock: 'block', JumpTile: 'jump', ResetSwitch: 'reset', Pipe: 'wall', PipeSwitch: 'pipe', Archeton: 'archeton', Laser: 'archeton', PuzzleWarp: 'teleporter', Crane: 'teleporter', CraneArm: 'teleporter' };
 
   function maskOf(test){
     let mask = [];
@@ -168,7 +168,7 @@
   const TURNED_KINDS = ['JumpTile', 'Pipe', 'Archeton', 'Laser', 'Edge'];
 
   // Every kind of object drawn from a drawing.
-  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'Gem', 'WarpOut', 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', 'LanternPulse', ...ANIMATED_KINDS, 'Laser', 'PuzzleWarp'];
+  const DRAWN_KINDS = [...Object.keys(SPRITE_SHAPES), 'Gem', 'WarpOut', 'PushBlock', ...TURNED_KINDS.filter(kind => kind !== 'Laser'), 'ResetSwitch', 'PipeSwitch', 'LanternPulse', ...ANIMATED_KINDS, 'Laser', 'CraneArm', 'Crane', 'PuzzleWarp'];
 
   const standardDrawings = new Map();
 
@@ -298,6 +298,8 @@
       else if (kind === 'PipeSwitch') drawing = { id: kind, kind, name: 'Standard', pixels: standardPipeSwitchPixels(), mix: standardMix('pipe') };
       else if (kind === 'Edge') drawing = { id: kind, kind, name: 'Standard', pixels: standardEdgePixels(), mix: standardMix('edge') };
       else if (kind === 'LanternPulse') drawing = { id: kind, kind, name: 'Standard', pixels: standardLanternPulsePixels(), mix: standardMix('lantern') };
+      else if (kind === 'Crane') drawing = { id: kind, kind, name: 'Standard', pixels: standardCranePixels(), mix: standardMix('teleporter') };
+      else if (kind === 'CraneArm') drawing = { id: kind, kind, name: 'Standard', pixels: standardCraneArmPixels(), mix: standardMix('teleporter') };
       else if (kind === 'Gem') drawing = { id: kind, kind, name: 'Standard', pixels: standardGemPixels(), mix: standardMix('gem') };
       else if (kind === 'WarpOut') drawing = { id: kind, kind, name: 'Standard', pixels: standardWarpOutPixels(), mix: standardMix('archeton') };
       else if (kind === 'PuzzleWarp') drawing = { id: kind, kind, name: 'Standard', pixels: standardPuzzleWarpPixels(), mix: standardMix('teleporter'), opacity: 0.5 };
@@ -502,6 +504,35 @@
     });
   }
 
+  // A Crane's Standard drawing: an L at each corner, 2 pixels thick with arms 8 long, inset 2 from the edge, so the
+  // frame has a gap on each of its sides and an empty middle for the letter that pairs it with the other square. Its
+  // whole content is lines, so it is painted in the light colour - an outline-colour frame disappears on a dark board.
+  function standardCranePixels(){
+    let onBracket = (u, v) => {
+      let nearLeft = u >= 2 && u <= 3, nearRight = u >= 20 && u <= 21;
+      let nearTop = v >= 2 && v <= 3, nearBottom = v >= 20 && v <= 21;
+      let downTop = v >= 2 && v <= 9, downBottom = v >= 14 && v <= 21;
+      let acrossLeft = u >= 2 && u <= 9, acrossRight = u >= 14 && u <= 21;
+      return (nearLeft && (downTop || downBottom)) || (nearRight && (downTop || downBottom))
+        || (nearTop && (acrossLeft || acrossRight)) || (nearBottom && (acrossLeft || acrossRight));
+    };
+    return layerOf((u, v) => onBracket(u, v) ? PAINTS.light : PAINTS.clear);
+  }
+
+  // A Crane's claw: the block the arm holds it by, and two prongs splaying out and hooking back in, so it reads as
+  // something that closes on what it picks up. Drawn from above the square - see renderBoard's cranes.
+  function standardCraneArmPixels(){
+    let middle = (TILE_PX - 1) / 2;
+    let onBody = (u, v) => u >= 7 && u <= 16 && v >= 3 && v <= 6;
+    let onProng = (u, v) => {
+      let across = Math.abs(u - middle);
+      if (v >= 6 && v <= 12) return Math.abs(across - (v - 6) * 0.8) <= 1;
+      if (v >= 12 && v <= 17) return Math.abs(across - 5.6 + (v - 12) * 0.7) <= 1;
+      return false;
+    };
+    return layerOf((u, v) => onBody(u, v) || onProng(u, v) ? PAINTS.light : PAINTS.clear);
+  }
+
   // A Lantern Pulse Tile's Standard drawing: a ring, and nothing else. Its whole content is lines, so it is painted in
   // the light colour - an outline-colour ring disappears into a dark board. The count in its middle is drawn over this
   // by buildSprite, and it is hollow so that the count has somewhere to go. Left for drawing over by hand.
@@ -595,7 +626,7 @@
       }
     }
 
-    if (object.kind === 'Gate' || object.kind === 'Switch' || object.kind === 'Teleporter') {
+    if (object.kind === 'Gate' || object.kind === 'Switch' || object.kind === 'Teleporter' || object.kind === 'Crane') {
       // Whichever of the art's lightest and darkest colours stands out from this shape the most. An open
       // Gate's letter has only the art behind it, so that one gets a dark edge to stand out from it.
       let fill = mix.colors[mix.main];
@@ -1044,6 +1075,10 @@
   // - pairLetters says which Warp Wisp goes with which Warp Out Square, as a letter in the corner of each. The editor
   //   wants that; gameplay doesn't.
   // - pulses ([{ col, row, radius }]) draws each lit Lantern's pulse: a ring radius pixels out from its square's middle.
+  // - cranes ([{ cell, lift }]) is not drawn here: a claw goes over the ship it is holding, so whoever draws the ship
+  //   draws the claws over it - see renderCraneArms. renderBoard leaves the option alone.
+  // - ship ({ col, row }) is where the ship is. It is not used for a Crane's half see-through: that goes by what a crane
+  //   could carry being on either square of the pair - see puzzleRules.js's craneBlocked.
   // - pushHints ([{ col, row, direction, bob }], or one as pushHint) show that the Push Block on each square can be
   //   pushed: an arrow just
   //   past it, pointing the way it would go, bob pixels further out as it bobs.
@@ -1073,6 +1108,10 @@
     // between squares instead of rising on the way - see board.js's WISP_DRIFT_CYCLE_MS.
     let floatingOn = (object) => object.kind === 'Archeton'
       && (look.archetons?.find(definition => definition.id === object.archeton)?.parts ?? []).some(part => part.kind === 'Warp');
+    // Cranes that cannot be used because something a crane could carry is on one of their pair's two squares: both
+    // halves of the pair go see-through together, so a pair with a block sitting on the half you are looking at still
+    // shows as out of action.
+    let blockedCranes = new Set(objects.filter(object => object.kind === 'Crane' && craneBlocked(objects, object)));
     let floorsFirst = objects
       .filter(object => object.kind !== 'Start')
       // What's standing on a square is drawn over what's built into it - an Archeton or a Push Block over the Switch,
@@ -1108,7 +1147,8 @@
       let top = Math.round(row * TILE_PX) + (options.originY ?? 0);
       let sunk = Math.round((object.sink ?? 0) * TILE_PX);
       // An open Gate is half see-through, so it reads as something the ship can pass through.
-      let opacity = (object.fade ?? 1) * (sprite.opacity ?? 1) * ((object.kind === 'Gate' || object.kind === 'GemGate') && object.open ? OPEN_GATE_OPACITY : 1);
+      let opacity = (object.fade ?? 1) * (sprite.opacity ?? 1) * ((object.kind === 'Gate' || object.kind === 'GemGate') && object.open ? OPEN_GATE_OPACITY : 1)
+        * (blockedCranes.has(object) ? BLOCKED_CRANE_OPACITY : 1);
       // A Wisp fades in and out as it drifts, in step with its rise and fall: solid at the top of it, thinner at the
       // bottom, between 90% and 60% of solid.
       if (floating) opacity *= (WISP_FADE_TOP + WISP_FADE_BOTTOM) / 2
@@ -1302,6 +1342,9 @@
 
   // How much of an open Gate shows - see renderBoard.
   const OPEN_GATE_OPACITY = 0.5;
+  // How much of a Move Crane shows when its pair has something on the far square: half, so it reads as not usable.
+  // puzzleRules.js's craneFree is the same rule the claw itself goes by.
+  const BLOCKED_CRANE_OPACITY = 0.5;
 
   // How far a lit Lantern's pulse spreads, in pixels: as far as it reaches.
   const PULSE_REACH_PX = LANTERN_REACH * TILE_PX;
@@ -1326,6 +1369,23 @@
         data[i + 3] = total * 255;
       }
     }
+  }
+
+  // A Move Crane's claw, over the square it is working on and held lift squares above it - coming down on what it
+  // takes, resting, and hauling it up into the fade. It is drawn over the board rather than into it, so it sits over
+  // whatever it holds - see puzzleRules.js's cranePose. The arm is the CraneArm drawing, so its pixels are the Drawings
+  // view's to change.
+  function drawCrane(image, crane, look, originY){
+    let sprite = spriteFor({ kind: 'CraneArm' }, look, true, 0, 0, null);
+    blit(image, sprite, crane.cell.col * TILE_PX, crane.cell.row * TILE_PX - Math.round(crane.lift * TILE_PX) + originY);
+  }
+
+  // Every Move Crane's claw for a frame, into an image that already has the board and the ship in it: the claw comes out
+  // in front of both. Drawing them in renderBoard's own pass cannot stand a claw over the ship, since the ship (and the
+  // reflections) go on above that picture - so every caller that draws a ship draws these after it.
+  function renderCraneArms(image, cranes, look, originY = 0){
+    for (const crane of cranes ?? []) drawCrane(image, crane, look, originY);
+    return image;
   }
 
   // An arrow pointing right, before it's turned the way a push would go.
@@ -1370,5 +1430,5 @@
     blit(image, sprite, placed[0], placed[1]);
   }
 
-  return { renderBoard, spinAt, SPIN_STEPS, PULSE_REACH_PX, PAINTS, DRAWN_KINDS, ANIMATED_KINDS, TURNED_KINDS, SYMBOLS, SPRITE_ROLES, standardDrawing, renderDrawingLayer, RAISED_PX };
+  return { renderBoard, renderCraneArms, spinAt, SPIN_STEPS, PULSE_REACH_PX, PAINTS, DRAWN_KINDS, ANIMATED_KINDS, TURNED_KINDS, SYMBOLS, SPRITE_ROLES, standardDrawing, renderDrawingLayer, RAISED_PX };
 });

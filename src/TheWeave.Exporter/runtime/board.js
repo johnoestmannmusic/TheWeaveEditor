@@ -145,6 +145,11 @@
         hooks.onWarp?.(event.warpedTo);
         carry();
       }
+      // The crane set the ship down: it is simply there, as a Teleporter's pair would have it.
+      if (event.cranedTo && event.ship) {
+        play.mover.releaseAll();
+        play.mover.teleport(event.cranedTo);
+      }
       // Push Blocks that matched sink together, once whichever of them is moving has finished gliding into place.
       let glideOf = (object) => {
         if (object.fromCol === undefined || (object.fromCol === object.col && object.fromRow === object.row)) return 0;
@@ -231,6 +236,25 @@
       }
     );
 
+    // Whether every claw has what it took properly on the square, and can get on with it. A block pushed onto a Crane
+    // is still gliding there with the ship, and one a Stream is carrying still riding that tick, so the claw waits for
+    // the picture to say the thing has landed - these are the same alongs frame draws by. The ship is always on its
+    // square by then: a claw only takes it as it arrives.
+    play.loadsSettled = () => {
+      let alongNow = (object) => {
+        if (!object || object.fromCol === undefined) return 1;
+        if (object.fromCol === object.col && object.fromRow === object.row) return 1;
+        if (object.glide === 'push') return play.mover.progress;
+        if (object.glide === 'rotator') return play.rotatorGlideMs / TIMING.rotatorTickMs;
+        if (object.glide === 'return') return play.returnMs === null ? 1 : play.returnMs / TIMING.stepMs;
+        if (object.glide === 'slide') return play.slideMs === null ? 1 : play.slideMs / TIMING.stepMs;
+        if (object.glide === 'hop') return play.hopMs === null ? 1 : play.hopMs / TIMING.stepMs;
+        if (object.glide === 'swim') return play.swimMs === null ? 1 : play.swimMs / TIMING.stepMs;
+        return play.streamMs / TIMING.streamTickMs;
+      };
+      return (game?.cranes ?? []).every(crane => crane.ship || alongNow(crane.thing) >= 1);
+    };
+
     // What carries on whatever else is happening: blocks sinking, pulses spreading, Pipes swinging round, blocks
     // returning from a Gate.
     play.animate = (dtMs) => {
@@ -258,6 +282,10 @@
       // A Beam that's reached its Gates changes them, which is when the press finally takes effect - see
       // puzzleRules.js's advanceGateBeams.
       for (const event of game?.advanceGateBeams(dtMs) ?? []) onEvent(event);
+      // A Crane's claw steps on whatever else is happening, and sets down what it holds half way through - the board is
+      // held still meanwhile, see play.step, and the claw waits for what it has taken to be on the square, see
+      // play.loadsSettled.
+      for (const event of play.loadsSettled() ? game?.advanceCranes(dtMs) ?? [] : []) onEvent(event);
       if (play.pipeTurnMs !== null) play.pipeTurnMs += dtMs;
       if (play.returnMs !== null) play.returnMs += dtMs;
       if (play.slideMs !== null) play.slideMs += dtMs;
@@ -314,6 +342,10 @@
         if (play.reset.ms >= play.reset.durationMs) play.reset = null;
         return;
       }
+      // A crane's claw holds the board still while it takes something up and sets it down - play.animate steps the
+      // claws on - and onEvent puts the mover where the rules set the ship down. A claw that has only just taken hold
+      // of something still on its way in doesn't hold the board yet: the step delivering it has to finish first.
+      if (game?.cranes.length > 0 && play.loadsSettled()) return;
       if (play.finished || !game) return;
 
       play.mover.update(dtMs);
@@ -357,6 +389,21 @@
     // lands, with how far through the jump it is (t), for a caller that arcs it. Stepping off a ledge is a jump too,
     // just a small one, so it comes back with a t of its own - see onStepStart.
     play.shipPosition = () => {
+      // In a claw: lifted where it was, then set down where the claw put it, fading out and back in as it goes - see
+      // puzzleRules.js's advanceCranes.
+      let clawed = game?.cranes.find(crane => crane.ship) ?? null;
+      if (clawed) {
+        // The ship's own pose, not the claw's: it sits on its square while the claw comes down, and is only carried
+        // while the claw has it.
+        let pose = WeavePuzzle.craneLoad(clawed.from, clawed.to, clawed.ms);
+        return {
+          x: (pose.cell.col + 0.5) * TILE_PX,
+          y: (pose.cell.row + 0.5) * TILE_PX - pose.lift * TILE_PX,
+          t: null,
+          spin: 0,
+          opacity: pose.alpha,
+        };
+      }
       if (play.teleport) {
         let t = Math.min(1, play.teleport.ms / play.teleport.durationMs);
         let centre = (c) => ({ x: (c.col + 0.5) * TILE_PX, y: (c.row + 0.5) * TILE_PX });
@@ -441,6 +488,10 @@
       if (game.objects.some(object => object.kind === 'Gem')) key.push('g', gemStep);
       let gemShots = play.gemShots.map(shot => ({ from: shot.from, to: shot.to, along: Math.min(1, shot.ms / GEM_SHOT_MS) }));
       for (const shot of gemShots) key.push('m', Math.round(shot.along * TILE_PX));
+      // Each claw is drawn over the square it is working on, held so far above it: both go in the key, the ship's
+      // included, which has no object of its own to fade - see puzzleRules.js's cranePose.
+      let cranes = (game.cranes ?? []).map(crane => WeavePuzzle.cranePose(crane.from, crane.to, crane.ms));
+      for (const crane of cranes) key.push('n', crane.cell.col, crane.cell.row, Math.round(crane.lift * TILE_PX));
       // The Gate rattles when a Gem hits it, a pixel either side of itself, settling as it goes.
       let gate = play.gemShakeMs === null || play.gemShakeMs >= GEM_SHAKE_MS ? null : game.objects.find(object => object.kind === 'GemGate');
       let shake = gate ? { col: gate.col, row: gate.row, dx: Math.round(Math.sin(play.gemShakeMs / 18) * 2 * (1 - play.gemShakeMs / GEM_SHAKE_MS)) } : null;
@@ -467,6 +518,19 @@
       let hideUnreached = (list) => unreached.size === 0 ? list : list.map(thing => unreached.has(thing) ? { ...thing, revealed: false } : thing);
       floors = fadedBy(hideUnreached(floors));
       objects = fadedBy(hideUnreached(objects));
+
+      // Whatever a claw has grabbed is hauled up out of its square and faded, then comes down into the other one out
+      // of the fade. It is still until it is grabbed and still again once it is set down - see craneLoad.
+      for (const crane of game.cranes ?? []) {
+        if (crane.ship) continue;
+        let pose = WeavePuzzle.craneLoad(crane.from, crane.to, crane.ms);
+        key.push('c', Math.round(pose.alpha * 10), Math.round(pose.lift * TILE_PX));
+        objects = objects.map(object => object === crane.thing ? {
+          ...object,
+          fade: pose.alpha,
+          lungeY: -Math.round(pose.lift * TILE_PX),
+        } : object);
+      }
 
       // A guard that has just caught the ship lunges into its square and back. It doesn't move on the board, so this
       // is entirely where it's drawn - see renderBoard's lungeX/lungeY.
@@ -519,6 +583,8 @@
         gemPhase: gemStep / GEM_SPIN_STEPS,
         wispDrift: wispStep / WISP_DRIFT_STEPS,
         gemShots,
+        cranes,
+        ship: game.shipCell,
         gateShake: shake,
         warpFlash,
         pulses,

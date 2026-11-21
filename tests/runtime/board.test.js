@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createBoardPlay, facingInwards, WARP_FLASH_MS } = require('../../src/TheWeave.Exporter/runtime/board.js');
-const { BOARD_TIMING } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+const { BOARD_TIMING, CRANE_MS } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
 
 const obj = (kind, col, row, extra = {}) => ({ kind, col, row, ...extra });
 const at = (col, row) => ({ col, row });
@@ -500,4 +500,51 @@ test('a guard\'s death washes it and the Pulse Tiles that killed it the same red
   assert.ok(guard && guard.tint, 'the dying guard is washed');
   assert.ok(guard.tint.color.r > 150 && guard.tint.color.g < 100, 'in red');
   assert.ok(tiles.length > 0 && tiles.every((o) => o.tint === guard.tint), 'and every Pulse Tile is the same shade');
+});
+
+test('a claw waits for a block it was pushed to be on the square before it starts', () => {
+  let play = createBoardPlay({ puzzle: { objects: [
+    obj('Start', 2, 5),
+    obj('PushBlock', 3, 5, { symbol: 'Circle' }),
+    obj('Crane', 4, 5, { letter: 'A' }),
+    obj('Crane', 7, 8, { letter: 'A' }),
+  ] } });
+  play.mover.press('right'); play.mover.release('right');
+
+  let started = 0, early = 0;
+  for (let frame = 0; frame < 80; frame++) {
+    play.animate(16); play.step(16);
+    let crane = play.game.cranes[0];
+    if (!crane) continue;
+    if (crane.ms <= 0) continue;
+    started++;
+    // A pushed block is drawn along the ship's own step, so that is when it is on the square the claw took it from.
+    if (play.frame(0, {}).options.pushAlong < 1) early++;
+  }
+  assert.ok(started > 0, 'the claw did start');
+  assert.equal(early, 0, 'and never on a frame where the block was still travelling');
+});
+
+test('a Crane holds the board still while its claw is out, then puts the ship down', () => {
+  let play = createBoardPlay({ puzzle: { objects: [
+    obj('Start', 2, 6),
+    obj('Crane', 2, 5, { letter: 'A' }),
+    obj('Crane', 6, 3, { letter: 'A' }),
+  ] } });
+  const stepUp = () => { play.mover.press('up'); play.mover.release('up'); run(play, BOARD_TIMING.stepMs + 20); };
+
+  stepUp();
+  assert.deepEqual(play.mover.cell, at(2, 5), 'on the crane, in its claw');
+  // A press while it is held goes nowhere. Keep this run short: the claw sets the ship down part way through the
+  // pickup, so a longer one would be testing the landing rather than the hold.
+  play.mover.press('down'); play.mover.release('down');
+  run(play, 50);
+  assert.deepEqual(play.mover.cell, at(2, 5), 'held still');
+  // And it stays exactly on its own square while the claw comes down: the ship is only carried once the claw has it.
+  let waiting = play.shipPosition();
+  assert.deepEqual([waiting.x, waiting.y, waiting.opacity], [(2 + 0.5) * 24, (5 + 0.5) * 24, 1], 'on its square, solid, until it is grabbed');
+
+  run(play, CRANE_MS + 60);                                    // past the halfway point and the end of the pickup
+  assert.deepEqual(play.mover.cell, at(6, 3), 'set down on the other square');
+  assert.deepEqual(play.game.cranes, [], 'and the claw has gone by the end of the pickup');
 });

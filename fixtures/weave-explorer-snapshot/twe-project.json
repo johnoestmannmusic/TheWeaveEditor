@@ -4816,7 +4816,512 @@
             "ExtraPanels": []
           },
           "Children": [],
-          "LockMessage": "Coming in a future version.."
+          "Puzzle": {
+            "Objects": [
+              {
+                "Kind": "Start",
+                "Col": 8,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Finish",
+                "Col": 0,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "Crane",
+                "Col": 6,
+                "Row": 1,
+                "Letter": "B",
+                "Direction": null
+              },
+              {
+                "Kind": "Crane",
+                "Col": 8,
+                "Row": 1,
+                "Letter": "C",
+                "Direction": null
+              },
+              {
+                "Kind": "Crane",
+                "Col": 1,
+                "Row": 8,
+                "Letter": "C",
+                "Direction": null
+              },
+              {
+                "Kind": "Wall",
+                "Col": 7,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-13"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 9,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-17"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 2,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-18"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-12"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-6"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-8"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-6"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-7"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-4"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 0,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-6"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-4"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 4,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 4,
+                "Row": 2,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 4,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 4,
+                "Row": 6,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 4,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-11"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 5,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 5,
+                "Row": 3,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-2"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 5,
+                "Row": 5,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 5,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 5,
+                "Row": 9,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Gem",
+                "Col": 0,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "GemGate",
+                "Col": 1,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 8,
+                "Row": 6,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Cross"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 7,
+                "Row": 6,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Circle"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 2,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-3"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 3,
+                "Row": 2,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-10"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 3,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-9"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 2,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-10"
+              },
+              {
+                "Kind": "Wall",
+                "Col": 1,
+                "Row": 0,
+                "Letter": null,
+                "Direction": null,
+                "Variant": "wall-10"
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 3,
+                "Row": 7,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Circle"
+              },
+              {
+                "Kind": "Gem",
+                "Col": 3,
+                "Row": 8,
+                "Letter": null,
+                "Direction": null
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 2,
+                "Row": 1,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Cross"
+              },
+              {
+                "Kind": "Crane",
+                "Col": 7,
+                "Row": 4,
+                "Letter": "A",
+                "Direction": null
+              },
+              {
+                "Kind": "Crane",
+                "Col": 2,
+                "Row": 4,
+                "Letter": "A",
+                "Direction": null
+              },
+              {
+                "Kind": "PushBlock",
+                "Col": 2,
+                "Row": 4,
+                "Letter": null,
+                "Direction": null,
+                "Symbol": "Triangle"
+              },
+              {
+                "Kind": "Crane",
+                "Col": 3,
+                "Row": 1,
+                "Letter": "B",
+                "Direction": null
+              }
+            ],
+            "Palette": {
+              "wall": "#ffffff",
+              "edge": "#ff994a",
+              "finish": "#ff994a",
+              "gate": "#a3e9ff",
+              "switch": "#a3e9ff",
+              "teleporter": "#ffdabd",
+              "stream": "#ffb470",
+              "key": "#55caff",
+              "rotator": "#dbf7ff",
+              "rotatorSwitch": "#dbf7ff",
+              "lantern": "#ff994a",
+              "block": "#ff994a",
+              "jump": "#ff994a",
+              "reset": "#ff994a",
+              "pipe": "#ff994a",
+              "archeton": "#ff994a",
+              "gem": "#ff994a",
+              "outline": "#000000",
+              "light": "#ffffff"
+            },
+            "Textures": {
+              "wall": {
+                "Ramp": [
+                  "#dbf7ff",
+                  "#dbf7ff",
+                  "#ffffff",
+                  "#ffffff"
+                ],
+                "Grain": "0m000mmmmzmzmzmzmzmm0m00mm0mmmzzzmzzzzzzzzzmm0000mmmmzmzmzmzmzmzmzmzmm0mmmmmzzzzzzzzzzzzzmzmm0m00mmzmzmz4zmz4zmzmzmz00mmmmmmzmzzzmzzzmzzzmzmm0m0mmmmmzmzmzmzmzmzmmmmmm00mmzmzzzzzzzzzzzzzzmmmmm0mmmmmzmzmzmzmzmzmzmmmmmmmmzmzzzzzmzzzmzzzzzmzmmmmmmzmzmzmzmzmzmzmzmzmzm0mzzmzzzzzzzzzzzzzzzzzmmmmzmzmzmzmzmzmzmzmzmzmzmmzmzzzmzzzmzzzmzzzmzzzmzmmzmzmzmzmzmzmzmzmmmzmzmmzmzmzzzzzzzmzmzmzzmmzzzzmzmzmmmzmzmmmmmmmzmzmmmzzmzmzzzzzmzmzmmmzmmmzmzmmzmzmzmzmmmzmmmmmzmmmzmmzzzzzzzzzzmmmmzmmmmmzmmmmzmzmzmzmm0mmmmmmmmmmmmmzzzzzmzzmmzmmmzmzmmmmmmmmzmmmmmmmmmmmmmmmzmmmmmmzzmmzmmmmmmmmmmmmmm0mmm0",
+                "Pixels": "111111111212121212111111111111222122222222211111111112121212121212121111111122222222222221211111111212121212121212121111111121222122212221211111111112121212121211111111112122222222222222111111111112121212121212111111112122222122212222212111111212121212121212121211122122222222222222222111121212121212121212121211212221222122212221222121121212121212121211121211212122222221212122112222121211121211111112121112212122222121211121112121121212121112111112111211222222222211112111112111121212121111111111111111222221221121112121111111121111111111111112111111221121111111111111111111"
+              },
+              "edge": {
+                "Ramp": [
+                  "#ff994a",
+                  "#ff994a",
+                  "#ff994a",
+                  "#ffb470"
+                ],
+                "Grain": "q2q0uuuuuqqqqquzu22uuqq2q2u2uuuuu2qqqquuu2qqqquqqqq2uuuuu2qqqqquqq0quuuqq2u2uuuuz2qqqqqqq2quzuuq22q2uuuuu2qqq2quu2qyuuuqq0u2uuuuuq2002uuu2quuuzqqqqquuqqq2222quuu2quuuu2qquqqqquu2qqqquuu2quuuuqqq2quuuuu2qqqquuu22uuuuqq2qquuzuu2qqqquuu0quuuuqqqqqquuuu2qqqquuu2quuuuqq2qqqqquu2qqqqzuz2uuzuuqqqquqqqqqqqqqquzu2qyuuuqqq2uuuuqqqqqqquuz2uuuuuqqq2uuuuuu2002qquuqquuzuqqq2uzuuuu2q220qqqquuzuuqqq0uuuuzu2qqqqqqqq2quuuqqq2uuuuuu2qqq2uuuqqqqquq2q0uuzuuu2qqqqquyqquqqqqqq0uzzzuuqqqqquuzuuuzuqqqq0zuuuuu2qqqquuuuqzqqqqqq2uzuzuuqqqqquuuuqqqquqqq2uuzszuqqqqquuqq2uuyuqq22uzyzyzqqqqqqquuqyyyuq",
+                "Pixels": "222233333222223332233222223233333222223332222232222233333222222322223332223233333222222222233332222233333222222332233332223233333222223332233332222233222222223332233332223222233222223332233332222233333222223332233332222233333222223332233332222223333222223332233332222222233222223332333332222322222222223332233332222333322222223332333332222333333222222332233332222333333222222222333332222333333222222222223332222333333222223332222232222333333222222332232222222333333222223333333322222333333222223333232222222333333222223333222232222333333222223322233332222333333222222233233332"
+              },
+              "finish": {
+                "Ramp": [
+                  "#ff994a",
+                  "#ff994a",
+                  "#ff994a",
+                  "#ffb470"
+                ],
+                "Grain": "q2q0uuuuuqqqqquzu22uuqq2q2u2uuuuu2qqqquuu2qqqquqqqq2uuuuu2qqqqquqq0quuuqq2u2uuuuz2qqqqqqq2quzuuq22q2uuuuu2qqq2quu2qyuuuqq0u2uuuuuq2002uuu2quuuzqqqqquuqqq2222quuu2quuuu2qquqqqquu2qqqquuu2quuuuqqq2quuuuu2qqqquuu22uuuuqq2qquuzuu2qqqquuu0quuuuqqqqqquuuu2qqqquuu2quuuuqq2qqqqquu2qqqqzuz2uuzuuqqqquqqqqqqqqqquzu2qyuuuqqq2uuuuqqqqqqquuz2uuuuuqqq2uuuuuu2002qquuqquuzuqqq2uzuuuu2q220qqqquuzuuqqq0uuuuzu2qqqqqqqq2quuuqqq2uuuuuu2qqq2uuuqqqqquq2q0uuzuuu2qqqqquyqquqqqqqq0uzzzuuqqqqquuzuuuzuqqqq0zuuuuu2qqqquuuuqzqqqqqq2uzuzuuqqqqquuuuqqqquqqq2uuzszuqqqqquuqq2uuyuqq22uzyzyzqqqqqqquuqyyyuq",
+                "Pixels": "222233333222223332233222223233333222223332222232222233333222222322223332223233333222222222233332222233333222222332233332223233333222223332233332222233222222223332233332223222233222223332233332222233333222223332233332222233333222223332233332222223333222223332233332222222233222223332333332222322222222223332233332222333322222223332333332222333333222222332233332222333333222222222333332222333333222222222223332222333333222223332222232222333333222222332232222222333333222223333333322222333333222223333232222222333333222223333222232222333333222223322233332222333333222222233233332"
+              },
+              "gate": {
+                "Ramp": [
+                  "#a3e9ff",
+                  "#a3e9ff",
+                  "#a3e9ff",
+                  "#dbf7ff"
+                ],
+                "Grain": "zzzz0zzz0zzzzzzz0zzz0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz0zzzzzzzzzzz0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+                "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+              },
+              "teleporter": {
+                "Ramp": [
+                  "#ffdabd",
+                  "#ffdabd",
+                  "#ffdabd",
+                  "#ffdabd"
+                ],
+                "Grain": "eeeeeeeeeeeeeeeeeeezeeezeezeeezeeeeezeeeeeeeeeeeee0eeeezezweeeeeeeeeeweezeeeeeeezezezezezzzwzezeeeeeeeezeweeezezeeezezeeeezzeezezeezzezewezezeeeezeeeeezeeeeeeeeezezezeeeeeezzzezezezeeezezzzewe8zeeeeezeewweeeeeeeeezwwzeeezezezezewezezwzwzwwwezeeeeeeezeewzeewzwzewwwzeeezezeeezwzewewezezezweeeeeeeeeeeeewewezezeewwwwzezezeeeeezwzezezezezeeeeeezewezezeeezeeewezezeezezezezzzezeeezzeezezeeeeeezezezeeeeeewwezeweeeeeezezewewzweeezwzzzezeeeeeeeeeeeezeeeeezeeezwzeezezezezzzwezezzzzezezeeeeeeeewezwwezezewwwezwzzeeezezzzezeeezezezwzewwwzeewzewezeeezewwwwewzeezwzezezezwwwzewwwwwwzwwe",
+                "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+              },
+              "stream": {
+                "Ramp": [
+                  "#ff994a",
+                  "#ffb470",
+                  "#ffb470",
+                  "#ffb470"
+                ],
+                "Grain": "uuuuuuuuuuuuuuuuuzuuuuuuzuzuuuzuzuzzzuuuzuzuuuuuuuuuuuuzuuuuuuuuuuuuuuuuzuuuuuuuuuuuuuuuzuzuuuuuuuuzuuuuuuuuuuuuuuuuuuuuuuuuuuzuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuzuuuzuuuzuuuuuuuuuuuuuuuuuuuuuuuuzuuuuuuuuuuquuuuuuuuuuuuuzuuuuuuuuuuuuuuuuuuuuuuuuuuzuuuuu0uuuuuuuuuuuuuuzuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuqzuuuuuuuuuuuuuuuuuquuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuzuuuuuuuuuuuuuuuquuuuuuuuuuuuuuuuuuuuuuuuuuuuuzuuuuuuuzuzuzuuuuuuuuuuuuuuuuuuuuuuuuuuuuuzuzuuuuuuuzuzuuuzuuuuuuuuuuuuuuuuuuuuuuuuuuzuuuzuuzuuuzuuuuuzuuuuuuuuuuuuuquuuuzuzyuuuuuuuuuuyuuzuuuuuuuzuzuzuzuzzzyzuzu",
+                "Pixels": "000000000000000002000000202000202022200020200000000000020000000000000000200000000000000020200000000200000000000000000000000000200000000000000000000000000000000000000000002000200020000000000000000000000002000000000000000000000000200000000000000000000000000200000000000000000000200000000000000000000000000000000000000000200000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000200000002020200000000000000000000000000000202000000020200020000000000000000000000000020002002000200000200000000000000000020220000000000200200000002020202022222020"
+              },
+              "key": {
+                "Ramp": [
+                  "#55caff",
+                  "#55caff",
+                  "#55caff",
+                  "#55caff"
+                ],
+                "Grain": "0www0wwwwwwwwwwwwwww0wwwwwwwwwwwwwwwwwwwwwwwwwwwww0wwwwwwwwwwzwwwwwwww0wwwwwwwwwwwwwwzwwwwwwwwww0www0www0www0www0www0w0wwwwwwwwwwwwwwwwwwwwwwwwwwwww8w0www0wwwwwww0wwwwwwwwwwwwwwwwwwwwwwwwwwwww0www0www0www0www0www0wwwwwwwwwwwwwwwwwwwwwwwwwwwww0wwwwwwwwwww0www0wwwwwwwwwwwwwwwwwwwwwwwwww8ww0wwwwwww0www0www0www0wwwwwwwwwwwwwwwwwwwwwwwwwwwww0wwwwwww0www0wwwwwww0wwwwwwwwwwwwwwwwwwwwwwwww0www0www0www0www0www0wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww0wwwwwww0www0www0wwwwwwwwwwwwwwwwwwwwwwwww0www0www0www0www0www0wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww8wwwww0wwwwwwwwwwwwwwwwwwwwwwwww",
+                "Pixels": "222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+              },
+              "rotator": {
+                "Ramp": [
+                  "#a3e9ff",
+                  "#dbf7ff",
+                  "#dbf7ff",
+                  "#ffffff"
+                ],
+                "Grain": "0m000mmmmzmzmzmzmzmm0m00mm0mmmzzzmzzzzzzzzzmm0000mmmmzmzmzmzmzmzmzmzmm0mmmmmzzzzzzzzzzzzzmzmm0m00mmzmzmz4zmz4zmzmzmz00mmmmmmzmzzzmzzzmzzzmzmm0m0mmmmmzmzmzmzmzmzmmmmmm00mmzmzzzzzzzzzzzzzzmmmmm0mmmmmzmzmzmzmzmzmzmmmmmmmmzmzzzzzmzzzmzzzzzmzmmmmmmzmzmzmzmzmzmzmzmzmzm0mzzmzzzzzzzzzzzzzzzzzmmmmzmzmzmzmzmzmzmzmzmzmzmmzmzzzmzzzmzzzmzzzmzzzmzmmzmzmzmzmzmzmzmzmmmzmzmmzmzmzzzzzzzmzmzmzzmmzzzzmzmzmmmzmzmmmmmmmzmzmmmzzmzmzzzzzmzmzmmmzmmmzmzmmzmzmzmzmmmzmmmmmzmmmzmmzzzzzzzzzzmmmmzmmmmmzmmmmzmzmzmzmm0mmmmmmmmmmmmmzzzzzmzzmmzmmmzmzmmmmmmmmzmmmmmmmmmmmmmmmzmmmmmmzzmmzmmmmmmmmmmmmmm0mmm0",
+                "Pixels": "000000000303030303000000000000333033333333300000000003030303030303030000000033333333333330300000000303030303030303030000000030333033303330300000000003030303030300000000003033333333333333000000000003030303030303000000003033333033303333303000000303030303030303030300033033333333333333333000030303030303030303030300303330333033303330333030030303030303030300030300303033333330303033003333030300030300000003030003303033333030300030003030030303030003000003000300333333333300003000003000030303030000000000000000333330330030003030000000030000000000000003000000330030000000000000000000"
+              },
+              "lantern": {
+                "Ramp": [
+                  "#ff994a",
+                  "#ff994a",
+                  "#ff994a",
+                  "#ffb470"
+                ],
+                "Grain": "q2q0uuuuuqqqqquzu22uuqq2q2u2uuuuu2qqqquuu2qqqquqqqq2uuuuu2qqqqquqq0quuuqq2u2uuuuz2qqqqqqq2quzuuq22q2uuuuu2qqq2quu2qyuuuqq0u2uuuuuq2002uuu2quuuzqqqqquuqqq2222quuu2quuuu2qquqqqquu2qqqquuu2quuuuqqq2quuuuu2qqqquuu22uuuuqq2qquuzuu2qqqquuu0quuuuqqqqqquuuu2qqqquuu2quuuuqq2qqqqquu2qqqqzuz2uuzuuqqqquqqqqqqqqqquzu2qyuuuqqq2uuuuqqqqqqquuz2uuuuuqqq2uuuuuu2002qquuqquuzuqqq2uzuuuu2q220qqqquuzuuqqq0uuuuzu2qqqqqqqq2quuuqqq2uuuuuu2qqq2uuuqqqqquq2q0uuzuuu2qqqqquyqquqqqqqq0uzzzuuqqqqquuzuuuzuqqqq0zuuuuu2qqqquuuuqzqqqqqq2uzuzuuqqqqquuuuqqqquqqq2uuzszuqqqqquuqq2uuyuqq22uzyzyzqqqqqqquuqyyyuq",
+                "Pixels": "222233333222223332233222223233333222223332222232222233333222222322223332223233333222222222233332222233333222222332233332223233333222223332233332222233222222223332233332223222233222223332233332222233333222223332233332222233333222223332233332222223333222223332233332222222233222223332333332222322222222223332233332222333322222223332333332222333333222222332233332222333333222222222333332222333333222222222223332222333333222223332222232222333333222222332232222222333333222223333333322222333333222223333232222222333333222223333222232222333333222223322233332222333333222222233233332"
+              },
+              "block": {
+                "Ramp": [
+                  "#ff994a",
+                  "#ff994a",
+                  "#ff994a",
+                  "#ffb470"
+                ],
+                "Grain": "q2q0uuuuuqqqqquzu22uuqq2q2u2uuuuu2qqqquuu2qqqquqqqq2uuuuu2qqqqquqq0quuuqq2u2uuuuz2qqqqqqq2quzuuq22q2uuuuu2qqq2quu2qyuuuqq0u2uuuuuq2002uuu2quuuzqqqqquuqqq2222quuu2quuuu2qquqqqquu2qqqquuu2quuuuqqq2quuuuu2qqqquuu22uuuuqq2qquuzuu2qqqquuu0quuuuqqqqqquuuu2qqqquuu2quuuuqq2qqqqquu2qqqqzuz2uuzuuqqqquqqqqqqqqqquzu2qyuuuqqq2uuuuqqqqqqquuz2uuuuuqqq2uuuuuu2002qquuqquuzuqqq2uzuuuu2q220qqqquuzuuqqq0uuuuzu2qqqqqqqq2quuuqqq2uuuuuu2qqq2uuuqqqqquq2q0uuzuuu2qqqqquyqquqqqqqq0uzzzuuqqqqquuzuuuzuqqqq0zuuuuu2qqqquuuuqzqqqqqq2uzuzuuqqqqquuuuqqqquqqq2uuzszuqqqqquuqq2uuyuqq22uzyzyzqqqqqqquuqyyyuq",
+                "Pixels": "222233333222223332233222223233333222223332222232222233333222222322223332223233333222222222233332222233333222222332233332223233333222223332233332222233222222223332233332223222233222223332233332222233333222223332233332222233333222223332233332222223333222223332233332222222233222223332333332222322222222223332233332222333322222223332333332222333333222222332233332222333333222222222333332222333333222222222223332222333333222223332222232222333333222222332232222222333333222223333333322222333333222223333232222222333333222223333222232222333333222223322233332222333333222222233233332"
+              },
+              "jump": {
+                "Ramp": [
+                  "#ff994a",
+                  "#ff994a",
+                  "#ff994a",
+                  "#ffb470"
+                ],
+                "Grain": "q2q0uuuuuqqqqquzu22uuqq2q2u2uuuuu2qqqquuu2qqqquqqqq2uuuuu2qqqqquqq0quuuqq2u2uuuuz2qqqqqqq2quzuuq22q2uuuuu2qqq2quu2qyuuuqq0u2uuuuuq2002uuu2quuuzqqqqquuqqq2222quuu2quuuu2qquqqqquu2qqqquuu2quuuuqqq2quuuuu2qqqquuu22uuuuqq2qquuzuu2qqqquuu0quuuuqqqqqquuuu2qqqquuu2quuuuqq2qqqqquu2qqqqzuz2uuzuuqqqquqqqqqqqqqquzu2qyuuuqqq2uuuuqqqqqqquuz2uuuuuqqq2uuuuuu2002qquuqquuzuqqq2uzuuuu2q220qqqquuzuuqqq0uuuuzu2qqqqqqqq2quuuqqq2uuuuuu2qqq2uuuqqqqquq2q0uuzuuu2qqqqquyqquqqqqqq0uzzzuuqqqqquuzuuuzuqqqq0zuuuuu2qqqquuuuqzqqqqqq2uzuzuuqqqqquuuuqqqquqqq2uuzszuqqqqquuqq2uuyuqq22uzyzyzqqqqqqquuqyyyuq",
+                "Pixels": "222233333222223332233222223233333222223332222232222233333222222322223332223233333222222222233332222233333222222332233332223233333222223332233332222233222222223332233332223222233222223332233332222233333222223332233332222233333222223332233332222223333222223332233332222222233222223332333332222322222222223332233332222333322222223332333332222333333222222332233332222333333222222222333332222333333222222222223332222333333222223332222232222333333222222332232222222333333222223333333322222333333222223333232222222333333222223333222232222333333222223322233332222333333222222233233332"
+              },
+              "reset": {
+                "Ramp": [
+                  "#ff994a",
+                  "#ff994a",
+                  "#ff994a",
+                  "#ffb470"
+                ],
+                "Grain": "q2q0uuuuuqqqqquzu22uuqq2q2u2uuuuu2qqqquuu2qqqquqqqq2uuuuu2qqqqquqq0quuuqq2u2uuuuz2qqqqqqq2quzuuq22q2uuuuu2qqq2quu2qyuuuqq0u2uuuuuq2002uuu2quuuzqqqqquuqqq2222quuu2quuuu2qquqqqquu2qqqquuu2quuuuqqq2quuuuu2qqqquuu22uuuuqq2qquuzuu2qqqquuu0quuuuqqqqqquuuu2qqqquuu2quuuuqq2qqqqquu2qqqqzuz2uuzuuqqqquqqqqqqqqqquzu2qyuuuqqq2uuuuqqqqqqquuz2uuuuuqqq2uuuuuu2002qquuqquuzuqqq2uzuuuu2q220qqqquuzuuqqq0uuuuzu2qqqqqqqq2quuuqqq2uuuuuu2qqq2uuuqqqqquq2q0uuzuuu2qqqqquyqquqqqqqq0uzzzuuqqqqquuzuuuzuqqqq0zuuuuu2qqqquuuuqzqqqqqq2uzuzuuqqqqquuuuqqqquqqq2uuzszuqqqqquuqq2uuyuqq22uzyzyzqqqqqqquuqyyyuq",
+                "Pixels": "222233333222223332233222223233333222223332222232222233333222222322223332223233333222222222233332222233333222222332233332223233333222223332233332222233222222223332233332223222233222223332233332222233333222223332233332222233333222223332233332222223333222223332233332222222233222223332333332222322222222223332233332222333322222223332333332222333333222222332233332222333333222222222333332222333333222222222223332222333333222223332222232222333333222222332232222222333333222223333333322222333333222223333232222222333333222223333222232222333333222223322233332222333333222222233233332"
+              },
+              "pipe": {
+                "Ramp": [
+                  "#ff994a",
+                  "#ff994a",
+                  "#ff994a",
+                  "#ffb470"
+                ],
+                "Grain": "q2q0uuuuuqqqqquzu22uuqq2q2u2uuuuu2qqqquuu2qqqquqqqq2uuuuu2qqqqquqq0quuuqq2u2uuuuz2qqqqqqq2quzuuq22q2uuuuu2qqq2quu2qyuuuqq0u2uuuuuq2002uuu2quuuzqqqqquuqqq2222quuu2quuuu2qquqqqquu2qqqquuu2quuuuqqq2quuuuu2qqqquuu22uuuuqq2qquuzuu2qqqquuu0quuuuqqqqqquuuu2qqqquuu2quuuuqq2qqqqquu2qqqqzuz2uuzuuqqqquqqqqqqqqqquzu2qyuuuqqq2uuuuqqqqqqquuz2uuuuuqqq2uuuuuu2002qquuqquuzuqqq2uzuuuu2q220qqqquuzuuqqq0uuuuzu2qqqqqqqq2quuuqqq2uuuuuu2qqq2uuuqqqqquq2q0uuzuuu2qqqqquyqquqqqqqq0uzzzuuqqqqquuzuuuzuqqqq0zuuuuu2qqqquuuuqzqqqqqq2uzuzuuqqqqquuuuqqqquqqq2uuzszuqqqqquuqq2uuyuqq22uzyzyzqqqqqqquuqyyyuq",
+                "Pixels": "222233333222223332233222223233333222223332222232222233333222222322223332223233333222222222233332222233333222222332233332223233333222223332233332222233222222223332233332223222233222223332233332222233333222223332233332222233333222223332233332222223333222223332233332222222233222223332333332222322222222223332233332222333322222223332333332222333333222222332233332222333333222222222333332222333333222222222223332222333333222223332222232222333333222222332232222222333333222223333333322222333333222223333232222222333333222223333222232222333333222223322233332222333333222222233233332"
+              },
+              "archeton": {
+                "Ramp": [
+                  "#ff994a",
+                  "#ff994a",
+                  "#ff994a",
+                  "#ffb470"
+                ],
+                "Grain": "q2q0uuuuuqqqqquzu22uuqq2q2u2uuuuu2qqqquuu2qqqquqqqq2uuuuu2qqqqquqq0quuuqq2u2uuuuz2qqqqqqq2quzuuq22q2uuuuu2qqq2quu2qyuuuqq0u2uuuuuq2002uuu2quuuzqqqqquuqqq2222quuu2quuuu2qquqqqquu2qqqquuu2quuuuqqq2quuuuu2qqqquuu22uuuuqq2qquuzuu2qqqquuu0quuuuqqqqqquuuu2qqqquuu2quuuuqq2qqqqquu2qqqqzuz2uuzuuqqqquqqqqqqqqqquzu2qyuuuqqq2uuuuqqqqqqquuz2uuuuuqqq2uuuuuu2002qquuqquuzuqqq2uzuuuu2q220qqqquuzuuqqq0uuuuzu2qqqqqqqq2quuuqqq2uuuuuu2qqq2uuuqqqqquq2q0uuzuuu2qqqqquyqquqqqqqq0uzzzuuqqqqquuzuuuzuqqqq0zuuuuu2qqqquuuuqzqqqqqq2uzuzuuqqqqquuuuqqqquqqq2uuzszuqqqqquuqq2uuyuqq22uzyzyzqqqqqqquuqyyyuq",
+                "Pixels": "222233333222223332233222223233333222223332222232222233333222222322223332223233333222222222233332222233333222222332233332223233333222223332233332222233222222223332233332223222233222223332233332222233333222223332233332222233333222223332233332222223333222223332233332222222233222223332333332222322222222223332233332222333322222223332333332222333333222222332233332222333333222222222333332222333333222222222223332222333333222223332222232222333333222222332232222222333333222223333333322222333333222223333232222222333333222223333222232222333333222223322233332222333333222222233233332"
+              },
+              "gem": {
+                "Ramp": [
+                  "#ff994a",
+                  "#ff994a",
+                  "#ff994a",
+                  "#ffb470"
+                ],
+                "Grain": "q2q0uuuuuqqqqquzu22uuqq2q2u2uuuuu2qqqquuu2qqqquqqqq2uuuuu2qqqqquqq0quuuqq2u2uuuuz2qqqqqqq2quzuuq22q2uuuuu2qqq2quu2qyuuuqq0u2uuuuuq2002uuu2quuuzqqqqquuqqq2222quuu2quuuu2qquqqqquu2qqqquuu2quuuuqqq2quuuuu2qqqquuu22uuuuqq2qquuzuu2qqqquuu0quuuuqqqqqquuuu2qqqquuu2quuuuqq2qqqqquu2qqqqzuz2uuzuuqqqquqqqqqqqqqquzu2qyuuuqqq2uuuuqqqqqqquuz2uuuuuqqq2uuuuuu2002qquuqquuzuqqq2uzuuuu2q220qqqquuzuuqqq0uuuuzu2qqqqqqqq2quuuqqq2uuuuuu2qqq2uuuqqqqquq2q0uuzuuu2qqqqquyqquqqqqqq0uzzzuuqqqqquuzuuuzuqqqq0zuuuuu2qqqquuuuqzqqqqqq2uzuzuuqqqqquuuuqqqquqqq2uuzszuqqqqquuqq2uuyuqq22uzyzyzqqqqqqquuqyyyuq",
+                "Pixels": "222233333222223332233222223233333222223332222232222233333222222322223332223233333222222222233332222233333222222332233332223233333222223332233332222233222222223332233332223222233222223332233332222233333222223332233332222233333222223332233332222223333222223332233332222222233222223332333332222322222222223332233332222333322222223332333332222333333222222332233332222333333222222222333332222333333222222222223332222333333222223332222232222333333222222332232222222333333222223333333322222333333222223333232222222333333222223333222232222333333222223322233332222333333222222233233332"
+              }
+            },
+            "PaletteSource": "img/pentura/dunam-sunset-towers.png"
+          },
+          "Requirements": [
+            "gestalt-canals"
+          ]
         },
         {
           "Id": "clockwork-lighthouse",
@@ -9433,7 +9938,9 @@
             },
             "PaletteSource": "img/pentura/mountain-town-urnh.png"
           },
-          "LockMessage": "Coming in a future version.."
+          "Requirements": [
+            "gestalt-canals"
+          ]
         },
         {
           "Id": "cedarwood-high-clubrooms",
@@ -13504,6 +14011,62 @@
         },
         {
           "Role": "archeton",
+          "Shade": 3,
+          "Percent": 15
+        }
+      ]
+    },
+    {
+      "Id": "Crane",
+      "Kind": "Crane",
+      "Name": "Standard",
+      "Pixels": "...................................................HHHHHHH....HHHHHHH.....HHOGOGOG....GOGOGOHH....HOG..............GOH....HG................GH....HO................OH....HG................GH....HO................OH....HG................GH....................................................................................................HG................GH....HO................OH....HG................GH....HO................OH....HG................GH....HOG..............GOH....HHOGOGOG....GOGOGOHH.....HHHHHHH....HHHHHHH...................................................",
+      "Mix": [
+        {
+          "Role": "teleporter",
+          "Shade": 0,
+          "Percent": 15
+        },
+        {
+          "Role": "teleporter",
+          "Shade": 1,
+          "Percent": 25
+        },
+        {
+          "Role": "teleporter",
+          "Shade": 2,
+          "Percent": 45
+        },
+        {
+          "Role": "teleporter",
+          "Shade": 3,
+          "Percent": 15
+        }
+      ]
+    },
+    {
+      "Id": "CraneArm",
+      "Kind": "CraneArm",
+      "Name": "Standard",
+      "Pixels": "...................................HH.....................HOOH...................HOGGGH.................HOOOOOOH.................HOGGGH.................HOOOOOOH................HHOHHGHH...............HOOGHHOGGH............HHOOGH..HOOGHH.........HOOOGH....HOOGGH.......HOOGGH......HOOOGH......HOGHH........HHOGH......HOGH..........HOGH......HOGH..........HOGH......HOGH..........HOGH.......HOGH........HOGH.........HOH........HOH...........H..........H..............................................................................................................................",
+      "Mix": [
+        {
+          "Role": "teleporter",
+          "Shade": 0,
+          "Percent": 15
+        },
+        {
+          "Role": "teleporter",
+          "Shade": 1,
+          "Percent": 25
+        },
+        {
+          "Role": "teleporter",
+          "Shade": 2,
+          "Percent": 45
+        },
+        {
+          "Role": "teleporter",
           "Shade": 3,
           "Percent": 15
         }

@@ -51,6 +51,27 @@ public class WeaveProjectSerializerTests
     }
 
     [Fact]
+    public void PuzzleFile_RoundTripsACraneAndItsClawDrawing()
+    {
+        var puzzle = new Puzzle
+        {
+            Objects =
+            {
+                new PuzzleObject { Kind = PuzzleObjectKind.Crane, Col = 3, Row = 4, Letter = "B" },
+                new PuzzleObject { Kind = PuzzleObjectKind.Crane, Col = 7, Row = 8, Letter = "B" },
+            },
+        };
+
+        var json = PuzzleFile.Serialize(puzzle);
+
+        Assert.Contains("\"Kind\": \"Crane\"", json);
+        Assert.Contains("\"Letter\": \"B\"", json);
+        var (objects, _, _) = PuzzleFile.Parse(json);
+        Assert.Equal(2, objects.Count);
+        Assert.Equal(PuzzleObjectKind.Crane, objects[1].Kind);
+    }
+
+    [Fact]
     public void PuzzleFile_LeavesOutWhatComesFromTheArt_AndIsEasyToRead()
     {
         var json = PuzzleFile.Serialize(MakeFilePuzzle());

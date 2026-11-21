@@ -49,6 +49,10 @@
         // A puzzle has one Gem Gate at most, so placing another moves it rather than being refused.
         if (object.kind === 'GemGate' && other.kind === 'GemGate') return false;
         if (!(isAt(other, object) && isFloor(other) === floor)) return true;
+        // A Crane is the square a thing stands on rather than one of the things on it, so it and one other thing share
+        // a square: a Push Block laid on a crane keeps the crane underneath, and draws over it - see renderBoard's
+        // STANDS_ON. Two cranes on one square are still one square's worth of crane.
+        if ((other.kind === 'Crane') !== (object.kind === 'Crane')) return true;
         return object.kind === 'Edge' && other.kind === 'Edge' && other.direction !== object.direction;
       }),
       object,
@@ -61,7 +65,8 @@
   function eraseObject(objects, cell, direction = null){
     let here = objects.filter(other => isAt(other, cell) && other.kind !== 'Start');
     let chosen = direction ? here.find(other => other.kind === 'Edge' && other.direction === direction) : null;
-    let top = chosen ?? here.find(other => !isFloor(other)) ?? here[0];
+    // Whatever is standing on a square goes before the square itself: a Push Block on a Crane is the top one.
+    let top = chosen ?? here.find(other => !isFloor(other) && other.kind !== 'Crane') ?? here.find(other => !isFloor(other)) ?? here[0];
     // A Warp Wisp and its Warp Out Square only make sense as a pair, so erasing either takes the other with it. An
     // Archeton has a letter only when it's one half of that pair, so the letter is what says so.
     let pair = null;
@@ -148,6 +153,12 @@
       return teleporters.find(letter => teleporters.filter(l => l === letter).length === 1) ?? firstUnused(teleporters);
     }
 
+    // A Crane is placed in pairs like a Teleporter, and the second one wants the letter the first one has.
+    if (kind === 'Crane') {
+      let cranes = letters('Crane');
+      return cranes.find(letter => cranes.filter(l => l === letter).length === 1) ?? firstUnused(cranes);
+    }
+
     let gates = letters('Gate');
     let switches = letters('Switch');
     if (kind === 'Switch') return gates.find(letter => !switches.includes(letter)) ?? firstUnused(gates, switches);
@@ -166,6 +177,16 @@
   const PULSE_MAX_STEPS = 19;
   // How long something takes to fade out once nothing lights it any more.
   const PULSE_FADE_MS = 250;
+  // How a Move Crane's pickup is timed, in ms: it comes down on what it is taking, rests on it, and pulls it up into a
+  // fade; then does the reverse on the other square, where the way down and the way up swap over. The thing changes
+  // squares at the end of the first half, which is the instant the fade has just taken it out at one square and not
+  // yet brought it in at the other.
+  const CRANE_TIMING = { dropMs: 300, restMs: 200, liftMs: 200 };
+  // How far above its own square the claw holds what it has taken, in squares - high enough to read as being hauled
+  // out of the board rather than nudged.
+  const CRANE_LIFT = 1;
+  const CRANE_PICKUP_MS = CRANE_TIMING.dropMs + CRANE_TIMING.restMs + CRANE_TIMING.liftMs;
+  const CRANE_MS = CRANE_PICKUP_MS * 2;
   // How many Jump Tiles can launch the ship one after another before the next one lets it stay.
   const MAX_JUMPS_IN_A_ROW = 8;
   // sokoban.js's directions are lower case, and a puzzle's are capitalized as they are in the project file.
@@ -227,6 +248,9 @@
     // A guard's shove, while it's carrying the ship: { from, direction, remaining }. Taken a square per arrival,
     // through carryDirection, so a Stream or a Wall on the way stops it where it stands.
     let shove = null;
+    // Every crane with something in its claw: { from, to, thing, ship, ms, landed }. The caller steps them on with
+    // advanceCranes, which is when the thing changes squares - see beginCrane.
+    let cranes = [];
     let solved = false;
     // How many Jump Tiles in a row the ship has been launched from, so two facing each other can't go on forever.
     let jumpsInARow = 0;
@@ -415,6 +439,7 @@
     // one is the way it's going. It can't be stepped onto head-on either.
     function canEnter(from, to, moverDirection){
       return canEnterAlone(from, to, moverDirection)
+        && !heldShip()
         && (!isAt(from, shipCell) || reflectionsFollow(moverDirection));
     }
 
@@ -487,12 +512,15 @@
     // Where a Push Block would go if pushed along a direction: the next square, if it's on the board, has nothing
     // on it, and isn't a Stream flowing straight back at it. Otherwise null, and it can't be pushed.
     function pushedTo(block, direction){
+      // A block in a claw is not on the board to be pushed: see advanceCranes.
+      if (held(block)) return null;
       // Shoved off a ledge, but not up one, as the ship is - see ledgeAt.
       if (ledgeAt(block, direction)) return null;
       let to = nextCell(block, direction);
       let there = onBoard(to) ? objectAt(to) : null;
       let openGate = there?.kind === 'Gate' && there.open;
-      if (!onBoard(to) || (there && !openGate) || streams.get(cellKey(to)) === OPPOSITES[direction]) return null;
+      // A Crane is somewhere a block can go: it takes hold of it rather than being in the way.
+      if (!onBoard(to) || (there && !openGate && there.kind !== 'Crane') || streams.get(cellKey(to)) === OPPOSITES[direction]) return null;
       if (!pipeAllows(block, direction) || !pipeAllows(to, direction)) return null;
       return to;
     }
@@ -584,6 +612,87 @@
         hid.push(thing);
       }
       return hid.length === 0 ? null : { hid };
+    }
+
+    // ---------- Move Cranes ----------
+
+    // The Crane on a square, if there is one.
+    function craneAt(cell){
+      return objects.find(object => object.kind === 'Crane' && isAt(object, cell)) ?? null;
+    }
+
+    // The other Crane square sharing an entry's letter, or null. A crane with no letter would pair with every other
+    // letterless one, and an unfinished pair is what the Puzzle Editor warns about - see ProjectValidator.
+    function cranePartner(crane){
+      return partnerOf(objects, crane);
+    }
+
+    // Whether a thing is in a claw right now: it can be neither moved nor pushed until it is set down. Once it has
+    // landed it is the board's again - the claw is only lifting away - so it can be carried on by the floor it landed
+    // on, or take its next step, before the pickup has finished.
+    function held(thing){
+      return cranes.some(crane => crane.thing === thing && !crane.landed);
+    }
+
+    // Whether the ship is in a claw - see canEnter and carryDirection.
+    function heldShip(){
+      return cranes.some(crane => crane.ship && !crane.landed);
+    }
+
+    // A claw taking hold of what has just entered a crane: { crane: { from, to } } for the caller to draw, or null if the
+    // crane hasn't a partner, or that thing is already in a claw. The thing stays where it is until advanceCranes sets it
+    // down, so nothing of the board happens to it in between.
+    function beginCrane(crane, { thing = null, ship = false } = {}){
+      let partner = partnerOf(objects, crane);
+      if (!partner) return null;
+      // Somewhere to put it, or nothing at all: the claw does not take hold of what it could not set down.
+      if (!craneFree(objects, partner, shipCell)) return null;
+      if (cranes.some(entry => (ship ? entry.ship : entry.thing === thing))) return null;
+      let from = { col: crane.col, row: crane.row }, to = { col: partner.col, row: partner.row };
+      cranes.push({ from, to, thing, ship, ms: 0, landed: false });
+      return { crane: { from, to } };
+    }
+
+    // A Crane picking up something that has just come onto its square: what the movers and the pushes call, since
+    // trigger can't tell one thing from another. An event for the caller, or null.
+    function craneTook(cell, thing){
+      let crane = craneAt(cell);
+      return crane ? beginCrane(crane, { thing }) : null;
+    }
+
+    // Steps every claw on by ms. Half way through, what it holds is set down on the other Crane square; the entry is
+    // dropped once the whole pickup has played. Each landing says what moved, and whether it was the ship - the caller
+    // puts the ship's mover there, since the rules never move it themselves.
+    function advanceCranes(ms){
+      let landed = [];
+      for (const crane of cranes) {
+        crane.ms += ms;
+        if (crane.landed || crane.ms < CRANE_PICKUP_MS) continue;
+        crane.landed = true;
+        let { to } = crane;
+        let sank = null;
+        if (crane.ship) {
+          shipCell = to;
+        } else if (objects.includes(crane.thing)) {
+          let thing = crane.thing;
+          // Its route moves with it: a bug that patrols goes on patrolling from where it was put down, from the
+          // beginning of its moves.
+          if (thing.kind === 'Archeton') { thing.homeCol = to.col; thing.homeRow = to.row; thing.beat = 0; }
+          thing.fromCol = to.col;
+          thing.fromRow = to.row;
+          thing.col = to.col;
+          thing.row = to.row;
+          thing.glide = null;
+          thing.falls = false;
+          version++;
+          // Set down beside a Push Block of its own symbol, the two go together - the same as anything else that puts
+          // one next to the other - see sinkMatches.
+          sank = sinkMatches();
+        }
+        landed.push({ cranedTo: to, ship: !!crane.ship, ...(sank ? { sank } : {}) });
+      }
+      cranes = cranes.filter(crane => crane.ms < CRANE_MS);
+      return landed;
     }
 
     // A Gate Switch's Beams, in flight: { from, gates, letter, ms }. A press aims one at every Gate with its letter and
@@ -724,6 +833,11 @@
           shipCell = destination;
           return { teleportTo: destination };
         }
+
+        // A Crane takes hold of the ship that has entered it: the claw comes down, and half a second later it is on the
+        // other Crane square - see advanceCranes. Only the ship: a reflection is an image of it, with nothing to lift.
+        case 'Crane':
+          return isAt(object, shipCell) ? beginCrane(object, { ship: true }) : null;
 
         // A Puzzle Warp leaves the board altogether, for another location's puzzle - so there is nothing to decide
         // here beyond where it leads: the page takes the ship there, and the warp carries what it needs resolved at
@@ -960,7 +1074,9 @@
       block.row = next.row;
       revealLitAreas();
       let sank = sinkMatches();
-      return sank ? { sank } : null;
+      // A block shoved onto a Crane is taken hold of, unless it sank with a match on the way.
+      let took = sank?.includes(block) ? null : craneTook(next, block);
+      return mergeEvent(sank ? { sank } : null, took);
     }
 
     // Whether the ship's reflection can be on a square: anywhere the ship could stand, and anywhere it would be hurt - a
@@ -1232,6 +1348,7 @@
       let slid = [];
       let set = {};
       for (const bug of objects.filter(object => object.kind === 'Archeton' && archetonDefinitions.get(object.archeton)?.parts?.some(part => part.kind === 'Slide'))) {
+        if (held(bug)) continue;
         let across = bug.direction !== 'Up' && bug.direction !== 'Down';
         let target = across ? shipCell.col : shipCell.row;
         let at = across ? bug.col : bug.row;
@@ -1251,6 +1368,7 @@
         bug.glide = 'slide';
         slid.push(bug);
         if (there) Object.assign(set, trigger(there) ?? {});
+        Object.assign(set, craneTook(to, bug) ?? {});
         // A Reset Switch puts every Slide Bug back where it started, so none of the rest move now.
         if (set.reset) break;
       }
@@ -1271,6 +1389,7 @@
       let swam = [];
       let set = {};
       for (const fish of objects.filter(object => object.kind === 'Archeton' && hasPart(object, 'Swim'))) {
+        if (held(fish)) continue;
         let direction = fish.direction ?? 'Left';
         let to = nextCell(fish, direction);
         let there = onBoard(to) ? objectAt(to) : null;
@@ -1291,6 +1410,7 @@
         fish.glide = 'swim';
         swam.push(fish);
         if (there) Object.assign(set, trigger(there) ?? {});
+        Object.assign(set, craneTook(to, fish) ?? {});
         // A Reset Switch puts every Swim Fish back where it started, so none of the rest move now.
         if (set.reset) break;
 
@@ -1301,6 +1421,7 @@
         fish.glide = 'hop';
         fish.col = landing.col;
         fish.row = landing.row;
+        Object.assign(set, craneTook(landing, fish) ?? {});
       }
       if (swam.length === 0) return null;
       version++;
@@ -1341,6 +1462,7 @@
       let hopped = [];
       let set = {};
       for (const bug of objects.filter(object => object.kind === 'Archeton' && hasPart(object, 'Sequence'))) {
+        if (held(bug)) continue;
         let moves = archetonDefinitions.get(bug.archeton).parts.find(part => part.kind === 'Sequence').moves ?? [];
         if (moves.length === 0) continue;
         bug.homeCol ??= bug.col;
@@ -1366,6 +1488,7 @@
         hopped.push(bug);
         let under = objects.find(other => other !== bug && isAt(other, target));
         if (under) Object.assign(set, trigger(under) ?? {});
+        Object.assign(set, craneTook(target, bug) ?? {});
         if (warp) Object.assign(set, warp);
         if (set.reset) break;
       }
@@ -1410,7 +1533,7 @@
       let moves = new Map();
       for (const object of objects) {
         let direction = track.get(cellKey(object));
-        if (!direction) continue;
+        if (!direction || held(object)) continue;
         let to = nextCell(object, direction);
         if (track.has(cellKey(to))) moves.set(object, to);
       }
@@ -1421,11 +1544,13 @@
         for (const [object, to] of moves) {
           let occupant = objectAt(to);
           let occupantLeaving = occupant && moves.has(occupant);
+          // A Crane is not in the way of what a Stream carries: it picks it up.
+          let aCrane = occupant?.kind === 'Crane';
           let swapping = occupantLeaving && isAt(moves.get(occupant), object);
           let shipInTheWay = isSolid(object) && occupiedByShip.some(cell => isAt(cell, to));
           let contested = [...moves].some(([other, otherTo]) => other !== object && isAt(otherTo, to) && objects.indexOf(other) < objects.indexOf(object));
 
-          if ((occupant && !occupantLeaving) || swapping || shipInTheWay || contested) {
+          if ((occupant && !occupantLeaving && !aCrane) || swapping || shipInTheWay || contested) {
             moves.delete(object);
             changed = true;
           }
@@ -1450,17 +1575,21 @@
       let occupied = shipHeadingTo ? [shipCell, shipHeadingTo] : [shipCell];
       let moves = resolveMoves(track, occupied);
       if (moves.size > 0) version++;
+      let took = null;
       for (const [object, to] of moves) {
         leaving(object);
         object.col = to.col;
         object.row = to.row;
+        // Something a Stream carries onto a Crane is a crane picking it up, as walking onto one would be.
+        took = mergeEvent(took, craneTook(to, object));
       }
       if (moves.size > 0) revealLitAreas();
 
       let sank = moves.size > 0 ? sinkMatches() : null;
       let cameUnder = !shipHeadingTo && [...moves.keys()].some(object => isAt(object, shipCell) && objects.includes(object));
       let arrived = cameUnder ? arriveAt(shipCell) : null;
-      return sank ? { ...arrived, sank } : arrived;
+      let result = sank ? { ...arrived, sank } : arrived;
+      return mergeEvent(result, took);
     }
 
     // A board with panes in line with the ship starts with its reflections already showing.
@@ -1540,6 +1669,8 @@
         shipCell = cell;
         // A shove in progress, and every guard's memory of having caught the ship, belong to where it was.
         shove = null;
+        // A claw belongs to the board the ship was on.
+        cranes = [];
         for (const object of objects) object.inZone = false;
         // Reflections are images, not state to be replayed: they're worked out again from wherever the ship now is.
         reflections = [];
@@ -1555,6 +1686,12 @@
       // The Beams in flight, for a caller that keeps its own clock: each says where it came from and when it left.
       get gateBeams(){ return gateBeams.map(beam => ({ from: beam.from, letter: beam.letter, ms: beam.ms, gates: beam.gates.map(gate => ({ col: gate.col, row: gate.row })) })); },
 
+      // The claws picking something up right now, { from, to, ms, ship, thing } each, for drawing - see advanceCranes.
+      get cranes(){ return cranes.map(crane => ({ ...crane })); },
+
+      // Steps every claw on, setting down what it holds half way through - see advanceCranes.
+      advanceCranes,
+
       // Which way a Stream is carrying a ship on this square, as sokoban.js's direction, or null.
       // A guard's shove comes first - being thrown is what's happening, and the Stream takes over again the moment it
       // stops - and otherwise a Stream, an Archeton's Beam pushing it away, or a Block's laser sending it back out of
@@ -1565,6 +1702,7 @@
       get shoving(){ return !!shove; },
 
       carryDirection(cell){
+        if (heldShip()) return null;
         let direction = shoveDirection(cell) ?? streams.get(cellKey(cell)) ?? pushedByBeam(cell) ?? hurtBack(cell) ?? hurtByReflection(cell);
         return direction ? MOVER_DIRECTIONS[direction] : null;
       },
@@ -1607,6 +1745,74 @@
   function reflectionSightLine(reflection, ship, tilePx){
     let from = reflection.from?.pane ? reflectionPosition(reflection.from, ship, tilePx) : ship;
     return { from, to: reflectionPosition(reflection, ship, tilePx) };
+  }
+
+  // The other end of a Move Crane's pair: the Crane square with the same letter, or null for a crane with no letter or
+  // no partner - either of which does nothing at all.
+  function partnerOf(objects, crane){
+    if (!crane || !crane.letter) return null;
+    return (objects ?? []).find(other => other.kind === 'Crane' && other !== crane && other.letter === crane.letter) ?? null;
+  }
+
+  // Whether a Move Crane can set something down on a square: nothing a crane can carry may be sitting there, and neither
+  // may the ship. A Key or a Gem on the square is not in the way - things stand on the square together all the time.
+  function craneFree(objects, cell, shipCell){
+    if (!cell) return true;
+    if (shipCell && shipCell.col === cell.col && shipCell.row === cell.row) return false;
+    return !(objects ?? []).some(other => (other.kind === 'PushBlock' || other.kind === 'Archeton')
+      && other.col === cell.col && other.row === cell.row);
+  }
+
+  // Whether a Move Crane is out of action: something a crane could carry is sitting on either square of its pair - the one
+  // it would take from or the one it would set down on - so it stays out of action until that is moved. The ship is not
+  // counted here: standing on a crane to be lifted is exactly what using one looks like, so it would read as the pair
+  // going dead at the moment it works. The claw itself still refuses a far square with the ship on it - see beginCrane.
+  function craneBlocked(objects, crane){
+    if (!crane) return false;
+    let partner = partnerOf(objects, crane);
+    // With no partner - none placed, or one with no letter to pair on - it has nowhere to set anything down and can
+    // never do anything at all, so it reads as out of action like the rest.
+    if (!partner) return true;
+    return !craneFree(objects, crane, null) || !craneFree(objects, partner, null);
+  }
+
+  // Where a Move Crane's claw is, ms into a pickup, and how much of what it holds shows: { cell, lift, alpha }, lift
+  // being how far above that square the claw is in squares and alpha how much of the thing in it is drawn. Down, rest,
+  // up into a fade - and then the same the other way round on the far square: down out of the fade, rest, up again.
+  function cranePose(from, to, ms){
+    let { dropMs, restMs, liftMs } = CRANE_TIMING;
+    let pose = (cell, lift, alpha) => ({ cell, lift, alpha });
+    if (ms < dropMs) return pose(from, CRANE_LIFT * (1 - ms / dropMs), 1);
+    if (ms < dropMs + restMs) return pose(from, 0, 1);
+    if (ms < CRANE_PICKUP_MS) {
+      let along = (ms - dropMs - restMs) / liftMs;
+      return pose(from, CRANE_LIFT * along, 1 - along);
+    }
+    let back = ms - CRANE_PICKUP_MS;
+    if (back < liftMs) {
+      let along = back / liftMs;
+      return pose(to, CRANE_LIFT * (1 - along), along);
+    }
+    if (back < liftMs + restMs) return pose(to, 0, 1);
+    return pose(to, CRANE_LIFT * Math.min(1, (back - liftMs - restMs) / dropMs), 1);
+  }
+
+  // The same for what a Move Crane has taken hold of: it sits where it is until the claw grabs it, rides up with the
+  // claw into the fade, is the far square's at the landing, and comes down with the claw out of the fade to rest there.
+  // So it is only ever moving, and only ever transparent, while the claw has it.
+  function craneLoad(from, to, ms){
+    let { dropMs, restMs, liftMs } = CRANE_TIMING;
+    let grabMs = dropMs + restMs;
+    if (ms < grabMs) return { cell: from, lift: 0, alpha: 1 };
+    if (ms < CRANE_PICKUP_MS) {
+      let along = (ms - grabMs) / liftMs;
+      return { cell: from, lift: CRANE_LIFT * along, alpha: 1 - along };
+    }
+    if (ms < CRANE_PICKUP_MS + liftMs) {
+      let along = (ms - CRANE_PICKUP_MS) / liftMs;
+      return { cell: to, lift: CRANE_LIFT * (1 - along), alpha: along };
+    }
+    return { cell: to, lift: 0, alpha: 1 };
   }
 
   // ---------- timing ----------
@@ -1671,5 +1877,5 @@
     return [...after.filter(object => !sweeps(object)), ...leaving, ...arriving].filter(object => (object.fade ?? 1) > 0);
   }
 
-  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, PULSE_MAX_STEPS, PULSE_FADE_MS, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
+  return { BOARD_SIZE, DEFAULT_START, LETTERS, placeObject, eraseObject, exitDirectionOf, entranceFrom, entranceAfter, startOf, acrossFrom, crossingCell, blockingEntrance, suggestLetter, hasFinish, createPuzzleGame, RESET_FADE_MS, RESET_SWEEP_STEP_MS, resetSweepMs, resetSweepAt, BOARD_TIMING, DIRECTION_DELTAS, LANTERN_REACH, PULSE_STEPS, PULSE_MAX_STEPS, PULSE_FADE_MS, CRANE_MS, CRANE_PICKUP_MS, CRANE_TIMING, CRANE_LIFT, cranePose, craneLoad, partnerOf, craneFree, craneBlocked, isFloor, reflectionPosition, reflectionFacing, reflectionSightLine };
 });

@@ -89,6 +89,7 @@ function renderTrackFocus(){
       board.appendChild(boardContrails.canvas);
       board.appendChild(buildBoardShip());
       board.appendChild(buildBoardReflections());
+      board.appendChild(buildBoardCranes());
     }
     slide.appendChild(board);
     if (lockedBy) frame.appendChild(buildArtLabel('Locked'));
@@ -883,6 +884,8 @@ function forgetBoard(){
   boardPuzzle = null;
   boardObjectsCanvas = null;
   boardObjectsImage = null;
+  boardCraneCanvas = null;
+  boardCraneImage = null;
   boardSolvedMs = null;
 }
 
@@ -905,6 +908,19 @@ function leaveBoardGame(){
     forgetBoard();
     renderTrackFocus();
   }, false));
+}
+
+// A Move Crane's claws, over the ship: a claw is in front of what it is holding, and the board's own canvas is under the
+// ship - see puzzleDrawing.js's renderCraneArms and drawBoardCranes. Styled as the board objects canvas, which is the
+// same overlay at the art's own size.
+function buildBoardCranes(){
+  boardCraneCanvas = document.createElement('canvas');
+  boardCraneCanvas.id = 'trackFocusBoardCranes';
+  boardCraneCanvas.className = 'trackFocusBoardObjects';
+  boardCraneCanvas.width = WeavePuzzle.ART_PX;
+  boardCraneCanvas.height = WeavePuzzle.ART_PX;
+  boardCraneImage = boardCraneCanvas.getContext('2d').createImageData(WeavePuzzle.ART_PX, WeavePuzzle.ART_PX);
+  return boardCraneCanvas;
 }
 
 function buildBoardShip(){
@@ -981,6 +997,19 @@ function drawBoardObjects(){
   boardObjectsCanvas.getContext('2d').putImageData(boardObjectsImage, 0, 0);
   drawSightLines();
   drawRefusedFlash();
+  drawBoardCranes(options.cranes);
+}
+
+// A Move Crane's claws, over the ship one may be holding. The board's own canvas sits under the ship, so a claw drawn
+// into that picture comes out behind it - see puzzleDrawing.js's renderCraneArms.
+function drawBoardCranes(cranes){
+  if (!boardCraneCanvas || !boardCraneImage) return;
+  let context = boardCraneCanvas.getContext('2d');
+  context.clearRect(0, 0, WeavePuzzle.ART_PX, WeavePuzzle.ART_PX);
+  if (!(cranes ?? []).length) return;
+  boardCraneImage.data.fill(0);
+  WeavePuzzle.renderCraneArms(boardCraneImage, cranes, boardPuzzle);
+  context.putImageData(boardCraneImage, 0, 0);
 }
 
 // The line of sight from the ship to each reflection, dotted and faint, so it's plain which pane is showing it and how

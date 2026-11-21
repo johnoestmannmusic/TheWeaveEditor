@@ -30,6 +30,28 @@ test('placing a Stream replaces a Stream, but keeps the object on it', () => {
   assert.ok(board.some(o => o.kind === 'Wall'));
 });
 
+test('a Push Block laid on a Crane square keeps the Crane underneath, whichever goes down first', () => {
+  let crane = { kind: 'Crane', col: 4, row: 4, letter: 'A' };
+  let block = { kind: 'PushBlock', col: 4, row: 4, symbol: 'Circle' };
+
+  let craneFirst = placeObject([crane], block);
+  assert.deepEqual(craneFirst.map(o => o.kind).sort(), ['Crane', 'PushBlock'], 'the block on top of the crane');
+  let blockFirst = placeObject([block], crane);
+  assert.deepEqual(blockFirst.map(o => o.kind).sort(), ['Crane', 'PushBlock'], 'and the crane on top of the block');
+
+  // One square still holds one crane: placing another on it replaces it, as anything else would.
+  let twoOnOne = placeObject([crane], { kind: 'Crane', col: 4, row: 4, letter: 'B' });
+  assert.equal(twoOnOne.filter(o => o.kind === 'Crane').length, 1);
+  assert.equal(twoOnOne.find(o => o.kind === 'Crane').letter, 'B');
+});
+
+test('erasing a square with a Crane and something on it takes the thing on top first', () => {
+  let crane = { kind: 'Crane', col: 4, row: 4, letter: 'A' };
+  let block = { kind: 'PushBlock', col: 4, row: 4, symbol: 'Circle' };
+  assert.deepEqual(eraseObject([crane, block], { col: 4, row: 4 }), [crane], 'the block goes and the crane stays');
+  assert.deepEqual(eraseObject([block, crane], { col: 4, row: 4 }), [crane], 'whichever order they are in');
+});
+
 test('there is only ever one Start, wherever it is placed', () => {
   let board = placeObject([{ kind: 'Start', col: 5, row: 9 }], { kind: 'Start', col: 2, row: 2 });
   assert.deepEqual(board, [{ kind: 'Start', col: 2, row: 2 }]);
@@ -62,6 +84,12 @@ test('a Teleporter is offered the letter of its unfinished pair, then a new one'
   assert.equal(suggestLetter([], 'Teleporter'), 'A');
   assert.equal(suggestLetter([lettered('Teleporter', 'A')], 'Teleporter'), 'A');
   assert.equal(suggestLetter([lettered('Teleporter', 'A'), lettered('Teleporter', 'A')], 'Teleporter'), 'B');
+});
+
+test('a Crane is offered the letter of its unfinished pair, then a new one', () => {
+  assert.equal(suggestLetter([], 'Crane'), 'A');
+  assert.equal(suggestLetter([lettered('Crane', 'C')], 'Crane'), 'C');
+  assert.equal(suggestLetter([lettered('Crane', 'C'), lettered('Crane', 'C')], 'Crane'), 'A');
 });
 
 test('a Switch is offered its Gate\'s letter, and a Gate its Switch\'s', () => {
@@ -116,7 +144,7 @@ test('transparent pixels are ignored, and fully transparent art is still handled
 
 // ---------- playing ----------
 
-const { createPuzzleGame, hasFinish, crossingCell, startOf } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+const { createPuzzleGame, hasFinish, crossingCell, startOf, CRANE_MS, cranePose, craneLoad, craneFree, craneBlocked } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
 
 const at = (col, row) => ({ col, row });
 const game = (...objects) => createPuzzleGame({ objects, palette: {} });
@@ -569,7 +597,7 @@ test('playing never changes the puzzle it was built from', () => {
 
 // ---------- pixel art ----------
 
-const { pickTextures, renderBoard, TILE_PX, ART_PX } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
+const { pickTextures, renderBoard, renderCraneArms, TILE_PX, ART_PX } = require('../../src/TheWeave.Exporter/runtime/puzzle.js');
 
 // A 240x240 art of two dithered colour families, plus dark and light, so everything has shades to find.
 function makeArt(){
@@ -597,6 +625,48 @@ const blank = () => ({ data: new Uint8ClampedArray(ART_PX * ART_PX * 4), width: 
 const pixelAt = (image, x, y) => { let i = (y * ART_PX + x) * 4; return [...image.data.slice(i, i + 4)]; };
 const colorsIn = (bytes) => { let set = new Set(); for (let i = 0; i < bytes.length; i += 4) if (bytes[i + 3]) set.add(`${bytes[i]},${bytes[i + 1]},${bytes[i + 2]}`); return set; };
 const tile = (image, col, row) => { let out = []; for (let y = row * TILE_PX; y < (row + 1) * TILE_PX; y++) for (let x = col * TILE_PX; x < (col + 1) * TILE_PX; x++) out.push(...pixelAt(image, x, y)); return out.join(); };
+
+test('a claw is drawn over the square it is working on, held above it by its lift, over whatever is already there', () => {
+  let { look } = artLook();
+  let from = blank(), to = blank(), lifted = blank(), over = blank(), behind = blank();
+  renderCraneArms(from, [{ cell: at(0, 0), lift: 0.5 }], look);
+  renderCraneArms(to, [{ cell: at(5, 5), lift: 0 }], look);
+  renderCraneArms(lifted, [{ cell: at(5, 5), lift: 1 }], look);
+  // The board's own pass leaves claws to the caller: drawn in there, they would come out behind the ship.
+  renderBoard(behind, [], look, { cranes: [{ cell: at(5, 5), lift: 0 }] });
+
+  let drawn = (image, col, row) => {
+    for (let y = row * TILE_PX; y < (row + 1) * TILE_PX; y++) {
+      for (let x = col * TILE_PX; x < (col + 1) * TILE_PX; x++) if (pixelAt(image, x, y)[3] > 0) return true;
+    }
+    return false;
+  };
+  assert.equal(drawn(behind, 5, 5), false, 'renderBoard leaves the claw to the caller: in there, it would be behind the ship');
+  assert.ok(drawn(from, 0, 0), 'coming down on the square it works on');
+  assert.equal(drawn(from, 5, 5), false, 'and nowhere near the other one');
+  assert.ok(drawn(to, 5, 5), 'holding on it');
+  assert.equal(drawn(to, 0, 0), false, 'with nothing left behind');
+  // A lift of one square puts the claw in the square above: that is the haul the fade happens over.
+  assert.ok(drawn(lifted, 5, 4), 'a whole square up, it is over the square above');
+  assert.equal(drawn(lifted, 5, 5), false, 'and nothing of it is left on its own');
+
+  // Drawn last, it paints over what is already in the picture - which is what puts it in front of the ship.
+  let lightPixels = (image) => {
+    let count = 0;
+    for (let y = 5 * TILE_PX; y < 6 * TILE_PX; y++) for (let x = 5 * TILE_PX; x < 6 * TILE_PX; x++) {
+      let [r, g, b] = pixelAt(image, x, y);
+      if (r > 200 && g > 200 && b > 190) count++;
+    }
+    return count;
+  };
+  for (let y = 5 * TILE_PX; y < 6 * TILE_PX; y++) for (let x = 5 * TILE_PX; x < 6 * TILE_PX; x++) {
+    let i = (y * ART_PX + x) * 4;
+    over.data[i] = 10; over.data[i + 1] = 10; over.data[i + 2] = 10; over.data[i + 3] = 255;
+  }
+  renderCraneArms(over, [{ cell: at(5, 5), lift: 0 }], look);
+  assert.ok(lightPixels(to) > 0, 'the claw is light paint');
+  assert.equal(lightPixels(over), lightPixels(to), 'and the same of it shows over a square already drawn');
+});
 
 test('a texture has 4 shades and a grain, and every shade is an exact colour from the art', () => {
   let { art, look } = artLook();
@@ -1664,6 +1734,26 @@ test('a Lantern Pulse Tile is a hollow ring in the light paint, and its count sh
   renderBoard(editing, [obj('LanternPulse', 0, 0, { steps: 3 })], look, { showCounts: true });
   assert.ok(pixelAt(editing, 12, 12)[3] > 0, 'so an author can see what each tile is set to');
   assert.notDeepEqual(tile(unlit, 0, 0), tile(editing, 0, 0), 'and the count is the only difference');
+});
+
+test('a Crane is a corner-bracketed square with room for its letter, and its claw is its own drawing', () => {
+  let crane = standardDrawing('Crane');
+  assert.equal(crane.pixels.length, TILE_PX * TILE_PX);
+  assert.match(crane.pixels, /^[.H]+$/, 'lines only, in the light paint, so it reads on a dark board');
+  assert.equal(crane.pixels[12 * TILE_PX + 12], '.', 'clear in the middle, for the letter');
+  assert.deepEqual(crane.mix, standardMix('teleporter'));
+
+  let claw = standardDrawing('CraneArm');
+  assert.equal(claw.pixels.length, TILE_PX * TILE_PX);
+  assert.match(claw.pixels, /^[.H]+$/);
+  assert.notEqual(claw.pixels, crane.pixels, 'the claw is a shape, not a frame');
+  assert.ok([...claw.pixels].filter((paint) => paint === 'H').length > 40, 'with enough of it drawn to see');
+
+  let { look } = artLook();
+  let a = blank(), b = blank();
+  renderBoard(a, [obj('Crane', 0, 0, { letter: 'A' })], look);
+  renderBoard(b, [obj('Crane', 0, 0, { letter: 'B' })], look);
+  assert.notDeepEqual(tile(a, 0, 0), tile(b, 0, 0), 'its letter says which square it pairs with');
 });
 
 test('a Pulse Tile shows a count past nine as two digits', () => {
@@ -3051,4 +3141,217 @@ test('the Switch flashes as it fires, and a Gate flashes as the Beam reaches it'
 
   let landed = drawn({ switchFlash: 0, gateFlash: 1 });
   assert.ok(brightestIn(landed, 6, 4)[2] < brightestIn(drawn(plain), 6, 4)[2], 'then the Gate lights up too');
+});
+
+// ---------- Move Cranes ----------
+
+const craneAt = (col, row, letter = 'A') => obj('Crane', col, row, { letter });
+test('a crane comes down for 300ms, rests, hauls its load up into a fade, then does the reverse on the far square', () => {
+  let from = at(2, 2), to = at(7, 7);
+  let pose = (ms) => cranePose(from, to, ms);
+
+  // Down onto it, over 300ms.
+  assert.deepEqual(pose(0), { cell: from, lift: 1, alpha: 1 });
+  assert.deepEqual(pose(150), { cell: from, lift: 0.5, alpha: 1 });
+  // Resting on it, for 200.
+  assert.deepEqual(pose(300), { cell: from, lift: 0, alpha: 1 });
+  assert.deepEqual(pose(499), { cell: from, lift: 0, alpha: 1 });
+  // Hauling it up into the fade, over 200: half up is half gone.
+  assert.deepEqual(pose(600), { cell: from, lift: 0.5, alpha: 0.5 });
+  // Set down at the end of the first half, where the fade has just taken it out at one square and not yet brought it in
+  // at the other.
+  assert.deepEqual(pose(CRANE_PICKUP_MS), { cell: to, lift: 1, alpha: 0 });
+  // The reverse: down out of the fade, rest, and up again.
+  assert.deepEqual(pose(800), { cell: to, lift: 0.5, alpha: 0.5 });
+  assert.deepEqual(pose(900), { cell: to, lift: 0, alpha: 1 });
+  assert.deepEqual(pose(1250), { cell: to, lift: 0.5, alpha: 1 });
+  assert.deepEqual(pose(1400), { cell: to, lift: 1, alpha: 1 });
+
+  assert.equal(CRANE_PICKUP_MS, 700, '300 down, 200 resting, 200 up');
+  assert.equal(CRANE_MS, 1400, 'and the same again on the other side');
+});
+
+test('a crane moves and fades what it has taken only while the claw has it', () => {
+  let from = at(2, 2), to = at(7, 7);
+  let load = (ms) => craneLoad(from, to, ms);
+
+  // Untouched while the claw comes down on it and rests: on its own square, and solid.
+  assert.deepEqual(load(0), { cell: from, lift: 0, alpha: 1 });
+  assert.deepEqual(load(299), { cell: from, lift: 0, alpha: 1 });
+  assert.deepEqual(load(499), { cell: from, lift: 0, alpha: 1 });
+  // Grabbed at 500, and only then moving: up with the claw, fading as it goes.
+  assert.deepEqual(load(600), { cell: from, lift: 0.5, alpha: 0.5 });
+  let hauled = load(699);
+  assert.equal(hauled.cell, from);
+  assert.ok(hauled.lift > CRANE_LIFT * 0.99 && hauled.alpha < 0.01, `all but up and all but gone: ${hauled.lift}, ${hauled.alpha}`);
+  // In the claw right across the landing, where it is out of sight at one square and not yet in at the other.
+  assert.deepEqual(load(CRANE_PICKUP_MS), { cell: to, lift: 1, alpha: 0 });
+  assert.deepEqual(load(800), { cell: to, lift: 0.5, alpha: 0.5 });
+  // Set down at 900, and there it stays while the empty claw lifts away.
+  assert.deepEqual(load(900), { cell: to, lift: 0, alpha: 1 });
+  assert.deepEqual(load(1250), { cell: to, lift: 0, alpha: 1 });
+  assert.deepEqual(load(CRANE_MS), { cell: to, lift: 0, alpha: 1 });
+
+  // The claw itself keeps moving the whole time - it is the one doing the work.
+  assert.deepEqual(cranePose(from, to, 0).lift, 1);
+  assert.deepEqual(cranePose(from, to, CRANE_MS).lift, 1);
+});
+
+// The barrel carries only CRANE_MS, which is the one board.js draws by; where in a pickup the thing lands is the
+// rules' own half of it.
+const { CRANE_PICKUP_MS, CRANE_LIFT } = require('../../src/TheWeave.Exporter/runtime/puzzleRules.js');
+
+test('a Crane whose pair has something on it is drawn half see-through, as one that cannot be used', () => {
+  let { look } = artLook();
+  let pair = [obj('Crane', 2, 2, { letter: 'A' }), obj('Crane', 7, 7, { letter: 'A' })];
+  let free = blank(), blocked = blank();
+  renderBoard(free, pair, look, {});
+  renderBoard(blocked, [...pair, obj('PushBlock', 7, 7, { symbol: 'Circle' })], look, {});
+
+  // What the crane's own square was drawn with: solid paint, or half of it.
+  let alphas = (image) => {
+    let set = new Set();
+    for (let y = 2 * TILE_PX; y < 3 * TILE_PX; y++) for (let x = 2 * TILE_PX; x < 3 * TILE_PX; x++) {
+      let a = pixelAt(image, x, y)[3];
+      if (a) set.add(a);
+    }
+    return [...set];
+  };
+  assert.deepEqual(alphas(free), [255], 'solid while the pair is free');
+  assert.deepEqual(alphas(blocked), [128], 'and half see-through once the far square is taken');
+});
+
+test('a Crane takes the ship up and sets it down on the other Crane square', () => {
+  let g = game(craneAt(2, 5), craneAt(6, 3), obj('Start', 2, 6));
+  // The barrel carries only the one constant board.js draws by: a name missing from puzzle.js's allow-list would
+  // leave this undefined, and every pickup would land on the frame it started.
+  assert.equal(CRANE_MS, CRANE_PICKUP_MS * 2);
+  let caught = g.shipArrivedAt(at(2, 5));
+  assert.deepEqual(caught.crane, { from: at(2, 5), to: at(6, 3) });
+  assert.deepEqual(g.shipCell, at(2, 5), 'still where it stepped on, until the claw has it');
+  assert.equal(g.canEnter(at(2, 5), at(2, 6), 'down'), false, 'and it can go nowhere while it is held');
+  assert.equal(g.carryDirection(at(2, 5)), null);
+
+  let landed = g.advanceCranes(CRANE_MS / 2);
+  assert.deepEqual(landed, [{ cranedTo: at(6, 3), ship: true }]);
+  assert.deepEqual(g.shipCell, at(6, 3));
+  // The square it is set down on does not fire: a crane takes what arrives, and nothing arrived a second time.
+  assert.equal(g.canEnter(at(6, 3), at(6, 4), 'down'), true, 'and it is free to walk on');
+  g.advanceCranes(CRANE_MS);
+  assert.deepEqual(g.cranes, [], 'the claw is gone once the pickup has played');
+});
+
+test('a Crane with no partner, or with no letter, does nothing at all', () => {
+  let lonely = game(craneAt(2, 5), obj('Start', 2, 6));
+  assert.equal(lonely.shipArrivedAt(at(2, 5))?.crane, undefined);
+
+  let letterless = game(obj('Crane', 2, 5), obj('Crane', 6, 5), obj('Start', 2, 6));
+  assert.equal(letterless.shipArrivedAt(at(2, 5))?.crane, undefined, 'two letterless cranes would pair with each other');
+});
+
+test('a Push Block pushed onto a Crane is set down on the other Crane square', () => {
+  let g = game(craneAt(4, 5), craneAt(7, 8), obj('PushBlock', 3, 5, { symbol: 'Circle' }), obj('Start', 2, 5));
+  g.pushFrom(at(2, 5), at(3, 5), 'right');
+  let block = find(g, 'PushBlock');
+  assert.deepEqual({ col: block.col, row: block.row }, at(4, 5), 'on the crane, in its claw');
+  g.advanceCranes(CRANE_PICKUP_MS);
+  assert.deepEqual({ col: block.col, row: block.row }, at(7, 8));
+  assert.equal(block.glide, null, 'and not drawn gliding there');
+});
+
+test('a Crane takes nothing at all when the square it would come out at is not free', () => {
+  // The ship stepping on, with a block already sitting on the far square: nothing is taken, and it simply stands there.
+  let g = game(craneAt(2, 5), craneAt(6, 3), obj('PushBlock', 6, 3, { symbol: 'Circle' }), obj('Start', 2, 6));
+  assert.equal(g.shipArrivedAt(at(2, 5))?.crane, undefined);
+  assert.deepEqual(g.cranes, [], 'no claw at all');
+  assert.deepEqual(g.shipCell, at(2, 5), 'and the ship just stands on the crane');
+
+  // A block pushed on with a block on the far square: it stops on the crane rather than being taken anywhere.
+  let b = game(craneAt(4, 5), craneAt(7, 8), obj('PushBlock', 7, 8, { symbol: 'Circle' }),
+    obj('PushBlock', 3, 5, { symbol: 'Circle' }), obj('Start', 2, 5));
+  b.pushFrom(at(2, 5), at(3, 5), 'right');
+  let pushed = b.objects.find(o => o.kind === 'PushBlock' && !(o.col === 7 && o.row === 8));
+  assert.deepEqual({ col: pushed.col, row: pushed.row }, at(4, 5), 'on the crane, but not taken');
+  assert.deepEqual(b.cranes, []);
+  b.advanceCranes(CRANE_MS);
+  assert.deepEqual({ col: pushed.col, row: pushed.row }, at(4, 5), 'and still there at the end of a pickup that never started');
+});
+
+test('a crane square is free unless something a crane could carry is on it, or the ship', () => {
+  let board = [obj('Key', 5, 5), obj('PushBlock', 3, 3, { symbol: 'Circle' })];
+  assert.equal(craneFree(board, at(5, 5), null), true, 'a key on it is not in the way');
+  assert.equal(craneFree(board, at(3, 3), null), false, 'a block is');
+  assert.equal(craneFree(board, at(1, 1), at(1, 1)), false, 'and so is the ship, on that square');
+  assert.equal(craneFree(board, at(1, 2), at(1, 1)), true, 'while it is somewhere else');
+  assert.equal(craneFree(board, null, at(1, 1)), true, 'a crane with no partner has no square to keep clear');
+});
+
+test('a Push Block craned down beside one of its own symbol takes them both off the board', () => {
+  // The far crane's neighbour is a Circle, so the block put down on the crane meets it - the same as a push into it.
+  let g = game(craneAt(4, 5), craneAt(7, 8), obj('PushBlock', 8, 8, { symbol: 'Circle' }),
+    obj('PushBlock', 3, 5, { symbol: 'Circle' }), obj('Start', 2, 5));
+  g.pushFrom(at(2, 5), at(3, 5), 'right');
+  assert.equal(g.objects.filter(object => object.kind === 'PushBlock').length, 2, 'two to start with');
+
+  let landed = g.advanceCranes(CRANE_PICKUP_MS);
+  assert.equal(landed[0].sank.length, 2, 'both of them go');
+  assert.deepEqual(g.objects.filter(object => object.kind === 'PushBlock'), [], 'and neither is left on the board');
+
+  // A Circle set down beside a Star is nothing to do with it, and stays.
+  let h = game(craneAt(4, 5), craneAt(7, 8), obj('PushBlock', 8, 8, { symbol: 'Star' }),
+    obj('PushBlock', 3, 5, { symbol: 'Circle' }), obj('Start', 2, 5));
+  h.pushFrom(at(2, 5), at(3, 5), 'right');
+  h.advanceCranes(CRANE_PICKUP_MS);
+  assert.equal(h.objects.filter(object => object.kind === 'PushBlock').length, 2, 'a different symbol is no match');
+});
+
+test('a crane pair is out of action while anything a crane could carry is on either of its squares', () => {
+  let pair = [craneAt(2, 2), craneAt(7, 7)];
+  assert.equal(craneBlocked(pair, pair[0]), false, 'clear, it can be used');
+
+  let farTaken = [...pair, obj('PushBlock', 7, 7, { symbol: 'Circle' })];
+  assert.equal(craneBlocked(farTaken, farTaken[0]), true, 'the square it would set down on is taken');
+  assert.equal(craneBlocked(farTaken, farTaken[1]), true, 'and the other half of the pair is out of action with it');
+
+  let nearTaken = [...pair, obj('PushBlock', 2, 2, { symbol: 'Circle' })];
+  assert.equal(craneBlocked(nearTaken, nearTaken[1]), true, 'either way round');
+
+  let withAKey = [...pair, obj('Key', 7, 7)];
+  assert.equal(craneBlocked(withAKey, withAKey[0]), false, 'a key on it is not in the way');
+
+  // A crane with no partner at all has nowhere to put anything, so it is out of action too - and a letterless one, which
+  // pairs with nothing.
+  let alone = [craneAt(4, 6)];
+  assert.equal(craneBlocked(alone, alone[0]), true, 'no partner, nothing it can ever do');
+  let letterless = [obj('Crane', 4, 6), obj('Crane', 7, 6)];
+  assert.equal(craneBlocked(letterless, letterless[0]), true, 'and two letterless cranes pair with nothing');
+});
+
+test('a Stream carrying something onto a Crane cranes it, and a held block stays put for a tick', () => {
+  let g = game(craneAt(4, 5), craneAt(8, 5), obj('PushBlock', 3, 5, { symbol: 'Circle' }),
+    obj('Stream', 3, 5, { direction: 'Right' }), obj('Stream', 4, 5, { direction: 'Right' }));
+  g.tick(null);
+  let block = find(g, 'PushBlock');
+  assert.deepEqual({ col: block.col, row: block.row }, at(4, 5));
+  g.tick(null);
+  assert.deepEqual({ col: block.col, row: block.row }, at(4, 5), 'the claw has hold of it');
+  g.advanceCranes(CRANE_PICKUP_MS);
+  assert.deepEqual({ col: block.col, row: block.row }, at(8, 5));
+});
+
+test('an Archeton craned to another Crane goes on patrolling from there', () => {
+  // Two moves, so that a route still counted from the bug's old home - or from the beat it had got to - lands
+  // somewhere else: a one-move sequence is at the start of itself again however far it has walked.
+  let hopper = { id: 'hopper', name: 'Hopper', parts: [{ kind: 'Sequence', moves: ['Right', 'Left'] }] };
+  let g = withArchetons([hopper],
+    obj('Archeton', 3, 5, { archeton: 'hopper', direction: 'Right' }),
+    craneAt(4, 5), craneAt(4, 8), obj('Start', 1, 9));
+
+  g.shipArrivedAt(at(1, 8));                       // its beat: right, onto the crane
+  assert.deepEqual({ col: find(g, 'Archeton').col, row: find(g, 'Archeton').row }, at(4, 5));
+  g.advanceCranes(CRANE_PICKUP_MS);
+  assert.deepEqual({ col: find(g, 'Archeton').col, row: find(g, 'Archeton').row }, at(4, 8));
+
+  g.shipArrivedAt(at(1, 9));                       // its next beat, counted from where it was put down
+  assert.deepEqual({ col: find(g, 'Archeton').col, row: find(g, 'Archeton').row }, at(5, 8), 'not back at 5,5');
 });

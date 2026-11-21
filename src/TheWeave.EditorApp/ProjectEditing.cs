@@ -337,7 +337,8 @@ internal static class ProjectEditing
             // pair that has one, since a plain Archeton hasn't. Everything else has its letter taken away. Taking the
             // Wisp's away here is what left every Wisp with nothing to find its square by: the editor never saw the
             // letter again, since every edit comes back from here.
-            var needsLetter = obj.Kind is PuzzleObjectKind.Gate or PuzzleObjectKind.Switch or PuzzleObjectKind.Teleporter;
+            var needsLetter = obj.Kind is PuzzleObjectKind.Gate or PuzzleObjectKind.Switch or PuzzleObjectKind.Teleporter
+                or PuzzleObjectKind.Crane;
             var mayHaveLetter = needsLetter || obj.Kind is PuzzleObjectKind.Archeton or PuzzleObjectKind.WarpOut;
             if (needsLetter && (obj.Letter is not { Length: 1 } || obj.Letter[0] is < 'A' or > 'Z'))
                 throw new InvalidOperationException($"A {obj.Kind} needs a letter from A to Z.");
@@ -388,14 +389,18 @@ internal static class ProjectEditing
         }
 
         // A square holds one object and one floor tile - and an Edge on each of its sides, since an Edge is only on
-        // one side of the square it's on, and a raised area's corner needs two.
+        // one side of the square it's on, and a raised area's corner needs two. A Crane is the square a thing stands on
+        // rather than one of the things on it, so it is counted apart: a Push Block and the crane it sits on share a
+        // square - which is how a block is laid on one in the editor - while two cranes are still one square's worth.
         var crowded = puzzle.Objects
-            .GroupBy(o => (o.Col, o.Row, IsFloor: IsFloorTile(o), Side: o.Kind == PuzzleObjectKind.Edge ? o.Direction : null))
+            .GroupBy(o => (o.Col, o.Row, IsFloor: IsFloorTile(o), Side: o.Kind == PuzzleObjectKind.Edge ? o.Direction : null,
+                Crane: o.Kind == PuzzleObjectKind.Crane))
             .FirstOrDefault(g => g.Count() > 1);
         if (crowded is not null)
         {
             var what = crowded.Key.IsFloor ? "floor tile"
                 : crowded.Key.Side is { } side ? $"Edge facing {side}"
+                : crowded.Key.Crane ? "Crane"
                 : "object";
             throw new InvalidOperationException($"Column {crowded.Key.Col}, row {crowded.Key.Row} holds more than one {what}.");
         }
