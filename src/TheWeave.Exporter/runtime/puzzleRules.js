@@ -49,6 +49,10 @@
         // A puzzle has one Gem Gate at most, so placing another moves it rather than being refused.
         if (object.kind === 'GemGate' && other.kind === 'GemGate') return false;
         if (!(isAt(other, object) && isFloor(other) === floor)) return true;
+        // A Crane is the square a thing stands on rather than one of the things on it, so it and one other thing share
+        // a square: a Push Block laid on a crane keeps the crane underneath, and draws over it - see renderBoard's
+        // STANDS_ON. Two cranes on one square are still one square's worth of crane.
+        if ((other.kind === 'Crane') !== (object.kind === 'Crane')) return true;
         return object.kind === 'Edge' && other.kind === 'Edge' && other.direction !== object.direction;
       }),
       object,
@@ -61,7 +65,8 @@
   function eraseObject(objects, cell, direction = null){
     let here = objects.filter(other => isAt(other, cell) && other.kind !== 'Start');
     let chosen = direction ? here.find(other => other.kind === 'Edge' && other.direction === direction) : null;
-    let top = chosen ?? here.find(other => !isFloor(other)) ?? here[0];
+    // Whatever is standing on a square goes before the square itself: a Push Block on a Crane is the top one.
+    let top = chosen ?? here.find(other => !isFloor(other) && other.kind !== 'Crane') ?? here.find(other => !isFloor(other)) ?? here[0];
     // A Warp Wisp and its Warp Out Square only make sense as a pair, so erasing either takes the other with it. An
     // Archeton has a letter only when it's one half of that pair, so the letter is what says so.
     let pair = null;

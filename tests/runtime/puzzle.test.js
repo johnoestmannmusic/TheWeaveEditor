@@ -30,6 +30,28 @@ test('placing a Stream replaces a Stream, but keeps the object on it', () => {
   assert.ok(board.some(o => o.kind === 'Wall'));
 });
 
+test('a Push Block laid on a Crane square keeps the Crane underneath, whichever goes down first', () => {
+  let crane = { kind: 'Crane', col: 4, row: 4, letter: 'A' };
+  let block = { kind: 'PushBlock', col: 4, row: 4, symbol: 'Circle' };
+
+  let craneFirst = placeObject([crane], block);
+  assert.deepEqual(craneFirst.map(o => o.kind).sort(), ['Crane', 'PushBlock'], 'the block on top of the crane');
+  let blockFirst = placeObject([block], crane);
+  assert.deepEqual(blockFirst.map(o => o.kind).sort(), ['Crane', 'PushBlock'], 'and the crane on top of the block');
+
+  // One square still holds one crane: placing another on it replaces it, as anything else would.
+  let twoOnOne = placeObject([crane], { kind: 'Crane', col: 4, row: 4, letter: 'B' });
+  assert.equal(twoOnOne.filter(o => o.kind === 'Crane').length, 1);
+  assert.equal(twoOnOne.find(o => o.kind === 'Crane').letter, 'B');
+});
+
+test('erasing a square with a Crane and something on it takes the thing on top first', () => {
+  let crane = { kind: 'Crane', col: 4, row: 4, letter: 'A' };
+  let block = { kind: 'PushBlock', col: 4, row: 4, symbol: 'Circle' };
+  assert.deepEqual(eraseObject([crane, block], { col: 4, row: 4 }), [crane], 'the block goes and the crane stays');
+  assert.deepEqual(eraseObject([block, crane], { col: 4, row: 4 }), [crane], 'whichever order they are in');
+});
+
 test('there is only ever one Start, wherever it is placed', () => {
   let board = placeObject([{ kind: 'Start', col: 5, row: 9 }], { kind: 'Start', col: 2, row: 2 });
   assert.deepEqual(board, [{ kind: 'Start', col: 2, row: 2 }]);
