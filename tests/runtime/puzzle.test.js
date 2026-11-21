@@ -3296,6 +3296,13 @@ test('a crane pair is out of action while anything a crane could carry is on eit
 
   let withAKey = [...pair, obj('Key', 7, 7)];
   assert.equal(craneBlocked(withAKey, withAKey[0]), false, 'a key on it is not in the way');
+
+  // A crane with no partner at all has nowhere to put anything, so it is out of action too - and a letterless one, which
+  // pairs with nothing.
+  let alone = [craneAt(4, 6)];
+  assert.equal(craneBlocked(alone, alone[0]), true, 'no partner, nothing it can ever do');
+  let letterless = [obj('Crane', 4, 6), obj('Crane', 7, 6)];
+  assert.equal(craneBlocked(letterless, letterless[0]), true, 'and two letterless cranes pair with nothing');
 });
 
 test('a Stream carrying something onto a Crane cranes it, and a held block stays put for a tick', () => {

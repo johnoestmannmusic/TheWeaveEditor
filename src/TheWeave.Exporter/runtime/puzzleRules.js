@@ -1764,7 +1764,11 @@
   // going dead at the moment it works. The claw itself still refuses a far square with the ship on it - see beginCrane.
   function craneBlocked(objects, crane){
     if (!crane) return false;
-    return [crane, partnerOf(objects, crane)].some(square => square && !craneFree(objects, square, null));
+    let partner = partnerOf(objects, crane);
+    // With no partner - none placed, or one with no letter to pair on - it has nowhere to set anything down and can
+    // never do anything at all, so it reads as out of action like the rest.
+    if (!partner) return true;
+    return !craneFree(objects, crane, null) || !craneFree(objects, partner, null);
   }
 
   // Where a Move Crane's claw is, ms into a pickup, and how much of what it holds shows: { cell, lift, alpha }, lift
